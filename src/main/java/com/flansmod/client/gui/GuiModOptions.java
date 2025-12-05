@@ -23,7 +23,7 @@ public class GuiModOptions extends GuiScreen {
         this.drawWorldBackground(0);
 
         FontRenderer fontRenderer = mc.fontRenderer;
-        fontRenderer.drawStringWithShadow("FMUR 模组设置", this.width / 2 - (fontRenderer.getStringWidth("FMUR 模组设置") / 2), 10, 16777215);
+        fontRenderer.drawStringWithShadow("FMUR Mod Settings", this.width / 2 - (fontRenderer.getStringWidth("FMUR Mod Settings") / 2), 10, 16777215);
 
         super.drawScreen(var1, var2, var3);
     }
@@ -31,28 +31,28 @@ public class GuiModOptions extends GuiScreen {
     @SuppressWarnings("unchecked")
     private void addButtons() {
         int buttonWidth = 132;
-        this.buttonList.add(new GuiButton(1, (this.width / 2) - (buttonWidth * 3 / 2), 60, buttonWidth, 20, "开火: " + FlansModClient.fireButton.getName()));
+        this.buttonList.add(new GuiButton(1, (this.width / 2) - (buttonWidth * 3 / 2), 60, buttonWidth, 20, "Fire: " + FlansModClient.fireButton.getName()));
 
-        this.buttonList.add(new GuiButton(2, (this.width / 2) - (buttonWidth * 3 / 2), 90, buttonWidth, 20, "瞄准: " + FlansModClient.aimButton.getName()));
+        this.buttonList.add(new GuiButton(2, (this.width / 2) - (buttonWidth * 3 / 2), 90, buttonWidth, 20, "Aim: " + FlansModClient.aimButton.getName()));
 
-        this.buttonList.add(new GuiButton(0, (this.width / 2) - (buttonWidth * 3 / 2), 30, buttonWidth, 20, "瞄准方式: " + FlansModClient.aimType.getName()));
+        this.buttonList.add(new GuiButton(0, (this.width / 2) - (buttonWidth * 3 / 2), 30, buttonWidth, 20, "Aim Mode: " + FlansModClient.aimType.getName()));
 
-        this.buttonList.add(new GuiButton(3, (this.width / 2) - (buttonWidth * 3 / 2), 120, buttonWidth, 20, "是否自动合并弹匣: " + (FlansModClient.combineAmmoOnReload ? "ON" : "OFF")));
-        this.buttonList.add(new GuiButton(4, (this.width / 2) - (buttonWidth * 3 / 2), 150, buttonWidth, 20, "换弹置于物品栏最上方: " + (FlansModClient.ammoToUpperInventoryOnReload ? "ON" : "OFF")));
-        this.buttonList.add(new GuiButton(5, (this.width / 2) - (buttonWidth * 3 / 2), 180, buttonWidth, 20, "启用腰射准心: " + (TickHandlerClient.enableDefaultCrossHair ? "ON" : "OFF")));
-        this.buttonList.add(new GuiButton(6, (this.width / 2) - (buttonWidth * 3 / 2), 210, buttonWidth, 20, "启用奔跑准心: " + (TickHandlerClient.enableSprintCrossHair ? "ON" : "OFF")));
-        this.buttonList.add(new GuiSlider(7, (this.width / 2) - (buttonWidth * 3 / 2), 240, buttonWidth, 20, "准心红色分量: ", "", 0, 255, TickHandlerClient.crosshairR * 255, false, true));
-        this.buttonList.add(new GuiSlider(8, (this.width / 2) - (buttonWidth * 3 / 2), 270, buttonWidth, 20, "准心绿色分量: ", "", 0, 255, TickHandlerClient.crosshairG * 255, false, true));
-        this.buttonList.add(new GuiSlider(9, (this.width / 2) - (buttonWidth * 3 / 2), 300, buttonWidth, 20, "准心蓝色分量: ", "", 0, 255, TickHandlerClient.crosshairB * 255, false, true));
-        this.buttonList.add(new GuiSlider(10, (this.width / 2) - (buttonWidth * 3 / 2), 330, buttonWidth, 20, "准心透明度: ", "", 0, 100, TickHandlerClient.crosshairA * 100, false, true));
-        this.buttonList.add(new GuiButton(11, (this.width / 2) - (buttonWidth * 3 / 2), 360, buttonWidth, 20, "闪光弹颜色: " + (TickHandlerClient.blackFlash ? "Black" : "White")));
-        this.buttonList.add(new GuiButton(12, (this.width / 2) - (buttonWidth * 3 / 2), 390, buttonWidth, 20, "载具第三人称新视角: " + (FlansModClient.enableMCHEntityCamera ? "ON" : "OFF")));
+        this.buttonList.add(new GuiButton(3, (this.width / 2) - (buttonWidth * 3 / 2), 120, buttonWidth, 20, "Auto-Merge Magazines: " + (FlansModClient.combineAmmoOnReload ? "ON" : "OFF")));
+        this.buttonList.add(new GuiButton(4, (this.width / 2) - (buttonWidth * 3 / 2), 150, buttonWidth, 20, "Place Reloaded Ammo on Top: " + (FlansModClient.ammoToUpperInventoryOnReload ? "ON" : "OFF")));
+        this.buttonList.add(new GuiButton(5, (this.width / 2) - (buttonWidth * 3 / 2), 180, buttonWidth, 20, "Enable Hipfire Crosshair: " + (TickHandlerClient.enableDefaultCrossHair ? "ON" : "OFF")));
+        this.buttonList.add(new GuiButton(6, (this.width / 2) - (buttonWidth * 3 / 2), 210, buttonWidth, 20, "Enable Sprint Crosshair: " + (TickHandlerClient.enableSprintCrossHair ? "ON" : "OFF")));
+        this.buttonList.add(new GuiSlider(7, (this.width / 2) - (buttonWidth * 3 / 2), 240, buttonWidth, 20, "Crosshair Red: ", "", 0, 255, TickHandlerClient.crosshairR * 255, false, true));
+        this.buttonList.add(new GuiSlider(8, (this.width / 2) - (buttonWidth * 3 / 2), 270, buttonWidth, 20, "Crosshair Green: ", "", 0, 255, TickHandlerClient.crosshairG * 255, false, true));
+        this.buttonList.add(new GuiSlider(9, (this.width / 2) - (buttonWidth * 3 / 2), 300, buttonWidth, 20, "Crosshair Blue: ", "", 0, 255, TickHandlerClient.crosshairB * 255, false, true));
+        this.buttonList.add(new GuiSlider(10, (this.width / 2) - (buttonWidth * 3 / 2), 330, buttonWidth, 20, "Crosshair Opacity: ", "", 0, 100, TickHandlerClient.crosshairA * 100, false, true));
+        this.buttonList.add(new GuiButton(11, (this.width / 2) - (buttonWidth * 3 / 2), 360, buttonWidth, 20, "Flashbang Color: " + (TickHandlerClient.blackFlash ? "Black" : "White")));
+        this.buttonList.add(new GuiButton(12, (this.width / 2) - (buttonWidth * 3 / 2), 390, buttonWidth, 20, "New Vehicle Third-Person Camera: " + (FlansModClient.enableMCHEntityCamera ? "ON" : "OFF")));
 
-        this.buttonList.add(new GuiSlider(13, (this.width / 2) + (buttonWidth / 2), 30, buttonWidth, 20, "瞄具准心红色分量: ", "", 0, 255, TickHandlerClient.dotR * 255, false, true));
-        this.buttonList.add(new GuiSlider(14, (this.width / 2) + (buttonWidth / 2), 60, buttonWidth, 20, "瞄具准心绿色分量: ", "", 0, 255, TickHandlerClient.dotG * 255, false, true));
-        this.buttonList.add(new GuiSlider(15, (this.width / 2) + (buttonWidth / 2), 90, buttonWidth, 20, "瞄具准心蓝色分量: ", "", 0, 255, TickHandlerClient.dotB * 255, false, true));
-        this.buttonList.add(new GuiSlider(16, (this.width / 2) + (buttonWidth / 2), 120, buttonWidth, 20, "瞄具准心透明度: ", "", 0, 100, TickHandlerClient.dotA * 100, false, true));
-        this.buttonList.add(new GuiButton(17, (this.width / 2) + (buttonWidth / 2), 150, buttonWidth, 20, "玩家击杀信息: " + (TickHandlerClient.showKillMessages ? "显示" : "隐藏")));
+        this.buttonList.add(new GuiSlider(13, (this.width / 2) + (buttonWidth / 2), 30, buttonWidth, 20, "Sight Reticle Red: ", "", 0, 255, TickHandlerClient.dotR * 255, false, true));
+        this.buttonList.add(new GuiSlider(14, (this.width / 2) + (buttonWidth / 2), 60, buttonWidth, 20, "Sight Reticle Green: ", "", 0, 255, TickHandlerClient.dotG * 255, false, true));
+        this.buttonList.add(new GuiSlider(15, (this.width / 2) + (buttonWidth / 2), 90, buttonWidth, 20, "Sight Reticle Blue: ", "", 0, 255, TickHandlerClient.dotB * 255, false, true));
+        this.buttonList.add(new GuiSlider(16, (this.width / 2) + (buttonWidth / 2), 120, buttonWidth, 20, "Sight Reticle Opacity: ", "", 0, 100, TickHandlerClient.dotA * 100, false, true));
+        this.buttonList.add(new GuiButton(17, (this.width / 2) + (buttonWidth / 2), 150, buttonWidth, 20, "Kill Messages: " + (TickHandlerClient.showKillMessages ? "Show" : "Hide")));
     }
 
     @Override

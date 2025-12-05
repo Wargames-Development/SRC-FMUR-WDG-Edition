@@ -233,9 +233,9 @@ public class FlansModClient extends FlansMod {
     //private static final ResourceLocation zombieSkin = new ResourceLocation("flansmod", "skins/zombie.png");
     public static void setAmmoToUpperInventoryOnReload(boolean ammoToUpperInventoryOnReload) {
         if (ammoToUpperInventoryOnReload) {
-            minecraft.thePlayer.addChatMessage(new ChatComponentText("§a弹药自动置顶已开启"));
+            minecraft.thePlayer.addChatMessage(new ChatComponentText("§aAmmo auto-sort to top enabled"));
         } else {
-            minecraft.thePlayer.addChatMessage(new ChatComponentText("§c弹药自动置顶已关闭"));
+            minecraft.thePlayer.addChatMessage(new ChatComponentText("§cAmmo auto-sort to top disabled"));
         }
 
         FlansModClient.ammoToUpperInventoryOnReload = ammoToUpperInventoryOnReload;
@@ -243,9 +243,9 @@ public class FlansModClient extends FlansMod {
 
     public static void setCombineAmmoOnReload(boolean combineAmmoOnReload) {
         if (combineAmmoOnReload) {
-            minecraft.thePlayer.addChatMessage(new ChatComponentText("§a弹匣自动合并已开启"));
+            minecraft.thePlayer.addChatMessage(new ChatComponentText("§aMagazine auto-merge enabled"));
         } else {
-            minecraft.thePlayer.addChatMessage(new ChatComponentText("§c弹匣自动合并已关闭"));
+            minecraft.thePlayer.addChatMessage(new ChatComponentText("§cMagazine auto-merge disabled"));
         }
         FlansModClient.combineAmmoOnReload = combineAmmoOnReload;
     }
@@ -269,7 +269,7 @@ public class FlansModClient extends FlansMod {
         //禁止步兵切换第三人称
         if (disableThirdPerson) {
             if (minecraft.gameSettings.thirdPersonView != 0 && minecraft.thePlayer.ridingEntity == null && !isBulletTrackingActive) {
-                minecraft.thePlayer.addChatComponentMessage(new ChatComponentText("步兵禁止切换第三人称!"));
+                minecraft.thePlayer.addChatComponentMessage(new ChatComponentText("Third-person view is disabled for infantry!"));
                 minecraft.gameSettings.thirdPersonView = 0;
             }
         }

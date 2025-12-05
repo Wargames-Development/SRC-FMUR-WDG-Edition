@@ -823,46 +823,46 @@ public class TickHandlerClient {
                 if (fuelP <= 2)
                     fuelColor = 0xff0000;
 
-                mc.fontRenderer.drawString(String.format("节流阀 : %.0f%%", driveable.throttle * 100), 2, 2, 0xffffff);
+                mc.fontRenderer.drawString(String.format("Throttle : %.0f%%", driveable.throttle * 100), 2, 2, 0xffffff);
 //				mc.fontRenderer.drawString("Throttle : " + driveable.throttle, 2, 2, 0xffffff);
                 //mc.fontRenderer.drawString("Health : " + driveable.getDriveableData().parts.get(EnumDriveablePart.core).health+ " / " +driveable.getDriveableData().parts.get(EnumDriveablePart.core).maxHealth, 2, 12, 0xffffff);
-                mc.fontRenderer.drawString("血量 : " + healthP + "%", 2, 12, healthColor);
-                mc.fontRenderer.drawString(String.format("速度 : %.2f 方块/秒", speed), 2, 22, 0xffffff);
+                mc.fontRenderer.drawString("Health : " + healthP + "%", 2, 12, healthColor);
+                mc.fontRenderer.drawString(String.format("Speed : %.2f 方块/秒", speed), 2, 22, 0xffffff);
                 if (driveable instanceof EntityVehicle) {
-                    mc.fontRenderer.drawString(String.format("方向机 : %.0f%%", playerSeat.looking.getYaw()), 92, 2,
+                    mc.fontRenderer.drawString(String.format("Rudder : %.0f%%", playerSeat.looking.getYaw()), 92, 2,
                             0xffffff);
-                    mc.fontRenderer.drawString(String.format("高低机 : %.0f%%", playerSeat.looking.getPitch()), 92, 12,
+                    mc.fontRenderer.drawString(String.format("Elevator : %.0f%%", playerSeat.looking.getPitch()), 92, 12,
                             0xffffff);
                 } else {
-                    mc.fontRenderer.drawString(String.format("偏航角 : %.2f", driveable.prevRotationYaw), 92, 2, 0xffffff);
-                    mc.fontRenderer.drawString(String.format("俯仰角 : %.2f", -driveable.prevRotationPitch), 92, 12, 0xffffff);
+                    mc.fontRenderer.drawString(String.format("Yaw : %.2f", driveable.prevRotationYaw), 92, 2, 0xffffff);
+                    mc.fontRenderer.drawString(String.format("Pitch : %.2f", -driveable.prevRotationPitch), 92, 12, 0xffffff);
                 }
-                mc.fontRenderer.drawString(String.format("燃油量 : %.0f%%", fuelP), 2, 32, fuelColor);
+                mc.fontRenderer.drawString(String.format("Fuel : %.0f%%", fuelP), 2, 32, fuelColor);
                 if (driveable instanceof EntityPlane) {
                     if (driveable.getDriveableType().hasFlare) {
                         if (driveable.ticksFlareUsing <= 0 && driveable.flareDelay <= 0)
-                            mc.fontRenderer.drawString("热诱弹 : 已准备", 2, 42, 0x00ff00);
+                            mc.fontRenderer.drawString("Flares : Ready", 2, 42, 0x00ff00);
 
                         if (driveable.ticksFlareUsing > 0)
-                            mc.fontRenderer.drawString("热诱弹 : 正在发射", 2, 52, 0xff0000);
+                            mc.fontRenderer.drawString("Flares : Firing", 2, 52, 0xff0000);
 
                         if (driveable.flareDelay > 0)
-                            mc.fontRenderer.drawString("热诱弹 : 正在装填", 2, 62, 0xdaa520);
+                            mc.fontRenderer.drawString("Flares : Reloading", 2, 62, 0xdaa520);
                     }
                     Vector3f up2 = (Vector3f) driveable.axes.getYAxis().normalise();
-                    mc.fontRenderer.drawString(String.format("升力 : %.0f%%", (float) driveable.getSpeedXYZ() * (float) driveable.getSpeedXYZ() * up2.y), 92, 22, 0xffffff);
+                    mc.fontRenderer.drawString(String.format("Lift : %.0f%%", (float) driveable.getSpeedXYZ() * (float) driveable.getSpeedXYZ() * up2.y), 92, 22, 0xffffff);
 
                 }
                 if (driveable instanceof EntityVehicle) {
                     if (driveable.getDriveableType().hasFlare) {
                         if (driveable.ticksFlareUsing <= 0 && driveable.flareDelay <= 0)
-                            mc.fontRenderer.drawString("烟雾弹 : 已准备", 2, 42, 0x00ff00);
+                            mc.fontRenderer.drawString("Smoke : Ready", 2, 42, 0x00ff00);
 
                         if (driveable.ticksFlareUsing > 0)
-                            mc.fontRenderer.drawString("烟雾弹 : 正在释放", 2, 52, 0xff0000);
+                            mc.fontRenderer.drawString("Smoke : Deploying", 2, 52, 0xff0000);
 
                         if (driveable.flareDelay > 0)
-                            mc.fontRenderer.drawString("烟雾弹 : 正在装填", 2, 62, 0xdaa520);
+                            mc.fontRenderer.drawString("Smoke : Reloading", 2, 62, 0xdaa520);
                     }
 
                     if (((EntityVehicle) driveable).getVehicleType().shootWithOpenDoor) {
