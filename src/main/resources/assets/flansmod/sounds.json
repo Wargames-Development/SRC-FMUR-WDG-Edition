@@ -1,0 +1,14 @@
+{
+  "emptyclick": {
+    "category": "player",
+    "sounds": ["flansmod:emptyclick"]
+  },
+  "defaultshellinsert": {
+    "category": "player",
+    "sounds": ["flansmod:defaultshellinsert"]
+  },
+  "target_hit": {
+    "category": "player",
+    "sounds": ["flansmod:target_hit"]
+  }
+}

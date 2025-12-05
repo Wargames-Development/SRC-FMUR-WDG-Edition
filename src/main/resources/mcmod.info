@@ -1,0 +1,19 @@
+[
+  {
+    "modid": "flansmod",
+    "name": "Flan's Mod Ultimate",
+    "description": "Flan's Mod is a huge mod which adds planes, cars, tanks, guns, grenades, and more!",
+    "version": "1.58-Reforged",
+    "mcversion": "1.7.10",
+    "url": "https://flansmod.com",
+    "updateUrl": "https://flansmod.com",
+    "authorList": [
+      "TV90",
+      "Mareep"
+    ],
+    "credits": "Flan and his team.FMUTeam",
+    "logoFile": "flansmod.png",
+    "screenshots": [],
+    "dependencies": []
+  }
+]

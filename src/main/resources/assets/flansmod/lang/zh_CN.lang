@@ -1,0 +1,23 @@
+#By Darkyoooooo
+
+itemGroup.tabFlan0=FMUR 枪械
+itemGroup.tabFlan1=FMUR 载具
+itemGroup.tabFlan2=FMUR 零件
+itemGroup.tabFlan3=FMUR 团队工具
+itemGroup.tabFlan4=FMUR 机甲
+itemGroup.tabFlan5=FMUR 方块
+tile.flansWorkbench.0.name=载具制造台
+tile.flansWorkbench.1.name=枪械制造台
+tile.flansWorkbench.2.name=零件合成台
+item.opStick.0.name=所有权棍
+item.opStick.1.name=联络棍
+item.opStick.2.name=绘图棍
+item.opStick.3.name=破坏原棍
+item.flagpole.name=旗杆
+tile.teamsSpawner.0.name=物品生成器
+tile.teamsSpawner.1.name=士兵生成器
+tile.teamsSpawner.2.name=载具生成器
+aimtype.hold.name=按住
+aimtype.toggle.name=切换
+firebutton.left.name=鼠标左键
+firebutton.right.name=鼠标右键
