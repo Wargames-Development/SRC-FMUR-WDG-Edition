@@ -18,12 +18,34 @@ public class EntityDamageSourceFlans extends EntityDamageSourceIndirect {
     public boolean headshot;
     public boolean melee;
 
-    public EntityDamageSourceFlans(String s, Entity entity, EntityLivingBase player, InfoType wep, boolean head, boolean isMelee) {
+    // NEW: flag used by FMUR / explosion checks
+    public boolean flansExplosion = false;
+
+    // Original constructor (non-explosive damage)
+    public EntityDamageSourceFlans(String s, Entity entity, EntityLivingBase player,
+                                   InfoType wep, boolean head, boolean isMelee) {
         super(s, entity, player);
-        weapon = wep;
-        shooter = player;
-        headshot = head;
-        melee = isMelee;
+        this.weapon = wep;
+        this.shooter = player;
+        this.headshot = head;
+        this.melee = isMelee;
+    }
+
+    // NEW: constructor that allows marking this as an explosion
+    public EntityDamageSourceFlans(String s, Entity entity, EntityLivingBase player,
+                                   InfoType wep, boolean head, boolean isMelee, boolean explosion) {
+        super(s, entity, player);
+        this.weapon = wep;
+        this.shooter = player;
+        this.headshot = head;
+        this.melee = isMelee;
+        this.flansExplosion = explosion;
+
+        // Optional but sensible: mark the vanilla DamageSource as an explosion too.
+        // If you want to stick 100% to the decompiled behavior, you can comment this out.
+        if (explosion) {
+            this.setExplosion();
+        }
     }
 
     public Entity getDamageSourceEntity() {
@@ -36,40 +58,36 @@ public class EntityDamageSourceFlans extends EntityDamageSourceIndirect {
             return super.func_151519_b(living);
         }
 
-        //FlansMod.log("victim: " + living.getCommandSenderName() + " killer: " + shooter.getCommandSenderName());
-
-        if(living instanceof EntityPlayer){
+        if (living instanceof EntityPlayer) {
             EntityPlayer player = (EntityPlayer) living;
             float dist = player.getDistanceToEntity(shooter);
 
-            //FlansMod.log("Player Death" + living.dimension);
-
             FlansMod.getPacketHandler().sendToDimension(
                     new PacketKillMessage(
                             headshot,
                             weapon,
                             shooter.getHeldItem() != null ? shooter.getHeldItem().getItemDamage() : 0,
-                            ("f" + player.getCommandSenderName()),
-                            ("f" + shooter.getCommandSenderName()),
+                            "f" + player.getCommandSenderName(),
+                            "f" + shooter.getCommandSenderName(),
                             dist
                     ),
-                    living.dimension);
-        } else if (living instanceof EntitySoldier){
+                    living.dimension
+            );
+        } else if (living instanceof EntitySoldier) {
             EntitySoldier soldier = (EntitySoldier) living;
             float dist = soldier.getDistanceToEntity(shooter);
 
-            //FlansMod.log("AI Death" + living.dimension);
-
             FlansMod.getPacketHandler().sendToDimension(
                     new PacketKillMessage(
                             headshot,
                             weapon,
                             shooter.getHeldItem() != null ? shooter.getHeldItem().getItemDamage() : 0,
-                            ("f" + soldier.getCommandSenderName()),
-                            ("f" + shooter.getCommandSenderName()),
+                            "f" + soldier.getCommandSenderName(),
+                            "f" + shooter.getCommandSenderName(),
                             dist
                     ),
-                    living.dimension);
+                    living.dimension
+            );
         }
 
         return new ChatComponentText("");
