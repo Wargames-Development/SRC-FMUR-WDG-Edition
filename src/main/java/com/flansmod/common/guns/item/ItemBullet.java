@@ -85,81 +85,81 @@ public class ItemBullet extends ItemShootable implements IFlanItem, IGunboxDescr
             }
             //Reveal all the bullet stats when holding down the sneak key
             if (!GameSettings.isKeyDown(shift)) {
-                lines.add("按住 \u00a7b\u00a7o" + GameSettings.getKeyDisplayString(shift.getKeyCode())
-                        + "\u00a7r\u00a77 查看更多数据");
+                lines.add("Hold \u00a7b\u00a7o" + GameSettings.getKeyDisplayString(shift.getKeyCode())
+                        + "\u00a7r\u00a77 to view more stats");
             } else {
                 lines.add("");
                 if (!Objects.equals(originGunbox, "")) {
                     lines.add("\u00a79Box" + "\u00a77: " + originGunbox);
                 }
                 if(type.roundsPerItem > 1) {
-                    lines.add("\u00a79子弹数量" + "\u00a77: " + type.roundsPerItem);
+                    lines.add("\u00a79Rounds per item" + "\u00a77: " + type.roundsPerItem);
                 }
                 if (type.numBullets > -1) {
-                    lines.add("\u00a79弹丸数量" + "\u00a77: " + type.numBullets);
+                    lines.add("\u00a79Projectiles per shot" + "\u00a77: " + type.numBullets);
                 }
-                lines.add("\u00a79基础伤害倍率" + "\u00a77: " + roundFloat(type.damageVsLiving, 2));
-                lines.add("\u00a79击中头部倍率" + "\u00a77: " + roundFloat(type.shootHeadMultiplier, 2));
-                lines.add("\u00a79击中手臂倍率" + "\u00a77: " + roundFloat(type.shootArmMultiplier, 2));
-                lines.add("\u00a79下坠速度" + "\u00a77: " + roundFloat(type.fallSpeed * 20, 2) + "m/s");
-                lines.add("\u00a79空气阻力" + "\u00a77: " + roundFloat(type.dragInAir, 2));
+                lines.add("\u00a79Base damage multiplier" + "\u00a77: " + roundFloat(type.damageVsLiving, 2));
+                lines.add("\u00a79Headshot multiplier" + "\u00a77: " + roundFloat(type.shootHeadMultiplier, 2));
+                lines.add("\u00a79Arm hit multiplier" + "\u00a77: " + roundFloat(type.shootArmMultiplier, 2));
+                lines.add("\u00a79Drop speed" + "\u00a77: " + roundFloat(type.fallSpeed * 20, 2) + "m/s");
+                lines.add("\u00a79Air drag" + "\u00a77: " + roundFloat(type.dragInAir, 2));
                 if (type.enableBulletDecay) {
-                    lines.add("\u00a79伤害衰减" + "\u00a77: " + type.bulletDecays.toString());
+                    lines.add("\u00a79Damage falloff" + "\u00a77: " + type.bulletDecays.toString());
                 } else {
-                    lines.add("\u00a79伤害衰减" + "\u00a77: 无");
+                    lines.add("\u00a79Damage falloff" + "\u00a77: None");
                 }
                 if (type.explosionRadius > 0) {
-                    lines.add("\u00a79爆炸范围" + "\u00a77: " + roundFloat(type.explosionRadius, 2) + "m");
-                    lines.add("\u00a79方块破坏力" + "\u00a77: " + roundFloat(type.explosionPower, 2));
+                    lines.add("\u00a79Explosion radius" + "\u00a77: " + roundFloat(type.explosionRadius, 2) + "m");
+                    lines.add("\u00a79Block destruction power" + "\u00a77: " + roundFloat(type.explosionPower, 2));
                 }
-                lines.add("\u00a79穿透能力" + "\u00a77: " + type.penetratingBlockMaxNum);
+                lines.add("\u00a79Penetration capability" + "\u00a77: " + type.penetratingBlockMaxNum);
                 if(type.penetratingBlockMaxNum > 0) {
-                    lines.add("\u00a79穿透衰减" + "\u00a77: " + type.penetratingDamageLoss);
+                    lines.add("\u00a79Penetration damage loss" + "\u00a77: " + type.penetratingDamageLoss);
                 }
                 if (type.lockOnToLivings || type.lockOnToMechas || type.lockOnToPlanes || type.lockOnToPlayers || type.lockOnToVehicles) {
                     if (type.enableSACLOS) {
-                        lines.add("\u00a79制导方式" + "\u00a77: " + "半主动制导");
+                        lines.add("\u00a79Guidance type" + "\u00a77: " + "Semi-active guidance");
                     } else {
-                        lines.add("\u00a79制导方式" + "\u00a77: " + "主动制导");
+                        lines.add("\u00a79Guidance type" + "\u00a77: " + "Active homing");
                     }
-                    lines.add("\u00a79导引启动时间" + "\u00a77: " + roundFloat(type.tickStartHoming / 20f, 2) + "s");
+                    lines.add("\u00a79Homing start delay" + "\u00a77: " + roundFloat(type.tickStartHoming / 20f, 2) + "s");
                     if(type.tickEndHoming > 0) {
-                        lines.add("\u00a79最大导引时长" + "\u00a77: " + roundFloat(type.tickEndHoming / 20f, 2) + "s");
+                        lines.add("\u00a79Max homing time" + "\u00a77: " + roundFloat(type.tickEndHoming / 20f, 2) + "s");
                     }
                 } else if (type.enableMCLOS && !type.manualGuidance) {
                     if(type.enableCameraFollow) {
-                        lines.add("\u00a79制导方式" + "\u00a77: " + "影像瞄准线指令制导[MCLOS]");
+                        lines.add("\u00a79Guidance type" + "\u00a77: " + "Camera command guidance [MCLOS]");
                     } else {
-                        lines.add("\u00a79制导方式" + "\u00a77: " + "手动瞄准线指令制导[MCLOS]");
+                        lines.add("\u00a79Guidance type" + "\u00a77: " + "Manual command guidance [MCLOS]");
                     }
                     if(type.tickEndHoming > 0) {
-                        lines.add("\u00a79最大导引时长" + "\u00a77: " + roundFloat(type.tickEndHoming / 20f, 2) + "s");
+                        lines.add("\u00a79Max guidance time" + "\u00a77: " + roundFloat(type.tickEndHoming / 20f, 2) + "s");
                     }
                 } else if (type.manualGuidance) {
                     if(type.enableCameraFollow) {
-                        lines.add("\u00a79制导方式" + "\u00a77: " + "影像制导[SACLOS]");
+                        lines.add("\u00a79Guidance type" + "\u00a77: " + "TV guidance [SACLOS]");
                     } else {
                         if(type.hasLine) {
-                            lines.add("\u00a79制导方式" + "\u00a77: " + "有线制导[SACLOS]");
+                            lines.add("\u00a79Guidance type" + "\u00a77: " + "Wire-guided [SACLOS]");
                         } else {
-                            lines.add("\u00a79制导方式" + "\u00a77: " + "驾束制导[SACLOS]");
+                            lines.add("\u00a79Guidance type" + "\u00a77: " + "Beam-riding [SACLOS]");
                         }
                     }
                     if(type.tickEndHoming > 0) {
-                        lines.add("\u00a79最大导引时长" + "\u00a77: " + roundFloat(type.tickEndHoming / 20f, 2) + "s");
+                        lines.add("\u00a79Max guidance time" + "\u00a77: " + roundFloat(type.tickEndHoming / 20f, 2) + "s");
                     }
                 }
 
                 if(type.enableAirburst) {
-                    lines.add("\u00a79空爆范围" + "\u00a77: " + roundFloat(type.airburstDamageRange, 2) + "m");
-                    lines.add("\u00a79空爆伤害" + "\u00a77: " + roundFloat(type.airburstDamage, 2));
+                    lines.add("\u00a79Airburst radius" + "\u00a77: " + roundFloat(type.airburstDamageRange, 2) + "m");
+                    lines.add("\u00a79Airburst damage" + "\u00a77: " + roundFloat(type.airburstDamage, 2));
                 }
-                lines.add("\u00a79补给数量上限" + "\u00a77: " + type.maxSupplyClips);
+                lines.add("\u00a79Max resupply amount" + "\u00a77: " + type.maxSupplyClips);
                 if(type.canBeDestructByAPS) {
-                    lines.add("\u00a7c被主动防御识别");
+                    lines.add("\u00a7cDetected by Active Protection System");
                 }
                 if(type.setEntitiesOnFire || type.fireRadius > 0F) {
-                    lines.add("\u00a7c燃烧弹");
+                    lines.add("\u00a7cIncendiary");
                 }
                 lines.add("");
 
@@ -172,7 +172,7 @@ public class ItemBullet extends ItemShootable implements IFlanItem, IGunboxDescr
                 Collections.addAll(lines, type.description.split("_"));
             }
         }
-        
+
     }
 
     //Can be overriden to allow new types of bullets to be created, for planes
