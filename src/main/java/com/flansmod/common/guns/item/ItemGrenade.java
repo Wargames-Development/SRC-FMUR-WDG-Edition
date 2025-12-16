@@ -56,47 +56,47 @@ public class ItemGrenade extends ItemShootable implements IFlanItem
 			}
 			//Reveal all the bullet stats when holding down the sneak key
 			if (!GameSettings.isKeyDown(shift)) {
-				lines.add("按住 \u00a7b\u00a7o" + GameSettings.getKeyDisplayString(shift.getKeyCode())
-						+ "\u00a7r\u00a77 查看更多数据");
+				lines.add("Hold \u00a7b\u00a7o" + GameSettings.getKeyDisplayString(shift.getKeyCode())
+						+ "\u00a7r\u00a77 to view more stats");
 			} else {
 				lines.add("");
-				lines.add("\u00a79基础伤害倍率" + "\u00a77: " + roundFloat(type.damageVsLiving, 2));
-				lines.add("\u00a79近战伤害" + "\u00a77: " + roundFloat(type.meleeDamage, 2));
+				lines.add("\u00a79Base damage multiplier" + "\u00a77: " + roundFloat(type.damageVsLiving, 2));
+				lines.add("\u00a79Melee damage" + "\u00a77: " + roundFloat(type.meleeDamage, 2));
 				if(type.fuse > 0) {
-					lines.add("\u00a79引信延时" + "\u00a77: " + type.fuse / 20 + "s");
+					lines.add("\u00a79Fuse delay" + "\u00a77: " + type.fuse / 20 + "s");
 				}
-				lines.add("\u00a79弹性系数" + "\u00a77: " + roundFloat(type.bounciness, 2));
+				lines.add("\u00a79Bounciness" + "\u00a77: " + roundFloat(type.bounciness, 2));
 				if (type.explosionRadius > 0) {
-					lines.add("\u00a79爆炸范围" + "\u00a77: " + roundFloat(type.explosionRadius, 2) + "m");
-					lines.add("\u00a79方块破坏力" + "\u00a77: " + roundFloat(type.explosionPower, 2));
+					lines.add("\u00a79Explosion radius" + "\u00a77: " + roundFloat(type.explosionRadius, 2) + "m");
+					lines.add("\u00a79Block destruction power" + "\u00a77: " + roundFloat(type.explosionPower, 2));
 				}
 				if(type.canBeDestructByAPS) {
-					lines.add("\u00a7c被主动防御识别");
+					lines.add("\u00a7cDetected by Active Protection System");
 				}
 				if(type.sticky) {
-					lines.add("\u00a7c粘性炸弹");
+					lines.add("\u00a7cSticky explosive");
 				}
 				if(type.remote) {
-					lines.add("\u00a7c远程引爆");
+					lines.add("\u00a7cRemote detonation");
 				}
 				if(type.motionSensor) {
-					lines.add("\u00a7c传感器");
-					lines.add("\u00a79传感范围" + "\u00a77: " + roundFloat(type.motionSensorRange, 2) + "m");
-					lines.add("\u00a79传感间隔" + "\u00a77: " + type.motionSensorDelay / 20 + "s");
+					lines.add("\u00a7cMotion sensor");
+					lines.add("\u00a79Detection range" + "\u00a77: " + roundFloat(type.motionSensorRange, 2) + "m");
+					lines.add("\u00a79Detection interval" + "\u00a77: " + type.motionSensorDelay / 20 + "s");
 				}
 				if(type.flashBang && type.flashDamage > 0) {
-					lines.add("\u00a7c震爆弹");
-					lines.add("\u00a79震爆范围" + "\u00a77: " + roundFloat(type.flashRange, 2) + "m");
-					lines.add("\u00a79震爆时间" + "\u00a77: " + type.flashTime / 20 + "s");
+					lines.add("\u00a7cFlashbang");
+					lines.add("\u00a79Flash radius" + "\u00a77: " + roundFloat(type.flashRange, 2) + "m");
+					lines.add("\u00a79Flash duration" + "\u00a77: " + type.flashTime / 20 + "s");
 				}
 				if(type.isMedicBag) {
-					lines.add("\u00a7c医疗箱");
-					lines.add("\u00a79医疗范围" + "\u00a77: " + roundFloat(type.medicBagRadius, 2) + "m");
+					lines.add("\u00a7cMedical kit");
+					lines.add("\u00a79Healing radius" + "\u00a77: " + roundFloat(type.medicBagRadius, 2) + "m");
 				}
 				if(type.isAmmoBag) {
-					lines.add("\u00a7c补给箱");
-					lines.add("\u00a79补给范围" + "\u00a77: " + roundFloat(type.ammoBagRadius, 2) + "m");
-					lines.add("\u00a79补给数量" + "\u00a77: " + type.ammoBagUseNum + "*" + type.ammoBagSupplyAmount);
+					lines.add("\u00a7cAmmo supply box");
+					lines.add("\u00a79Supply radius" + "\u00a77: " + roundFloat(type.ammoBagRadius, 2) + "m");
+					lines.add("\u00a79Supply amount" + "\u00a77: " + type.ammoBagUseNum + "*" + type.ammoBagSupplyAmount);
 				}
 				lines.add("");
 			}

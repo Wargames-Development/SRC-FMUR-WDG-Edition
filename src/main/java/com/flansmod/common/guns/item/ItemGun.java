@@ -260,8 +260,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     }
                 }
 
-                lines.add("按住 \u00a7b\u00a7o" + GameSettings.getKeyDisplayString(shift.getKeyCode())
-                        + "\u00a7r\u00a77 查看更多数据");
+                lines.add("Hold \u00a7b\u00a7o" + GameSettings.getKeyDisplayString(shift.getKeyCode())
+                        + "\u00a7r\u00a77 to view more stats");
             } else {
                 lines.add("");
 
@@ -271,39 +271,39 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
 
                 AttachmentType barrel = type.getBarrel(stack);
                 if (barrel != null && barrel.silencer)
-                    lines.add("\u00a7e[消音]");
+                    lines.add("\u00a7e[Silenced]");
 
                 if (type.getSecondaryFire(stack))
-                    lines.add("\u00a7e[下挂武器]");
+                    lines.add("\u00a7e[Underbarrel weapon]");
 
-                lines.add("\u00a79子弹威力" + "\u00a77: " + roundFloat(type.getDamage(stack), 2));
-                lines.add("\u00a79后坐控制" + "\u00a77: 垂直 " + roundFloat(type.getRecoilDisplay(stack), 2) +
-                        " 水平 " + roundFloat(type.getRecoilYawDisplay(stack, false, false), 2));
-//                String sprintingControl = String.format("奔跑:%s%s", EnumChatFormatting.RED,
+                lines.add("\u00a79Bullet damage" + "\u00a77: " + roundFloat(type.getDamage(stack), 2));
+                lines.add("\u00a79Recoil control" + "\u00a77: Vertical " + roundFloat(type.getRecoilDisplay(stack), 2) +
+                        " Horizontal " + roundFloat(type.getRecoilYawDisplay(stack, false, false), 2));
+//                String sprintingControl = String.format("Sprinting:%s%s", EnumChatFormatting.RED,
 //                        roundFloat(1 - type.getRecoilControl(stack, true, false), 2));
-//                String sneakingControl = String.format("下蹲:%s%s", EnumChatFormatting.GREEN,
+//                String sneakingControl = String.format("Crouching:%s%s", EnumChatFormatting.GREEN,
 //                        roundFloat(1 - type.getRecoilControl(stack, false, true), 2));
-//                String normalControl = String.format("正常:%s%s", EnumChatFormatting.AQUA,
+//                String normalControl = String.format("Normal:%s%s", EnumChatFormatting.AQUA,
 //                        roundFloat(1 - type.getRecoilControl(stack, false, false), 2));
-//                lines.add("\u00a79后坐控制" + "\u00a77: "
+//                lines.add("\u00a79Recoil control" + "\u00a77: "
 //                        + String.format("%s %s %s", sprintingControl, normalControl, sneakingControl));
-                lines.add("\u00a79腰射散布" + "\u00a77: " + roundFloat(type.getSpread(stack, false, false), 2));
-                lines.add("\u00a79开镜散布" + "\u00a77: " + roundFloat(type.getADSSpread(stack, false, false), 2)
-                + " [Min:" + type.minSpread + "]");
-                lines.add("\u00a79空仓换弹" + "\u00a77: " + roundFloat(type.getEmptyReloadTime(stack) / 20, 2) + "s");
-                lines.add("\u00a79战术换弹" + "\u00a77: " + roundFloat(type.getTacticalReloadTime(stack) / 20, 2) + "s");
-                lines.add("\u00a79子弹速度" + "\u00a77: " + (int)(type.getBulletSpeed(stack) * 20) + "m/s");
-                lines.add("\u00a79开镜时间" + "\u00a77: " + roundFloat(type.getAimTimeConstant(stack) * 20, 2));
-                lines.add("\u00a79跑射延迟" + "\u00a77: " + roundFloat(type.getRunPosTime(stack), 2));
+                lines.add("\u00a79Hip-fire spread" + "\u00a77: " + roundFloat(type.getSpread(stack, false, false), 2));
+                lines.add("\u00a79ADS spread" + "\u00a77: " + roundFloat(type.getADSSpread(stack, false, false), 2)
+                        + " [Min:" + type.minSpread + "]");
+                lines.add("\u00a79Empty reload" + "\u00a77: " + roundFloat(type.getEmptyReloadTime(stack) / 20, 2) + "s");
+                lines.add("\u00a79Tactical reload" + "\u00a77: " + roundFloat(type.getTacticalReloadTime(stack) / 20, 2) + "s");
+                lines.add("\u00a79Bullet velocity" + "\u00a77: " + (int)(type.getBulletSpeed(stack) * 20) + "m/s");
+                lines.add("\u00a79Aim-down-sights time" + "\u00a77: " + roundFloat(type.getAimTimeConstant(stack) * 20, 2));
+                lines.add("\u00a79Sprint-to-fire delay" + "\u00a77: " + roundFloat(type.getRunPosTime(stack), 2));
 
                 if (type.shootDelay != 0) {
-                    lines.add("\u00a79射速" + "\u00a77: " + 1200 / type.getShootDelay(stack) + "\u00a77RPM ");
+                    lines.add("\u00a79Rate of fire" + "\u00a77: " + 1200 / type.getShootDelay(stack) + "\u00a77RPM ");
                 } else
-                    lines.add("\u00a79射速" + "\u00a77: " + 1200 / type.getShootDelay(stack) + "\u00a77RPM ");
-                lines.add("\u00a79模式" + "\u00a77: \u00a7f" + type.getFireMode(stack).toString().toLowerCase());
+                    lines.add("\u00a79Rate of fire" + "\u00a77: " + 1200 / type.getShootDelay(stack) + "\u00a77RPM ");
+                lines.add("\u00a79Fire mode" + "\u00a77: \u00a7f" + type.getFireMode(stack).toString().toLowerCase());
 
                 lines.add("");
-                lines.add("\u00a7e配件");
+                lines.add("\u00a7eAttachments");
                 boolean empty = true;
                 for (AttachmentType attachment : type.getCurrentAttachments(stack)) {
                     String line = attachment.name;
@@ -313,7 +313,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 }
 
                 if (empty)
-                    lines.add("无配件");
+                    lines.add("No attachments");
             }
         }
     }
