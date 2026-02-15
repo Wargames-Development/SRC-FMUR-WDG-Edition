@@ -91,8 +91,8 @@ import java.util.zip.ZipInputStream;
 @SuppressWarnings({"unused", "WeakerAccess"})
 @Mod(modid = FlansMod.MODID, name = "Flan's Mod Ultimate (Stability Edition)", version = FlansMod.VERSION, acceptableRemoteVersions = FlansMod.VERSION, guiFactory = "com.flansmod.client.gui.config.ModGuiFactory")
 public class FlansMod {
-//TODO : 在这里改截图服务端IP
-    public static final String SERVER_IP = "43.248.184.39";
+//TODO : Here, change the screenshot server IP.
+    public static final String SERVER_IP = "";
     public static final int SERVER_PORT = 20031;
     public static final boolean enableScreenShot = false;
     public static final boolean enableSecurityCheck = false;

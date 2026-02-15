@@ -50,7 +50,7 @@ public class PlayerStats {
     }
 
     public void savePlayerStats() {
-        File dir = new File(MinecraftServer.getServer().getEntityWorld().getSaveHandler().getWorldDirectory() + "\\FlansMod players statistics\\");
+        File dir = getStatsDir(true);
         dir.mkdirs();
         dir.setReadable(true);
         dir.setWritable(true);
@@ -100,6 +100,90 @@ public class PlayerStats {
         }
         return true;
     }
+    // --- Stats file path helpers (OS-safe) ---
+    // Old code used hardcoded backslashes, which on Linux creates a folder literally named
+    // "WorldName\FlansMod players statistics\" beside the world folder.
+    // We build paths using File(parent, child) so it works on Windows + Linux.
+    private static boolean didStatsDirMigration = false;
+
+    private static File getStatsDir(boolean create) {
+        File worldDir = MinecraftServer.getServer().getEntityWorld().getSaveHandler().getWorldDirectory();
+
+        // Desired layout:
+        // <world>/FlansMod/player statistics/
+        File dir = new File(new File(worldDir, "FlansMod"), "player statistics");
+
+        if (create) {
+            dir.mkdirs();
+        }
+
+        migrateLegacyStatsDirsOnce(worldDir, dir);
+        return dir;
+    }
+
+    private static void migrateLegacyStatsDirsOnce(File worldDir, File newDir) {
+        if (didStatsDirMigration) return;
+        didStatsDirMigration = true;
+
+        // Ensure destination exists
+        newDir.mkdirs();
+
+        File parent = worldDir.getParentFile();
+
+        // Candidate legacy / buggy directories:
+        // 1) Old “intended” name used by this fork: <world>/FlansMod players statistics
+        File legacy1 = new File(worldDir, "FlansMod players statistics");
+
+        // 2) Buggy Linux folder created beside the world folder:
+        //    <parent>/<worldName>\FlansMod players statistics
+        File legacy2 = parent == null ? null : new File(parent, worldDir.getName() + "\\FlansMod players statistics");
+
+        // 3) Same but with a trailing backslash char (some setups end up with this)
+        File legacy3 = parent == null ? null : new File(parent, worldDir.getName() + "\\FlansMod players statistics\\");
+
+        File[] candidates = new File[] { legacy1, legacy2, legacy3 };
+
+        for (File legacy : candidates) {
+            if (legacy == null || !legacy.exists() || !legacy.isDirectory()) continue;
+
+            File[] files = legacy.listFiles();
+            if (files == null) continue;
+
+            for (File f : files) {
+                if (f == null || !f.isFile()) continue;
+
+                File dest = new File(newDir, f.getName());
+                if (dest.exists()) continue;
+
+                boolean moved = false;
+                try {
+                    moved = f.renameTo(dest);
+                } catch (Exception ignored) {
+                    moved = false;
+                }
+
+                // If rename fails (e.g., across devices), copy manually
+                if (!moved) {
+                    FileInputStream in = null;
+                    FileOutputStream out = null;
+                    try {
+                        in = new FileInputStream(f);
+                        out = new FileOutputStream(dest);
+
+                        byte[] buf = new byte[8192];
+                        int r;
+                        while ((r = in.read(buf)) > 0) {
+                            out.write(buf, 0, r);
+                        }
+                    } catch (Exception ignored) {
+                    } finally {
+                        try { if (in != null) in.close(); } catch (Exception ignored) {}
+                        try { if (out != null) out.close(); } catch (Exception ignored) {}
+                    }
+                }
+            }
+        }
+    }
 
     public void addExp(float a) {
         exp += a;
@@ -124,8 +208,11 @@ public class PlayerStats {
 
     public static PlayerStats getPlayerStatsFromFile(String name) {
         PlayerStats toSend = new PlayerStats();
-        File dir = new File(MinecraftServer.getServer().getEntityWorld().getSaveHandler().getWorldDirectory() + "\\FlansMod players statistics\\");
-        for (File file : dir.listFiles()) {
+        File dir = getStatsDir(false);
+        File[] files = dir.listFiles();
+        if (files == null) return null;
+
+        for (File file : files) {
             if (file.getName().startsWith(name)) {
                 checkFileExists(file);
                 try {
@@ -157,8 +244,14 @@ public class PlayerStats {
 
     public static void printLeaderboardExp(ICommandSender sender) {
         List<String> nameList = new ArrayList<>();
-        File dir = new File(MinecraftServer.getServer().getEntityWorld().getSaveHandler().getWorldDirectory() + "\\FlansMod players statistics\\");
-        for (File file : dir.listFiles()) {
+        File dir = getStatsDir(false);
+        File[] files = dir.listFiles();
+        if (files == null) {
+            sender.addChatMessage(new ChatComponentText("\u00a7cNo player statistics found."));
+            return;
+        }
+
+        for (File file : files) {
             checkFileExists(file);
             try {
                 NBTTagCompound tags = CompressedStreamTools.read(new DataInputStream(new FileInputStream(file)));
@@ -215,9 +308,11 @@ public class PlayerStats {
 
     public static List<PlayerStats> getAllPlayersStats() {
         List<PlayerStats> listToSend = new ArrayList<>();
-        File dir = new File(MinecraftServer.getServer().getEntityWorld().getSaveHandler().getWorldDirectory() + "\\FlansMod players statistics\\");
-        if(dir.listFiles()==null) return null;
-        for (File file : dir.listFiles()) {
+        File dir = getStatsDir(false);
+        File[] files = dir.listFiles();
+        if (files == null) return null;
+
+        for (File file : files) {
             checkFileExists(file);
             try {
                 PlayerStats toSend = new PlayerStats();
