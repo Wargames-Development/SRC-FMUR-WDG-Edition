@@ -1,5 +1,6 @@
 package com.flansmod.common.guns.item;
 
+import com.flansmod.common.wgc.Integrations;
 import com.flansmod.client.AimType;
 import com.flansmod.client.FlansModClient;
 import com.flansmod.client.debug.EntityDebugDot;
@@ -1118,19 +1119,20 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                                         default:
                                     }
 
-                                    if (playerHit.hitbox.player.attackEntityFrom(getMeleeDamage(player), swingDistance * type.getMeleeDamage(itemstack, false))) {
-                                        //If the attack was allowed, we should remove their immortality cooldown so we can shoot them again. Without this, any rapid fire gun become useless
-                                        playerHit.hitbox.player.arrowHitTimer++;
-                                        playerHit.hitbox.player.hurtResistantTime = playerHit.hitbox.player.maxHurtResistantTime / 2;
+                                    if (Integrations.canHarmPlayerWGC(player, playerHit.hitbox.player, world)) {
+                                        if (playerHit.hitbox.player.attackEntityFrom(getMeleeDamage(player), swingDistance * type.getMeleeDamage(itemstack, false))) {
+                                            playerHit.hitbox.player.arrowHitTimer++;
+                                            playerHit.hitbox.player.hurtResistantTime = playerHit.hitbox.player.maxHurtResistantTime / 2;
+                                        }
                                     }
 
                                     if (FlansMod.DEBUG)
                                         world.spawnEntityInWorld(new EntityDebugDot(world, new Vector3f(data.lastMeleePositions[k].x + dPos.x * playerHit.intersectTime, data.lastMeleePositions[k].y + dPos.y * playerHit.intersectTime, data.lastMeleePositions[k].z + dPos.z * playerHit.intersectTime), 1000, 1F, 0F, 0F));
                                 } else if (bulletHit instanceof EntityHit) {
                                     EntityHit entityHit = (EntityHit) bulletHit;
-                                    if (entityHit.entity.attackEntityFrom(DamageSource.causePlayerDamage(player), swingDistance * type.getMeleeDamage(itemstack, ((EntityHit) bulletHit).entity instanceof EntityDriveable)) && entityHit.entity instanceof EntityLivingBase) {
+                                    boolean allowDamage = !(entityHit.entity instanceof EntityPlayer) || Integrations.canHarmPlayerWGC(player, entityHit.entity, world);
+                                    if (allowDamage && entityHit.entity.attackEntityFrom(DamageSource.causePlayerDamage(player), swingDistance * type.getMeleeDamage(itemstack, ((EntityHit) bulletHit).entity instanceof EntityDriveable)) && entityHit.entity instanceof EntityLivingBase) {
                                         EntityLivingBase living = (EntityLivingBase) entityHit.entity;
-                                        //If the attack was allowed, we should remove their immortality cooldown so we can shoot them again. Without this, any rapid fire gun become useless
                                         living.arrowHitTimer++;
                                         living.hurtResistantTime = living.maxHurtResistantTime / 2;
                                     }
@@ -1396,25 +1398,20 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             // 如果弹药槽内没有弹匣 , 或弹匣为空 , 或这是一次强制换弹
             if (bulletStack == null || bulletStack.getItemDamage() == bulletStack.getMaxDamage() || forceReload) {
                 //遍历玩家的背包（或者其他包含物品槽的地方，如存储箱、容器等），然后查找包含子弹（弹药）的物品栈中哪一个具有最多数量的子弹
-                int bestSlot = -1;// 最多子弹的槽的下标
-                int bulletsInBestSlot = 0;// 最多子弹的槽里有多少子弹
-                boolean bestSlotIsPreferred = false; // 是否找到了一个首选的物品槽
-                for (int j = 0; j < inventory.getSizeInventory(); j++) { // 返回物品栏中物品槽的数量
-                    ItemStack item = inventory.getStackInSlot(j); // 获取当前遍历到的stack
+                int bestSlot = -1;
+                int bulletsInBestSlot = -1;
+                boolean bestSlotIsPreferred = false;
+                for (int j = 0; j < inventory.getSizeInventory(); j++) {
+                    ItemStack item = inventory.getStackInSlot(j);
                     if (item != null && item.getItem() instanceof ItemShootable && gunType.isAmmo(((ItemShootable) (item.getItem())).type, gunStack)) {
-                        // 若当前槽有物品 , 且 当前物品为可发射类型 且 为目前该枪可使用的弹药类型
                         int bulletsInThisSlot = item.getMaxDamage() - item.getItemDamage();
-                        // 计算目前slot内弹匣的弹药量
-                        boolean isPreferred = ((ItemShootable) item.getItem()).type.shortName.equals(preferredAmmoShortname); // 是否为选中弹药
-                        if (isPreferred) { // 如果是
-                            if (!bestSlotIsPreferred || bulletsInThisSlot > bulletsInBestSlot) {
-                                bestSlot = j;
-                                bulletsInBestSlot = bulletsInThisSlot;
-                                bestSlotIsPreferred = true;
-                            }
-                        } else if (!bestSlotIsPreferred && bulletsInThisSlot > bulletsInBestSlot) {
+                        boolean isPreferred = ((ItemShootable) item.getItem()).type.shortName.equals(preferredAmmoShortname);
+
+                        if (bulletsInThisSlot > bulletsInBestSlot
+                                || (bulletsInThisSlot == bulletsInBestSlot && isPreferred && !bestSlotIsPreferred)) {
                             bestSlot = j;
-                            bestSlotIsPreferred = false;
+                            bulletsInBestSlot = bulletsInThisSlot;
+                            bestSlotIsPreferred = isPreferred;
                         }
                     }
                 }

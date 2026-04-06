@@ -1,5 +1,6 @@
 package com.flansmod.common.guns;
 
+import com.flansmod.common.wgc.Integrations;
 import com.flansmod.client.FlansModClient;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.PlayerHandler;
@@ -507,7 +508,9 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
                                 continue;
                         }
                         if (type.damageToTriggerer > 0) {
-                            ((EntityLivingBase) obj).attackEntityFrom(getGrenadeDamage(), type.damageToTriggerer);
+                            if (!(obj instanceof EntityPlayer) || Integrations.canHarmPlayerWGC(thrower, (Entity) obj, worldObj)) {
+                                ((EntityLivingBase) obj).attackEntityFrom(getGrenadeDamage(), type.damageToTriggerer);
+                            }
                         }
                         if (type.bounceMine && type.bounceAfterTrigger) {
                             motionY += 0.5;
@@ -825,7 +828,9 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
                 if (obj == thrower && ticksExisted < 10 || motVec.lengthSquared() < 0.01D)
                     continue;
                 if (obj instanceof EntityPlayer) {
-                    ((EntityPlayer) obj).attackEntityFrom(getGrenadeDamage(), type.damageVsPlayer * motVec.lengthSquared() * 3);
+                    if (Integrations.canHarmPlayerWGC(thrower, (Entity) obj, worldObj)) {
+                        ((EntityPlayer) obj).attackEntityFrom(getGrenadeDamage(), type.damageVsPlayer * motVec.lengthSquared() * 3);
+                    }
                 } else if (obj instanceof EntityLivingBase) {
                     ((EntityLivingBase) obj).attackEntityFrom(getGrenadeDamage(), type.damageVsLiving * motVec.lengthSquared() * 3);
                 }
@@ -958,9 +963,11 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
             for (Object obj : list) {
                 EntityLivingBase entity = ((EntityLivingBase) obj);
                 if (entity.getDistanceToEntity(this) < type.flashRange && type.flashDamageEnable) {
-                    if (type.flashEffects)
-                        entity.addPotionEffect(new PotionEffect(type.flashEffectsID, type.flashEffectsDuration, type.flashEffectsLevel));
-                    entity.attackEntityFrom(this.getGrenadeDamage(), type.flashDamage);
+                    if (!(entity instanceof EntityPlayer) || Integrations.canHarmPlayerWGC(thrower, entity, worldObj)) {
+                        if (type.flashEffects)
+                            entity.addPotionEffect(new PotionEffect(type.flashEffectsID, type.flashEffectsDuration, type.flashEffectsLevel));
+                        entity.attackEntityFrom(this.getGrenadeDamage(), type.flashDamage);
+                    }
                     //entityP.worldObj.playSoundAtEntity((EntityPlayer)entity, "flansmod:FlashSound",1.0F,1.0F);
                 }
             }

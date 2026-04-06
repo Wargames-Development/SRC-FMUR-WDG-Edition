@@ -1,5 +1,6 @@
 package com.flansmod.common.guns;
 
+import com.flansmod.common.wgc.Integrations;
 import com.flansmod.api.IEntityBullet;
 import com.flansmod.client.BulletEntityCamera;
 import com.flansmod.client.FlansModClient;
@@ -465,7 +466,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                                                 && !FlansModRaytracer.hasBlock(worldObj,
                                                 Vec3.createVectorHelper(posX, posY, posZ),
                                                 Vec3.createVectorHelper(o1.posX, o1.posY + 1.5F, o1.posZ))) {
-                                            ((EntityLivingBase) obj).attackEntityFrom(getBulletDamage(false), type.airburstDamage);
+                                            if (!(o1 instanceof EntityPlayer) || Integrations.canHarmPlayerWGC(owner, o1, worldObj)) {
+                                                o1.attackEntityFrom(getBulletDamage(false), type.airburstDamage);
+                                            }
                                         }
                                     }
                                 }
@@ -486,8 +489,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     if (obj == owner && ticksExisted < 10)
                         continue;
                     if (obj instanceof EntityLivingBase && getDistanceToEntity((Entity) obj) < type.livingProximityTrigger) {
-                        if (type.damageToTriggerer > 0)
-                            ((EntityLivingBase) obj).attackEntityFrom(getBulletDamage(false), type.damageToTriggerer);
+                        if (type.damageToTriggerer > 0) {
+                            if (!(obj instanceof EntityPlayer) || Integrations.canHarmPlayerWGC(owner, (Entity) obj, worldObj)) {
+                                ((EntityLivingBase) obj).attackEntityFrom(getBulletDamage(false), type.damageToTriggerer);
+                            }
+                        }
                         FlansMod.proxy.spawnParticle("redstone", posX, posY, posZ, 0, 0, 0);
 
                         detonate();
@@ -887,17 +893,20 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         d1 *= type.damageVsEntity;
                     }
                     d1 *= distanceDamageModifier;
-                    if (entityHit.entity.attackEntityFrom(getBulletDamage(false), d1) && entityHit.entity instanceof EntityLivingBase) {
-                        EntityLivingBase living = (EntityLivingBase) entityHit.entity;
-                        for (PotionEffect effect : type.hitEffects) {
-                            living.addPotionEffect(new PotionEffect(effect));
+                    boolean allowDamage = !(entityHit.entity instanceof EntityPlayer) || Integrations.canHarmPlayerWGC(owner, entityHit.entity, worldObj);
+
+                    if (allowDamage) {
+                        if (entityHit.entity.attackEntityFrom(getBulletDamage(false), d1) && entityHit.entity instanceof EntityLivingBase) {
+                            EntityLivingBase living = (EntityLivingBase) entityHit.entity;
+                            for (PotionEffect effect : type.hitEffects) {
+                                living.addPotionEffect(new PotionEffect(effect));
+                            }
+                            living.arrowHitTimer++;
+                            living.hurtResistantTime = living.maxHurtResistantTime / 2;
                         }
-                        //If the attack was allowed, we should remove their immortality cooldown so we can shoot them again. Without this, any rapid fire gun become useless
-                        living.arrowHitTimer++;
-                        living.hurtResistantTime = living.maxHurtResistantTime / 2;
+                        if (type.setEntitiesOnFire)
+                            entityHit.entity.setFire(type.setEntitiesOnFireTime);
                     }
-                    if (type.setEntitiesOnFire)
-                        entityHit.entity.setFire(type.setEntitiesOnFireTime);
 
                     penetratingPower -= 1F;
                     penetrationLosses.add(new PenetrationLoss(1F, PenetrationLoss.PenetrationLossType.ENTITY));

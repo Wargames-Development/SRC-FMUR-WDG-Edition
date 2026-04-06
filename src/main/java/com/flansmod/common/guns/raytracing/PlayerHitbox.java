@@ -1,5 +1,6 @@
 package com.flansmod.common.guns.raytracing;
 
+import com.flansmod.common.wgc.Integrations;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.PlayerData;
 import com.flansmod.common.PlayerHandler;
@@ -213,32 +214,31 @@ public class PlayerHitbox {
             case RIGHTARM: {
                 //Calculate the hit damage
                 float hitDamage = bullet.damage * bullet.type.damageVsPlayer * damageModifier;
-                //Create a damage source object
                 DamageSource damagesource = bullet.owner == null ? DamageSource.generic : bullet.getBulletDamage(type == EnumHitboxType.HEAD);
-                //When the damage is 0 (such as with Nerf guns) the entityHurt Forge hook is not called, so this hacky thing is here
-                if (!player.worldObj.isRemote && hitDamage == 0 && TeamsManager.getInstance().currentRound != null)
-                    TeamsManager.getInstance().currentRound.gametype.playerAttacked((EntityPlayerMP) player, damagesource);
-                Vector3f motBefore = new Vector3f(player.motionX, player.motionY, player.motionZ);
-                //Attack the entity!
-                if (player.attackEntityFrom(damagesource, hitDamage)) {
-                    //If the attack was allowed, we should remove their immortality cooldown so we can shoot them again. Without this, any rapid fire gun become useless
-                    player.arrowHitTimer++;
-                    player.hurtResistantTime = player.maxHurtResistantTime / 2;
-                    //Yuck.
-                    //PacketDispatcher.sendPacketToAllAround(posX, posY, posZ, 50, dimension, PacketPlaySound.buildSoundPacket(posX, posY, posZ, type.hitSound, true));
-                }
+                boolean allowDamage = Integrations.canHarmPlayerWGC(bullet.owner, player, player.worldObj);
 
-                // Handle knockback by finding entity motion before and after, and reapplying to negate effect of vanilla code.
-                Vector3f motAfter = new Vector3f(player.motionX, player.motionY, player.motionZ);
-                Vector3f deltav = new Vector3f();
-                Vector3f.sub(motAfter, motBefore, deltav);
-                deltav.scale(1-bullet.type.knockbackModifier);
-                if (bullet.type.knockbackModifier > 2) {
-                    deltav.y = (float) Math.sqrt(deltav.y);
+                if (allowDamage) {
+                    if (!player.worldObj.isRemote && hitDamage == 0 && TeamsManager.getInstance().currentRound != null)
+                        TeamsManager.getInstance().currentRound.gametype.playerAttacked((EntityPlayerMP) player, damagesource);
+
+                    Vector3f motBefore = new Vector3f(player.motionX, player.motionY, player.motionZ);
+
+                    if (player.attackEntityFrom(damagesource, hitDamage)) {
+                        player.arrowHitTimer++;
+                        player.hurtResistantTime = player.maxHurtResistantTime / 2;
+                    }
+
+                    Vector3f motAfter = new Vector3f(player.motionX, player.motionY, player.motionZ);
+                    Vector3f deltav = new Vector3f();
+                    Vector3f.sub(motAfter, motBefore, deltav);
+                    deltav.scale(1-bullet.type.knockbackModifier);
+                    if (bullet.type.knockbackModifier > 2) {
+                        deltav.y = (float) Math.sqrt(deltav.y);
+                    }
+                    player.motionX -= deltav.x;
+                    player.motionY -= deltav.y;
+                    player.motionZ -= deltav.z;
                 }
-                player.motionX -= deltav.x;
-                player.motionY -= deltav.y;
-                player.motionZ -= deltav.z;
 
                 if (FlansMod.useNewPenetrationSystem) {
                     return penetratingPower - totalPenetrationResistance;

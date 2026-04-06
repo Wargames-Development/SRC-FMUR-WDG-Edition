@@ -1,5 +1,6 @@
 package com.flansmod.common.driveables;
 
+import com.flansmod.common.wgc.Integrations;
 import com.flansmod.api.IControllable;
 import com.flansmod.api.IExplodeable;
 import com.flansmod.client.EntityCamera;
@@ -385,14 +386,25 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
     protected void entityInit() {
     }
 
+    private Entity getWGCoreActingEntity() {
+        if (seats != null
+                && seats.length > 0
+                && seats[0] != null
+                && seats[0].riddenByEntity instanceof Entity) {
+            return seats[0].riddenByEntity;
+        }
+        return this.lastAtkEntity;
+    }
 
     @Override
     public AxisAlignedBB getCollisionBox(Entity entity) {
         if (getDriveableType().collisionDamageEnable) {
             if (throttle > getDriveableType().collisionDamageThrottle) {
-                if (entity instanceof EntityLiving) {
-                    entity.attackEntityFrom(DamageSource.generic, throttle * getDriveableType().collisionDamageTimes);
-                } else if (entity instanceof EntityPlayer) {
+                if (entity instanceof EntityPlayer) {
+                    if (Integrations.canHarmPlayerWGC(getWGCoreActingEntity(), entity, worldObj)) {
+                        entity.attackEntityFrom(DamageSource.generic, throttle * getDriveableType().collisionDamageTimes);
+                    }
+                } else if (entity instanceof EntityLiving) {
                     entity.attackEntityFrom(DamageSource.generic, throttle * getDriveableType().collisionDamageTimes);
                 }
             }
@@ -1975,9 +1987,11 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
                     }
 
                     if (canDamage) {
-                        if (rider instanceof EntityLiving) {
-                            rider.attackEntityFrom(DamageSource.generic, throttle * getDriveableType().collisionDamageTimes);
-                        } else if (rider instanceof EntityPlayer) {
+                        if (rider instanceof EntityPlayer) {
+                            if (Integrations.canHarmPlayerWGC(getWGCoreActingEntity(), rider, worldObj)) {
+                                rider.attackEntityFrom(DamageSource.generic, throttle * getDriveableType().collisionDamageTimes);
+                            }
+                        } else if (rider instanceof EntityLiving) {
                             rider.attackEntityFrom(DamageSource.generic, throttle * getDriveableType().collisionDamageTimes);
                         }
                     }
@@ -2475,9 +2489,13 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
                         seat.riddenByEntity.setInvisible(false);
                         seat.riddenByEntity.mountEntity(null);
                         if (this.lastAtkEntity instanceof EntityPlayer) {
-                            entity.attackEntityFrom(DamageSource.causePlayerDamage((EntityPlayer) this.lastAtkEntity), 10000000);
+                            if (Integrations.canHarmPlayerWGC(this.lastAtkEntity, entity, worldObj)) {
+                                entity.attackEntityFrom(DamageSource.causePlayerDamage((EntityPlayer) this.lastAtkEntity), 10000000);
+                            }
                         } else if (this.lastAtkEntity instanceof EntityLivingBase) {
-                            entity.attackEntityFrom(DamageSource.causeMobDamage((EntityLivingBase) this.lastAtkEntity), 10000000);
+                            if (Integrations.canHarmPlayerWGC(this.lastAtkEntity, entity, worldObj)) {
+                                entity.attackEntityFrom(DamageSource.causeMobDamage((EntityLivingBase) this.lastAtkEntity), 10000000);
+                            }
                         }
                     }
                 }
