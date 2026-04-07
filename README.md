@@ -13,10 +13,76 @@
 
 ## Features
 
-<!-- Write about the features of the mod and include some gifs or images to help document major features. Below is an example of image/gif addition -->
-<!-- ![Weapon Showcase](https://raw.githubusercontent.com/Cubed-Development/Modern-Warfare-Cubed/main/assets/showcase/Weapon%20Showcase.gif) -->
+### WGCore Integration
 
-<!-- 
+This edition introduces full integration with the Wargames Core (WGCore) system, ensuring that all combat, explosions, and interactions respect territory ownership, war states, and protection rules.
+
+- All damage sources are validated through WGCore
+- Explosions are centrally controlled and permission-checked
+- Consistent behaviour across safezones, warzones, and player-controlled territory
+
+---
+
+### Combat System Improvements
+
+Combat interactions have been reworked to ensure consistency and fairness across all environments:
+
+- Bullet damage respects WGCore protection rules
+- Grenades and flash effects are validated against territory permissions
+- Melee attacks from weapons follow the same protection logic
+- Vehicle collision (roadkill) damage is properly attributed and controlled
+
+---
+
+### Explosion Handling Overhaul
+
+Explosions are no longer handled in isolation and are now fully integrated into a centralized system:
+
+- Terrain damage is conditionally allowed based on territory rules
+- Entity damage is validated per-target
+- Explosion sources are properly tracked and attributed
+- Prevents unintended damage in protected areas
+
+---
+
+### Technical Improvements
+
+- Centralized integration layer via:
+  - `com.flansmod.common.wgc.Integrations`
+- Accurate explosion attribution system
+- Explosion-aware damage sources for better compatibility
+- Improved server-side consistency and reliability
+
+---
+
+### Cross-Platform Compatibility Fixes
+
+- Fixed player statistics file handling for Linux and dedicated servers
+- Automatic migration support for legacy stat files
+- Eliminates common file path issues on non-Windows environments
+
+---
+
+### UI and Localization Improvements
+
+- Full English translation pass across:
+  - Keybinds
+  - Settings menus
+  - HUD elements
+  - Tooltips (weapons, ammo, grenades)
+- Removal of unclear or inconsistent text
+- Improved readability across the entire mod
+
+---
+
+### Wargames Edition Branding
+
+- Rebranded as **Flan’s Mod Ultimate-R Wargames Edition**
+- Updated:
+  - Mod metadata (`mcmod.info`)
+  - Logo and visual identity
+  - Project descriptions and credits
+  
 ## Documentation
 
 If there is some documentation then please include this and update the link! The website forum documentation page needs to be produced first...
