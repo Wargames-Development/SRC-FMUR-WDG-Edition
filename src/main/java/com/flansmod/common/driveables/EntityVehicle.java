@@ -295,16 +295,8 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
             }
             case 5: //Down : Do nothing
             {
-                Minecraft mc = Minecraft.getMinecraft();
                 if (toggleTimer <= 0 && TeamsManager.allowVehicleZoom) {
                     toggleTimer = 10;
-                    if (mc.gameSettings.fovSetting != 10) {
-                        mc.gameSettings.fovSetting = 10;
-                        mc.gameSettings.mouseSensitivity = 0.2F;
-                    } else if (mc.gameSettings.fovSetting == 10) {
-                        mc.gameSettings.fovSetting = 70;
-                        mc.gameSettings.mouseSensitivity = 0.5F;
-                    }
                 }
                 return true;
             }
@@ -402,13 +394,6 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
 
     @SideOnly(Side.CLIENT)
     public void resetZoom() {
-        if (TeamsManager.allowVehicleZoom) {
-            Minecraft mc = Minecraft.getMinecraft();
-            if (mc.gameSettings.fovSetting == 10) {
-                mc.gameSettings.fovSetting = 70;
-                mc.gameSettings.mouseSensitivity = 0.5F;
-            }
-        }
     }
 
     @Override

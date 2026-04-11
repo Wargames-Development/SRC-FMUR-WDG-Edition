@@ -443,8 +443,6 @@ public class FlansModClient extends FlansMod {
 
         if (isSprinting || (currentScope != null && (itemInHand == null || !(itemInHand instanceof ItemGun && ((ItemGun) itemInHand).type.getCurrentScope(itemstackInHand) == currentScope)))) {
             currentScope = null;
-            minecraft.gameSettings.fovSetting = originalFOV;
-            minecraft.gameSettings.mouseSensitivity = originalMouseSensitivity;
             minecraft.gameSettings.viewBobbing = originalViewBobbing;
         }
 
@@ -484,8 +482,6 @@ public class FlansModClient extends FlansMod {
             MouseSenNedToChange = gamingMouseSensitivity - gamingMouseSensitivity / currentScope.getFOVFactor() / currentScope.getZoomFactor();
         }
 
-        mc.gameSettings.mouseSensitivity = gamingMouseSensitivity - MouseSenNedToChange * zoomProgress;
-
         PlayerData playerData = PlayerHandler.getPlayerData(minecraft.getSession().getUsername());
 
 
@@ -513,9 +509,6 @@ public class FlansModClient extends FlansMod {
             if (currentScope != null) {
                 lastZoomLevel = currentScope.getZoomFactor();
                 lastFOVZoomLevel = currentScope.getFOVFactor();
-                if (canChangeSettings) {
-                    mc.gameSettings.mouseSensitivity = mc.gameSettings.mouseSensitivity / currentScope.getZoomFactor() / currentScope.getFOVFactor();
-                }
             }
 
             /**  涉及下蹲时间的改动  */
@@ -703,7 +696,6 @@ public class FlansModClient extends FlansMod {
             zoomLevel = 1.0D;
         try {
             ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class, minecraft.entityRenderer, zoomLevel, "cameraZoom", "af", "field_78503_V");
-            minecraft.gameSettings.fovSetting = (((originalFOV * 40 + 70) / FOVZoomLevel) - 70) / 40;
         } catch (Exception e) {
             log("I forgot to update obfuscated reflection D:");
             throw new RuntimeException(e);

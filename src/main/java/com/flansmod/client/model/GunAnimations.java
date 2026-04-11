@@ -281,7 +281,6 @@ public class GunAnimations {
             FlansMod.getPacketHandler().sendToServer(new PacketGunState(false));
             FlansModClient.scopeTime = reloadTime - 5;
             gameSettings.viewBobbing = true;
-            gameSettings.mouseSensitivity = FlansModClient.originalMouseSensitivity;
         }
 
     }

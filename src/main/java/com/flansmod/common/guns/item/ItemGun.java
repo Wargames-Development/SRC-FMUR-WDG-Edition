@@ -356,8 +356,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             if (FMLClientHandler.instance().getClient().currentScreen != null) {
                 if (FlansModClient.currentScope != null) {
                     FlansModClient.currentScope = null;
-                    gameSettings.mouseSensitivity = FlansModClient.originalMouseSensitivity;
-                    gameSettings.fovSetting = FlansModClient.originalFOV;
 
                     //Send default spread packet to server
                     //getDefaultSpread方法
@@ -474,7 +472,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     FlansModClient.lastZoomLevel = currentScope.getZoomFactor();
                     gameSettings.thirdPersonView = 0;
                     gameSettings.viewBobbing = true;
-                    gameSettings.mouseSensitivity = FlansModClient.originalMouseSensitivity;
                     RenderManager.debugBoundingBox = false;
                     FlansMod.getPacketHandler().sendToServer(new PacketGunSpread(itemstack, type.getDefaultSpread(itemstack)));
                     FlansMod.getPacketHandler().sendToServer(new PacketGunState(false));
@@ -495,9 +492,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                             FlansModClient.currentScope = currentScope;
                             FlansModClient.lastZoomLevel = currentScope.getZoomFactor();
                             gameSettings.thirdPersonView = 0;
-                            if (FlansModClient.canChangeSettings) {
-                                gameSettings.mouseSensitivity = gameSettings.mouseSensitivity / currentScope.getZoomFactor() / currentScope.getFOVFactor();
-                            }
                             if (Math.abs(zoomProgress - FlansModClient.lastZoomProgress) < 0.0001F) {
                                 FlansModClient.originalFOV = gameSettings.fovSetting;
                             }
@@ -514,8 +508,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                             FlansModClient.lastZoomLevel = currentScope.getZoomFactor();
                             //收镜时视角摇晃设为true
                             gameSettings.viewBobbing = true;
-                            //收镜时重置鼠标灵敏度
-                            gameSettings.mouseSensitivity = FlansModClient.originalMouseSensitivity;
                             RenderManager.debugBoundingBox = false;
                             FlansMod.getPacketHandler().sendToServer(new PacketGunState(false));
                         }
@@ -538,9 +530,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                             FlansModClient.currentScope = currentScope;
                             FlansModClient.lastZoomLevel = currentScope.getZoomFactor();
                             FlansModClient.lastFOVZoomLevel = currentScope.getFOVFactor();
-                            if (FlansModClient.canChangeSettings) {
-                                gameSettings.mouseSensitivity = gameSettings.mouseSensitivity / currentScope.getZoomFactor() / currentScope.getFOVFactor();
-                            }
                             FlansModClient.originalViewBobbing = gameSettings.viewBobbing;
                             gameSettings.thirdPersonView = 0;
                             if (Math.abs(zoomProgress - FlansModClient.lastZoomProgress) < 0.0001F) {
@@ -564,8 +553,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                                 FlansModClient.lastZoomLevel = currentScope.getZoomFactor();
                                 //收镜时视角摇晃设为true
                                 gameSettings.viewBobbing = true;
-                                //收镜时重置鼠标灵敏度
-                                gameSettings.mouseSensitivity = FlansModClient.originalMouseSensitivity;
                                 RenderManager.debugBoundingBox = false;
                                 FlansMod.getPacketHandler().sendToServer(new PacketGunState(false));
                             }
@@ -609,7 +596,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     }
                 });
                 gameSettings.viewBobbing = true;
-                gameSettings.mouseSensitivity = FlansModClient.originalMouseSensitivity;
                 FlansModClient.scopeTime = Math.max((int) type.shootDelay, 20);
             } else {
                 threadPool.submit(() -> {
@@ -623,7 +609,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     }
                 });
                 gameSettings.viewBobbing = true;
-                gameSettings.mouseSensitivity = FlansModClient.originalMouseSensitivity;
                 FlansModClient.scopeTime = Math.max((int) type.shootDelay, 20);
             }
 
