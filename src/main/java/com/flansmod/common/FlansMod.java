@@ -115,6 +115,7 @@ public class FlansMod {
     public static FlansMod INSTANCE;
     public static boolean printDebugLog = true;
     public static boolean printStackTrace = false;
+    public static boolean enableWGCoreIntegration = true;
     public static int noticeSpawnKillTime = 10;
     public static boolean gunCarryLimitEnable = false;
     public static int gunCarryLimit = 3;
@@ -820,6 +821,7 @@ public class FlansMod {
         //Teams/Advanced Settings
         printDebugLog = configFile.getBoolean("Print Debug Log", "Teams/advanced settings", printDebugLog, "");
         printStackTrace = configFile.getBoolean("Print Stack Trace", "Teams/advanced settings", printStackTrace, "");
+        enableWGCoreIntegration = configFile.getBoolean("EnableWGCoreIntegration", Configuration.CATEGORY_GENERAL, enableWGCoreIntegration, "Use WGCore protections when WGCore is installed. FMUR uses native behavior when disabled or WGCore is absent.");
         noticeSpawnKillTime = configFile.getInt("NoticeSpawnKillTime", "Teams/advanced settings", 10, 0, 600, "Min");
         TeamsManager.bulletSnapshotMin = configFile.getInt("BltSS_Min", "Teams/advanced settings", 0, 0, 1000, "Min");
         TeamsManager.bulletSnapshotDivisor = configFile.getInt("BltSS_Divisor", "Teams/advanced settings", 50, 0, 1000, "Divisor");
@@ -872,6 +874,7 @@ public class FlansMod {
         //Teams/Advanced Settings
         printDebugLog = configFile.getBoolean("Print Debug Log", "Teams/advanced settings", printDebugLog, "");
         printStackTrace = configFile.getBoolean("Print Stack Trace", "Teams/advanced settings", printStackTrace, "");
+        enableWGCoreIntegration = configFile.getBoolean("EnableWGCoreIntegration", Configuration.CATEGORY_GENERAL, enableWGCoreIntegration, "Use WGCore protections when WGCore is installed. FMUR uses native behavior when disabled or WGCore is absent.");
         noticeSpawnKillTime = configFile.getInt("NoticeSpawnKillTime", "Teams/advanced settings", 10, 0, 600, "Min");
         TeamsManager.bulletSnapshotMin = configFile.getInt("BltSS_Min", "Teams/advanced settings", 0, 0, 1000, "Min");
         TeamsManager.bulletSnapshotDivisor = configFile.getInt("BltSS_Divisor", "Teams/advanced settings", 50, 0, 1000, "Divisor");
