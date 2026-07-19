@@ -15,13 +15,13 @@ import com.flansmod.common.driveables.EntitySeat;
 import com.flansmod.common.driveables.mechas.EntityMecha;
 import com.flansmod.common.eventhandlers.GunFiredEvent;
 import com.flansmod.common.eventhandlers.GunReloadEvent;
-import com.flansmod.common.eventhandlers.PlayerReviveEvent;
 import com.flansmod.common.guns.*;
 import com.flansmod.common.guns.raytracing.*;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.BulletType;
 import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.guns.type.ShootableType;
+import com.flansmod.common.medical.CorpseMedicalService;
 import com.flansmod.common.mob.EntityCorpse;
 import com.flansmod.common.network.*;
 import com.flansmod.common.paintjob.IPaintableItem;
@@ -1529,49 +1529,10 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             if (gunType.dropItemOnShoot != null)// && !entityplayer.capabilities.isCreativeMode)
                 dropItem(world, entityPlayer, gunType.dropItemOnShoot);
 
-            if (gunType.isAED) {
-                // 检测玩家正对的方向一定距离内是否有玩家尸体实体
-                double searchDistance = 5.0; // 检测距离，可以调整
-                EntityCorpse targetCorpse = null;
-
-                // 获取玩家正对的方向向量
-                Vec3 lookVec = entityPlayer.getLookVec();
-
-                // 获取玩家的当前位置
-                Vec3 playerPos = Vec3.createVectorHelper(entityPlayer.posX, entityPlayer.posY + entityPlayer.getEyeHeight(), entityPlayer.posZ);
-
-                // 遍历当前世界中所有实体
-                for (Object entity : entityPlayer.worldObj.loadedEntityList) {
-                    if (entity instanceof EntityCorpse) {
-                        EntityCorpse corpse = (EntityCorpse) entity;
-
-                        // 检查距离是否在范围内
-                        double distance = playerPos.distanceTo(Vec3.createVectorHelper(corpse.posX, corpse.posY, corpse.posZ));
-                        if (distance > searchDistance) {
-                            continue; // 跳过距离超过范围的尸体
-                        }
-
-                        // 检查是否在玩家的视线方向上
-                        Vec3 corpseVec = Vec3.createVectorHelper(corpse.posX - playerPos.xCoord, corpse.posY - playerPos.yCoord, corpse.posZ - playerPos.zCoord);
-                        double dotProduct = lookVec.dotProduct(corpseVec.normalize()); // 方向向量的点积
-
-                        if (dotProduct < 0.8) { // 视角容差，0.99 表示基本正对，可以调整
-                            continue; // 跳过不在视线方向的尸体
-                        }
-
-                        // 检查是否属于同一计分板队伍
-                        if (entityPlayer.getTeam() != null && entityPlayer.getTeam().isSameTeam(corpse.getPlayer().getTeam())) {
-                            targetCorpse = corpse;
-                            break; // 找到符合条件的尸体，退出循环
-                        }
-                    }
-                }
-
-                // 如果找到符合条件的尸体实体，则发布事件
+            if (gunType.isAED && !world.isRemote) {
+                EntityCorpse targetCorpse = CorpseMedicalService.findLookedAtReviveCorpse(entityPlayer, 5.0D, 0.8D);
                 if (targetCorpse != null) {
-                    PlayerReviveEvent event = new PlayerReviveEvent(entityPlayer.getDisplayName(), targetCorpse.getPlayerName(), gunType.name, targetCorpse.posX, targetCorpse.posY, targetCorpse.posZ);
-                    MinecraftForge.EVENT_BUS.post(event);
-                    targetCorpse.setDead();
+                    CorpseMedicalService.reviveCorpse(entityPlayer, targetCorpse, gunType.name);
                 }
             }
         }

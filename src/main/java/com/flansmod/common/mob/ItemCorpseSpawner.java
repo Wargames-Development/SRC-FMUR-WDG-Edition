@@ -1,6 +1,7 @@
 package com.flansmod.common.mob;
 
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.medical.CorpseMedicalService;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -30,9 +31,14 @@ public class ItemCorpseSpawner extends Item {
      * 生成尸体的方法
      */
     public static void spawnCorpse(World world, double x, double y, double z, EntityPlayer player) {
+        if (world == null || world.isRemote || player == null) {
+            return;
+        }
         EntityCorpse corpse = new EntityCorpse(world, player);
         corpse.setPosition(x + 0.5, y + 1, z + 0.5); // 设置尸体位置
-        world.spawnEntityInWorld(corpse); // 添加尸体到世界
+        if (world.spawnEntityInWorld(corpse)) { // 添加尸体到世界
+            CorpseMedicalService.registerCorpse(corpse);
+        }
     }
 
     @Override

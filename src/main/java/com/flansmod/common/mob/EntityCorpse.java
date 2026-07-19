@@ -1,66 +1,68 @@
 package com.flansmod.common.mob;
 
+import com.flansmod.common.FlansMod;
+import com.flansmod.common.medical.CorpseMedicalService;
 import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.World;
 
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
 
-    private final long spawnTime; // 生成时间
-    private EntityPlayer owner; // 玩家对象
-    private String name;
+    private EntityPlayer owner;
+    private String playerName;
+    private String playerDisplayName;
+    private UUID playerUuid;
+    private String scoreboardTeamName;
 
-    // 身体部位的旋转角度
     private float headRotationX;
-
     private float headRotationY;
-
     private float leftArmRotationX, leftArmRotationY, leftArmRotationZ;
-
     private float rightArmRotationX, rightArmRotationY, rightArmRotationZ;
-
     private float bodyRotationX, bodyRotationY;
-
     private float leftLegRotationX, leftLegRotationY, leftLegRotationZ;
-
     private float rightLegRotationX, rightLegRotationY, rightLegRotationZ;
-
     private boolean isDown;
 
     public EntityCorpse(World world) {
         super(world);
-        this.spawnTime = System.currentTimeMillis(); // 获取当前时间
         renderDistanceWeight = 100D;
         ignoreFrustumCheck = true;
+        setSize(0.6F, 0.3F);
     }
 
     public EntityCorpse(World world, EntityPlayer player) {
         this(world);
-        this.owner = player; // 保存死亡玩家信息
-        this.name = player.getDisplayName();
+        this.owner = player;
+        this.playerName = player.getCommandSenderName();
+        this.playerDisplayName = player.getDisplayName();
+        this.playerUuid = player.getUniqueID();
+        this.scoreboardTeamName = player.getTeam() != null ? player.getTeam().getRegisteredName() : "";
 
-        this.headRotationX = (float) (Math.random() * 30 - 15); // 随机上下转动
-        this.headRotationY = (float) (Math.random() * 360 - 180); // 随机左右转动
+        this.headRotationX = (float) (Math.random() * 30 - 15);
+        this.headRotationY = (float) (Math.random() * 360 - 180);
         this.leftArmRotationX = (float) (Math.random() * 60 - 30);
         this.leftArmRotationY = (float) (Math.random() * 60 - 30);
-        this.leftArmRotationZ = (float) (Math.random() * 180 - 90); // 新增 Z 轴旋转
+        this.leftArmRotationZ = (float) (Math.random() * 180 - 90);
         this.rightArmRotationX = (float) (Math.random() * 60 - 30);
         this.rightArmRotationY = (float) (Math.random() * 60 - 30);
-        this.rightArmRotationZ = (float) (Math.random() * 180 - 90); // 新增 Z 轴旋转
+        this.rightArmRotationZ = (float) (Math.random() * 180 - 90);
         this.bodyRotationX = (float) (Math.random() * 10 - 5);
         this.bodyRotationY = player.rotationYaw + (float) (Math.random() * 20 - 10);
         this.leftLegRotationX = (float) (Math.random() * 90 - 45);
         this.leftLegRotationY = (float) (Math.random() * 90 - 45);
-        this.leftLegRotationZ = (float) (Math.random() * 90 - 45); // 新增 Z 轴旋转
+        this.leftLegRotationZ = (float) (Math.random() * 90 - 45);
         this.rightLegRotationX = (float) (Math.random() * 90 - 45);
         this.rightLegRotationY = (float) (Math.random() * 90 - 45);
-        this.rightLegRotationZ = (float) (Math.random() * 90 - 45); // 新增 Z 轴旋转
+        this.rightLegRotationZ = (float) (Math.random() * 90 - 45);
         this.isDown = ThreadLocalRandom.current().nextBoolean();
     }
 
@@ -73,37 +75,85 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
     public void onUpdate() {
         super.onUpdate();
 
-        // 检查尸体是否存在超过15秒
-        if (System.currentTimeMillis() - spawnTime > 15000) {
-            this.setDead(); // 超时后移除尸体
+        int lifetimeTicks = Math.max(1, FlansMod.corpseLifetimeSeconds) * 20;
+        if (!worldObj.isRemote && ticksExisted > lifetimeTicks) {
+            this.setDead();
+            return;
         }
-        // update motion
+
         motionY -= 9.81D / 400D;
-        motionX *= 0.5;
-        motionZ *= 0.5;
+        motionX *= 0.5D;
+        motionZ *= 0.5D;
         moveEntity(motionX, motionY, motionZ);
     }
 
     @Override
     protected void readEntityFromNBT(NBTTagCompound nbt) {
+        playerName = nbt.getString("PlayerName");
+        playerDisplayName = nbt.getString("PlayerDisplayName");
+        String uuidString = nbt.getString("PlayerUUID");
+        if (uuidString != null && !uuidString.isEmpty()) {
+            try {
+                playerUuid = UUID.fromString(uuidString);
+            } catch (IllegalArgumentException ignored) {
+                playerUuid = null;
+            }
+        }
+        scoreboardTeamName = nbt.getString("ScoreboardTeam");
+
+        headRotationX = nbt.getFloat("HeadRotationX");
+        headRotationY = nbt.getFloat("HeadRotationY");
+        leftArmRotationX = nbt.getFloat("LeftArmRotationX");
+        leftArmRotationY = nbt.getFloat("LeftArmRotationY");
+        leftArmRotationZ = nbt.getFloat("LeftArmRotationZ");
+        rightArmRotationX = nbt.getFloat("RightArmRotationX");
+        rightArmRotationY = nbt.getFloat("RightArmRotationY");
+        rightArmRotationZ = nbt.getFloat("RightArmRotationZ");
+        bodyRotationX = nbt.getFloat("BodyRotationX");
+        bodyRotationY = nbt.getFloat("BodyRotationY");
+        leftLegRotationX = nbt.getFloat("LeftLegRotationX");
+        leftLegRotationY = nbt.getFloat("LeftLegRotationY");
+        leftLegRotationZ = nbt.getFloat("LeftLegRotationZ");
+        rightLegRotationX = nbt.getFloat("RightLegRotationX");
+        rightLegRotationY = nbt.getFloat("RightLegRotationY");
+        rightLegRotationZ = nbt.getFloat("RightLegRotationZ");
+        isDown = nbt.getBoolean("IsDown");
     }
 
     @Override
     protected void writeEntityToNBT(NBTTagCompound nbt) {
+        nbt.setString("PlayerName", safe(playerName));
+        nbt.setString("PlayerDisplayName", safe(playerDisplayName));
+        nbt.setString("PlayerUUID", playerUuid != null ? playerUuid.toString() : "");
+        nbt.setString("ScoreboardTeam", safe(scoreboardTeamName));
+
+        nbt.setFloat("HeadRotationX", headRotationX);
+        nbt.setFloat("HeadRotationY", headRotationY);
+        nbt.setFloat("LeftArmRotationX", leftArmRotationX);
+        nbt.setFloat("LeftArmRotationY", leftArmRotationY);
+        nbt.setFloat("LeftArmRotationZ", leftArmRotationZ);
+        nbt.setFloat("RightArmRotationX", rightArmRotationX);
+        nbt.setFloat("RightArmRotationY", rightArmRotationY);
+        nbt.setFloat("RightArmRotationZ", rightArmRotationZ);
+        nbt.setFloat("BodyRotationX", bodyRotationX);
+        nbt.setFloat("BodyRotationY", bodyRotationY);
+        nbt.setFloat("LeftLegRotationX", leftLegRotationX);
+        nbt.setFloat("LeftLegRotationY", leftLegRotationY);
+        nbt.setFloat("LeftLegRotationZ", leftLegRotationZ);
+        nbt.setFloat("RightLegRotationX", rightLegRotationX);
+        nbt.setFloat("RightLegRotationY", rightLegRotationY);
+        nbt.setFloat("RightLegRotationZ", rightLegRotationZ);
+        nbt.setBoolean("IsDown", isDown);
     }
 
     @Override
     public boolean canBeCollidedWith() {
-        return false; // 取消碰撞箱
+        return false;
     }
 
     @Override
     public boolean isInvisible() {
-        return false; // 显示实体模型
-    }
-
-    public EntityPlayer getOwner() {
-        return owner;
+        return false;
     }
 
     @Override
@@ -112,68 +162,102 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
     }
 
     @Override
+    public void setDead() {
+        super.setDead();
+        if (worldObj != null && !worldObj.isRemote) {
+            CorpseMedicalService.unregisterCorpse(this);
+        }
+    }
+
+    @Override
     public void writeSpawnData(ByteBuf buffer) {
-        ByteBufUtils.writeUTF8String(buffer, owner == null ? "尸体" : owner.getDisplayName());
-        // 写入旋转角度
+        ByteBufUtils.writeUTF8String(buffer, safe(playerName));
+        ByteBufUtils.writeUTF8String(buffer, safe(playerDisplayName));
+        ByteBufUtils.writeUTF8String(buffer, playerUuid != null ? playerUuid.toString() : "");
+        ByteBufUtils.writeUTF8String(buffer, safe(scoreboardTeamName));
+
         buffer.writeFloat(headRotationX);
         buffer.writeFloat(headRotationY);
-
         buffer.writeFloat(leftArmRotationX);
         buffer.writeFloat(leftArmRotationY);
         buffer.writeFloat(leftArmRotationZ);
-
         buffer.writeFloat(rightArmRotationX);
         buffer.writeFloat(rightArmRotationY);
         buffer.writeFloat(rightArmRotationZ);
-
         buffer.writeFloat(bodyRotationX);
         buffer.writeFloat(bodyRotationY);
-
         buffer.writeFloat(leftLegRotationX);
         buffer.writeFloat(leftLegRotationY);
         buffer.writeFloat(leftLegRotationZ);
-
         buffer.writeFloat(rightLegRotationX);
         buffer.writeFloat(rightLegRotationY);
         buffer.writeFloat(rightLegRotationZ);
-
-        buffer.writeBoolean(isDown); // 写入是否为趴着状态
+        buffer.writeBoolean(isDown);
     }
 
     @Override
     public void readSpawnData(ByteBuf additionalData) {
-        name = ByteBufUtils.readUTF8String(additionalData);
-        // 读取旋转角度
+        playerName = ByteBufUtils.readUTF8String(additionalData);
+        playerDisplayName = ByteBufUtils.readUTF8String(additionalData);
+        String uuidString = ByteBufUtils.readUTF8String(additionalData);
+        try {
+            playerUuid = uuidString == null || uuidString.isEmpty() ? null : UUID.fromString(uuidString);
+        } catch (IllegalArgumentException ignored) {
+            playerUuid = null;
+        }
+        scoreboardTeamName = ByteBufUtils.readUTF8String(additionalData);
+
         headRotationX = additionalData.readFloat();
         headRotationY = additionalData.readFloat();
-
         leftArmRotationX = additionalData.readFloat();
         leftArmRotationY = additionalData.readFloat();
         leftArmRotationZ = additionalData.readFloat();
-
         rightArmRotationX = additionalData.readFloat();
         rightArmRotationY = additionalData.readFloat();
         rightArmRotationZ = additionalData.readFloat();
-
         bodyRotationX = additionalData.readFloat();
         bodyRotationY = additionalData.readFloat();
-
         leftLegRotationX = additionalData.readFloat();
         leftLegRotationY = additionalData.readFloat();
         leftLegRotationZ = additionalData.readFloat();
-
         rightLegRotationX = additionalData.readFloat();
         rightLegRotationY = additionalData.readFloat();
         rightLegRotationZ = additionalData.readFloat();
+        isDown = additionalData.readBoolean();
+    }
 
-        isDown = additionalData.readBoolean(); // 读取是否为趴着状态
+    public EntityPlayer getOwner() {
+        return owner;
+    }
+
+    public EntityPlayer getPlayer() {
+        if (owner != null) {
+            return owner;
+        }
+        if (worldObj != null && !worldObj.isRemote && playerName != null && MinecraftServer.getServer() != null) {
+            EntityPlayerMP player = MinecraftServer.getServer().getConfigurationManager().func_152612_a(playerName);
+            if (player != null) {
+                owner = player;
+            }
+        }
+        return owner;
     }
 
     public String getPlayerName() {
-        return name;
+        return playerName;
     }
 
-    // Getter 方法
+    public String getPlayerDisplayName() {
+        return playerDisplayName != null && !playerDisplayName.isEmpty() ? playerDisplayName : playerName;
+    }
+
+    public UUID getPlayerUuid() {
+        return playerUuid;
+    }
+
+    public String getScoreboardTeamName() {
+        return scoreboardTeamName;
+    }
 
     public float getHeadRotationX() {
         return headRotationX;
@@ -193,7 +277,7 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
 
     public float getLeftArmRotationZ() {
         return leftArmRotationZ;
-    } // 新增
+    }
 
     public float getRightArmRotationX() {
         return rightArmRotationX;
@@ -205,7 +289,7 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
 
     public float getRightArmRotationZ() {
         return rightArmRotationZ;
-    } // 新增
+    }
 
     public float getBodyRotationX() {
         return bodyRotationX;
@@ -225,7 +309,7 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
 
     public float getLeftLegRotationZ() {
         return leftLegRotationZ;
-    } // 新增
+    }
 
     public float getRightLegRotationX() {
         return rightLegRotationX;
@@ -237,13 +321,13 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
 
     public float getRightLegRotationZ() {
         return rightLegRotationZ;
-    } // 新增
+    }
 
     public boolean isDown() {
         return isDown;
-    } // 新增
+    }
 
-    public EntityPlayer getPlayer() {
-        return owner;
+    private static String safe(String value) {
+        return value == null ? "" : value;
     }
 }

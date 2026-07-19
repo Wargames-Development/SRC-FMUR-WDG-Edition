@@ -77,6 +77,24 @@ public final class Integrations {
         return preferredEntity != null ? preferredEntity : fallbackEntity;
     }
 
+    public static boolean areSameFactionWGC(UUID firstPlayerId, UUID secondPlayerId, World world) {
+        if (world == null || firstPlayerId == null || secondPlayerId == null) {
+            return false;
+        }
+
+        try {
+            if (!WGCoreIntegrationAccess.isBound()) {
+                return false;
+            }
+
+            UUID firstFactionId = WGCoreIntegrationAccess.getPlayerFaction(world, firstPlayerId);
+            UUID secondFactionId = WGCoreIntegrationAccess.getPlayerFaction(world, secondPlayerId);
+            return firstFactionId != null && firstFactionId.equals(secondFactionId);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     private static ActionAttribution buildAttribution(World world,
                                                       UUID actingPlayerId,
                                                       ActionSourceType sourceType) {
