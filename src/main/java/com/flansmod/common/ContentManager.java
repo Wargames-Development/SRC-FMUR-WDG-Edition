@@ -138,44 +138,44 @@ public class ContentManager {
                         if (infoType.shortName != null) {
                             switch (type) {
                                 case bullet:
-                                    FlansMod.bulletItems.add((ItemBullet) new ItemBullet((BulletType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.bulletItems.add(ItemCompat.setUnlocalizedName(new ItemBullet((BulletType) infoType), infoType.shortName));
                                     break;
                                 case attachment:
-                                    FlansMod.attachmentItems.add((ItemAttachment) new ItemAttachment((AttachmentType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.attachmentItems.add(ItemCompat.setUnlocalizedName(new ItemAttachment((AttachmentType) infoType), infoType.shortName));
                                     break;
                                 case gun:{
-                                    FlansMod.gunItems.add((ItemGun) new ItemGun((GunType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.gunItems.add(ItemCompat.setUnlocalizedName(new ItemGun((GunType) infoType), infoType.shortName));
                                     break;
                                 }
                                 case grenade:
-                                    FlansMod.grenadeItems.add((ItemGrenade) new ItemGrenade((GrenadeType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.grenadeItems.add(ItemCompat.setUnlocalizedName(new ItemGrenade((GrenadeType) infoType), infoType.shortName));
                                     break;
                                 case part:
-                                    FlansMod.partItems.add((ItemPart) new ItemPart((PartType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.partItems.add(ItemCompat.setUnlocalizedName(new ItemPart((PartType) infoType), infoType.shortName));
                                     break;
                                 case plane:
-                                    FlansMod.planeItems.add((ItemPlane) new ItemPlane((PlaneType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.planeItems.add(ItemCompat.setUnlocalizedName(new ItemPlane((PlaneType) infoType), infoType.shortName));
                                     break;
                                 case vehicle:
-                                    FlansMod.vehicleItems.add((ItemVehicle) new ItemVehicle((VehicleType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.vehicleItems.add(ItemCompat.setUnlocalizedName(new ItemVehicle((VehicleType) infoType), infoType.shortName));
                                     break;
                                 case aa:
-                                    FlansMod.aaGunItems.add((ItemAAGun) new ItemAAGun((AAGunType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.aaGunItems.add(ItemCompat.setUnlocalizedName(new ItemAAGun((AAGunType) infoType), infoType.shortName));
                                     break;
                                 case mechaItem:
-                                    FlansMod.mechaToolItems.add((ItemMechaAddon) new ItemMechaAddon((MechaItemType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.mechaToolItems.add(ItemCompat.setUnlocalizedName(new ItemMechaAddon((MechaItemType) infoType), infoType.shortName));
                                     break;
                                 case mecha:
-                                    FlansMod.mechaItems.add((ItemMecha) new ItemMecha((MechaType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.mechaItems.add(ItemCompat.setUnlocalizedName(new ItemMecha((MechaType) infoType), infoType.shortName));
                                     break;
                                 case tool:
-                                    FlansMod.toolItems.add((ItemTool) new ItemTool((ToolType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.toolItems.add(ItemCompat.setUnlocalizedName(new ItemTool((ToolType) infoType), infoType.shortName));
                                     break;
                                 case box:
                                     FlansMod.gunBoxBlocks.add((BlockGunBox) new BlockGunBox((GunBoxType) infoType).setBlockName(infoType.shortName));
                                     break;
                                 case armour:
-                                    FlansMod.armourItems.add((ItemTeamArmour) new ItemTeamArmour((ArmourType) infoType).setUnlocalizedName(infoType.shortName));
+                                    FlansMod.armourItems.add(ItemCompat.setUnlocalizedName(new ItemTeamArmour((ArmourType) infoType), infoType.shortName));
                                     break;
                                 case armourBox:
                                     FlansMod.armourBoxBlocks.add((BlockArmourBox) new BlockArmourBox((ArmourBoxType) infoType).setBlockName(infoType.shortName));

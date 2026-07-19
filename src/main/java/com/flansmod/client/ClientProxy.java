@@ -471,6 +471,11 @@ public class ClientProxy extends CommonProxy {
         Minecraft mc = Minecraft.getMinecraft();
         World theWorld = mc.theWorld;
         if (mc.renderViewEntity != null && mc.effectRenderer != null) {
+            if (p_72726_1_.equals("flansmod.bullethole")) {
+                BulletHoleDecalRenderer.addBulletHole(p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
+                return null;
+            }
+
             int i = mc.gameSettings.particleSetting;
 
             if (i == 1 && theWorld.rand.nextInt(3) == 0) {
@@ -505,6 +510,8 @@ public class ClientProxy extends CommonProxy {
                     // FLANS PARTICLES
                     if (p_72726_1_.equals("flansmod.flare")) {
                         entityfx = new EntityFlare(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
+                    } else if (p_72726_1_.equals("flansmod.bloodchunk")) {
+                        entityfx = new EntityBloodChunkFX(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
                     } else if (p_72726_1_.equals("flansmod.smoker")) { //载具烟雾弹
                         entityfx = new EntitySmokeGrenade(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
                     } else if (p_72726_1_.equals("flansmod.flash")) {

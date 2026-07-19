@@ -1,6 +1,7 @@
 package com.flansmod.common.parts;
 
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.ItemCompat;
 import com.flansmod.common.types.IFlanItem;
 import com.flansmod.common.types.InfoType;
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -26,7 +27,7 @@ public class ItemPart extends Item implements IFlanItem {
             setHasSubtypes(true);
         }
         type.item = this;
-        setTextureName("FlansMod:" + type.iconPath);
+        ItemCompat.setTextureName(this, "FlansMod:" + type.iconPath);
         setCreativeTab(FlansMod.tabFlanParts);
         GameRegistry.registerItem(this, type.shortName, FlansMod.MODID);
     }
