@@ -1,6 +1,7 @@
 package com.flansmod.common.teams;
 
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.ItemCompat;
 import com.flansmod.common.network.PacketBaseEdit;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -24,7 +25,7 @@ public class ItemOpStick extends Item
 	public ItemOpStick()
 	{
 		super();
-		setUnlocalizedName("opStick");
+		ItemCompat.setUnlocalizedName(this, "opStick");
 		setHasSubtypes(true);
 	}
 		
