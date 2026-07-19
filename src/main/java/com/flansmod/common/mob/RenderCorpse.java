@@ -1,6 +1,7 @@
 package com.flansmod.common.mob;
 
 import com.flansmod.utils.RenderUtils;
+import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
@@ -26,8 +27,7 @@ public class RenderCorpse extends Render {
         if(entity.ticksExisted < 20) {
             return;
         }
-        // 获取玩家的皮肤
-        ResourceLocation skin = getPlayerSkin(entity.getOwner());
+        ResourceLocation skin = getPlayerSkin(entity);
         this.bindTexture(skin);
 
         // 开始渲染
@@ -80,8 +80,8 @@ public class RenderCorpse extends Render {
 
         GL11.glPopMatrix();
 
-        if (entity.getPlayerName() != null) {
-            RenderUtils.renderNameTag(entity, x, y - 1.5 , z,entity.getPlayerName() + "[倒地]", 16, this.renderManager);
+        if (entity.getPlayerDisplayName() != null) {
+            RenderUtils.renderNameTag(entity, x, y - 1.5 , z, entity.getPlayerDisplayName() + " [Downed]", 16, this.renderManager);
         }
     }
 
@@ -90,10 +90,19 @@ public class RenderCorpse extends Render {
         return DEFAULT_SKIN;
     }
 
-    /**
-     * 获取玩家皮肤，如果玩家为 null 或无皮肤，则返回默认皮肤。
-     */
-    private ResourceLocation getPlayerSkin(EntityPlayer player) {
+    private ResourceLocation getPlayerSkin(EntityCorpse entity) {
+        EntityPlayer player = entity.getOwner();
+        if (player instanceof AbstractClientPlayer) {
+            return ((AbstractClientPlayer) player).getLocationSkin();
+        }
+
+        String playerName = entity.getPlayerName();
+        if (playerName != null && !playerName.trim().isEmpty()) {
+            ResourceLocation skin = AbstractClientPlayer.getLocationSkin(playerName);
+            AbstractClientPlayer.getDownloadImageSkin(skin, playerName);
+            return skin;
+        }
+
         return DEFAULT_SKIN;
     }
 
