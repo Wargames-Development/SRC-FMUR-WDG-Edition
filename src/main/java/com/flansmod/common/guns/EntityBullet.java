@@ -20,6 +20,7 @@ import com.flansmod.common.mob.EntitySoldier;
 import com.flansmod.common.network.PacketBlockHit;
 import com.flansmod.common.network.PacketFlak;
 import com.flansmod.common.network.PacketMissileMCLOSAccelerate;
+import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketPlaySound;
 import com.flansmod.common.teams.EntityConnectingLine;
 import com.flansmod.common.teams.TeamsManager;
@@ -60,6 +61,9 @@ import java.util.List;
 public class EntityBullet extends EntityShootable implements IEntityAdditionalSpawnData, IEntityBullet, ILockable {
 
     private static final int DEFAULT_BULLET_LIFE = 3 * 20; //Kill bullets after 3 seconds
+    private static final int BLOOD_PARTICLE_COUNT = 12;
+    private static final float BLOOD_PARTICLE_RANGE = 64F;
+
     @SideOnly(Side.CLIENT)
     public EntityLivingBase bulletFollowCamera;
 
@@ -129,7 +133,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     public float yawOffsetMCLOS = 0.0f;  // 水平偏航（偏航）
     public boolean isAccelerating = false; //导弹正在加力
     public boolean canAccelerate = false; //导弹是否可以加力
-
 
     public EntityBullet(World world) {
         super(world);
@@ -224,6 +227,73 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
     public ShootableType getType() {
         return type;
+    }
+
+    public static void spawnBloodParticles(EntityLivingBase entity, double x, double y, double z) {
+        spawnBloodParticles(entity, x, y, z, 0D, 0D, 0D, EnumHitboxType.BODY);
+    }
+
+    public static void spawnBloodParticles(EntityLivingBase entity, double x, double y, double z, double dirX, double dirY, double dirZ, EnumHitboxType hitboxType) {
+        if (entity == null || entity.worldObj == null || entity.worldObj.isRemote)
+            return;
+
+        String particleName = "flansmod.bloodchunk";
+        World world = entity.worldObj;
+        EnumHitboxType bloodHitboxType = hitboxType == null ? EnumHitboxType.BODY : hitboxType;
+
+        double dirLength = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
+        if (dirLength > 0.0001D) {
+            dirX /= dirLength;
+            dirY /= dirLength;
+            dirZ /= dirLength;
+        }
+
+        int particleCount = BLOOD_PARTICLE_COUNT;
+        double horizontalSpread = 0.58D;
+        double verticalSpread = 0.18D;
+        double directionalStrength = 0.34D;
+        double upwardStrength = 0.10D;
+        float particleScale = 0.9F;
+
+        switch (bloodHitboxType) {
+            case HEAD:
+                particleCount += 6;
+                verticalSpread = 0.28D;
+                directionalStrength = 0.42D;
+                upwardStrength = 0.22D;
+                particleScale = 1.05F;
+                break;
+            case LEGS:
+                particleCount -= 2;
+                verticalSpread = 0.12D;
+                directionalStrength = 0.28D;
+                upwardStrength = 0.04D;
+                particleScale = 0.85F;
+                break;
+            case LEFTARM:
+            case RIGHTARM:
+                particleCount -= 3;
+                horizontalSpread = 0.48D;
+                directionalStrength = 0.38D;
+                upwardStrength = 0.08D;
+                particleScale = 0.8F;
+                break;
+            default:
+                break;
+        }
+        directionalStrength *= 3D;
+
+        for (int i = 0; i < Math.max(1, particleCount); i++) {
+            double particleX = x + (world.rand.nextDouble() - 0.5D) * entity.width * horizontalSpread;
+            double particleY = y + (world.rand.nextDouble() - 0.35D) * entity.height * verticalSpread;
+            double particleZ = z + (world.rand.nextDouble() - 0.5D) * entity.width * horizontalSpread;
+            double motionX = dirX * directionalStrength + (world.rand.nextDouble() - 0.5D) * 0.56D;
+            double motionY = Math.max(0D, dirY) * directionalStrength * 0.35D + world.rand.nextDouble() * 0.24D + upwardStrength;
+            double motionZ = dirZ * directionalStrength + (world.rand.nextDouble() - 0.5D) * 0.56D;
+
+            FlansMod.getPacketHandler().sendToAllAround(new PacketParticle(particleName, particleX, particleY, particleZ, motionX, motionY, motionZ, particleScale),
+                    particleX, particleY, particleZ, BLOOD_PARTICLE_RANGE, entity.dimension);
+        }
     }
 
     @Override
@@ -327,6 +397,25 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
     public void calculateDps(float damage, EntityPlayer p) {
         FlansMod.packetHandler.sendTo(new PacketBlockHit(damage), (EntityPlayerMP) p);
+    }
+
+    private static double[] getHitNormal(int sideHit) {
+        switch (sideHit) {
+            case 0:
+                return new double[]{0D, -1D, 0D};
+            case 1:
+                return new double[]{0D, 1D, 0D};
+            case 2:
+                return new double[]{0D, 0D, -1D};
+            case 3:
+                return new double[]{0D, 0D, 1D};
+            case 4:
+                return new double[]{-1D, 0D, 0D};
+            case 5:
+                return new double[]{1D, 0D, 0D};
+            default:
+                return new double[]{0D, 1D, 0D};
+        }
     }
 
     @Override
@@ -812,6 +901,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     }
 
                     penetratingPower = playerHit.hitbox.hitByBullet(this, penetratingPower, distanceDamageModifier);
+                    spawnBloodParticles(playerHit.hitbox.player, hitX, hitY, hitZ, motionX, motionY, motionZ, playerHit.hitbox.type);
                     penetrationLosses.add(new PenetrationLoss((prevPenetratingPower - penetratingPower), PenetrationLoss.PenetrationLossType.PLAYER));
 
                     if (FlansMod.DEBUG)
@@ -852,6 +942,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         worldObj.spawnEntityInWorld(new EntityDebugDot(worldObj, new Vector3f(hitX, hitY, hitZ), 100, 1F, 0F, 0F));
                     float prevPenetratingPower = penetratingPower;
                     penetratingPower = playerHit.hitbox.hitByBullet(this, penetratingPower, distanceDamageModifier);
+                    spawnBloodParticles(playerHit.hitbox.soldier, hitX, hitY, hitZ, motionX, motionY, motionZ, playerHit.hitbox.type);
                     penetrationLosses.add(new PenetrationLoss((prevPenetratingPower - penetratingPower), PenetrationLoss.PenetrationLossType.PLAYER));
                     setDead();
                     break;
@@ -886,9 +977,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     float d1 = damage;
                     if (entityHit.entity instanceof EntityLivingBase) {
                         d1 *= type.damageVsLiving;
-                        if (entityHit.entity != owner)
-                            FlansMod.proxy.spawnParticle("reddust", entityHit.entity.posX, entityHit.entity.posY, entityHit.entity.posZ, 0, 0, 0);
-
                     } else {
                         d1 *= type.damageVsEntity;
                     }
@@ -898,6 +986,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     if (allowDamage) {
                         if (entityHit.entity.attackEntityFrom(getBulletDamage(false), d1) && entityHit.entity instanceof EntityLivingBase) {
                             EntityLivingBase living = (EntityLivingBase) entityHit.entity;
+                            spawnBloodParticles(living, hitX, hitY, hitZ, motionX, motionY, motionZ, EnumHitboxType.BODY);
                             for (PotionEffect effect : type.hitEffects) {
                                 living.addPotionEffect(new PotionEffect(effect));
                             }
@@ -999,6 +1088,14 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         } else {
                             PacketPlaySound.sendSoundPacket(posX, posY, posZ, type.hitSoundRange, dimension, type.hitSound, true);
                         }
+                    }
+
+                    if (!worldObj.isRemote && mat != Material.air) {
+                        double[] normal = getHitNormal(raytraceResult.sideHit);
+                        FlansMod.getPacketHandler().sendToAllAround(new PacketParticle("flansmod.bullethole",
+                                        hitVec.xCoord, hitVec.yCoord, hitVec.zCoord,
+                                        normal[0], normal[1], normal[2], 1.0F),
+                                hitVec.xCoord, hitVec.yCoord, hitVec.zCoord, 64F, dimension);
                     }
 
                     if (penetrationBlockCount < type.penetratingBlockMaxNum) {

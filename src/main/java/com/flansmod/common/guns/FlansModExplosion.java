@@ -1,6 +1,5 @@
 package com.flansmod.common.guns;
 
-import com.wdg.wgcore.integration.model.ExplosionDecision;
 import com.flansmod.common.wgc.Integrations;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.blocks.IBreakableBlock;
@@ -165,7 +164,7 @@ public class FlansModExplosion extends Explosion
 			}
 		}
 
-		ExplosionDecision wgcoreExplosionDecision = Integrations.evaluateExplosionWGC(
+		Integrations.ExplosionResult wgcoreExplosionDecision = Integrations.evaluateExplosionWGC(
 				this.worldObj,
 				getWGCoreActingEntity(),
 				this,

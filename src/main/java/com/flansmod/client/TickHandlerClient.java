@@ -43,6 +43,7 @@ import net.minecraft.world.EnumSkyBlock;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
+import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.common.MinecraftForge;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
@@ -791,7 +792,6 @@ public class TickHandlerClient {
                 GL11.glColor4f(1F, 1F, 1F, 1F);
             }
 
-
             //DEBUG vehicles
             if (mc.thePlayer.ridingEntity instanceof EntitySeat) {
                 EntityDriveable driveable = ((EntitySeat) mc.thePlayer.ridingEntity).driveable;
@@ -882,6 +882,11 @@ public class TickHandlerClient {
     }
 
     @SubscribeEvent
+    public void renderWorldLast(RenderWorldLastEvent event) {
+        BulletHoleDecalRenderer.render(event);
+    }
+
+    @SubscribeEvent
     public void renderTick(TickEvent.RenderTickEvent event) {
         switch (event.phase) {
             case START:
@@ -919,6 +924,7 @@ public class TickHandlerClient {
         if (tickCountWounded > 0) {
             tickCountWounded--;
         }
+        BulletHoleDecalRenderer.tick();
         if (FlansMod.ticker % lightOverrideRefreshRate == 0 && mc.theWorld != null) {
             //Check graphics setting and adjust refresh rate
             lightOverrideRefreshRate = mc.gameSettings.fancyGraphics ? 10 : 20;

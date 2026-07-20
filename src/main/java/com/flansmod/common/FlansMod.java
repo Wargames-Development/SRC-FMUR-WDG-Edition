@@ -115,6 +115,7 @@ public class FlansMod {
     public static FlansMod INSTANCE;
     public static boolean printDebugLog = true;
     public static boolean printStackTrace = false;
+    public static boolean enableWGCoreIntegration = true;
     public static int noticeSpawnKillTime = 10;
     public static boolean gunCarryLimitEnable = false;
     public static int gunCarryLimit = 3;
@@ -292,7 +293,7 @@ public class FlansMod {
         }
 
         //Set up mod blocks and items
-        crosshairsymbol = (Item) (new Item()).setUnlocalizedName("crosshairsymbol").setTextureName("FlansMod:" + "crosshairsymbol");
+        crosshairsymbol = ItemCompat.setTextureName(ItemCompat.setUnlocalizedName(new Item(), "crosshairsymbol"), "FlansMod:" + "crosshairsymbol");
         GameRegistry.registerItem(crosshairsymbol, "crosshairsymbol", MODID);
 
         workbench = (BlockFlansWorkbench) (new BlockFlansWorkbench(1, 0).setBlockName("flansWorkbench").setBlockTextureName("flansWorkbench"));
@@ -303,7 +304,7 @@ public class FlansMod {
         opStick = new ItemOpStick();
         GameRegistry.registerItem(opStick, "opStick", MODID);
 
-        flag = (ItemFlagpole) (new ItemFlagpole().setUnlocalizedName("flagpole"));
+        flag = ItemCompat.setUnlocalizedName(new ItemFlagpole(), "flagpole");
         GameRegistry.registerItem(flag, "flagpole", MODID);
 
         spawner = (BlockSpawner) (new BlockSpawner(Material.iron).setBlockName("teamsSpawner").setBlockUnbreakable().setResistance(1000000F));
@@ -315,8 +316,8 @@ public class FlansMod {
         GameRegistry.addRecipe(new ItemStack(paintjobTable), "ICI", "III", "DDD", 'C', Items.cauldron, 'I', Items.iron_ingot, 'D', Items.dye);
         GameRegistry.registerTileEntity(TileEntityPaintjobTable.class, MODID);
 
-        soldierSpawner = (ItemSoldierSpawner) (new ItemSoldierSpawner().setUnlocalizedName("soldierSpawner"));
-        corpseSpawner = (ItemCorpseSpawner) (new ItemCorpseSpawner().setUnlocalizedName("corpseSpawner"));
+        soldierSpawner = ItemCompat.setUnlocalizedName(new ItemSoldierSpawner(), "soldierSpawner");
+        corpseSpawner = ItemCompat.setUnlocalizedName(new ItemCorpseSpawner(), "corpseSpawner");
 
         proxy.registerRenderers();
 
@@ -725,44 +726,44 @@ public class FlansMod {
                         if (infoType.shortName != null) {
                             switch (type) {
                                 case bullet:
-                                    bulletItems.add((ItemBullet) new ItemBullet((BulletType) infoType).setUnlocalizedName(infoType.shortName));
+                                    bulletItems.add(ItemCompat.setUnlocalizedName(new ItemBullet((BulletType) infoType), infoType.shortName));
                                     break;
                                 case attachment:
-                                    attachmentItems.add((ItemAttachment) new ItemAttachment((AttachmentType) infoType).setUnlocalizedName(infoType.shortName));
+                                    attachmentItems.add(ItemCompat.setUnlocalizedName(new ItemAttachment((AttachmentType) infoType), infoType.shortName));
                                     break;
                                 case gun: {
-                                    gunItems.add((ItemGun) new ItemGun((GunType) infoType).setUnlocalizedName(infoType.shortName));
+                                    gunItems.add(ItemCompat.setUnlocalizedName(new ItemGun((GunType) infoType), infoType.shortName));
                                     break;
                                 }
                                 case grenade:
-                                    grenadeItems.add((ItemGrenade) new ItemGrenade((GrenadeType) infoType).setUnlocalizedName(infoType.shortName));
+                                    grenadeItems.add(ItemCompat.setUnlocalizedName(new ItemGrenade((GrenadeType) infoType), infoType.shortName));
                                     break;
                                 case part:
-                                    partItems.add((ItemPart) new ItemPart((PartType) infoType).setUnlocalizedName(infoType.shortName));
+                                    partItems.add(ItemCompat.setUnlocalizedName(new ItemPart((PartType) infoType), infoType.shortName));
                                     break;
                                 case plane:
-                                    planeItems.add((ItemPlane) new ItemPlane((PlaneType) infoType).setUnlocalizedName(infoType.shortName));
+                                    planeItems.add(ItemCompat.setUnlocalizedName(new ItemPlane((PlaneType) infoType), infoType.shortName));
                                     break;
                                 case vehicle:
-                                    vehicleItems.add((ItemVehicle) new ItemVehicle((VehicleType) infoType).setUnlocalizedName(infoType.shortName));
+                                    vehicleItems.add(ItemCompat.setUnlocalizedName(new ItemVehicle((VehicleType) infoType), infoType.shortName));
                                     break;
                                 case aa:
-                                    aaGunItems.add((ItemAAGun) new ItemAAGun((AAGunType) infoType).setUnlocalizedName(infoType.shortName));
+                                    aaGunItems.add(ItemCompat.setUnlocalizedName(new ItemAAGun((AAGunType) infoType), infoType.shortName));
                                     break;
                                 case mechaItem:
-                                    mechaToolItems.add((ItemMechaAddon) new ItemMechaAddon((MechaItemType) infoType).setUnlocalizedName(infoType.shortName));
+                                    mechaToolItems.add(ItemCompat.setUnlocalizedName(new ItemMechaAddon((MechaItemType) infoType), infoType.shortName));
                                     break;
                                 case mecha:
-                                    mechaItems.add((ItemMecha) new ItemMecha((MechaType) infoType).setUnlocalizedName(infoType.shortName));
+                                    mechaItems.add(ItemCompat.setUnlocalizedName(new ItemMecha((MechaType) infoType), infoType.shortName));
                                     break;
                                 case tool:
-                                    toolItems.add((ItemTool) new ItemTool((ToolType) infoType).setUnlocalizedName(infoType.shortName));
+                                    toolItems.add(ItemCompat.setUnlocalizedName(new ItemTool((ToolType) infoType), infoType.shortName));
                                     break;
                                 case box:
                                     gunBoxBlocks.add((BlockGunBox) new BlockGunBox((GunBoxType) infoType).setBlockName(infoType.shortName));
                                     break;
                                 case armour:
-                                    armourItems.add((ItemTeamArmour) new ItemTeamArmour((ArmourType) infoType).setUnlocalizedName(infoType.shortName));
+                                    armourItems.add(ItemCompat.setUnlocalizedName(new ItemTeamArmour((ArmourType) infoType), infoType.shortName));
                                     break;
                                 case armourBox:
                                     armourBoxBlocks.add((BlockArmourBox) new BlockArmourBox((ArmourBoxType) infoType).setBlockName(infoType.shortName));
@@ -825,6 +826,7 @@ public class FlansMod {
         //Teams/Advanced Settings
         printDebugLog = configFile.getBoolean("Print Debug Log", "Teams/advanced settings", printDebugLog, "");
         printStackTrace = configFile.getBoolean("Print Stack Trace", "Teams/advanced settings", printStackTrace, "");
+        enableWGCoreIntegration = configFile.getBoolean("EnableWGCoreIntegration", Configuration.CATEGORY_GENERAL, enableWGCoreIntegration, "Use WGCore protections when WGCore is installed. FMUR uses native behavior when disabled or WGCore is absent.");
         noticeSpawnKillTime = configFile.getInt("NoticeSpawnKillTime", "Teams/advanced settings", 10, 0, 600, "Min");
         TeamsManager.bulletSnapshotMin = configFile.getInt("BltSS_Min", "Teams/advanced settings", 0, 0, 1000, "Min");
         TeamsManager.bulletSnapshotDivisor = configFile.getInt("BltSS_Divisor", "Teams/advanced settings", 50, 0, 1000, "Divisor");
@@ -882,6 +884,7 @@ public class FlansMod {
         //Teams/Advanced Settings
         printDebugLog = configFile.getBoolean("Print Debug Log", "Teams/advanced settings", printDebugLog, "");
         printStackTrace = configFile.getBoolean("Print Stack Trace", "Teams/advanced settings", printStackTrace, "");
+        enableWGCoreIntegration = configFile.getBoolean("EnableWGCoreIntegration", Configuration.CATEGORY_GENERAL, enableWGCoreIntegration, "Use WGCore protections when WGCore is installed. FMUR uses native behavior when disabled or WGCore is absent.");
         noticeSpawnKillTime = configFile.getInt("NoticeSpawnKillTime", "Teams/advanced settings", 10, 0, 600, "Min");
         TeamsManager.bulletSnapshotMin = configFile.getInt("BltSS_Min", "Teams/advanced settings", 0, 0, 1000, "Min");
         TeamsManager.bulletSnapshotDivisor = configFile.getInt("BltSS_Divisor", "Teams/advanced settings", 50, 0, 1000, "Divisor");
