@@ -122,16 +122,18 @@ public class ItemTool extends ItemFood {
 		{
 			PlayerData data = PlayerHandler.getPlayerData(entityplayer, world.isRemote ? Side.CLIENT : Side.SERVER);
 			if(data == null)
-				return null;
+				return itemstack;
 			Iterator<EntityGrenade> i = data.remoteExplosives.iterator();
 			while (i.hasNext())
 			{
 				EntityGrenade grenade = i.next();
-				if(grenade.isDead)
+				if(grenade == null || grenade.isDead)
 				{
 					i.remove();
 				}
 			}
+			if(world.isRemote)
+				return itemstack;
 			//If we have some remote explosives out there
 			if(data.remoteExplosives.size() > 0)
 			{

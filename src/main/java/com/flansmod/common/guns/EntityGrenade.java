@@ -170,7 +170,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
         /* 医疗相关设置 */
         if (!worldObj.isRemote && type.isMedicBag) {
             float radius = type.medicBagRadius;
-            if (ticksExisted % type.medicBagHealDelay == 0) {
+            if (type.medicBagHealDelay > 0 && ticksExisted % type.medicBagHealDelay == 0) {
                 List list = worldObj.getEntitiesWithinAABB(EntityPlayer.class, boundingBox.expand(radius, radius, radius));
                 for (Object obj : list) {
                     EntityPlayer player = (EntityPlayer) obj;
@@ -196,7 +196,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
         /* 弹药相关设置 */
         if (!worldObj.isRemote && type.isAmmoBag) {
             float radius = type.ammoBagRadius;
-            if (ticksExisted % type.ammoBagSupplyDelay == 0) {
+            if (type.ammoBagSupplyDelay > 0 && ticksExisted % type.ammoBagSupplyDelay == 0) {
                 List list = worldObj.getEntitiesWithinAABB(EntityPlayer.class, boundingBox.expand(radius, radius, radius));
                 for (Object obj : list) {
                     EntityPlayer player = (EntityPlayer) obj;
@@ -292,13 +292,13 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
         /* 运动传感器相关设置 */
         if (!worldObj.isRemote && type.motionSensor) {
 
-            if (ticksExisted % type.motionSensorDelay == 0) {
+            if (type.motionSensorDelay > 0 && ticksExisted % type.motionSensorDelay == 0) {
                 float radius = type.motionSensorRange;
                 List list = worldObj.getEntitiesWithinAABB(Entity.class, boundingBox.expand(radius, radius, radius));
                 MCHeliUtil.sendSpotedEntityListToSameTeam(thrower, type.motionSensorTime, list.stream().mapToInt(e -> ((Entity) e).getEntityId()).toArray());
             }
 
-            if (ticksExisted % type.motionSoundTime == 0) {
+            if (type.motionSoundTime > 0 && ticksExisted % type.motionSoundTime == 0) {
                 PacketPlaySound.sendSoundPacket(posX, posY, posZ, type.motionSoundRange, dimension, type.motionSound, false);
             }
 
@@ -306,7 +306,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
 
         /* 诱饵相关设置 */
         if (!worldObj.isRemote && type.isDecoy) {
-            if (ticksExisted % type.decoySoundDelay == 0) {
+            if (type.decoySoundDelay > 0 && ticksExisted % type.decoySoundDelay == 0) {
                 PacketPlaySound.sendSoundPacket(posX, posY, posZ, type.decoySoundRange, dimension, type.decoySound, false);
             }
 
@@ -426,8 +426,11 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
 
         /** 召唤炮击 */
         if (!worldObj.isRemote && type.enableCallArtillery && canCallArtillery && ticksExisted > type.artilleryStartTime) {
-            ItemShootable itemShootable = (ItemShootable) GameRegistry.findItem(FlansMod.MODID, type.artilleryType);
-            this.callArtillery(itemShootable);
+            Item artilleryItem = GameRegistry.findItem(FlansMod.MODID, type.artilleryType);
+            if (artilleryItem instanceof ItemShootable && type.artilleryDelay > 0)
+                this.callArtillery((ItemShootable) artilleryItem);
+            else
+                canCallArtillery = false;
             artilleryCalled = true;
         }
 
@@ -872,7 +875,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
         if (ticksExisted % type.artilleryDelay == 0 && artilleryCalledNum < type.artilleryNum) {
             float randomX = type.artillerySpread * (-1 + (2 * new Random().nextFloat()));
             float randomZ = type.artillerySpread * (-1 + (2 * new Random().nextFloat()));
-            world.spawnEntityInWorld(itemShootable.getEntity(
+            EntityShootable artillery = itemShootable.getEntity(
                     world,
                     new Vector3f(this.posX + randomX, type.artilleryHeight, this.posZ + randomZ),
                     new Vector3f(0, -1, 0),
@@ -881,7 +884,9 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
                     1,
                     0,
                     0,
-                    type));
+                    type);
+            if (artillery != null)
+                world.spawnEntityInWorld(artillery);
             artilleryCalledNum++;
         }
 
@@ -946,7 +951,8 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
                 itemName = itemName.split("\\.")[0];
             }
             ItemStack dropStack = InfoType.getRecipeElement(itemName, damage);
-            entityDropItem(dropStack, 1.0F);
+            if (dropStack != null)
+                entityDropItem(dropStack, 1.0F);
         }
 
         //Start smoke counter
@@ -1057,6 +1063,11 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
         prevRotationYaw = rotationYaw;
         prevRotationPitch = rotationPitch;
         axes.setAngles(rotationYaw, rotationPitch, 0F);
+        if (type == null) {
+            FlansMod.log("EntityGrenade.readSpawnData() Error: unknown grenade type");
+            setDead();
+            return;
+        }
         if (type.spinWhenThrown)
             angularVelocity = new Vector3f(0F, 0F, 10F);
     }

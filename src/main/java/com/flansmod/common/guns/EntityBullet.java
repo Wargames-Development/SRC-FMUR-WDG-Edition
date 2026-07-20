@@ -459,8 +459,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
         /* 召唤炮击 */
         if (!worldObj.isRemote && type.enableCallArtillery && canCallArtillery && ticksExisted > type.artilleryStartTime) {
-            ItemShootable itemShootable = (ItemShootable) GameRegistry.findItem(FlansMod.MODID, type.artilleryType);
-            this.callArtillery(itemShootable);
+            Item artilleryItem = GameRegistry.findItem(FlansMod.MODID, type.artilleryType);
+            if (artilleryItem instanceof ItemShootable && type.artilleryDelay > 0 && owner instanceof EntityLivingBase)
+                this.callArtillery((ItemShootable) artilleryItem);
+            else
+                canCallArtillery = false;
             artilleryCalled = true;
         }
 
@@ -1925,7 +1928,8 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             String itemName = type.dropItemOnDetonate;
             int damage = type.roundsPerItem;
             ItemStack dropStack = InfoType.getRecipeElement(itemName, damage);
-            entityDropItem(dropStack, 1.0F);
+            if (dropStack != null)
+                entityDropItem(dropStack, 1.0F);
         }
     }
 
@@ -1976,12 +1980,18 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     }
 
     public boolean deploySubmunitions() {
-        ItemShootable itemShootable = (ItemShootable) GameRegistry.findItem(FlansMod.MODID, type.submunition);
-        ShootableType shootType = itemShootable.type;
+        if (worldObj.isRemote)
+            return true;
+        Item submunitionItem = GameRegistry.findItem(FlansMod.MODID, type.submunition);
+        if (!(submunitionItem instanceof ItemShootable) || !(owner instanceof EntityLivingBase)) {
+            FlansMod.log("Unable to deploy submunition '" + type.submunition + "' for " + type.shortName);
+            return true;
+        }
+        ItemShootable itemShootable = (ItemShootable) submunitionItem;
         World world = worldObj;
         EntityLivingBase entityplayer = (EntityLivingBase) owner;
         for (int sm = 0; sm < type.numSubmunitions; sm++) {
-            world.spawnEntityInWorld(itemShootable.getEntity(
+            EntityShootable submunition = itemShootable.getEntity(
                     world,
                     new Vector3f(this.posX, this.posY, this.posZ),
                     new Vector3f(motionX, motionY, motionZ),
@@ -1990,7 +2000,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     damage,
                     speedA,
                     0,
-                    firedFrom));
+                    firedFrom);
+            if (submunition != null)
+                world.spawnEntityInWorld(submunition);
         }
         if (type.destroyOnDeploySubmunition) {
             setDead();
@@ -2006,7 +2018,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         if (ticksExisted % type.artilleryDelay == 0 && artilleryCalledNum < type.artilleryNum) {
             float randomX = type.artillerySpread * (-1 + (2 * rand.nextFloat()));
             float randomZ = type.artillerySpread * (-1 + (2 * rand.nextFloat()));
-            world.spawnEntityInWorld(itemShootable.getEntity(
+            EntityShootable artillery = itemShootable.getEntity(
                     world,
                     new Vector3f(this.posX + randomX, type.artilleryHeight, this.posZ + randomZ),
                     new Vector3f(0, -1, 0),
@@ -2015,7 +2027,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     damage,
                     0,
                     0,
-                    firedFrom));
+                    firedFrom);
+            if (artillery != null)
+                world.spawnEntityInWorld(artillery);
             artilleryCalledNum++;
         }
 

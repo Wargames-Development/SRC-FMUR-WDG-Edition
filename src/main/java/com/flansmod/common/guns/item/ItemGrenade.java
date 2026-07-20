@@ -155,9 +155,9 @@ public class ItemGrenade extends ItemShootable implements IFlanItem
 			if(!player.capabilities.isCreativeMode)
 				stack.stackSize--;
 			//Drop an item upon throwing if necessary
-			if(type.dropItemOnThrow != null)
+			if(!world.isRemote && type.dropItemOnThrow != null)
 			{
-				String itemName = type.dropItemOnDetonate;
+				String itemName = type.dropItemOnThrow;
 				int damage = 0;
 				if (itemName.contains("."))
 				{
@@ -165,7 +165,8 @@ public class ItemGrenade extends ItemShootable implements IFlanItem
 					itemName = itemName.split("\\.")[0];
 				}
 				ItemStack dropStack = InfoType.getRecipeElement(itemName, damage);
-				world.spawnEntityInWorld(new EntityItem(world, player.posX, player.posY, player.posZ, dropStack));
+				if(dropStack != null)
+					world.spawnEntityInWorld(new EntityItem(world, player.posX, player.posY, player.posZ, dropStack));
 			}
 		}
 		return stack;
