@@ -82,6 +82,17 @@ public final class Integrations {
         return preferredEntity != null ? preferredEntity : fallbackEntity;
     }
 
+    public static boolean areSameFactionWGC(UUID firstPlayerId, UUID secondPlayerId, World world) {
+        if (!isWGCoreIntegrationEnabled()
+                || world == null
+                || firstPlayerId == null
+                || secondPlayerId == null) {
+            return false;
+        }
+
+        return WGCoreCompat.areSameFaction(firstPlayerId, secondPlayerId, world);
+    }
+
     private static UUID resolveActingPlayerId(Entity actingEntity) {
         if (actingEntity == null) {
             return null;

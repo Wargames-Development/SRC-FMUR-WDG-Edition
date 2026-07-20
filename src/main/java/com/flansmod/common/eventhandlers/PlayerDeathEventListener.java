@@ -8,6 +8,7 @@ import com.flansmod.common.mob.EntitySoldier;
 import com.flansmod.common.network.PacketKillMessage;
 import com.flansmod.common.types.InfoType;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent.PlayerLoggedOutEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent.PlayerRespawnEvent;
@@ -16,6 +17,7 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.PlayerDropsEvent;
 
 @SuppressWarnings("unused")
 public class PlayerDeathEventListener {
@@ -66,9 +68,16 @@ public class PlayerDeathEventListener {
         }
     }
 
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public void onPlayerDrops(PlayerDropsEvent event) {
+        CorpseMedicalService.captureDeathDrops(event);
+    }
+
     @SubscribeEvent
     public void onPlayerRespawn(PlayerRespawnEvent event) {
-        CorpseMedicalService.clearCorpseForPlayer(event.player);
+        if (!CorpseMedicalService.isInternalReviveInProgress(event.player)) {
+            CorpseMedicalService.clearCorpseForPlayer(event.player);
+        }
     }
 
     @SubscribeEvent

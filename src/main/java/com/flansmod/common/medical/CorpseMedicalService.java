@@ -11,13 +11,18 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.management.ServerConfigurationManager;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.player.PlayerDropsEvent;
 
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -32,6 +37,7 @@ import java.util.UUID;
 public final class CorpseMedicalService {
 
     private static final Map<UUID, CorpseRef> ACTIVE_CORPSES = new HashMap<UUID, CorpseRef>();
+    private static final Set<UUID> INTERNAL_REVIVES = new HashSet<UUID>();
 
     private CorpseMedicalService() {
     }
@@ -44,6 +50,7 @@ public final class CorpseMedicalService {
         clearCorpseForPlayer(player);
 
         EntityCorpse corpse = new EntityCorpse(player.worldObj, player);
+        corpse.captureInventory(player);
         corpse.setLocationAndAngles(player.posX, player.posY, player.posZ, player.rotationYaw, 0.0F);
         corpse.motionX = player.motionX * FlansMod.corpseKnockbackMultiplier;
         corpse.motionY = Math.max(0.02D, player.motionY * FlansMod.corpseKnockbackMultiplier);
@@ -98,7 +105,7 @@ public final class CorpseMedicalService {
                 if (registeredWorld != null) {
                     Entity entity = registeredWorld.getEntityByID(registered.entityId);
                     if (entity instanceof EntityCorpse) {
-                        entity.setDead();
+                        ((EntityCorpse) entity).expireAndDropInventory();
                     }
                 }
             }
@@ -114,10 +121,29 @@ public final class CorpseMedicalService {
                 }
                 EntityCorpse corpse = (EntityCorpse) object;
                 if (corpseMatches(corpse, playerUuid, playerName)) {
-                    corpse.setDead();
+                    corpse.expireAndDropInventory();
                 }
             }
         }
+    }
+
+    public static void captureDeathDrops(PlayerDropsEvent event) {
+        if (event == null || event.entityPlayer == null || event.entityPlayer.worldObj.isRemote || !FlansMod.playerCorpsesEnabled) {
+            return;
+        }
+
+        EntityCorpse corpse = findCorpse(event.entityPlayer.getUniqueID(), event.entityPlayer.getCommandSenderName());
+        if (corpse != null) {
+            // The corpse already captured the inventory with its original slot
+            // positions during LivingDeathEvent. Cancel at highest priority so
+            // TeamsManager and vanilla cannot transform or spawn these drops.
+            event.drops.clear();
+            event.setCanceled(true);
+        }
+    }
+
+    public static boolean isInternalReviveInProgress(EntityPlayer player) {
+        return player != null && INTERNAL_REVIVES.contains(player.getUniqueID());
     }
 
     public static EntityCorpse findLookedAtReviveCorpse(EntityPlayer reviver, double searchDistance, double minLookDot) {
@@ -213,9 +239,24 @@ public final class CorpseMedicalService {
         );
         MinecraftForge.EVENT_BUS.post(event);
 
-        EntityPlayerMP revived = MinecraftServer.getServer().getConfigurationManager().respawnPlayer(target, reviveDimension, false);
+        ServerConfigurationManager configurationManager = MinecraftServer.getServer().getConfigurationManager();
+        INTERNAL_REVIVES.add(target.getUniqueID());
+        EntityPlayerMP revived;
+        try {
+            revived = configurationManager.respawnPlayer(target, reviveDimension, false);
+        } finally {
+            INTERNAL_REVIVES.remove(target.getUniqueID());
+        }
         if (revived == null) {
             revived = target;
+        }
+
+        // NetHandlerPlayServer normally performs this handoff after handling the
+        // client's respawn packet. AED revives invoke respawnPlayer directly, so
+        // without it movement and combat packets continue targeting the old,
+        // dead EntityPlayerMP while the replacement remains frozen in the world.
+        if (revived.playerNetServerHandler != null) {
+            revived.playerNetServerHandler.playerEntity = revived;
         }
 
         revived.isDead = false;
@@ -226,8 +267,18 @@ public final class CorpseMedicalService {
         revived.motionZ = 0.0D;
         revived.extinguish();
         revived.setHealth(Math.min(revived.getMaxHealth(), Math.max(1.0F, FlansMod.aedReviveHealth)));
-        revived.setPositionAndUpdate(reviveX, reviveY, reviveZ);
+        corpse.restoreInventory(revived);
+        configurationManager.syncPlayerInventory(revived);
         revived.rotationYaw = reviveYaw;
+        revived.setPositionAndUpdate(reviveX, reviveY, reviveZ);
+
+        // respawnPlayer has already registered the replacement at the normal
+        // spawn point. Refresh its chunk membership and tracker entry after the
+        // corpse teleport so every client receives the same initial position.
+        configurationManager.updatePlayerPertinentChunks(revived);
+        WorldServer revivedWorld = revived.getServerForPlayer();
+        revivedWorld.getEntityTracker().removeEntityFromAllTrackingPlayers(revived);
+        revivedWorld.getEntityTracker().addEntityToTracker(revived);
 
         corpse.setDead();
         clearCorpseForPlayer(corpse.getPlayerUuid(), corpse.getPlayerName());
@@ -286,6 +337,25 @@ public final class CorpseMedicalService {
             return true;
         }
         return playerName != null && corpse.getPlayerName() != null && playerName.equalsIgnoreCase(corpse.getPlayerName());
+    }
+
+    private static EntityCorpse findCorpse(UUID playerUuid, String playerName) {
+        MinecraftServer server = MinecraftServer.getServer();
+        if (server == null || server.worldServers == null) {
+            return null;
+        }
+
+        for (World world : server.worldServers) {
+            if (world == null || world.isRemote) {
+                continue;
+            }
+            for (Object object : world.loadedEntityList) {
+                if (object instanceof EntityCorpse && corpseMatches((EntityCorpse) object, playerUuid, playerName)) {
+                    return (EntityCorpse) object;
+                }
+            }
+        }
+        return null;
     }
 
     private static EntityPlayerMP getOnlinePlayer(String playerName) {

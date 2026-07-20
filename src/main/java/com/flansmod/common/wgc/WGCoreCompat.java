@@ -24,6 +24,12 @@ final class WGCoreCompat {
         return WGCoreIntegrationAccess.canHarmPlayer(actingPlayerId, targetPlayerId, world);
     }
 
+    static boolean areSameFaction(UUID firstPlayerId, UUID secondPlayerId, World world) {
+        UUID firstFactionId = WGCoreIntegrationAccess.getPlayerFaction(world, firstPlayerId);
+        UUID secondFactionId = WGCoreIntegrationAccess.getPlayerFaction(world, secondPlayerId);
+        return firstFactionId != null && firstFactionId.equals(secondFactionId);
+    }
+
     static Integrations.ExplosionResult evaluateExplosion(World world,
                                                           UUID actingPlayerId,
                                                           Explosion explosion,

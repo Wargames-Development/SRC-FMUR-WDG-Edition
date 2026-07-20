@@ -1,6 +1,7 @@
 package com.flansmod.common.mob;
 
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.types.InfoType;
 import com.flansmod.common.medical.CorpseMedicalService;
 import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
@@ -8,11 +9,15 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.World;
 
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
@@ -31,6 +36,8 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
     private float leftLegRotationX, leftLegRotationY, leftLegRotationZ;
     private float rightLegRotationX, rightLegRotationY, rightLegRotationZ;
     private boolean isDown;
+    private final List<StoredItem> storedInventory = new ArrayList<StoredItem>();
+    private boolean inventoryReleased;
 
     public EntityCorpse(World world) {
         super(world);
@@ -77,7 +84,7 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
 
         int lifetimeTicks = Math.max(1, FlansMod.corpseLifetimeSeconds) * 20;
         if (!worldObj.isRemote && ticksExisted > lifetimeTicks) {
-            this.setDead();
+            expireAndDropInventory();
             return;
         }
 
@@ -100,6 +107,17 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
             }
         }
         scoreboardTeamName = nbt.getString("ScoreboardTeam");
+
+        storedInventory.clear();
+        NBTTagList inventoryTags = nbt.getTagList("StoredInventory", 10);
+        for (int index = 0; index < inventoryTags.tagCount(); index++) {
+            NBTTagCompound itemTag = inventoryTags.getCompoundTagAt(index);
+            ItemStack stack = ItemStack.loadItemStackFromNBT(itemTag);
+            if (stack != null) {
+                storedInventory.add(new StoredItem(itemTag.getInteger("CorpseSlot"), stack));
+            }
+        }
+        inventoryReleased = nbt.getBoolean("InventoryReleased");
 
         headRotationX = nbt.getFloat("HeadRotationX");
         headRotationY = nbt.getFloat("HeadRotationY");
@@ -126,6 +144,19 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
         nbt.setString("PlayerDisplayName", safe(playerDisplayName));
         nbt.setString("PlayerUUID", playerUuid != null ? playerUuid.toString() : "");
         nbt.setString("ScoreboardTeam", safe(scoreboardTeamName));
+
+        NBTTagList inventoryTags = new NBTTagList();
+        for (StoredItem storedItem : storedInventory) {
+            if (storedItem.stack == null) {
+                continue;
+            }
+            NBTTagCompound itemTag = new NBTTagCompound();
+            storedItem.stack.writeToNBT(itemTag);
+            itemTag.setInteger("CorpseSlot", storedItem.slot);
+            inventoryTags.appendTag(itemTag);
+        }
+        nbt.setTag("StoredInventory", inventoryTags);
+        nbt.setBoolean("InventoryReleased", inventoryReleased);
 
         nbt.setFloat("HeadRotationX", headRotationX);
         nbt.setFloat("HeadRotationY", headRotationY);
@@ -167,6 +198,64 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
         if (worldObj != null && !worldObj.isRemote) {
             CorpseMedicalService.unregisterCorpse(this);
         }
+    }
+
+    public void captureInventory(EntityPlayer player) {
+        storedInventory.clear();
+        inventoryReleased = false;
+        if (player == null || player.inventory == null) {
+            return;
+        }
+        if (player.worldObj.getGameRules().getGameRuleBooleanValue("keepInventory")) {
+            return;
+        }
+
+        for (int slot = 0; slot < player.inventory.getSizeInventory(); slot++) {
+            ItemStack stack = player.inventory.getStackInSlot(slot);
+            if (stack != null) {
+                storedInventory.add(new StoredItem(slot, stack.copy()));
+            }
+        }
+    }
+
+    public void restoreInventory(EntityPlayer player) {
+        if (player == null || player.inventory == null || inventoryReleased) {
+            return;
+        }
+
+        for (StoredItem storedItem : storedInventory) {
+            ItemStack stack = storedItem.stack != null ? storedItem.stack.copy() : null;
+            if (stack == null) {
+                continue;
+            }
+
+            if (storedItem.slot >= 0
+                    && storedItem.slot < player.inventory.getSizeInventory()
+                    && player.inventory.getStackInSlot(storedItem.slot) == null) {
+                player.inventory.setInventorySlotContents(storedItem.slot, stack);
+            } else if (!player.inventory.addItemStackToInventory(stack) && stack.stackSize > 0) {
+                player.entityDropItem(stack, 0.0F);
+            }
+        }
+
+        storedInventory.clear();
+        inventoryReleased = true;
+        player.inventory.markDirty();
+    }
+
+    public void expireAndDropInventory() {
+        if (worldObj != null && !worldObj.isRemote && !inventoryReleased) {
+            for (StoredItem storedItem : storedInventory) {
+                ItemStack stack = storedItem.stack;
+                InfoType type = stack != null ? InfoType.getType(stack) : null;
+                if (stack != null && (type == null || type.canDrop)) {
+                    entityDropItem(stack.copy(), 0.0F);
+                }
+            }
+            storedInventory.clear();
+            inventoryReleased = true;
+        }
+        setDead();
     }
 
     @Override
@@ -329,5 +418,15 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
 
     private static String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private static final class StoredItem {
+        private final int slot;
+        private final ItemStack stack;
+
+        private StoredItem(int slot, ItemStack stack) {
+            this.slot = slot;
+            this.stack = stack;
+        }
     }
 }
