@@ -147,9 +147,7 @@ public class TickHandlerClient {
         int minutes = remainingSeconds / 60;
         int seconds = remainingSeconds % 60;
         String timer = String.format("Body expires in %d:%02d", minutes, seconds);
-        String instruction = remainingSeconds > 0
-                ? "Respawn or wait to be revived"
-                : "Your body has expired - respawn to continue";
+        String instruction = "Respawn to continue";
         int centerX = event.gui.width / 2;
         int baseY = event.gui.height / 4 + 132;
         event.gui.drawCenteredString(mc.fontRenderer, timer, centerX, baseY, 0xFFFFFF);

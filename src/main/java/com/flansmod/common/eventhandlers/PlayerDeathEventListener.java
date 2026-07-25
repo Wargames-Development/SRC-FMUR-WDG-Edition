@@ -75,9 +75,7 @@ public class PlayerDeathEventListener {
 
     @SubscribeEvent
     public void onPlayerRespawn(PlayerRespawnEvent event) {
-        if (!CorpseMedicalService.isInternalReviveInProgress(event.player)) {
-            CorpseMedicalService.clearCorpseForPlayer(event.player);
-        }
+        CorpseMedicalService.clearCorpseForPlayer(event.player);
     }
 
     @SubscribeEvent

@@ -158,10 +158,7 @@ public class FlansMod {
     public static boolean showMuzzleFlashParticlesDefault = true;
     public static boolean showFlashesWhenWounded = true;
     public static boolean playerCorpsesEnabled = true;
-    public static boolean internalAedReviveEnabled = true;
     public static int corpseLifetimeSeconds = 60;
-    public static float corpseKnockbackMultiplier = 0.35F;
-    public static float aedReviveHealth = 6.0F;
 
     public static int armourSpawnRate = 20;
 
@@ -857,11 +854,8 @@ public class FlansMod {
         seatCollisions = configFile.getBoolean("Seat Collisions", "Gameplay Settings (synced)", seatCollisions, "Whether seats should collide with the world. Prevents plane glitching through walls.");
         showMuzzleFlashParticlesDefault = configFile.getBoolean("Muzzle Flash Particles Default (Synced)", "Gameplay Settings (synced)", showMuzzleFlashParticlesDefault, "Enable muzzle flash particles by default. Gun configs can override.");
         showFlashesWhenWounded = configFile.getBoolean("Flashes when player wounded (Synced)", "Gameplay Settings (synced)", showFlashesWhenWounded, "Should show red overlay when player has been wounded?");
-        playerCorpsesEnabled = configFile.getBoolean("Enable player corpses", "Gameplay Settings (synced)", playerCorpsesEnabled, "Spawn a reviveable corpse / visual ragdoll when a player dies.");
-        internalAedReviveEnabled = configFile.getBoolean("Enable internal AED revive", "Gameplay Settings (synced)", internalAedReviveEnabled, "Handle AED corpse revives inside FMUR instead of relying on an external server plugin.");
-        corpseLifetimeSeconds = configFile.getInt("Corpse lifetime seconds", "Gameplay Settings (synced)", corpseLifetimeSeconds, 1, 600, "How long player corpses remain available for visual ragdoll and AED revive.");
-        corpseKnockbackMultiplier = configFile.getFloat("Corpse knockback multiplier", "Gameplay Settings (synced)", corpseKnockbackMultiplier, 0.0F, 5.0F, "Multiplier applied to corpse motion inherited from the player death.");
-        aedReviveHealth = configFile.getFloat("AED revive health", "Gameplay Settings (synced)", aedReviveHealth, 1.0F, 20.0F, "Health restored when a player is revived from a corpse with an AED.");
+        playerCorpsesEnabled = configFile.getBoolean("Enable player corpses", "Gameplay Settings (synced)", playerCorpsesEnabled, "Spawn a visual corpse when a player dies.");
+        corpseLifetimeSeconds = configFile.getInt("Corpse lifetime seconds", "Gameplay Settings (synced)", corpseLifetimeSeconds, 1, 600, "How long visual player corpses remain.");
 
         //Client Side Settings
         armsEnable = configFile.getBoolean("Enable Arms", Configuration.CATEGORY_GENERAL, armsEnable, "Enable arms rendering");
@@ -915,11 +909,8 @@ public class FlansMod {
         seatCollisions = configFile.getBoolean("Seat Collisions", "Gameplay Settings (synced)", seatCollisions, "Whether seats should collide with the world. Prevents plane glitching through walls.");
         showMuzzleFlashParticlesDefault = configFile.getBoolean("Muzzle Flash Particles Default", "Gameplay Settings (synced)", showMuzzleFlashParticlesDefault, "Enable muzzle flash particles by default. Gun configs can override.");
         showFlashesWhenWounded = configFile.getBoolean("Flashes when player wounded (Synced)", "Gameplay Settings (synced)", showFlashesWhenWounded, "Should show red overlay when player has been wounded?");
-        playerCorpsesEnabled = configFile.getBoolean("Enable player corpses", "Gameplay Settings (synced)", playerCorpsesEnabled, "Spawn a reviveable corpse / visual ragdoll when a player dies.");
-        internalAedReviveEnabled = configFile.getBoolean("Enable internal AED revive", "Gameplay Settings (synced)", internalAedReviveEnabled, "Handle AED corpse revives inside FMUR instead of relying on an external server plugin.");
-        corpseLifetimeSeconds = configFile.getInt("Corpse lifetime seconds", "Gameplay Settings (synced)", corpseLifetimeSeconds, 1, 600, "How long player corpses remain available for visual ragdoll and AED revive.");
-        corpseKnockbackMultiplier = configFile.getFloat("Corpse knockback multiplier", "Gameplay Settings (synced)", corpseKnockbackMultiplier, 0.0F, 5.0F, "Multiplier applied to corpse motion inherited from the player death.");
-        aedReviveHealth = configFile.getFloat("AED revive health", "Gameplay Settings (synced)", aedReviveHealth, 1.0F, 20.0F, "Health restored when a player is revived from a corpse with an AED.");
+        playerCorpsesEnabled = configFile.getBoolean("Enable player corpses", "Gameplay Settings (synced)", playerCorpsesEnabled, "Spawn a visual corpse when a player dies.");
+        corpseLifetimeSeconds = configFile.getInt("Corpse lifetime seconds", "Gameplay Settings (synced)", corpseLifetimeSeconds, 1, 600, "How long visual player corpses remain.");
 
         //Client Side Settings
         armsEnable = configFile.getBoolean("Enable Arms", Configuration.CATEGORY_GENERAL, armsEnable, "Enable arms rendering");

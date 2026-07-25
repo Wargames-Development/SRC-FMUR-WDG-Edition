@@ -218,31 +218,6 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
         }
     }
 
-    public void restoreInventory(EntityPlayer player) {
-        if (player == null || player.inventory == null || inventoryReleased) {
-            return;
-        }
-
-        for (StoredItem storedItem : storedInventory) {
-            ItemStack stack = storedItem.stack != null ? storedItem.stack.copy() : null;
-            if (stack == null) {
-                continue;
-            }
-
-            if (storedItem.slot >= 0
-                    && storedItem.slot < player.inventory.getSizeInventory()
-                    && player.inventory.getStackInSlot(storedItem.slot) == null) {
-                player.inventory.setInventorySlotContents(storedItem.slot, stack);
-            } else if (!player.inventory.addItemStackToInventory(stack) && stack.stackSize > 0) {
-                player.entityDropItem(stack, 0.0F);
-            }
-        }
-
-        storedInventory.clear();
-        inventoryReleased = true;
-        player.inventory.markDirty();
-    }
-
     public void expireAndDropInventory() {
         if (worldObj != null && !worldObj.isRemote && !inventoryReleased) {
             for (StoredItem storedItem : storedInventory) {

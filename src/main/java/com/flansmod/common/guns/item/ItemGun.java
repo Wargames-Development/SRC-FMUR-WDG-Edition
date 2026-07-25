@@ -21,8 +21,6 @@ import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.BulletType;
 import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.guns.type.ShootableType;
-import com.flansmod.common.medical.CorpseMedicalService;
-import com.flansmod.common.mob.EntityCorpse;
 import com.flansmod.common.network.*;
 import com.flansmod.common.paintjob.IPaintableItem;
 import com.flansmod.common.paintjob.PaintableType;
@@ -1529,12 +1527,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             if (gunType.dropItemOnShoot != null)// && !entityplayer.capabilities.isCreativeMode)
                 dropItem(world, entityPlayer, gunType.dropItemOnShoot);
 
-            if (gunType.isAED && !world.isRemote) {
-                EntityCorpse targetCorpse = CorpseMedicalService.findLookedAtReviveCorpse(entityPlayer, 5.0D, 0.8D);
-                if (targetCorpse != null) {
-                    CorpseMedicalService.reviveCorpse(entityPlayer, targetCorpse, gunType.name);
-                }
-            }
         }
 
         if (left)

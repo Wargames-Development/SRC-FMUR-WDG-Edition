@@ -82,6 +82,11 @@ public final class HitboxHelper {
     }
 
     public static AxisAlignedBB getFixedBoundingBox(Entity entity) {
+        if (isWgeZombie(entity)) {
+            // WGEvents owns these mobs server-side and synchronizes their current positions.
+            // The generic five-tick FMUR rewind moves their gun hit boxes behind the model.
+            return entity.boundingBox;
+        }
         // 原始flan代码
         //return entity.boundingBox.expand(-(entity.posX - entity.prevPosX) * 2.0D, -(entity.posY - entity.prevPosY) * 2.0D, -(entity.posZ - entity.prevPosZ) * 2.0D);
 
@@ -106,5 +111,16 @@ public final class HitboxHelper {
         }
         boundingBox = boundingBox.getOffsetBoundingBox(velocity.xCoord * -5, velocity.yCoord * -5, velocity.zCoord * -5);
         return boundingBox;
+    }
+
+    private static boolean isWgeZombie(Entity entity) {
+        Class<?> type = entity == null ? null : entity.getClass();
+        while (type != null) {
+            if ("com.wdg.wgevents.zombies.EntityWgeZombie".equals(type.getName())) {
+                return true;
+            }
+            type = type.getSuperclass();
+        }
+        return false;
     }
 }
