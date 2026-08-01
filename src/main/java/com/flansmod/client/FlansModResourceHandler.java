@@ -69,12 +69,16 @@ public class FlansModResourceHandler
 	
 	public static ResourceLocation getScope(String scopeTexture)
 	{
-		if(scopeMap.containsKey(scopeTexture))
+		// Content packs commonly use Windows separators (for example
+		// "GUI\\RifleScope"). Backslashes are not resource-path separators on
+		// macOS or Linux, including when the pack is loaded from a zip.
+		String resourcePath = scopeTexture.replace('\\', '/');
+		if(scopeMap.containsKey(resourcePath))
 		{
-			return scopeMap.get(scopeTexture);
+			return scopeMap.get(resourcePath);
 		}
-		ResourceLocation resLoc = new ResourceLocation("flansmod", "gui/" + scopeTexture + ".png");
-		scopeMap.put(scopeTexture, resLoc);
+		ResourceLocation resLoc = new ResourceLocation("flansmod", "gui/" + resourcePath + ".png");
+		scopeMap.put(resourcePath, resLoc);
 		return resLoc;
 	}
 	
