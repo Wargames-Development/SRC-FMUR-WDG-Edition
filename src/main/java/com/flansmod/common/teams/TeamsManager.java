@@ -957,16 +957,11 @@ public class TeamsManager {
     }
 
     public void resetInventory(EntityPlayer player) {
-        PlayerData playerData = PlayerHandler.getPlayerData(player);
-        Team team = playerData.team;
-        PlayerClass playerClass = playerData.getPlayerClass();
+        Team team = PlayerHandler.getPlayerData(player).team;
+        PlayerClass playerClass = PlayerHandler.getPlayerData(player).getPlayerClass();
 
         if (team == null)
             return;
-
-        // A class kit replaces every gun, so none of the previous gun's transient
-        // trigger, reload, cooldown, burst, or off-hand state remains valid.
-        playerData.resetWeaponState();
 
         player.inventory.armorInventory = new ItemStack[4];
         player.inventory.mainInventory = new ItemStack[36];
@@ -998,10 +993,6 @@ public class TeamsManager {
             player.inventory.addItemStackToInventory(stack.copy());
             //Load up as many guns as possible
         }
-
-        player.inventory.markDirty();
-        if (player instanceof EntityPlayerMP)
-            ((EntityPlayerMP) player).inventoryContainer.detectAndSendChanges();
 
 //        //Preload each gun
 //        for (int i = 0; i < player.inventory.getSizeInventory(); i++) {

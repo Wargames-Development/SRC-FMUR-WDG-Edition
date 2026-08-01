@@ -55,6 +55,7 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.network.play.client.C09PacketHeldItemChange;
 import net.minecraft.util.*;
 import net.minecraft.util.MovingObjectPosition.MovingObjectType;
 import net.minecraft.world.World;
@@ -394,17 +395,17 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                                 } else {
                                     //Send packet when firing a semi or starting to fire a full
                                     if (leftMouseHeld && !lastLeftMouseHeld && offHandGunType.getFireMode(offHandGunStack) != EnumFireMode.RAILGUN) {
-                                        FlansMod.getPacketHandler().sendToServer(new PacketGunFire(true, true, player.rotationYaw, player.rotationPitch));
+                                        sendGunFirePacket(player, true, true);
                                         if (clientSideShoot(player, offHandGunStack, offHandGunType, true))
                                             player.inventory.setInventorySlotContents(data.offHandGunSlot - 1, null);
                                     }
                                     if ((offHandGunType.getFireMode(offHandGunStack) == EnumFireMode.FULLAUTO || offHandGunType.getFireMode(offHandGunStack) == EnumFireMode.MINIGUN) && !leftMouseHeld && lastLeftMouseHeld) //Full auto. Send released mouse packet
                                     {
-                                        FlansMod.getPacketHandler().sendToServer(new PacketGunFire(true, false, player.rotationYaw, player.rotationPitch));
+                                        sendGunFirePacket(player, true, false);
                                     }
                                     if(offHandGunType.getFireMode(offHandGunStack) == EnumFireMode.RAILGUN) {
                                         if(railgunFire) {
-                                            FlansMod.getPacketHandler().sendToServer(new PacketGunFire(true, true, player.rotationYaw, player.rotationPitch));
+                                            sendGunFirePacket(player, true, true);
                                             if (clientSideShoot(player, offHandGunStack, offHandGunType, true)) {
                                                 player.inventory.setInventorySlotContents(data.offHandGunSlot - 1, null);
                                             }
@@ -435,17 +436,17 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     } else {
                         //Send packet when firing a semi or starting to fire a full
                         if (rightMouseHeld && !lastRightMouseHeld && type.getFireMode(itemstack) != EnumFireMode.RAILGUN) {
-                            FlansMod.getPacketHandler().sendToServer(new PacketGunFire(false, true, player.rotationYaw, player.rotationPitch));
+                            sendGunFirePacket(player, false, true);
                             if (clientSideShoot(player, itemstack, type, false))
                                 player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
                         }
                         //Full auto. Send released mouse packet
                         if ((type.getFireMode(itemstack) == EnumFireMode.FULLAUTO || type.getFireMode(itemstack) == EnumFireMode.MINIGUN) && !rightMouseHeld && lastRightMouseHeld) {
-                            FlansMod.getPacketHandler().sendToServer(new PacketGunFire(false, false, player.rotationYaw, player.rotationPitch));
+                            sendGunFirePacket(player, false, false);
                         }
                         if(type.getFireMode(itemstack) == EnumFireMode.RAILGUN) {
                             if(railgunFire) {
-                                FlansMod.getPacketHandler().sendToServer(new PacketGunFire(false, true, player.rotationYaw, player.rotationPitch));
+                                sendGunFirePacket(player, false, true);
                                 if (clientSideShoot(player, itemstack, type, false))
                                     player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
                             } else if(rightMouseHeld && !lastRightMouseHeld) {
@@ -715,6 +716,17 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         }
 
         return false;
+    }
+
+    @SideOnly(Side.CLIENT)
+    private void sendGunFirePacket(EntityPlayer player, boolean left, boolean held) {
+        // The Flan fire packet does not contain a hotbar slot. Some external kit
+        // systems can replace the held item without updating the server's selected
+        // slot, so refresh it through vanilla's validated held-item packet first.
+        if (player == Minecraft.getMinecraft().thePlayer) {
+            FlansMod.getPacketHandler().sendToServer(new C09PacketHeldItemChange(player.inventory.currentItem));
+        }
+        FlansMod.getPacketHandler().sendToServer(new PacketGunFire(left, held, player.rotationYaw, player.rotationPitch));
     }
 
     public void onUpdateServer(ItemStack itemstack, World world, Entity entity, int i, boolean flag) {

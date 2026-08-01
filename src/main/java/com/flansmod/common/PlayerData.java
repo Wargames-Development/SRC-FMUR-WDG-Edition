@@ -176,22 +176,8 @@ public class PlayerData {
 
 	public void playerKilled() {
 		mountingGun = null;
-		resetWeaponState();
-		snapshots = new PlayerSnapshot[FlansMod.numPlayerSnapshots];
-	}
-
-	/** Clear transient state that must not carry over to a replacement loadout. */
-	public void resetWeaponState() {
-		offHandGunSlot = 0;
-		shootTimeRight = shootTimeLeft = 0F;
-		shootClickDelay = 0;
 		isShootingRight = isShootingLeft = false;
-		minigunSpeed = 0F;
-		reloadingRight = reloadingLeft = false;
-		loopedSoundDelay = 0;
-		shouldPlayCooldownSound = shouldPlayWarmupSound = false;
-		burstRoundsRemainingLeft = burstRoundsRemainingRight = 0;
-		reloadedAfterRespawn = false;
+		snapshots = new PlayerSnapshot[FlansMod.numPlayerSnapshots];
 	}
 
 	public void selectOffHandWeapon(EntityPlayer player, int slot) {
