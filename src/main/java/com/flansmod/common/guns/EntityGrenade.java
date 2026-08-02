@@ -912,7 +912,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
                         type.explosionDamageVsLiving, type.explosionDamageVsPlayer, type.explosionDamageVsPlane, type.explosionDamageVsVehicle, type.smokeParticleCount, type.debrisParticleCount);
 
             } else {
-                worldObj.createExplosion(this, posX, posY, posZ, type.explosionRadius, TeamsManager.explosions && type.explosionBreaksBlocks);
+                worldObj.createExplosion(this, posX, posY, posZ, type.explosionRadius, FlansMod.explosionBlockDestructionEnabled && TeamsManager.explosions && type.explosionBreaksBlocks);
             }
         }
 

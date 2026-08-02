@@ -62,8 +62,8 @@ public class FlansModExplosion extends Explosion
 		player = p;
         isFlaming = false;
         isSmoking = true;
-        this.breakBlocks = breakBlocks;
-		this.breakBreakableBlocks = breakBreakableBlocks;
+        this.breakBlocks = FlansMod.explosionBlockDestructionEnabled && breakBlocks;
+		this.breakBreakableBlocks = FlansMod.explosionBlockDestructionEnabled && breakBreakableBlocks;
         damageVsPlayer = damagePlayer;
         damageVsLiving  = damageLiving;
         damageVsPlane   = damagePlane;
@@ -82,7 +82,8 @@ public class FlansModExplosion extends Explosion
             		EntityPlayerMP entityplayer = (EntityPlayerMP)playerEntity;
             		if (entityplayer.getDistanceSq(x, y, z) < 4096.0D)
             		{
-            			FlansMod.getPacketHandler().sendTo(new PacketExplosion(x, y, z, explosionRadius, breakBlocks, breakBreakableBlocks), entityplayer);
+						FlansMod.getPacketHandler().sendTo(new PacketExplosion(x, y, z, explosionRadius,
+								this.breakBlocks, this.breakBreakableBlocks), entityplayer);
             		}
             	}
             }

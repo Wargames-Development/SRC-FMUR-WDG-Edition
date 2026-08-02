@@ -536,7 +536,8 @@ public class EntityMecha extends EntityDriveable
         	FlansMod.getPacketHandler().sendToAllAround(new PacketDriveableDamage(this), posX, posY, posZ, FlansMod.driveableUpdateRange, dimension);
         	if(blockDamageFromFalling > 1)
         	{
-        		worldObj.createExplosion(this, posX, posY, posZ, blockDamageFromFalling, TeamsManager.explosions);
+				worldObj.createExplosion(this, posX, posY, posZ, blockDamageFromFalling,
+						FlansMod.explosionBlockDestructionEnabled && TeamsManager.explosions);
         	}
         }
         // assert that player is on ground, vehicle is empty and the player is in creative or non creatives can break

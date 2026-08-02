@@ -1894,7 +1894,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         type.explosionDamageVsLiving, type.explosionDamageVsPlayer, type.explosionDamageVsPlane, type.explosionDamageVsVehicle, type.smokeParticleCount, type.debrisParticleCount);
                 isDead = true;
             } else {
-                worldObj.createExplosion(this, posX, posY, posZ, type.explosionRadius, TeamsManager.explosions && type.explosionBreaksBlocks);
+                worldObj.createExplosion(this, posX, posY, posZ, type.explosionRadius, FlansMod.explosionBlockDestructionEnabled && TeamsManager.explosions && type.explosionBreaksBlocks);
                 isDead = true;
             }
         }
