@@ -10,6 +10,8 @@ import com.flansmod.common.PlayerHandler;
 import com.flansmod.common.driveables.*;
 import com.flansmod.common.driveables.mechas.EntityMecha;
 import com.flansmod.common.guns.EntityShootable;
+import com.flansmod.common.guns.EntityChemLight;
+import com.flansmod.common.guns.FlashlightState;
 import com.flansmod.common.guns.item.ItemGrenade;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.type.AttachmentType;
@@ -52,7 +54,10 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class TickHandlerClient {
@@ -63,6 +68,12 @@ public class TickHandlerClient {
     private static final List<KillMessage> killMessages = new ArrayList<>();
     public static ArrayList<Vector3i> blockLightOverrides = new ArrayList<>();
     public static ArrayList<Vector3i> vehicleLightOverrides = new ArrayList<>();
+    private static final ArrayList<Vector3i> muzzleFlashLightOverrides = new ArrayList<>();
+    private static final Map<Integer, Integer> muzzleFlashLightTicks = new HashMap<>();
+    private static final int MUZZLE_FLASH_DURATION_TICKS = 3;
+    private static final int MUZZLE_FLASH_LIGHT_LEVEL = 6;
+    private static float localMuzzleFlashExposure;
+    private static float localMuzzleFlashBaseLightExposure = -1F;
     public static int lightOverrideRefreshRate = 5;
     public static int vehicleLightOverrideRefreshRate = 1;
     public static boolean enableDefaultCrossHair = true;
@@ -913,6 +924,35 @@ public class TickHandlerClient {
     }
 
     @SubscribeEvent
+    public void renderNightVisionBeforeHud(RenderGameOverlayEvent.Pre event) {
+        if (event.type != ElementType.ALL || Minecraft.getMinecraft().gameSettings.hideGUI) {
+            return;
+        }
+        Minecraft minecraft = Minecraft.getMinecraft();
+        FirstPersonNightVisionGogglesRenderer.render(minecraft, event.partialTicks);
+        float intensity = NightVisionGogglesEffect.getIntensity(minecraft, event.partialTicks);
+        NightVisionGogglesEffect.renderBeforeHud(minecraft, intensity);
+    }
+
+    @SubscribeEvent
+    public void renderNightVisionAfterHud(RenderGameOverlayEvent.Post event) {
+        if (event.type != ElementType.ALL || Minecraft.getMinecraft().gameSettings.hideGUI) {
+            return;
+        }
+        Minecraft minecraft = Minecraft.getMinecraft();
+        float intensity = NightVisionGogglesEffect.getIntensity(minecraft, event.partialTicks);
+        NightVisionGogglesEffect.renderAfterHud(minecraft, intensity);
+    }
+
+    @SubscribeEvent
+    public void renderAltynHelmetOverlay(RenderGameOverlayEvent.Post event) {
+        if (event.type != ElementType.HELMET || Minecraft.getMinecraft().gameSettings.hideGUI) {
+            return;
+        }
+        AltynHelmetOverlay.render(Minecraft.getMinecraft());
+    }
+
+    @SubscribeEvent
     public void renderWorldLast(RenderWorldLastEvent event) {
         BulletHoleDecalRenderer.render(event);
     }
@@ -921,13 +961,34 @@ public class TickHandlerClient {
     public void renderTick(TickEvent.RenderTickEvent event) {
         switch (event.phase) {
             case START:
+                NightVisionGogglesBrightness.beginFrame(Minecraft.getMinecraft());
                 RenderGun.smoothing = event.renderTickTime;
                 renderTickStart(Minecraft.getMinecraft(), event.renderTickTime);
                 break;
             case END:
-                renderTickEnd(Minecraft.getMinecraft(), event.renderTickTime);
+                try {
+                    Minecraft minecraft = Minecraft.getMinecraft();
+                    renderTickEnd(minecraft, event.renderTickTime);
+                    renderEquipmentEffectsWithHiddenHud(minecraft, event.renderTickTime);
+                } finally {
+                    NightVisionGogglesBrightness.endFrame(Minecraft.getMinecraft());
+                }
                 break;
         }
+    }
+
+    /** RenderGameOverlayEvent is skipped while F1 hides the HUD. */
+    private void renderEquipmentEffectsWithHiddenHud(Minecraft minecraft, float partialTicks) {
+        if (!minecraft.gameSettings.hideGUI
+                || minecraft.currentScreen != null
+                || minecraft.theWorld == null) {
+            return;
+        }
+        FirstPersonNightVisionGogglesRenderer.render(minecraft, partialTicks);
+        float intensity = NightVisionGogglesEffect.getIntensity(minecraft, partialTicks);
+        NightVisionGogglesEffect.renderBeforeHud(minecraft, intensity);
+        AltynHelmetOverlay.render(minecraft);
+        NightVisionGogglesEffect.renderAfterHud(minecraft, intensity);
     }
 
     @SubscribeEvent
@@ -946,6 +1007,7 @@ public class TickHandlerClient {
      * Handle flashlight block light override
      */
     public void clientTickStart(Minecraft mc) {
+        updateMuzzleFlashLights(mc);
         if (mc.currentScreen instanceof GuiGameOver) {
             if (deathScreenDisplayWidth > 0
                     && deathScreenDisplayHeight > 0
@@ -986,7 +1048,8 @@ public class TickHandlerClient {
             for (Object obj : mc.theWorld.playerEntities) {
                 EntityPlayer player = (EntityPlayer) obj;
                 ItemStack currentHeldItem = player.getCurrentEquippedItem();
-                if (currentHeldItem != null && currentHeldItem.getItem() instanceof ItemGun) {
+                if (currentHeldItem != null && currentHeldItem.getItem() instanceof ItemGun
+                        && FlashlightState.isEnabled(currentHeldItem)) {
                     GunType type = ((ItemGun) currentHeldItem.getItem()).type;
                     for (AttachmentType attachment : type.getCurrentAttachments(currentHeldItem))
                         if (attachment != null && attachment.flashlight) {
@@ -1018,7 +1081,10 @@ public class TickHandlerClient {
                                             break;
                                     }
                                     blockLightOverrides.add(new Vector3i(x, y, z));
-                                    mc.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z, 12);
+                                    mc.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z,
+                                            Math.max(mc.theWorld.getSavedLightValue(
+                                                    EnumSkyBlock.Block, x, y, z),
+                                                    attachment.flashlightStrength));
                                     mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y + 1, z);
                                     mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y - 1, z);
                                     mc.theWorld.updateLightByType(EnumSkyBlock.Block, x + 1, y, z);
@@ -1032,7 +1098,24 @@ public class TickHandlerClient {
             }
 
             for (Object obj : mc.theWorld.loadedEntityList) {
-                if (obj instanceof EntityShootable) {
+                if (obj instanceof EntityChemLight) {
+                    EntityChemLight chemLight = (EntityChemLight)obj;
+                    if (!chemLight.isDead && chemLight.getRemainingLife() > 0) {
+                        int x = MathHelper.floor_double(chemLight.posX);
+                        int y = MathHelper.floor_double(chemLight.posY);
+                        int z = MathHelper.floor_double(chemLight.posZ);
+                        blockLightOverrides.add(new Vector3i(x, y, z));
+                        int existing = mc.theWorld.getSavedLightValue(EnumSkyBlock.Block, x, y, z);
+                        mc.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z,
+                                Math.max(existing, EntityChemLight.LIGHT_LEVEL));
+                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x + 1, y, z);
+                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x - 1, y, z);
+                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y + 1, z);
+                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y - 1, z);
+                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y, z + 1);
+                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y, z - 1);
+                    }
+                } else if (obj instanceof EntityShootable) {
                     EntityShootable bullet = (EntityShootable) obj;
                     if (!bullet.isDead && bullet.getType().hasDynamicLight) {
                         int x = (int) bullet.posX;
@@ -1094,7 +1177,96 @@ public class TickHandlerClient {
         }
     }
 
+    public static void triggerMuzzleFlashLight(int playerEntityId) {
+        muzzleFlashLightTicks.put(playerEntityId, MUZZLE_FLASH_DURATION_TICKS);
+        Minecraft minecraft = Minecraft.getMinecraft();
+        if (minecraft.thePlayer != null
+                && minecraft.thePlayer.getEntityId() == playerEntityId) {
+            if (localMuzzleFlashExposure <= 0F && minecraft.theWorld != null) {
+                int x = MathHelper.floor_double(minecraft.thePlayer.posX);
+                int y = MathHelper.floor_double(minecraft.thePlayer.posY
+                        + minecraft.thePlayer.getEyeHeight());
+                int z = MathHelper.floor_double(minecraft.thePlayer.posZ);
+                localMuzzleFlashBaseLightExposure = minecraft.theWorld.getSavedLightValue(
+                        EnumSkyBlock.Block, x, y, z) / 15F;
+            }
+            localMuzzleFlashExposure = 1F;
+        }
+    }
+
+    public static float getLocalMuzzleFlashExposure() {
+        return localMuzzleFlashExposure;
+    }
+
+    public static float getLocalMuzzleFlashBaseLightExposure(float measuredExposure) {
+        if (localMuzzleFlashExposure > 0F && localMuzzleFlashBaseLightExposure >= 0F) {
+            return localMuzzleFlashBaseLightExposure;
+        }
+        return measuredExposure;
+    }
+
+    private static void updateMuzzleFlashLights(Minecraft minecraft) {
+        if (minecraft.theWorld == null) {
+            muzzleFlashLightTicks.clear();
+            muzzleFlashLightOverrides.clear();
+            localMuzzleFlashExposure = 0F;
+            localMuzzleFlashBaseLightExposure = -1F;
+            return;
+        }
+
+        for (Vector3i position : muzzleFlashLightOverrides) {
+            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block,
+                    position.x, position.y, position.z);
+        }
+        muzzleFlashLightOverrides.clear();
+        localMuzzleFlashExposure = 0F;
+        boolean localFlashActive = false;
+
+        Iterator<Map.Entry<Integer, Integer>> iterator = muzzleFlashLightTicks.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Integer, Integer> entry = iterator.next();
+            Entity entity = minecraft.theWorld.getEntityByID(entry.getKey());
+            int ticksRemaining = entry.getValue();
+            if (!(entity instanceof EntityPlayer) || entity.isDead || ticksRemaining <= 0) {
+                iterator.remove();
+                continue;
+            }
+
+            EntityPlayer shooter = (EntityPlayer)entity;
+            int x = MathHelper.floor_double(shooter.posX);
+            int y = MathHelper.floor_double(shooter.posY + shooter.getEyeHeight());
+            int z = MathHelper.floor_double(shooter.posZ);
+            muzzleFlashLightOverrides.add(new Vector3i(x, y, z));
+            int existing = minecraft.theWorld.getSavedLightValue(EnumSkyBlock.Block, x, y, z);
+            minecraft.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z,
+                    Math.max(existing, MUZZLE_FLASH_LIGHT_LEVEL));
+            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x + 1, y, z);
+            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x - 1, y, z);
+            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x, y + 1, z);
+            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x, y - 1, z);
+            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x, y, z + 1);
+            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x, y, z - 1);
+
+            if (shooter == minecraft.thePlayer) {
+                localFlashActive = true;
+                localMuzzleFlashBaseLightExposure = existing / 15F;
+                localMuzzleFlashExposure = Math.max(localMuzzleFlashExposure,
+                        ticksRemaining / (float)MUZZLE_FLASH_DURATION_TICKS);
+            }
+
+            if (ticksRemaining <= 1) {
+                iterator.remove();
+            } else {
+                entry.setValue(ticksRemaining - 1);
+            }
+        }
+        if (!localFlashActive) {
+            localMuzzleFlashBaseLightExposure = -1F;
+        }
+    }
+
     public void clientTickEnd(Minecraft minecraft) { /* Client side only */
+        NightVisionGogglesAnimation.tick(minecraft);
         for (int i = 0; i < killMessages.size(); i++) {
             killMessages.get(i).timer--;
             if (killMessages.get(i).timer == 0) {

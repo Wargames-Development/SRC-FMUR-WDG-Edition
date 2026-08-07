@@ -10,5 +10,9 @@
   "target_hit": {
     "category": "player",
     "sounds": ["flansmod:target_hit"]
+  },
+  "nvg_on": {
+    "category": "player",
+    "sounds": ["flansmod:nvg_on"]
   }
 }

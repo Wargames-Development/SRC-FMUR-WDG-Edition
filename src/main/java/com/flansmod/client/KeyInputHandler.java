@@ -5,7 +5,9 @@ import com.flansmod.client.gui.GuiModOptions;
 import com.flansmod.client.gui.GuiSelectAmmo;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.eventhandlers.EnumBFMCKeyType;
+import com.flansmod.common.guns.FlashlightState;
 import com.flansmod.common.network.*;
+import com.flansmod.common.teams.ItemNightVisionGoggles;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -13,16 +15,20 @@ import cpw.mods.fml.common.gameevent.InputEvent.KeyInputEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.GuiChat;
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ChatComponentText;
+import net.minecraft.util.ResourceLocation;
 import org.lwjgl.input.Keyboard;
 
 @SideOnly(value = Side.CLIENT)
 public class KeyInputHandler {
     static Minecraft mc;
+    private static long nextNightVisionToggleTime;
     //public static KeyBinding accelerateKey = new KeyBinding("Accelerate Key", Keyboard.KEY_W, "FMUR");
     //public static KeyBinding decelerateKey = new KeyBinding("Decelerate Key", Keyboard.KEY_S, "FMUR");
     //public static KeyBinding leftKey = new KeyBinding("Left Key", Keyboard.KEY_A, "FMUR");
@@ -33,6 +39,7 @@ public class KeyInputHandler {
     public static KeyBinding reloadModelsKey = new KeyBinding("Reload Models", Keyboard.KEY_F9, "FMUR General");
     public static KeyBinding optionsKey = new KeyBinding("Mod Settings", Keyboard.KEY_SEMICOLON, "FMUR General");
     public static KeyBinding modelDebugKey = new KeyBinding("Toggle Model Debug Mode", Keyboard.KEY_I, "FMUR General");
+    public static KeyBinding nightVisionGogglesKey = new KeyBinding("Raise / Lower Night Vision Goggles", Keyboard.KEY_N, "FMUR Equipment");
     //=============================================================================================================================================
 
     public static KeyBinding downKey = new KeyBinding("Dive", Keyboard.KEY_LCONTROL, "FMUR Vehicle");
@@ -107,6 +114,7 @@ public class KeyInputHandler {
         ClientRegistry.registerKeyBinding(zoomSwitchKey);
         ClientRegistry.registerKeyBinding(coSightSwitchKey);
         ClientRegistry.registerKeyBinding(modelDebugKey);
+        ClientRegistry.registerKeyBinding(nightVisionGogglesKey);
         //ClientRegistry.registerKeyBinding(stableSightKey);
         ClientRegistry.registerKeyBinding(menuKey);
         ClientRegistry.registerKeyBinding(f10Key);
@@ -121,6 +129,24 @@ public class KeyInputHandler {
 
         EntityPlayer player = mc.thePlayer; // 玩家
         Entity ridingEntity = player.ridingEntity; // 玩家正在骑乘的载具
+
+        if (nightVisionGogglesKey.isPressed()) {
+            ItemStack boots = player.getEquipmentInSlot(1);
+            long now = System.currentTimeMillis();
+            if (now >= nextNightVisionToggleTime && boots != null
+                    && boots.getItem() instanceof ItemNightVisionGoggles
+                    && ItemNightVisionGoggles.canToggle(boots,
+                    player.worldObj.getTotalWorldTime())) {
+                if (!ItemNightVisionGoggles.isLowered(boots)) {
+                    mc.getSoundHandler().playSound(new PositionedSoundRecord(
+                            new ResourceLocation("flansmod", "nvg_on"),
+                            0.8F, 1F,
+                            (float)player.posX, (float)player.posY, (float)player.posZ));
+                }
+                FlansMod.getPacketHandler().sendToServer(new PacketToggleNightVisionGoggles());
+                nextNightVisionToggleTime = now + 2000L;
+            }
+        }
 
         if(missileAccelerateKey.isPressed()) {
             FlansMod.getPacketHandler().sendToServer(new PacketMissileMCLOSAccelerate());
@@ -173,7 +199,12 @@ public class KeyInputHandler {
         /* 注册按键 切换 */
 
         if (lightSwitchKey.isPressed()) {
-            FlansModClient.isFlashLight = !FlansModClient.isFlashLight;
+            ItemStack heldGun = mc.thePlayer == null ? null
+                    : mc.thePlayer.getCurrentEquippedItem();
+            boolean enabled = FlashlightState.hasFlashlight(heldGun)
+                    && !FlashlightState.isEnabled(heldGun);
+            FlansModClient.isFlashLight = enabled;
+            FlansMod.getPacketHandler().sendToServer(new PacketToggleFlashlight(enabled));
         }
         if (zoomSwitchKey.isPressed()) {
             FlansMod.switchedFOV = !FlansMod.switchedFOV;

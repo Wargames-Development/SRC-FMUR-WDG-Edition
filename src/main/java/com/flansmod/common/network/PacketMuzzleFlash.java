@@ -1,6 +1,7 @@
 package com.flansmod.common.network;
 
 import com.flansmod.common.FlansMod;
+import com.flansmod.client.TickHandlerClient;
 import com.flansmod.common.RotatedAxes;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
@@ -66,6 +67,7 @@ public class PacketMuzzleFlash extends PacketBase
     public void handleClientSide(EntityPlayer clientPlayer)
     {
         boolean isThisPlayer = playerID == clientPlayer.getEntityId();
+        TickHandlerClient.triggerMuzzleFlashLight(playerID);
         GunType g = GunType.getGun(gunType);
         if (g == null || g.model == null) {
             return;

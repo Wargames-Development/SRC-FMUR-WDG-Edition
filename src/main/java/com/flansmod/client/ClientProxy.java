@@ -16,6 +16,7 @@ import com.flansmod.common.guns.boxes.BlockGunBox;
 import com.flansmod.common.guns.boxes.GunBoxType;
 import com.flansmod.common.guns.type.GrenadeType;
 import com.flansmod.common.guns.type.GunType;
+import com.flansmod.common.guns.item.ItemChemLight;
 import com.flansmod.common.mob.EntityCorpse;
 import com.flansmod.common.mob.EntitySoldier;
 import com.flansmod.common.mob.RenderCorpse;
@@ -58,6 +59,7 @@ public class ClientProxy extends CommonProxy {
     /* These renderers handle rendering in hand items */
     public static RenderGun gunRenderer;
     public static RenderGrenade grenadeRenderer;
+    public static RenderChemLight chemLightRenderer;
     public static RenderPlane planeRenderer;
     public static RenderVehicle vehicleRenderer;
     public static RenderMecha mechaRenderer;
@@ -72,6 +74,9 @@ public class ClientProxy extends CommonProxy {
         new FlansModClient().load();
         gunRenderer = new RenderGun();
         grenadeRenderer = new RenderGrenade();
+        if (chemLightRenderer == null) {
+            chemLightRenderer = new RenderChemLight();
+        }
         planeRenderer = new RenderPlane();
         vehicleRenderer = new RenderVehicle();
         mechaRenderer = new RenderMecha();
@@ -82,6 +87,10 @@ public class ClientProxy extends CommonProxy {
 
         for (GrenadeType grenadeType : GrenadeType.grenades)
             MinecraftForgeClient.registerItemRenderer(grenadeType.item, grenadeRenderer);
+
+        MinecraftForgeClient.registerItemRenderer(FlansMod.chemLightRed, chemLightRenderer);
+        MinecraftForgeClient.registerItemRenderer(FlansMod.chemLightBlue, chemLightRenderer);
+        MinecraftForgeClient.registerItemRenderer(FlansMod.chemLightGreen, chemLightRenderer);
 
         for (PlaneType planeType : PlaneType.types)
             MinecraftForgeClient.registerItemRenderer(planeType.item, planeRenderer);
@@ -181,6 +190,10 @@ public class ClientProxy extends CommonProxy {
     public void registerRenderers() {
         RenderingRegistry.registerEntityRenderingHandler(EntityBullet.class, new RenderBullet());
         RenderingRegistry.registerEntityRenderingHandler(EntityGrenade.class, new RenderGrenade());
+        if (chemLightRenderer == null) {
+            chemLightRenderer = new RenderChemLight();
+        }
+        RenderingRegistry.registerEntityRenderingHandler(EntityChemLight.class, chemLightRenderer);
         RenderingRegistry.registerEntityRenderingHandler(EntityPlane.class, new RenderPlane());
         RenderingRegistry.registerEntityRenderingHandler(EntityVehicle.class, new RenderVehicle());
         RenderingRegistry.registerEntityRenderingHandler(EntityAAGun.class, new RenderAAGun());
