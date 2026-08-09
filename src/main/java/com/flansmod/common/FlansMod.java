@@ -191,6 +191,9 @@ public class FlansMod {
     public static ItemSoldierSpawner soldierSpawner;
     public static ItemCorpseSpawner corpseSpawner;
     public static ItemNightVisionGoggles nightVisionGoggles;
+    public static ItemNightVisionGoggles nightVisionGogglesWhitePhosphor;
+    public static ItemNightVisionGoggles nightVisionGogglesBlack;
+    public static ItemNightVisionGoggles nightVisionGogglesWhitePhosphorBlack;
     public static ItemChemLight chemLightRed;
     public static ItemChemLight chemLightBlue;
     public static ItemChemLight chemLightGreen;
@@ -306,8 +309,19 @@ public class FlansMod {
         opStick = new ItemOpStick();
         GameRegistry.registerItem(opStick, "opStick", MODID);
 
-        nightVisionGoggles = new ItemNightVisionGoggles();
+        nightVisionGoggles = new ItemNightVisionGoggles(
+                ItemNightVisionGoggles.PhosphorType.GREEN_TAN);
+        nightVisionGogglesWhitePhosphor = new ItemNightVisionGoggles(
+                ItemNightVisionGoggles.PhosphorType.WHITE_TAN);
+        nightVisionGogglesBlack = new ItemNightVisionGoggles(
+                ItemNightVisionGoggles.PhosphorType.GREEN_BLACK);
+        nightVisionGogglesWhitePhosphorBlack = new ItemNightVisionGoggles(
+                ItemNightVisionGoggles.PhosphorType.WHITE_BLACK);
         GameRegistry.registerItem(nightVisionGoggles, "gpnvg", MODID);
+        GameRegistry.registerItem(nightVisionGogglesWhitePhosphor, "gpnvg_wp", MODID);
+        GameRegistry.registerItem(nightVisionGogglesBlack, "gpnvg_black", MODID);
+        GameRegistry.registerItem(nightVisionGogglesWhitePhosphorBlack,
+                "gpnvg_wp_black", MODID);
 
         chemLightRed = new ItemChemLight(ItemChemLight.Color.RED);
         chemLightBlue = new ItemChemLight(ItemChemLight.Color.BLUE);

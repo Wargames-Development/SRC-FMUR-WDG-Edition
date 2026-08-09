@@ -21,17 +21,39 @@ import java.util.List;
  * can be worn alongside content-pack helmets without changing their definitions.
  */
 public class ItemNightVisionGoggles extends ItemArmor {
+    public enum PhosphorType {
+        GREEN_TAN(false, "gpnvg", "gpnvg", "armor/GPNVG_1.png"),
+        WHITE_TAN(true, "gpnvg_wp", "gpnvg", "armor/GPNVG_WP_1.png"),
+        GREEN_BLACK(false, "gpnvg_black", "gpnvg_black", "armor/GPNVG_BLACK_1.png"),
+        WHITE_BLACK(true, "gpnvg_wp_black", "gpnvg_black", "armor/GPNVG_WP_BLACK_1.png");
+
+        private final boolean whitePhosphor;
+        private final String unlocalizedName;
+        private final String iconName;
+        private final String modelTexturePath;
+
+        PhosphorType(boolean whitePhosphor, String unlocalizedName,
+                     String iconName, String modelTexturePath) {
+            this.whitePhosphor = whitePhosphor;
+            this.unlocalizedName = unlocalizedName;
+            this.iconName = iconName;
+            this.modelTexturePath = modelTexturePath;
+        }
+    }
+
     public static final String TAG_LOWERED = "GPNVGLowered";
     public static final String TAG_LAST_TOGGLE_TICK = "GPNVGLastToggleTick";
     public static final long TOGGLE_COOLDOWN_TICKS = 40L;
 
     @SideOnly(Side.CLIENT)
     private ModelBiped armorModel;
+    private final PhosphorType phosphorType;
 
-    public ItemNightVisionGoggles() {
+    public ItemNightVisionGoggles(PhosphorType phosphorType) {
         super(ItemTeamArmour.armorMat, 0, 3);
-        setUnlocalizedName("gpnvg");
-        setTextureName(FlansMod.MODID + ":gpnvg");
+        this.phosphorType = phosphorType;
+        setUnlocalizedName(phosphorType.unlocalizedName);
+        setTextureName(FlansMod.MODID + ":" + phosphorType.iconName);
         setCreativeTab(FlansMod.tabFlanTeams);
         setMaxStackSize(1);
     }
@@ -41,6 +63,16 @@ public class ItemNightVisionGoggles extends ItemArmor {
                 && stack.getItem() instanceof ItemNightVisionGoggles
                 && stack.hasTagCompound()
                 && stack.getTagCompound().getBoolean(TAG_LOWERED);
+    }
+
+    public static boolean isWhitePhosphor(ItemStack stack) {
+        return stack != null
+                && stack.getItem() instanceof ItemNightVisionGoggles
+                && ((ItemNightVisionGoggles)stack.getItem()).phosphorType.whitePhosphor;
+    }
+
+    public String getModelTexturePath() {
+        return phosphorType.modelTexturePath;
     }
 
     public static void setLowered(ItemStack stack, boolean lowered) {
@@ -71,7 +103,7 @@ public class ItemNightVisionGoggles extends ItemArmor {
 
     @Override
     public String getArmorTexture(ItemStack stack, Entity entity, int slot, String layer) {
-        return FlansMod.MODID + ":armor/GPNVG_1.png";
+        return FlansMod.MODID + ":" + phosphorType.modelTexturePath;
     }
 
     @Override
@@ -86,7 +118,8 @@ public class ItemNightVisionGoggles extends ItemArmor {
     @Override
     @SideOnly(Side.CLIENT)
     public void registerIcons(IIconRegister iconRegister) {
-        itemIcon = iconRegister.registerIcon(FlansMod.MODID + ":gpnvg");
+        itemIcon = iconRegister.registerIcon(
+                FlansMod.MODID + ":" + phosphorType.iconName);
     }
 
     @SuppressWarnings({"rawtypes", "unchecked"})
@@ -94,6 +127,11 @@ public class ItemNightVisionGoggles extends ItemArmor {
     @SideOnly(Side.CLIENT)
     public void addInformation(ItemStack stack, EntityPlayer player, List lines, boolean advanced) {
         lines.add(EnumChatFormatting.DARK_GREEN + "Quad-tube night vision");
+        if (phosphorType.whitePhosphor) {
+            lines.add(EnumChatFormatting.AQUA + "WP: White phosphor image intensifier");
+        } else {
+            lines.add(EnumChatFormatting.GREEN + "GP: Green phosphor image intensifier");
+        }
         lines.add(EnumChatFormatting.DARK_GRAY + "Use N to lower NVG");
     }
 }

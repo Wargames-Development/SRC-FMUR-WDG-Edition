@@ -25,9 +25,6 @@ public final class FirstPersonNightVisionGogglesRenderer {
     // Keep the upper bridge clipped by the top of the viewport so the moving
     // assembly reads as attached to a helmet mount instead of floating.
     private static final float FIRST_PERSON_OFFSET_Y = -0.065F;
-    private static final ResourceLocation TEXTURE = new ResourceLocation(
-            FlansMod.MODID, "armor/GPNVG_1.png");
-
     private static IModelCustom flipModel;
 
     private FirstPersonNightVisionGogglesRenderer() {
@@ -41,6 +38,7 @@ public final class FirstPersonNightVisionGogglesRenderer {
         if (boots == null || !(boots.getItem() instanceof ItemNightVisionGoggles)) {
             return;
         }
+        ItemNightVisionGoggles goggles = (ItemNightVisionGoggles)boots.getItem();
 
         float progress = NightVisionGogglesAnimation.getLoweredProgress(
                 minecraft.thePlayer, partialTicks);
@@ -89,7 +87,8 @@ public final class FirstPersonNightVisionGogglesRenderer {
             }
             GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL11.GL_TEXTURE_ENV_MODE, GL11.GL_MODULATE);
             GL11.glColor4f(modelBrightness, modelBrightness, modelBrightness, 1F);
-            minecraft.renderEngine.bindTexture(TEXTURE);
+            minecraft.renderEngine.bindTexture(new ResourceLocation(
+                    FlansMod.MODID, goggles.getModelTexturePath()));
 
             GL11.glTranslatef(0F, FIRST_PERSON_OFFSET_Y, 0F);
             // Camera space already uses +Y as up. The third-person armour

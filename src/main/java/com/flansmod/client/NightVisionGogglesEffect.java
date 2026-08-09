@@ -43,6 +43,7 @@ public final class NightVisionGogglesEffect {
             "uniform float localLightExposure;\n" +
             "uniform float chemLightExposure;\n" +
             "uniform float flashlightExposure;\n" +
+            "uniform float whitePhosphor;\n" +
             "uniform int renderPass;\n" +
             "varying vec2 textureCoordinate;\n" +
             "float luminance(vec3 color) {\n" +
@@ -136,23 +137,29 @@ public final class NightVisionGogglesEffect {
             "    intensified = mix(intensified, max(intensified, chemAmplified), chemLightExposure * 0.90);\n" +
             "    intensified += flashlightExposure * 2.4;\n" +
             "    intensified += daylightBlindness * 4.0;\n" +
+            "    float whiteProfile = clamp(whitePhosphor, 0.0, 1.0);\n" +
+            "    float whiteContrast = smoothstep(0.035, 0.90, intensified);\n" +
+            "    intensified = mix(intensified, whiteContrast, whiteProfile * 0.42);\n" +
             "    float animationFrame = floor(elapsedTime * 24.0);\n" +
             "    vec2 fineCell = floor(gl_FragCoord.xy);\n" +
             "    float fineGrain = temporalNoise(vec3(fineCell, animationFrame));\n" +
             "    fineGrain += temporalNoise(vec3(fineCell.yx + vec2(19.0, 73.0), animationFrame + 47.0));\n" +
             "    fineGrain -= 1.0;\n" +
             "    float coarseGrain = temporalNoise(vec3(floor(gl_FragCoord.xy / 2.0), animationFrame + 93.0)) - 0.5;\n" +
-            "    float grainStrength = mix(0.045, 0.015, smoothstep(0.04, 0.70, light));\n" +
-            "    intensified += fineGrain * grainStrength + coarseGrain * 0.012;\n" +
+            "    float grainStrength = mix(0.0675, 0.0225, smoothstep(0.04, 0.70, light));\n" +
+            "    intensified += fineGrain * grainStrength + coarseGrain * 0.018;\n" +
             "    float distanceToTube = tubeDistance(uv, aspect);\n" +
             "    float lensFalloff = 1.0 - 0.43 * smoothstep(0.05, 0.39, distanceToTube);\n" +
-            "    vec3 phosphor = intensified * vec3(0.13, 0.57, 0.245);\n" +
-            "    phosphor += halo * vec3(0.045, 0.31, 0.085);\n" +
+            "    vec3 phosphorColor = mix(vec3(0.13, 0.57, 0.245), vec3(0.56, 0.76, 0.86), whiteProfile);\n" +
+            "    vec3 haloColor = mix(vec3(0.045, 0.31, 0.085), vec3(0.15, 0.27, 0.34), whiteProfile);\n" +
+            "    vec3 phosphor = intensified * phosphorColor;\n" +
+            "    phosphor += halo * haloColor * mix(1.0, 0.68, whiteProfile);\n" +
             "    float whiteout = clamp(directOverload * 1.15 + bloom * 14.4, 0.0, 1.0);\n" +
             "    whiteout = max(whiteout, indoorExposure * 0.78 * (1.0 - chemPresence));\n" +
             "    whiteout = max(whiteout, smoothstep(0.04, 0.72, flashlightExposure) * 0.98);\n" +
             "    whiteout = max(whiteout, daylightBlindness * 0.98);\n" +
-            "    phosphor = mix(phosphor, vec3(0.78, 1.0, 0.80), whiteout);\n" +
+            "    vec3 overloadColor = mix(vec3(0.78, 1.0, 0.80), vec3(0.86, 0.96, 1.0), whiteProfile);\n" +
+            "    phosphor = mix(phosphor, overloadColor, whiteout);\n" +
             "    phosphor *= lensFalloff;\n" +
             "    gl_FragColor = vec4(mix(scene, clamp(phosphor, 0.0, 1.0), intensity), 1.0);\n" +
             "}\n";
@@ -390,6 +397,10 @@ public final class NightVisionGogglesEffect {
                 NightVisionGogglesBrightness.getChemLightExposure(minecraft));
         GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "flashlightExposure"),
                 NightVisionGogglesBrightness.getFlashlightExposure(minecraft));
+        ItemStack goggles = minecraft.thePlayer == null ? null
+                : minecraft.thePlayer.getEquipmentInSlot(1);
+        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "whitePhosphor"),
+                ItemNightVisionGoggles.isWhitePhosphor(goggles) ? 1F : 0F);
         GL20.glUniform1i(GL20.glGetUniformLocation(shaderProgram, "renderPass"), renderPass);
     }
 
@@ -412,7 +423,15 @@ public final class NightVisionGogglesEffect {
             GL11.glDepthMask(false);
             GL11.glEnable(GL11.GL_BLEND);
             GL11.glBlendFunc(GL11.GL_ZERO, GL11.GL_SRC_COLOR);
-            GL11.glColor4f(1F - 0.88F * intensity, 1F, 1F - 0.84F * intensity, 1F);
+            ItemStack goggles = minecraft.thePlayer == null ? null
+                    : minecraft.thePlayer.getEquipmentInSlot(1);
+            if (ItemNightVisionGoggles.isWhitePhosphor(goggles)) {
+                GL11.glColor4f(1F - 0.44F * intensity,
+                        1F - 0.24F * intensity, 1F, 1F);
+            } else {
+                GL11.glColor4f(1F - 0.88F * intensity,
+                        1F, 1F - 0.84F * intensity, 1F);
+            }
             ScaledResolution scaled = new ScaledResolution(minecraft,
                     minecraft.displayWidth, minecraft.displayHeight);
             int width = scaled.getScaledWidth();
