@@ -1,6 +1,5 @@
 package com.flansmod.common.network;
 
-import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.guns.item.ItemGun;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -39,16 +38,8 @@ public class PacketGunSpread extends PacketBase
     @Override
     public void handleServerSide(EntityPlayerMP player)
     {
-        ItemStack stack = player.inventory.getCurrentItem();
-        if(stack != null && stack.getItem() instanceof ItemGun)
-        {
-            GunType type = ((ItemGun)stack.getItem()).type;
-
-            if(type.getGrip(stack) != null && type.getSecondaryFire(stack))
-                ((ItemGun)stack.getItem()).type.getGrip(stack).secondarySpread = spread;
-            else
-                ((ItemGun)stack.getItem()).type.bulletSpread = spread;
-        }
+        // Kept as a registered no-op for compatibility with older clients.
+        // Gun definition spread must never be overwritten by client input.
     }
 
     @Override

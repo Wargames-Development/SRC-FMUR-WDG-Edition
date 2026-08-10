@@ -11,9 +11,22 @@ import net.minecraft.potion.PotionEffect;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 
 public class BulletType extends ShootableType {
+    private static final String[] PISTOL_CALIBER_TOKENS = {
+            "9mm", "9x17", "9x18", "9x19", "9x21", "9x23",
+            "45acp", "40sw", "40smithwesson", "380acp", "357mag", "357sig",
+            "10mm", "57x28", "46x30", "762x25", "44mag", "50ae",
+            "38special", "38spl", "32acp", "25acp", "22lr"
+    };
+    private static final String[] LARGE_CALIBER_TOKENS = {
+            "50bmg", "50cal", "510dtc", "50beowulf",
+            "12x99", "127x99", "127mm", "145x114", "145mm",
+            "20mm", "23mm", "25mm", "30mm", "35mm", "40mm"
+    };
+
     /**
      * The static bullets list
      */
@@ -122,6 +135,10 @@ public class BulletType extends ShootableType {
     public float bulletSpread = -1;
     public float dragInAir = 0.99F;
     public float dragInWater = 0.80F;
+    private Boolean pistolCaliber;
+    private Boolean inferredPistolCaliber;
+    private Boolean largeCaliber;
+    private Boolean inferredLargeCaliber;
     public boolean canSpotEntityDriveable = false;
     public int maxRange = -1;
 
@@ -253,6 +270,14 @@ public class BulletType extends ShootableType {
         super.read(split, file);
         try {
             switch (split[0]) {
+                case "PistolCaliber":
+                case "IsPistolCaliber":
+                    pistolCaliber = Boolean.parseBoolean(split[1]);
+                    break;
+                case "LargeCaliber":
+                case "IsLargeCaliber":
+                    largeCaliber = Boolean.parseBoolean(split[1]);
+                    break;
                 case "FlakParticles":
                     flak = Integer.parseInt(split[1]);
                     break;
@@ -551,6 +576,59 @@ public class BulletType extends ShootableType {
                 e.printStackTrace();
             }
         }
+    }
+
+    /**
+     * Content packs may override ambiguous ammunition with PistolCaliber true/false.
+     * Existing packs fall back to common caliber tokens in the bullet name.
+     */
+    public boolean isPistolCaliber() {
+        if (pistolCaliber != null) {
+            return pistolCaliber;
+        }
+        if (inferredPistolCaliber == null) {
+            String identifier = ((shortName == null ? "" : shortName)
+                    + (name == null ? "" : name)).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+            boolean inferred = false;
+            for (String token : PISTOL_CALIBER_TOKENS) {
+                if (identifier.contains(token)) {
+                    inferred = true;
+                    break;
+                }
+            }
+            inferredPistolCaliber = inferred;
+        }
+        return inferredPistolCaliber;
+    }
+
+    /**
+     * Identifies .50-caliber-and-larger ammunition for stronger cosmetic effects.
+     * Content packs can override unusual names with LargeCaliber true/false.
+     */
+    public boolean isLargeCaliber() {
+        if (largeCaliber != null) {
+            return largeCaliber;
+        }
+        if (isPistolCaliber()) {
+            return false;
+        }
+        if (inferredLargeCaliber == null) {
+            String identifier = getNormalizedCaliberIdentifier();
+            boolean inferred = false;
+            for (String token : LARGE_CALIBER_TOKENS) {
+                if (identifier.contains(token)) {
+                    inferred = true;
+                    break;
+                }
+            }
+            inferredLargeCaliber = inferred;
+        }
+        return inferredLargeCaliber;
+    }
+
+    private String getNormalizedCaliberIdentifier() {
+        return ((shortName == null ? "" : shortName)
+                + (name == null ? "" : name)).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 
     /**

@@ -63,6 +63,12 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private static final int DEFAULT_BULLET_LIFE = 3 * 20; //Kill bullets after 3 seconds
     private static final int BLOOD_PARTICLE_COUNT = 12;
     private static final float BLOOD_PARTICLE_RANGE = 64F;
+    private static final double MIN_TRACER_VISIBLE_DISTANCE = 5D;
+    private static final double TRACER_VISIBLE_DISTANCE_RANGE = 5D;
+    private static final double BALLISTIC_DUST_DISTANCE = 5D;
+    private static final double BALLISTIC_DUST_SPACING = 1.25D;
+    private static final double MIN_TRACER_RICOCHET_DISTANCE = 100D;
+    private static final int TRACER_RICOCHET_CHANCE_DENOMINATOR = 12;
 
     @SideOnly(Side.CLIENT)
     public EntityLivingBase bulletFollowCamera;
@@ -125,6 +131,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     public Vector3f initialPos;
     public boolean hasSetLook = false;
     public int distanceTravelled = 0;
+    private boolean tracerOriginSet = false;
+    private double tracerOriginX;
+    private double tracerOriginY;
+    private double tracerOriginZ;
+    private double nextBallisticDustDistance = 0.75D;
     public int penetrationBlockCount = 0;
     private int ticksInAir;
     private double getPrevDistanceToTarget;
@@ -421,6 +432,13 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     @Override
     public void onUpdate() {
         super.onUpdate();
+
+        if (!tracerOriginSet) {
+            tracerOriginX = posX;
+            tracerOriginY = posY;
+            tracerOriginZ = posZ;
+            tracerOriginSet = true;
+        }
 
 
         // Update the ping for hit detection
@@ -1117,6 +1135,21 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         if (penetrableBlockFound) continue;
                     }
 
+                    // Cosmetic only. The normal non-bouncy projectile impact below is unchanged.
+                    if (!worldObj.isRemote
+                            && !type.enableBounciness
+                            && raytraceResult.sideHit == 1
+                            && motionY < -0.01D
+                            && hasTraveledFromTracerOrigin(hitVec.xCoord, hitVec.yCoord, hitVec.zCoord,
+                                    MIN_TRACER_RICOCHET_DISTANCE)
+                            && shouldSpawnTracerRicochet(raytraceResult)) {
+                        FlansMod.getPacketHandler().sendToAllAround(
+                                new PacketParticle("flansmod.tracerricochet",
+                                        hitVec.xCoord, hitVec.yCoord + 0.03D, hitVec.zCoord,
+                                        motionX, motionY, motionZ, 1.0F),
+                                hitVec.xCoord, hitVec.yCoord, hitVec.zCoord, 160F, dimension);
+                    }
+
 
                     //标靶方块
                     if (block instanceof TargetBreakableBlock && owner instanceof EntityPlayer) {
@@ -1625,6 +1658,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         rotationYaw = prevRotationYaw + (rotationYaw - prevRotationYaw) * 0.2F;
 
         //Particles
+        if (worldObj.isRemote && shouldSpawnBallisticDust()) {
+            spawnBallisticDust();
+        }
         if (type.trailParticles && worldObj.isRemote && ticksInAir > 1) {
             spawnParticles();
         }
@@ -1632,6 +1668,88 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         //Temporary fire glitch fix
         if (worldObj.isRemote)
             extinguish();
+    }
+
+    /** Keeps the entity tracer hidden for a stable per-projectile 5-10 block launch gap. */
+    public boolean hasTracerReachedVisibleDistance() {
+        return hasTracerReachedVisibleDistance(posX, posY, posZ);
+    }
+
+    private boolean hasTracerReachedVisibleDistance(double x, double y, double z) {
+        return hasTraveledFromTracerOrigin(x, y, z, getTracerVisibleDistance());
+    }
+
+    private boolean hasTraveledFromTracerOrigin(double x, double y, double z, double distance) {
+        if (!tracerOriginSet) {
+            return false;
+        }
+        double deltaX = x - tracerOriginX;
+        double deltaY = y - tracerOriginY;
+        double deltaZ = z - tracerOriginZ;
+        return deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ >= distance * distance;
+    }
+
+    private double getTracerVisibleDistance() {
+        int mixedId = getEntityId() * 1103515245 + 12345;
+        return MIN_TRACER_VISIBLE_DISTANCE
+                + ((mixedId >>> 8) & 1023) * (TRACER_VISIBLE_DISTANCE_RANGE / 1023D);
+    }
+
+    private boolean shouldSpawnTracerRicochet(MovingObjectPosition hit) {
+        int hash = getEntityId();
+        hash = 31 * hash + hit.blockX;
+        hash = 31 * hash + hit.blockY;
+        hash = 31 * hash + hit.blockZ;
+        // Deterministic selection avoids consuming randomness used by projectile behavior.
+        return (hash & Integer.MAX_VALUE) % TRACER_RICOCHET_CHANCE_DENOMINATOR == 0;
+    }
+
+    private boolean shouldSpawnBallisticDust() {
+        return owner instanceof EntityPlayer
+                && (type.weaponType == EnumWeaponType.NONE || type.weaponType == EnumWeaponType.GUN);
+    }
+
+    @SideOnly(Side.CLIENT)
+    private void spawnBallisticDust() {
+        double startX = prevPosX - tracerOriginX;
+        double startY = prevPosY - tracerOriginY;
+        double startZ = prevPosZ - tracerOriginZ;
+        double endX = posX - tracerOriginX;
+        double endY = posY - tracerOriginY;
+        double endZ = posZ - tracerOriginZ;
+        double startDistance = Math.sqrt(startX * startX + startY * startY + startZ * startZ);
+        double endDistance = Math.sqrt(endX * endX + endY * endY + endZ * endZ);
+        double visibleEnd = Math.min(endDistance, BALLISTIC_DUST_DISTANCE);
+        double segmentLength = endDistance - startDistance;
+        if (segmentLength <= 0.001D || nextBallisticDustDistance > visibleEnd) {
+            return;
+        }
+
+        boolean pistolCaliber = type.isPistolCaliber();
+        boolean largeCaliber = type.isLargeCaliber();
+        double cloudSpread = largeCaliber ? 1.8D : pistolCaliber ? 0.55D : 1D;
+        double particleSpacing = largeCaliber ? 0.85D : pistolCaliber ? 1.5D : BALLISTIC_DUST_SPACING;
+        float particleScale = largeCaliber
+                ? 1.8F + rand.nextFloat() * 0.35F
+                : pistolCaliber ? 0.42F + rand.nextFloat() * 0.13F
+                : 0.9F + rand.nextFloat() * 0.25F;
+        double motionLength = Math.sqrt(motionX * motionX + motionY * motionY + motionZ * motionZ);
+        while (nextBallisticDustDistance <= visibleEnd) {
+            double progress = (nextBallisticDustDistance - startDistance) / segmentLength;
+            progress = Math.max(0D, Math.min(1D, progress));
+            double x = prevPosX + (posX - prevPosX) * progress + rand.nextGaussian() * 0.18D * cloudSpread;
+            double y = prevPosY + (posY - prevPosY) * progress + rand.nextGaussian() * 0.12D * cloudSpread;
+            double z = prevPosZ + (posZ - prevPosZ) * progress + rand.nextGaussian() * 0.18D * cloudSpread;
+            double forwardX = motionLength > 0.001D ? motionX / motionLength * 0.018D : 0D;
+            double forwardY = motionLength > 0.001D ? motionY / motionLength * 0.018D : 0D;
+            double forwardZ = motionLength > 0.001D ? motionZ / motionLength * 0.018D : 0D;
+            FlansMod.proxy.spawnParticle("flansmod.ballisticdust", x, y, z,
+                    forwardX + rand.nextGaussian() * 0.012D,
+                    forwardY + 0.018D + rand.nextGaussian() * 0.008D,
+                    forwardZ + rand.nextGaussian() * 0.012D,
+                    particleScale);
+            nextBallisticDustDistance += particleSpacing;
+        }
     }
 
     private boolean stillHoming() {

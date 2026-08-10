@@ -356,9 +356,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 if (FlansModClient.currentScope != null) {
                     FlansModClient.currentScope = null;
 
-                    //Send default spread packet to server
-                    //getDefaultSpread方法
-                    FlansMod.getPacketHandler().sendToServer(new PacketGunSpread(itemstack, type.getDefaultSpread(itemstack)));
                 }
             } else if (mc.objectMouseOver != null && (mc.objectMouseOver.entityHit instanceof EntityFlagpole || mc.objectMouseOver.entityHit instanceof EntityFlag || mc.objectMouseOver.entityHit instanceof EntityGunItem || (mc.objectMouseOver.entityHit instanceof EntityGrenade && ((EntityGrenade) mc.objectMouseOver.entityHit).type.isDeployableBag))) {
                 //Do not shoot ammo bags, flags or dropped gun items
@@ -390,6 +387,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                             if (offHandGunType.usableByPlayers) {
                                 //If we are using a burst mode gun, and there is burst left to be done, try to do it
                                 if (offHandGunType.getFireMode(offHandGunStack) == EnumFireMode.BURST && data.burstRoundsRemainingLeft > 0) {
+                                    refreshGunFireAim(player, true, false);
                                     if (clientSideShoot(player, offHandGunStack, offHandGunType, true))
                                         player.inventory.setInventorySlotContents(data.offHandGunSlot - 1, null);
                                 } else {
@@ -417,6 +415,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                                         }
                                     }
                                     if ((offHandGunType.getFireMode(offHandGunStack) == EnumFireMode.FULLAUTO || offHandGunType.getFireMode(offHandGunStack) == EnumFireMode.MINIGUN) && leftMouseHeld) {
+                                        if (lastLeftMouseHeld)
+                                            refreshGunFireAim(player, true, true);
                                         if (clientSideShoot(player, offHandGunStack, offHandGunType, true)) {
                                             player.inventory.setInventorySlotContents(data.offHandGunSlot - 1, null);
                                         }
@@ -431,6 +431,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 if (type.usableByPlayers) {
                     //If we are using a burst mode gun, and there is burst left to be done, try to do it
                     if (type.getFireMode(itemstack) == EnumFireMode.BURST && data.burstRoundsRemainingRight > 0) {
+                        refreshGunFireAim(player, false, false);
                         if (clientSideShoot(player, itemstack, type, false))
                             player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
                     } else {
@@ -457,6 +458,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                             }
                         }
                         if ((type.getFireMode(itemstack) == EnumFireMode.FULLAUTO || type.getFireMode(itemstack) == EnumFireMode.MINIGUN) && rightMouseHeld) {
+                            if (lastRightMouseHeld)
+                                refreshGunFireAim(player, false, true);
                             if (clientSideShoot(player, itemstack, type, false))
                                 player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
                         }
@@ -472,7 +475,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     gameSettings.thirdPersonView = 0;
                     gameSettings.viewBobbing = true;
                     RenderManager.debugBoundingBox = false;
-                    FlansMod.getPacketHandler().sendToServer(new PacketGunSpread(itemstack, type.getDefaultSpread(itemstack)));
                     FlansMod.getPacketHandler().sendToServer(new PacketGunState(false));
                 }
                 /**
@@ -561,10 +563,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
 
                 if (zoomProgress > 0.9) {
                     currentSpread = type.getADSSpread(itemstack, player.isSneaking(), player.isSprinting());
-                    FlansMod.getPacketHandler().sendToServer(new PacketGunSpread(itemstack, type.getADSSpread(itemstack, player.isSneaking(), player.isSprinting())));
                 } else {
                     currentSpread = type.getDefaultSpread(itemstack);
-                    FlansMod.getPacketHandler().sendToServer(new PacketGunSpread(itemstack, type.getDefaultSpread(itemstack)));
                 }
             }
         }
@@ -729,6 +729,11 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         FlansMod.getPacketHandler().sendToServer(new PacketGunFire(left, held, player.rotationYaw, player.rotationPitch));
     }
 
+    @SideOnly(Side.CLIENT)
+    private void refreshGunFireAim(EntityPlayer player, boolean left, boolean held) {
+        FlansMod.getPacketHandler().sendToServer(new PacketGunFire(left, held, player.rotationYaw, player.rotationPitch));
+    }
+
     public void onUpdateServer(ItemStack itemstack, World world, Entity entity, int i, boolean flag) {
         if (itemstack.getTagCompound() == null || itemstack.getTagCompound().hasNoTags()) {
             GunType gunType = this.type;
@@ -796,6 +801,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 //If the player is no longer holding a gun, emulate a release of the shoot button
                 if (player.inventory.getCurrentItem() == null || player.inventory.getCurrentItem().getItem() == null || !(player.inventory.getCurrentItem().getItem() instanceof ItemGun)) {
                     data.isShootingRight = data.isShootingLeft = false;
+                    data.isScoped = false;
                     data.offHandGunSlot = 0;
                     isScoped = false;
                     /*                    (new PacketSelectOffHandGun(0)).handleServerSide(player);*/
@@ -1315,7 +1321,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
 
             }
             //A bullet stack was found, so try shooting with it
-            else if (bulletStack != null && bulletStack.getItem() instanceof ItemShootable && ((sprinting && isScoped) || !sprinting || canActuallyHipFire) && entityplayer.ridingEntity == null) {
+            else if (bulletStack != null && bulletStack.getItem() instanceof ItemShootable && ((sprinting && data.isScoped) || !sprinting || canActuallyHipFire) && entityplayer.ridingEntity == null) {
                 /* 奔跑不能射击 */
                 if (sprinting && !type.isCanShootWhileRunning)
                     return gunStack;
@@ -1487,10 +1493,15 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         }
 
         AttachmentType barrel = gunType.getBarrel(stack);
-        if ((barrel == null || !barrel.disableMuzzleFlash) && type.getShouldShowMuzzleFlash()) {
-            PacketMuzzleFlash p = new PacketMuzzleFlash(entityPlayer, type.muzzleFlashParticle, type.muzzleFlashParticleSize, type.flashTexture == null, gunType.shortName);
-            FlansMod.packetHandler.sendToAllAround(p, entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ, 160, entityPlayer.dimension);
-        }
+        boolean showMuzzleFlash = (barrel == null || !barrel.disableMuzzleFlash)
+                && type.getShouldShowMuzzleFlash();
+        PacketMuzzleFlash muzzlePacket = new PacketMuzzleFlash(entityPlayer,
+                showMuzzleFlash ? type.muzzleFlashParticle : "",
+                type.muzzleFlashParticleSize,
+                showMuzzleFlash && type.flashTexture == null,
+                gunType.shortName);
+        FlansMod.packetHandler.sendToAllAround(muzzlePacket, entityPlayer.posX, entityPlayer.posY,
+                entityPlayer.posZ, 160, entityPlayer.dimension);
 
         if (!world.isRemote && bulletStack.getItem() instanceof ItemShootable) {
             // Spawn the bullet entities
@@ -1512,20 +1523,33 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 numBullets = gunType.getNumBullets(stack);
             }
 
+            PlayerData playerData = PlayerHandler.getPlayerData(entityPlayer);
             if (spread <= 0) {
-                spread = gunType.getSpread(stack, entityPlayer.isSneaking(), entityPlayer.isSprinting());
-                //spread = (float) currentSpread;
+                spread = playerData != null && playerData.isScoped
+                        ? gunType.getADSSpread(stack, entityPlayer.isSneaking(), entityPlayer.isSprinting())
+                        : gunType.getDefaultSpread(stack);
             }
 
-            for (int k = 0; k < numBullets; k++) {
-                world.spawnEntityInWorld(itemShootable.getEntity(
-                        world,
-                        entityPlayer,
-                        gunType.getDamage(stack),
-                        gunType.getBulletSpeed(stack, bulletStack),
-                        numBullets > 1,
-                        bulletStack.getItemDamage(),
-                        gunType, spread, type.isDuckBill() ? spread * 2.0F : spread));
+            float previousYaw = entityPlayer.rotationYaw;
+            float previousPitch = entityPlayer.rotationPitch;
+            if (playerData != null && playerData.hasShotAim) {
+                entityPlayer.rotationYaw = playerData.shotYaw;
+                entityPlayer.rotationPitch = playerData.shotPitch;
+            }
+            try {
+                for (int k = 0; k < numBullets; k++) {
+                    world.spawnEntityInWorld(itemShootable.getEntity(
+                            world,
+                            entityPlayer,
+                            gunType.getDamage(stack),
+                            gunType.getBulletSpeed(stack, bulletStack),
+                            numBullets > 1,
+                            bulletStack.getItemDamage(),
+                            gunType, spread, type.isDuckBill() ? spread * 2.0F : spread));
+                }
+            } finally {
+                entityPlayer.rotationYaw = previousYaw;
+                entityPlayer.rotationPitch = previousPitch;
             }
 
             if(!FlansMod.recoilOnClient) {

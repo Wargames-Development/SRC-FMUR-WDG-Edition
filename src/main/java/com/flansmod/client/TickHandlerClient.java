@@ -955,6 +955,7 @@ public class TickHandlerClient {
     @SubscribeEvent
     public void renderWorldLast(RenderWorldLastEvent event) {
         BulletHoleDecalRenderer.render(event);
+        TracerRicochetRenderer.render(event);
     }
 
     @SubscribeEvent
@@ -1033,6 +1034,7 @@ public class TickHandlerClient {
             tickCountWounded--;
         }
         BulletHoleDecalRenderer.tick();
+        TracerRicochetRenderer.tick();
         if (FlansMod.ticker % lightOverrideRefreshRate == 0 && mc.theWorld != null) {
             //Check graphics setting and adjust refresh rate
             lightOverrideRefreshRate = mc.gameSettings.fancyGraphics ? 10 : 20;

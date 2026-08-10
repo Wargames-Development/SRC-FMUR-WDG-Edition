@@ -59,6 +59,11 @@ public class PlayerData {
 	public int shootClickDelay;
 	/** True if this player is shooting */
 	public boolean isShootingRight, isShootingLeft;
+	/** Server-owned player state used to select hip-fire or ADS spread. */
+	public boolean isScoped;
+	/** Latest finite client camera aim accepted by the server for gunfire. */
+	public float shotYaw, shotPitch;
+	public boolean hasShotAim;
 	/** The speed of the minigun the player is using */
 	public float minigunSpeed = 0F;
 	/** Reloading booleans */

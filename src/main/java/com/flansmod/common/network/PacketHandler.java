@@ -22,6 +22,7 @@ import net.minecraft.network.Packet;
 import net.minecraft.server.MinecraftServer;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Flan's Mod packet handler class. Directs packet data to packet classes.
@@ -31,12 +32,28 @@ import java.util.*;
  */
 @ChannelHandler.Sharable
 public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketBase> {
+    private static final Queue<Runnable> serverTasks = new ConcurrentLinkedQueue<Runnable>();
     //Map of channels for each side
     private EnumMap<Side, FMLEmbeddedChannel> channels;
     //The list of registered packets. Should contain no more than 256 packets.
     private LinkedList<Class<? extends PacketBase>> packets = new LinkedList<>();
     //Whether or not Flan's Mod has initialised yet. Once true, no more packets may be registered.
     private boolean modInitialised = false;
+
+    /**
+     * Forge 1.7.10 decodes custom packets on a Netty thread. World, player and
+     * inventory state must only be touched by tasks drained from the server tick.
+     */
+    public static void enqueueServerTask(Runnable task) {
+        serverTasks.offer(task);
+    }
+
+    public static void runServerTasks() {
+        Runnable task;
+        while ((task = serverTasks.poll()) != null) {
+            task.run();
+        }
+    }
 
     /**
      * Registers a packet with the handler

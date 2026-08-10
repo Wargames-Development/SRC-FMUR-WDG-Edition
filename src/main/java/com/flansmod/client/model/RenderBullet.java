@@ -23,12 +23,106 @@ public class RenderBullet extends Render
 		bindEntityTexture(bullet);
 		GL11.glPushMatrix();
 		GL11.glTranslatef((float) d, (float) d1, (float) d2);
+		renderTracerGlow(bullet, f1);
 		GL11.glRotatef(f, 0.0F, 1.0F, 0.0F);
 		GL11.glRotatef(90F -bullet.prevRotationPitch - (bullet.rotationPitch - bullet.prevRotationPitch) * f1, 1.0F, 0.0F, 0.0F);
 		ModelBase model = bullet.type.model;
 		if(model != null)
 			model.render(bullet, 0.0F, 0.0F, -0.1F, 0.0F, 0.0F, 0.0625F);
 		GL11.glPopMatrix();
+	}
+
+	/**
+	 * Render the gameplay tracer directly on the synchronized bullet entity.
+	 */
+	private void renderTracerGlow(EntityBullet bullet, float partialTicks)
+	{
+		if(!bullet.hasTracerReachedVisibleDistance())
+			return;
+
+		double speed = Math.sqrt(bullet.motionX * bullet.motionX
+				+ bullet.motionY * bullet.motionY
+				+ bullet.motionZ * bullet.motionZ);
+		if(speed < 0.001D)
+			return;
+
+		double directionX = bullet.motionX / speed;
+		double directionY = bullet.motionY / speed;
+		double directionZ = bullet.motionZ / speed;
+		double length = Math.max(0.45D, Math.min(3.25D, speed * 1.35D));
+		Minecraft minecraft = Minecraft.getMinecraft();
+		if(minecraft.gameSettings.thirdPersonView == 0 && minecraft.thePlayer != null)
+		{
+			double bulletX = bullet.lastTickPosX + (bullet.posX - bullet.lastTickPosX) * partialTicks;
+			double bulletY = bullet.lastTickPosY + (bullet.posY - bullet.lastTickPosY) * partialTicks;
+			double bulletZ = bullet.lastTickPosZ + (bullet.posZ - bullet.lastTickPosZ) * partialTicks;
+			double eyeX = minecraft.thePlayer.lastTickPosX
+					+ (minecraft.thePlayer.posX - minecraft.thePlayer.lastTickPosX) * partialTicks;
+			double eyeY = minecraft.thePlayer.lastTickPosY
+					+ (minecraft.thePlayer.posY - minecraft.thePlayer.lastTickPosY) * partialTicks
+					+ minecraft.thePlayer.getEyeHeight();
+			double eyeZ = minecraft.thePlayer.lastTickPosZ
+					+ (minecraft.thePlayer.posZ - minecraft.thePlayer.lastTickPosZ) * partialTicks;
+			double distanceToEye = Math.sqrt((bulletX - eyeX) * (bulletX - eyeX)
+					+ (bulletY - eyeY) * (bulletY - eyeY)
+					+ (bulletZ - eyeZ) * (bulletZ - eyeZ));
+			length = Math.min(length, Math.max(0D, distanceToEye - 0.35D));
+		}
+
+		double tailX = -directionX * length;
+		double tailY = -directionY * length;
+		double tailZ = -directionZ * length;
+
+		GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+		try
+		{
+			GL11.glDisable(GL11.GL_TEXTURE_2D);
+			GL11.glDisable(GL11.GL_LIGHTING);
+			GL11.glDisable(GL11.GL_ALPHA_TEST);
+			GL11.glDisable(GL11.GL_CULL_FACE);
+			GL11.glEnable(GL11.GL_DEPTH_TEST);
+			GL11.glDepthMask(false);
+			GL11.glEnable(GL11.GL_BLEND);
+			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+			GL11.glEnable(GL11.GL_LINE_SMOOTH);
+			GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
+
+			if(length > 0.05D)
+			{
+				drawTracerLine(tailX, tailY, tailZ, 11F, 1F, 0F, 0F, 0.10F);
+				drawTracerLine(tailX, tailY, tailZ, 6F, 1F, 0.015F, 0F, 0.24F);
+				drawTracerLine(tailX, tailY, tailZ, 2.25F, 1F, 0.20F, 0.08F, 0.92F);
+			}
+
+			GL11.glEnable(GL11.GL_POINT_SMOOTH);
+			GL11.glHint(GL11.GL_POINT_SMOOTH_HINT, GL11.GL_NICEST);
+			drawTracerPoint(9F, 1F, 0F, 0F, 0.16F);
+			drawTracerPoint(3.5F, 1F, 0.28F, 0.12F, 0.95F);
+		}
+		finally
+		{
+			GL11.glPopAttrib();
+		}
+	}
+
+	private void drawTracerLine(double tailX, double tailY, double tailZ,
+			float width, float red, float green, float blue, float alpha)
+	{
+		GL11.glLineWidth(width);
+		GL11.glColor4f(red, green, blue, alpha);
+		GL11.glBegin(GL11.GL_LINES);
+		GL11.glVertex3d(tailX, tailY, tailZ);
+		GL11.glVertex3d(0D, 0D, 0D);
+		GL11.glEnd();
+	}
+
+	private void drawTracerPoint(float size, float red, float green, float blue, float alpha)
+	{
+		GL11.glPointSize(size);
+		GL11.glColor4f(red, green, blue, alpha);
+		GL11.glBegin(GL11.GL_POINTS);
+		GL11.glVertex3d(0D, 0D, 0D);
+		GL11.glEnd();
 	}
 
 	@Override

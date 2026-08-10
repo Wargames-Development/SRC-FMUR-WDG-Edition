@@ -655,9 +655,8 @@ public class RenderGun implements IItemRenderer {
             // new location)
             boolean isFlashEnabled = barrelAttachment == null || !barrelAttachment.disableMuzzleFlash;
 
-            if (isFlashEnabled && animations.muzzleFlashTime > 0 && gunType.flashModel != null && !gunType.getSecondaryFire(item)) {
+            if (animations.muzzleFlashTime > 0 && !gunType.getSecondaryFire(item)) {
                 GL11.glPushMatrix();
-                ModelFlash flash = gunType.flashModel;
                 GL11.glScalef(model.flashScale, model.flashScale, model.flashScale);
                 {
                     Vector3f base = model.muzzleFlashPoint == null ? Vector3f.Zero : model.muzzleFlashPoint;
@@ -674,11 +673,17 @@ public class RenderGun implements IItemRenderer {
                                 base.z + defaultOffset.z);
                     }
 
-                    renderEngine.bindTexture(FlansModResourceHandler.getAuxiliaryTexture(gunType.flashTexture));
-                    ModelGun.glowOn();
-                    flash.renderFlash(f, animations.flashInt);
-                    ModelGun.glowOff();
-                    renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(gunType.getPaintjob(item.getItemDamage())));
+                    if (model.muzzleFlashPoint != null) {
+                        renderMuzzleTracer(model.flashScale);
+                    }
+
+                    if (isFlashEnabled && gunType.flashModel != null) {
+                        renderEngine.bindTexture(FlansModResourceHandler.getAuxiliaryTexture(gunType.flashTexture));
+                        ModelGun.glowOn();
+                        gunType.flashModel.renderFlash(f, animations.flashInt);
+                        ModelGun.glowOff();
+                        renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(gunType.getPaintjob(item.getItemDamage())));
+                    }
                 }
                 GL11.glPopMatrix();
             }
@@ -1576,6 +1581,44 @@ public class RenderGun implements IItemRenderer {
         GL11.glPopMatrix();
 
         GL11.glPopMatrix();
+    }
+
+    /**
+     * Bridges the visible muzzle to the synchronized entity tracer without
+     * predicting a separate projectile path.
+     */
+    private void renderMuzzleTracer(float flashScale) {
+        float length = 0.65F / Math.max(0.05F, Math.abs(flashScale));
+
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        try {
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glDisable(GL11.GL_LIGHTING);
+            GL11.glDisable(GL11.GL_ALPHA_TEST);
+            GL11.glDisable(GL11.GL_CULL_FACE);
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glDepthMask(false);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+            GL11.glEnable(GL11.GL_LINE_SMOOTH);
+            GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
+
+            drawMuzzleTracerLine(length, 9F, 1F, 0F, 0F, 0.12F);
+            drawMuzzleTracerLine(length, 5F, 1F, 0.03F, 0F, 0.30F);
+            drawMuzzleTracerLine(length, 2F, 1F, 0.22F, 0.08F, 0.95F);
+        } finally {
+            GL11.glPopAttrib();
+        }
+    }
+
+    private void drawMuzzleTracerLine(float length, float width,
+                                      float red, float green, float blue, float alpha) {
+        GL11.glLineWidth(width);
+        GL11.glColor4f(red, green, blue, alpha);
+        GL11.glBegin(GL11.GL_LINES);
+        GL11.glVertex3f(0F, 0F, 0F);
+        GL11.glVertex3f(length, 0F, 0F);
+        GL11.glEnd();
     }
 
     /**

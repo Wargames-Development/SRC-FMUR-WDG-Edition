@@ -1,5 +1,7 @@
 package com.flansmod.common.network;
 
+import com.flansmod.common.PlayerData;
+import com.flansmod.common.PlayerHandler;
 import com.flansmod.common.eventhandlers.ServerTickEvent;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.item.ItemGun;
@@ -42,40 +44,39 @@ public class PacketGunState extends PacketBase
 	}
 
 	@Override
-	public void handleServerSide(EntityPlayerMP player) 
+	public void handleServerSide(final EntityPlayerMP player)
 	{
-		//FlansMod.log("Gun state packet received + isScoped; " + isScoped);
-		//player.getHeldItem();
-		if(player.getCurrentEquippedItem() != null && player.getCurrentEquippedItem().getItem() instanceof ItemGun)
-		{
-			ItemGun itemGun = (ItemGun)player.getCurrentEquippedItem().getItem();
-			ItemStack itemstack = player.getCurrentEquippedItem();
-			AttachmentType scope = itemGun.type.getScope(itemstack);
-			
-			//Apply night vision while scoped if gun.allowNightVision = True
-			if(itemGun.type.allowNightVision && isScoped)
-			{
-				player.addPotionEffect(new PotionEffect(Potion.nightVision.id, 1200, 0));
-				ServerTickEvent.nightVisionPlayers.add(player);
+		final boolean scoped = isScoped;
+		PacketHandler.enqueueServerTask(new Runnable() {
+			@Override
+			public void run() {
+				boolean holdingGun = player.getCurrentEquippedItem() != null
+						&& player.getCurrentEquippedItem().getItem() instanceof ItemGun;
+				PlayerData data = PlayerHandler.getPlayerData(player);
+				if (data != null)
+					data.isScoped = scoped && holdingGun;
+
+				if(holdingGun)
+				{
+					ItemGun itemGun = (ItemGun)player.getCurrentEquippedItem().getItem();
+					ItemStack itemstack = player.getCurrentEquippedItem();
+					AttachmentType scope = itemGun.type.getScope(itemstack);
+					boolean hasNightVision = itemGun.type.allowNightVision || scope != null && scope.hasNightVision;
+
+					if(hasNightVision && scoped)
+					{
+						player.addPotionEffect(new PotionEffect(Potion.nightVision.id, 1200, 0));
+						if (!ServerTickEvent.nightVisionPlayers.contains(player))
+							ServerTickEvent.nightVisionPlayers.add(player);
+					}
+					else if(hasNightVision)
+					{
+						player.removePotionEffect(Potion.nightVision.id);
+						ServerTickEvent.nightVisionPlayers.remove(player);
+					}
+				}
 			}
-			else if(itemGun.type.allowNightVision && !isScoped)
-			{
-				player.removePotionEffect(Potion.nightVision.id);
-				ServerTickEvent.nightVisionPlayers.remove(player);
-			}
-			//Apply night vision while scoped if attachment.hasNightVision = True
-			if(scope != null && scope.hasNightVision && isScoped)
-			{
-				player.addPotionEffect(new PotionEffect(Potion.nightVision.id, 1200, 0));
-				ServerTickEvent.nightVisionPlayers.add(player);
-			}
-			else if(scope != null && scope.hasNightVision && !isScoped)
-			{
-				player.removePotionEffect(Potion.nightVision.id);
-				ServerTickEvent.nightVisionPlayers.remove(player);
-			}
-			itemGun.isScoped = isScoped;
-		}
+		});
 	}
 
 	@Override
