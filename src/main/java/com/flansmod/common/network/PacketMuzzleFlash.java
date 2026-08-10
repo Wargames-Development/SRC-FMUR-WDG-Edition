@@ -83,34 +83,60 @@ public class PacketMuzzleFlash extends PacketBase
                 RotatedAxes axes = new RotatedAxes(entityPlayer.rotationYawHead+90, entityPlayer.rotationPitch, 0);
 
                 Vector3f shoulderOffset = isThisPlayer ? new Vector3f(0, -22F/16F, 0) : new Vector3f(0, 0, 0);
-                Vector3f handOffset = /*isThisPlayer ? new Vector3f(0.5, 0, 0.5) :*/ new Vector3f(0, 0, 0);
+                Vector3f handOffset = getMuzzleModelOffset(g, barrelAttachment);
 
                 Vector3f.add(shoulderOffset, g.muzzleFlashParticlesShoulderOffset, shoulderOffset);
 
-                if (g.model.muzzleFlashPoint != null) {
-                    Vector3f.add(handOffset, (Vector3f) g.model.muzzleFlashPoint, handOffset);
-                } else {
-                    Vector3f.add(handOffset, new Vector3f(0.5F, 0.22F, 0), handOffset);
-                }
-
-                if (barrelAttachment != null && barrelAttachment.model != null && barrelAttachment.model.attachmentFlashOffset != null) {
-                    Vector3f.add(handOffset, (Vector3f) barrelAttachment.model.attachmentFlashOffset, handOffset);
-                } else if (g.model.defaultBarrelFlashPoint != null) {
-                    Vector3f.add(handOffset, (Vector3f) g.model.defaultBarrelFlashPoint, handOffset);
-                }
-
                 if (isThisPlayer/* && Minecraft.getMinecraft().gameSettings.thirdPersonView == 0*/) {
                     Vector3f.add(handOffset, new Vector3f(-0.7, -0.35, 0.1), handOffset);
+                } else {
+                    handOffset = transformThirdPersonMuzzleOffset(g, handOffset);
                 }
 
                 Vector3f.add(handOffset, g.muzzleFlashParticlesHandOffset, handOffset);
 
                 Vector3f pos = PlayerItemPositionUtils.GetPlayerHandPosition(entityPlayer, shoulderOffset, handOffset, !isThisPlayer);
+                if (!isThisPlayer) {
+                    Vector3f backwardCorrection = new Vector3f(axes.getXAxis());
+                    backwardCorrection.scale(2F);
+                    Vector3f.sub(pos, backwardCorrection, pos);
+                    pos.y -= 1.5F;
+                }
 
                 Vector3f v = (Vector3f) axes.getXAxis().translate((float)Math.random() * 2 - 1, (float)Math.random() * 2 - 1, (float)Math.random() * 2 - 1).scale(0.05F);
 
                 FlansMod.proxy.spawnParticle(type, pos.x, pos.y, pos.z, v.x, v.y, v.z, scale);
             }
         }
+    }
+
+    private static Vector3f getMuzzleModelOffset(GunType gun, AttachmentType barrelAttachment) {
+        Vector3f offset = gun.model.muzzleFlashPoint == null
+                ? new Vector3f(0.5F, 0.22F, 0F)
+                : new Vector3f(gun.model.muzzleFlashPoint);
+        if (barrelAttachment != null && barrelAttachment.model != null
+                && barrelAttachment.model.attachmentFlashOffset != null) {
+            Vector3f.add(offset, barrelAttachment.model.attachmentFlashOffset, offset);
+        } else if (gun.model.defaultBarrelFlashPoint != null) {
+            Vector3f.add(offset, gun.model.defaultBarrelFlashPoint, offset);
+        }
+        return offset;
+    }
+
+    /** Mirrors RenderGun's EQUIPPED transform so model units do not become world blocks. */
+    private static Vector3f transformThirdPersonMuzzleOffset(GunType gun, Vector3f modelOffset) {
+        float muzzleScale = gun.modelScale * gun.model.flashScale;
+        float x = 0.75F + gun.model.thirdPersonOffset.x + modelOffset.x * muzzleScale;
+        float y = -0.22F + gun.model.thirdPersonOffset.y + modelOffset.y * muzzleScale;
+        float z = -0.08F - gun.model.thirdPersonOffset.z - modelOffset.z * muzzleScale;
+
+        double yawRadians = Math.toRadians(-5D);
+        float yawX = (float) (Math.cos(yawRadians) * x + Math.sin(yawRadians) * z);
+        float yawZ = (float) (-Math.sin(yawRadians) * x + Math.cos(yawRadians) * z);
+        double rollRadians = Math.toRadians(35D);
+        return new Vector3f(
+                (float) (Math.cos(rollRadians) * yawX - Math.sin(rollRadians) * y),
+                (float) (Math.sin(rollRadians) * yawX + Math.cos(rollRadians) * y),
+                yawZ);
     }
 }

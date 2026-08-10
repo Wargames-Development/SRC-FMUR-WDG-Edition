@@ -74,6 +74,9 @@ public class TickHandlerClient {
     private static final int MUZZLE_FLASH_LIGHT_LEVEL = 6;
     private static float localMuzzleFlashExposure;
     private static float localMuzzleFlashBaseLightExposure = -1F;
+    private static final int BALLISTIC_NEAR_MISS_DURATION_TICKS = 14;
+    private static int ballisticNearMissTicks;
+    private static float ballisticNearMissStrength;
     public static int lightOverrideRefreshRate = 5;
     public static int vehicleLightOverrideRefreshRate = 1;
     public static boolean enableDefaultCrossHair = true;
@@ -945,6 +948,14 @@ public class TickHandlerClient {
     }
 
     @SubscribeEvent
+    public void renderBallisticNearMissVignette(RenderGameOverlayEvent.Post event) {
+        if (event.type != ElementType.ALL || ballisticNearMissStrength <= 0F) {
+            return;
+        }
+        renderBallisticNearMissVignette(Minecraft.getMinecraft());
+    }
+
+    @SubscribeEvent
     public void renderAltynHelmetOverlay(RenderGameOverlayEvent.Post event) {
         if (event.type != ElementType.HELMET || Minecraft.getMinecraft().gameSettings.hideGUI) {
             return;
@@ -1009,6 +1020,7 @@ public class TickHandlerClient {
      */
     public void clientTickStart(Minecraft mc) {
         updateMuzzleFlashLights(mc);
+        updateBallisticNearMiss(mc);
         if (mc.currentScreen instanceof GuiGameOver) {
             if (deathScreenDisplayWidth > 0
                     && deathScreenDisplayHeight > 0
@@ -1205,6 +1217,83 @@ public class TickHandlerClient {
             return localMuzzleFlashBaseLightExposure;
         }
         return measuredExposure;
+    }
+
+    public static void triggerBallisticNearMiss(float strength) {
+        ballisticNearMissStrength = Math.max(ballisticNearMissStrength,
+                MathHelper.clamp_float(strength, 0F, 1F));
+        ballisticNearMissTicks = BALLISTIC_NEAR_MISS_DURATION_TICKS;
+    }
+
+    private static void updateBallisticNearMiss(Minecraft minecraft) {
+        if (minecraft.theWorld == null || minecraft.thePlayer == null) {
+            ballisticNearMissTicks = 0;
+            ballisticNearMissStrength = 0F;
+            return;
+        }
+        if (ballisticNearMissTicks > 0) {
+            ballisticNearMissTicks--;
+            ballisticNearMissStrength *= 0.9F;
+        } else {
+            ballisticNearMissStrength = 0F;
+        }
+    }
+
+    private static void renderBallisticNearMissVignette(Minecraft minecraft) {
+        ScaledResolution resolution = new ScaledResolution(minecraft,
+                minecraft.displayWidth, minecraft.displayHeight);
+        int width = resolution.getScaledWidth();
+        int height = resolution.getScaledHeight();
+        float life = ballisticNearMissTicks / (float) BALLISTIC_NEAR_MISS_DURATION_TICKS;
+        float alpha = Math.min(0.34F, ballisticNearMissStrength * life * 0.34F);
+        if (alpha <= 0.005F) {
+            return;
+        }
+
+        float edgeX = Math.max(36F, width * 0.22F);
+        float edgeY = Math.max(28F, height * 0.25F);
+        minecraft.entityRenderer.setupOverlayRendering();
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
+        GL11.glDepthMask(false);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glShadeModel(GL11.GL_SMOOTH);
+
+        Tessellator tessellator = Tessellator.instance;
+        tessellator.startDrawingQuads();
+        addNearMissVignetteVertex(tessellator, 0, 0, alpha);
+        addNearMissVignetteVertex(tessellator, width, 0, alpha);
+        addNearMissVignetteVertex(tessellator, width, edgeY, 0F);
+        addNearMissVignetteVertex(tessellator, 0, edgeY, 0F);
+
+        addNearMissVignetteVertex(tessellator, 0, height - edgeY, 0F);
+        addNearMissVignetteVertex(tessellator, width, height - edgeY, 0F);
+        addNearMissVignetteVertex(tessellator, width, height, alpha);
+        addNearMissVignetteVertex(tessellator, 0, height, alpha);
+
+        addNearMissVignetteVertex(tessellator, 0, 0, alpha);
+        addNearMissVignetteVertex(tessellator, edgeX, 0, 0F);
+        addNearMissVignetteVertex(tessellator, edgeX, height, 0F);
+        addNearMissVignetteVertex(tessellator, 0, height, alpha);
+
+        addNearMissVignetteVertex(tessellator, width - edgeX, 0, 0F);
+        addNearMissVignetteVertex(tessellator, width, 0, alpha);
+        addNearMissVignetteVertex(tessellator, width, height, alpha);
+        addNearMissVignetteVertex(tessellator, width - edgeX, height, 0F);
+        tessellator.draw();
+
+        GL11.glShadeModel(GL11.GL_FLAT);
+        GL11.glPopAttrib();
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+    }
+
+    private static void addNearMissVignetteVertex(Tessellator tessellator,
+                                                   double x, double y, float alpha) {
+        tessellator.setColorRGBA_F(0.07F, 0.055F, 0.045F, alpha);
+        tessellator.addVertex(x, y, -90D);
     }
 
     private static void updateMuzzleFlashLights(Minecraft minecraft) {

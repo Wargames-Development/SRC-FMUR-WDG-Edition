@@ -4,6 +4,7 @@ import com.flansmod.common.wgc.Integrations;
 import com.flansmod.api.IEntityBullet;
 import com.flansmod.client.BulletEntityCamera;
 import com.flansmod.client.FlansModClient;
+import com.flansmod.client.TickHandlerClient;
 import com.flansmod.client.debug.EntityDebugDot;
 import com.flansmod.common.*;
 import com.flansmod.common.blocks.impl.TargetBreakableBlock;
@@ -69,6 +70,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private static final double BALLISTIC_DUST_SPACING = 1.25D;
     private static final double MIN_TRACER_RICOCHET_DISTANCE = 100D;
     private static final int TRACER_RICOCHET_CHANCE_DENOMINATOR = 12;
+    private static final double NEAR_MISS_MIN_DISTANCE = 0.7D;
+    private static final double NEAR_MISS_MAX_DISTANCE = 3.25D;
+    private static final float GLASS_PENETRATION_COST = 0.08F;
+    private static final float LEAVES_PENETRATION_COST = 0.04F;
+    private static final float IRON_BARS_PENETRATION_COST = 0.75F;
 
     @SideOnly(Side.CLIENT)
     public EntityLivingBase bulletFollowCamera;
@@ -136,6 +142,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private double tracerOriginY;
     private double tracerOriginZ;
     private double nextBallisticDustDistance = 0.75D;
+    private boolean nearMissTriggered;
     public int penetrationBlockCount = 0;
     private int ticksInAir;
     private double getPrevDistanceToTarget;
@@ -426,6 +433,49 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                 return new double[]{1D, 0D, 0D};
             default:
                 return new double[]{0D, 1D, 0D};
+        }
+    }
+
+    private float getBlockPenetrationCost(Block block, Material material) {
+        if (material == Material.glass) {
+            return GLASS_PENETRATION_COST;
+        }
+        if (material == Material.leaves) {
+            return LEAVES_PENETRATION_COST;
+        }
+        if (block == Blocks.iron_bars) {
+            return IRON_BARS_PENETRATION_COST;
+        }
+        if (material == Material.wood) {
+            if (type.isExtraLargeCaliber()) {
+                return 0.18F;
+            }
+            if (type.isLargeCaliber()) {
+                return 0.35F;
+            }
+            return type.isPistolCaliber() ? 0.85F : 0.55F;
+        }
+        return -1F;
+    }
+
+    private static boolean isMetalMaterial(Material material) {
+        return material == Material.iron || material == Material.anvil;
+    }
+
+    @SideOnly(Side.CLIENT)
+    private void spawnMetalImpactEffects(MovingObjectPosition hit) {
+        double[] normal = getHitNormal(hit.sideHit);
+        int sparkCount = type.isLargeCaliber() ? 10 : 7;
+        for (int i = 0; i < sparkCount; i++) {
+            double speed = 0.08D + rand.nextDouble() * 0.16D;
+            FlansMod.proxy.spawnParticle("fireworksSpark",
+                    hit.hitVec.xCoord + normal[0] * 0.02D,
+                    hit.hitVec.yCoord + normal[1] * 0.02D,
+                    hit.hitVec.zCoord + normal[2] * 0.02D,
+                    normal[0] * speed + rand.nextGaussian() * 0.07D,
+                    normal[1] * speed + rand.nextGaussian() * 0.07D,
+                    normal[2] * speed + rand.nextGaussian() * 0.07D,
+                    0.7F);
         }
     }
 
@@ -1099,6 +1149,16 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     Block block = worldObj.getBlock(xTile, yTile, zTile);
                     Material mat = block.getMaterial();
 
+                    if (worldObj.isRemote && isMetalMaterial(mat)) {
+                        spawnMetalImpactEffects(raytraceResult);
+                    }
+
+                    // Glass destruction is server-owned and happens before penetration continues.
+                    if (!worldObj.isRemote && mat == Material.glass && TeamsManager.canBreakGlass) {
+                        FlansMod.proxy.playBlockBreakSound(xTile, yTile, zTile, block, this.dimension);
+                        worldObj.setBlockToAir(xTile, yTile, zTile);
+                    }
+
                     if (type.hitSoundEnable) {
                         //如果材质是铁质物品
                         if (mat == Material.iron || mat == Material.anvil) {
@@ -1108,7 +1168,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         }
                     }
 
-                    if (!worldObj.isRemote && mat != Material.air) {
+                    if (!worldObj.isRemote && mat != Material.air && mat != Material.glass) {
                         double[] normal = getHitNormal(raytraceResult.sideHit);
                         FlansMod.getPacketHandler().sendToAllAround(new PacketParticle("flansmod.bullethole",
                                         hitVec.xCoord, hitVec.yCoord, hitVec.zCoord,
@@ -1117,22 +1177,20 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     }
 
                     if (penetrationBlockCount < type.penetratingBlockMaxNum) {
-                        boolean penetrableBlockFound = false;
+                        float penetrationCost = getBlockPenetrationCost(block, mat);
 
                         //如果击中可穿透方块
-                        if (block == Blocks.iron_bars || mat == Material.glass || mat == Material.leaves) {
+                        if (penetrationCost >= 0F && penetratingPower > penetrationCost) {
 
+                            penetratingPower -= penetrationCost;
                             damage *= type.penetratingDamageLoss;
-                            FlansMod.proxy.playBlockBreakSound(xTile, yTile, zTile, block, this.dimension);
+                            if (!worldObj.isRemote && mat != Material.glass) {
+                                FlansMod.proxy.playBlockBreakSound(xTile, yTile, zTile, block, this.dimension);
+                            }
 
-                            penetrableBlockFound = true;
                             penetrationBlockCount++;
-
-                        } else {
-                            //击中非穿透方块
+                            continue;
                         }
-
-                        if (penetrableBlockFound) continue;
                     }
 
                     // Cosmetic only. The normal non-bouncy projectile impact below is unchanged.
@@ -1157,14 +1215,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                             calculateDps((float) (damage * type.damageVsPlayer * distanceDamageModifier), (EntityPlayer) owner);
                         } else {
                             playTargetSound((EntityPlayer) owner);
-                        }
-                    }
-
-                    //击碎玻璃
-                    if (type.breaksGlass && mat == Material.glass) {
-                        if (TeamsManager.canBreakGlass) {
-                            worldObj.setBlockToAir(xTile, yTile, zTile);
-                            FlansMod.proxy.playBlockBreakSound(xTile, yTile, zTile, block, this.dimension);
                         }
                     }
 
@@ -1658,6 +1708,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         rotationYaw = prevRotationYaw + (rotationYaw - prevRotationYaw) * 0.2F;
 
         //Particles
+        if (worldObj.isRemote) {
+            handleNearMissVignette();
+        }
         if (worldObj.isRemote && shouldSpawnBallisticDust()) {
             spawnBallisticDust();
         }
@@ -1704,6 +1757,49 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         return (hash & Integer.MAX_VALUE) % TRACER_RICOCHET_CHANCE_DENOMINATOR == 0;
     }
 
+    @SideOnly(Side.CLIENT)
+    private void handleNearMissVignette() {
+        Minecraft minecraft = Minecraft.getMinecraft();
+        EntityPlayer listener = minecraft.thePlayer;
+        if (nearMissTriggered || listener == null || owner == null
+                || owner.getEntityId() == listener.getEntityId()
+                || (type.weaponType != EnumWeaponType.NONE && type.weaponType != EnumWeaponType.GUN)) {
+            return;
+        }
+
+        double segmentX = posX - prevPosX;
+        double segmentY = posY - prevPosY;
+        double segmentZ = posZ - prevPosZ;
+        double segmentLengthSquared = segmentX * segmentX + segmentY * segmentY + segmentZ * segmentZ;
+        if (segmentLengthSquared < 0.0001D) {
+            return;
+        }
+
+        double eyeX = listener.posX;
+        double eyeY = listener.posY + listener.getEyeHeight();
+        double eyeZ = listener.posZ;
+        double progress = ((eyeX - prevPosX) * segmentX
+                + (eyeY - prevPosY) * segmentY
+                + (eyeZ - prevPosZ) * segmentZ) / segmentLengthSquared;
+        progress = Math.max(0D, Math.min(1D, progress));
+        double closestX = prevPosX + segmentX * progress;
+        double closestY = prevPosY + segmentY * progress;
+        double closestZ = prevPosZ + segmentZ * progress;
+        double deltaX = eyeX - closestX;
+        double deltaY = eyeY - closestY;
+        double deltaZ = eyeZ - closestZ;
+        double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);
+        if (distance < NEAR_MISS_MIN_DISTANCE || distance > NEAR_MISS_MAX_DISTANCE) {
+            return;
+        }
+
+        nearMissTriggered = true;
+        float intensity = (float) (1D - (distance - NEAR_MISS_MIN_DISTANCE)
+                / (NEAR_MISS_MAX_DISTANCE - NEAR_MISS_MIN_DISTANCE));
+        intensity = Math.max(0.15F, Math.min(1F, intensity));
+        TickHandlerClient.triggerBallisticNearMiss(intensity);
+    }
+
     private boolean shouldSpawnBallisticDust() {
         return owner instanceof EntityPlayer
                 && (type.weaponType == EnumWeaponType.NONE || type.weaponType == EnumWeaponType.GUN);
@@ -1726,11 +1822,13 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         }
 
         boolean pistolCaliber = type.isPistolCaliber();
+        boolean extraLargeCaliber = isExtraLargeSmokeCaliber();
         boolean largeCaliber = type.isLargeCaliber();
-        double cloudSpread = largeCaliber ? 1.8D : pistolCaliber ? 0.55D : 1D;
-        double particleSpacing = largeCaliber ? 0.85D : pistolCaliber ? 1.5D : BALLISTIC_DUST_SPACING;
-        float particleScale = largeCaliber
-                ? 1.8F + rand.nextFloat() * 0.35F
+        double cloudSpread = extraLargeCaliber ? 2.7D : largeCaliber ? 1.8D : pistolCaliber ? 0.55D : 1D;
+        double particleSpacing = extraLargeCaliber ? 0.55D : largeCaliber ? 0.85D : pistolCaliber ? 1.5D : BALLISTIC_DUST_SPACING;
+        float particleScale = extraLargeCaliber
+                ? 2.9F + rand.nextFloat() * 0.55F
+                : largeCaliber ? 1.8F + rand.nextFloat() * 0.35F
                 : pistolCaliber ? 0.42F + rand.nextFloat() * 0.13F
                 : 0.9F + rand.nextFloat() * 0.25F;
         double motionLength = Math.sqrt(motionX * motionX + motionY * motionY + motionZ * motionZ);
@@ -1750,6 +1848,17 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     particleScale);
             nextBallisticDustDistance += particleSpacing;
         }
+    }
+
+    private boolean isExtraLargeSmokeCaliber() {
+        if (type.isExtraLargeCaliber()) {
+            return true;
+        }
+        if (firedFrom == null || firedFrom.shortName == null) {
+            return false;
+        }
+        String weaponName = firedFrom.shortName.toLowerCase().replaceAll("[^a-z0-9]", "");
+        return weaponName.contains("ntw20");
     }
 
     private boolean stillHoming() {

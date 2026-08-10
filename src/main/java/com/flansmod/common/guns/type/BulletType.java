@@ -26,6 +26,10 @@ public class BulletType extends ShootableType {
             "12x99", "127x99", "127mm", "145x114", "145mm",
             "20mm", "23mm", "25mm", "30mm", "35mm", "40mm"
     };
+    private static final String[] EXTRA_LARGE_CALIBER_TOKENS = {
+            "ntw20", "20x82", "20x110", "20mm",
+            "23mm", "25mm", "30mm", "35mm", "40mm"
+    };
 
     /**
      * The static bullets list
@@ -139,6 +143,8 @@ public class BulletType extends ShootableType {
     private Boolean inferredPistolCaliber;
     private Boolean largeCaliber;
     private Boolean inferredLargeCaliber;
+    private Boolean extraLargeCaliber;
+    private Boolean inferredExtraLargeCaliber;
     public boolean canSpotEntityDriveable = false;
     public int maxRange = -1;
 
@@ -277,6 +283,10 @@ public class BulletType extends ShootableType {
                 case "LargeCaliber":
                 case "IsLargeCaliber":
                     largeCaliber = Boolean.parseBoolean(split[1]);
+                    break;
+                case "ExtraLargeCaliber":
+                case "IsExtraLargeCaliber":
+                    extraLargeCaliber = Boolean.parseBoolean(split[1]);
                     break;
                 case "FlakParticles":
                     flak = Integer.parseInt(split[1]);
@@ -624,6 +634,30 @@ public class BulletType extends ShootableType {
             inferredLargeCaliber = inferred;
         }
         return inferredLargeCaliber;
+    }
+
+    /** 20 mm and larger rounds use an additional cosmetic tier above .50 caliber. */
+    public boolean isExtraLargeCaliber() {
+        if (extraLargeCaliber != null) {
+            return extraLargeCaliber;
+        }
+        // Do not mistake a pistol cartridge's case length (for example 7.62x25mm)
+        // for a 25 mm cannon caliber.
+        if (isPistolCaliber()) {
+            return false;
+        }
+        if (inferredExtraLargeCaliber == null) {
+            String identifier = getNormalizedCaliberIdentifier();
+            boolean inferred = false;
+            for (String token : EXTRA_LARGE_CALIBER_TOKENS) {
+                if (identifier.contains(token)) {
+                    inferred = true;
+                    break;
+                }
+            }
+            inferredExtraLargeCaliber = inferred;
+        }
+        return inferredExtraLargeCaliber;
     }
 
     private String getNormalizedCaliberIdentifier() {

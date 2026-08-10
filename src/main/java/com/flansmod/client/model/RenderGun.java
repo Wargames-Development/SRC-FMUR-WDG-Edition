@@ -142,9 +142,6 @@ public class RenderGun implements IItemRenderer {
         // The model scale
         float f = 1F / 16F;
         ModelGun model = gunType.model;
-        ModelGun thirdModel = gunType.thirdPersonModel;
-        if (thirdModel == null)
-            thirdModel = model;
 
         int flip = offHand ? -1 : 1;
 
@@ -174,8 +171,8 @@ public class RenderGun implements IItemRenderer {
                         GL11.glTranslatef(0.75F, -0.22F, -0.08F);
                         GL11.glScalef(1F, 1F, -1F);
                     }
-                    GL11.glTranslatef(thirdModel.thirdPersonOffset.x, thirdModel.thirdPersonOffset.y, thirdModel.thirdPersonOffset.z);
-                    renderGun(item, gunType, f, thirdModel, animations, reloadRotate, type);
+                    GL11.glTranslatef(model.thirdPersonOffset.x, model.thirdPersonOffset.y, model.thirdPersonOffset.z);
+                    renderGun(item, gunType, f, model, animations, reloadRotate, type);
                     GL11.glPopMatrix();
                     /*
                      * if(animations.meleeAnimationProgress > 0 && animations.meleeAnimationProgress
@@ -477,9 +474,6 @@ public class RenderGun implements IItemRenderer {
             renderEngine = Minecraft.getMinecraft().renderEngine;
 
         float scale = gunType.modelScale;
-        if (rtype == ItemRenderType.EQUIPPED) {
-            scale = gunType.thirdPersonModelScale;
-        }
 
         // If we have no animation variables, use defaults
         if (animations == null)
@@ -584,11 +578,7 @@ public class RenderGun implements IItemRenderer {
         }
 
 
-        if (rtype == ItemRenderType.EQUIPPED) {
-            renderEngine.bindTexture(FlansModResourceHandler.get3rdTexture(gunType));
-        } else {
-            renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(gunType.getPaintjob(item.getItemDamage())));
-        }
+        renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(gunType.getPaintjob(item.getItemDamage())));
 
         // This allows you to offset your gun with a sight attached to properly align
         // the aiming reticle
@@ -1174,11 +1164,7 @@ public class RenderGun implements IItemRenderer {
                     renderAnimArm(mc.thePlayer, model, gunType, animations);
                 }
 
-                if (rtype == ItemRenderType.EQUIPPED) {
-                    renderEngine.bindTexture(FlansModResourceHandler.get3rdTexture(gunType));
-                } else {
-                    renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(gunType.getPaintjob(item.getItemDamage())));
-                }
+                renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(gunType.getPaintjob(item.getItemDamage())));
 
                 if (shouldRender) {
                     if (gripAttachment != null && gunType.getSecondaryFire(item))
@@ -1387,10 +1373,6 @@ public class RenderGun implements IItemRenderer {
     }
 
     private void postRenderAttachment(AttachmentType attachment, ItemStack stack, float f, ItemRenderType type) {
-        if (type == ItemRenderType.EQUIPPED) {
-            return;
-        }
-
         Paintjob paintjob = attachment.getPaintjob(stack.getItemDamage());
         ModelAttachment model = attachment.model;
         if (model != null) {
