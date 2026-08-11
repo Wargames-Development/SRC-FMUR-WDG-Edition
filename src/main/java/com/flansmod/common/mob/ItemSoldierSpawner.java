@@ -98,7 +98,9 @@ public class ItemSoldierSpawner extends Item {
         world.spawnEntityInWorld(soldier);
 
 
-        FlansMod.getPacketHandler().sendToAll(new PacketSoldierName(soldier.getEntityId(), name, team == null ? "" : team.getRegisteredName()));
+        FlansMod.getPacketHandler().sendToDimension(
+                new PacketSoldierName(soldier.getEntityId(), name, team == null ? "" : team.getRegisteredName()),
+                soldier.dimension);
         //FlansMod.getPacketHandler().sendToAll(new PacketSoldierSlot(soldier.getEntityId(), gunStack, grenadeStack, armourStack));
 
         SoldierAPI.soldierMap.put(soldier.getEntityId(), soldier);

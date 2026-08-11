@@ -28,23 +28,31 @@ public class PacketBFMCKeyInput extends PacketBase {
 
     @Override
     public void decodeInto(ChannelHandlerContext ctx, ByteBuf data) {
-        keyType = EnumBFMCKeyType.valueOf(readUTF(data));
+        String encodedKeyType = readUTF(data);
+        try {
+            keyType = EnumBFMCKeyType.valueOf(encodedKeyType);
+        } catch (IllegalArgumentException ignored) {
+            keyType = null;
+        }
         playerName = readUTF(data);
     }
 
     @Override
     public void handleServerSide(EntityPlayerMP playerEntity) {
+		if (keyType == null)
+			return;
+		String authenticatedPlayerName = playerEntity.getDisplayName();
         switch (keyType) {
             case menu:
-                BFMCKeyInputEvent e = new BFMCKeyInputEvent(EnumBFMCKeyType.menu, playerName);
+                BFMCKeyInputEvent e = new BFMCKeyInputEvent(EnumBFMCKeyType.menu, authenticatedPlayerName);
                 MinecraftForge.EVENT_BUS.post(e);
                 break;
             case f10:
-                BFMCKeyInputEvent e1 = new BFMCKeyInputEvent(EnumBFMCKeyType.f10, playerName);
+                BFMCKeyInputEvent e1 = new BFMCKeyInputEvent(EnumBFMCKeyType.f10, authenticatedPlayerName);
                 MinecraftForge.EVENT_BUS.post(e1);
                 break;
             case taunt:
-                BFMCKeyInputEvent e2 = new BFMCKeyInputEvent(EnumBFMCKeyType.taunt, playerName);
+                BFMCKeyInputEvent e2 = new BFMCKeyInputEvent(EnumBFMCKeyType.taunt, authenticatedPlayerName);
                 MinecraftForge.EVENT_BUS.post(e2);
                 break;
         }

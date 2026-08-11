@@ -46,12 +46,16 @@ public class PacketToggleFlashlight extends PacketBase {
     @Override
     public void handleServerSide(EntityPlayerMP player) {
         ItemStack heldGun = player.getCurrentEquippedItem();
-        boolean authoritativeState = enabled && FlashlightState.hasFlashlight(heldGun);
-        if (heldGun != null) {
-            FlashlightState.setEnabled(heldGun, authoritativeState);
-            player.inventory.markDirty();
-            player.inventoryContainer.detectAndSendChanges();
-        }
+        if (!FlashlightState.hasFlashlight(heldGun))
+            return;
+
+        boolean authoritativeState = enabled;
+        if (FlashlightState.isEnabled(heldGun) == authoritativeState)
+            return;
+
+        FlashlightState.setEnabled(heldGun, authoritativeState);
+        player.inventory.markDirty();
+        player.inventoryContainer.detectAndSendChanges();
         FlansMod.getPacketHandler().sendToDimension(
                 new PacketToggleFlashlight(player.getEntityId(), authoritativeState),
                 player.dimension);

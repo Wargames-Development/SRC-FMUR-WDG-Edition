@@ -35,6 +35,8 @@ public class PacketMissileMCLOSAccelerate extends PacketBase {
     @Override
     public void handleServerSide(EntityPlayerMP playerEntity) {
         PlayerData data = PlayerHandler.getPlayerData(playerEntity, Side.SERVER);
+        if (data == null || data.playerControlledBullets.isEmpty())
+            return;
         data.playerControlledBullets.removeIf(bullet -> bullet.isDead);
         for (EntityBullet bullet : data.playerControlledBullets) {
             if(!bullet.isAccelerating) {
@@ -45,9 +47,8 @@ public class PacketMissileMCLOSAccelerate extends PacketBase {
 
     @Override
     public void handleClientSide(EntityPlayer clientPlayer) {
-        EntityBullet bullet = (EntityBullet) clientPlayer.worldObj.getEntityByID(entityId);
-        if(bullet != null) {
-            bullet.isAccelerating = true;
-        }
+        Entity entity = clientPlayer.worldObj.getEntityByID(entityId);
+        if(entity instanceof EntityBullet)
+            ((EntityBullet) entity).isAccelerating = true;
     }
 }

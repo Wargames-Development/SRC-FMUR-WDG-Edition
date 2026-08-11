@@ -66,6 +66,9 @@ public class PlayerData {
 	public boolean hasShotAim;
 	/** The speed of the minigun the player is using */
 	public float minigunSpeed = 0F;
+	/** Server-side limiter for the two legitimate hand updates accepted each tick. */
+	public long minigunPacketTick = Long.MIN_VALUE;
+	public int minigunPacketsThisTick;
 	/** Reloading booleans */
 	public boolean reloadingRight, reloadingLeft;
 	/** When remote explosives are thrown they are added to this list. When the player uses a remote, the first one from this list detonates */

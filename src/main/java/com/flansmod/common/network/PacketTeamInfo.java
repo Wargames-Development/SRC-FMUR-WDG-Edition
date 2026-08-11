@@ -17,7 +17,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class PacketTeamInfo extends PacketBase 
-{			
+{
+	private static final int MAX_TEAMS = 256;
+	private static final int MAX_PLAYERS = 2048;
+
 	public static String mapShortName;
 	public static String map;
 	public static String gametype;
@@ -122,20 +125,21 @@ public class PacketTeamInfo extends PacketBase
 		        			String username = team.members.get(j);
 		        			PlayerData playerData = PlayerHandler.getPlayerData(username, Side.SERVER);
 		        			writeUTF(data, username);
-		        			if(playerData == null)
-		        			{
-		        				data.writeInt(0);
-		        				data.writeInt(0);
-		        				data.writeInt(0);
-		        				writeUTF(data, "");
+							if(playerData == null)
+							{
+								data.writeInt(0);
+								data.writeInt(0);
+								data.writeInt(0);
+								data.writeInt(0);
+								writeUTF(data, "");
 		        			}
 		        			else
 		        			{
 			        			data.writeInt(playerData.score);
-			        			data.writeInt(playerData.zombieScore);
-			        			data.writeInt(playerData.kills);
-			        			data.writeInt(playerData.deaths);
-			        			writeUTF(data, playerData.playerClass.shortName);
+								data.writeInt(playerData.zombieScore);
+								data.writeInt(playerData.kills);
+								data.writeInt(playerData.deaths);
+								writeUTF(data, playerData.playerClass == null ? "" : playerData.playerClass.shortName);
 		        			}
 		        		}
 		        	}
@@ -169,7 +173,7 @@ public class PacketTeamInfo extends PacketBase
 						data.writeInt(playerData.score);
 						data.writeInt(playerData.kills);
 						data.writeInt(playerData.deaths);
-						writeUTF(data, playerData.playerClass.shortName);
+						writeUTF(data, playerData.playerClass == null ? "" : playerData.playerClass.shortName);
 					}
 				}
 	        	
@@ -204,6 +208,8 @@ public class PacketTeamInfo extends PacketBase
 			if(sortedByTeam)
 			{
 				numLines = numTeams = data.readInt();
+				if(numTeams < 0 || numTeams > MAX_TEAMS)
+					throw new IllegalArgumentException("Invalid team count " + numTeams);
 				if(numTeams == 0)
 					return;
 				teamData = new TeamData[numTeams];
@@ -217,6 +223,8 @@ public class PacketTeamInfo extends PacketBase
 					teamData[i].score = data.readInt();
 					teamData[i].winner = data.readBoolean();
 					teamData[i].numPlayers = data.readInt();
+					if(teamData[i].numPlayers < 0 || teamData[i].numPlayers > MAX_PLAYERS)
+						throw new IllegalArgumentException("Invalid team player count " + teamData[i].numPlayers);
 					teamData[i].playerData = new PlayerScoreData[teamData[i].numPlayers];
 					if(teamData[i].numPlayers > numLines)
 						numLines = teamData[i].numPlayers;
@@ -240,6 +248,8 @@ public class PacketTeamInfo extends PacketBase
 				teamData[0].team = null;
 				teamData[0].score = 0;
 				teamData[0].numPlayers = data.readInt();
+				if(teamData[0].numPlayers < 0 || teamData[0].numPlayers > MAX_PLAYERS)
+					throw new IllegalArgumentException("Invalid scoreboard player count " + teamData[0].numPlayers);
 				teamData[0].playerData = new PlayerScoreData[teamData[0].numPlayers];
 				numLines += teamData[0].numPlayers;
 				for(int j = 0; j < teamData[0].numPlayers; j++)

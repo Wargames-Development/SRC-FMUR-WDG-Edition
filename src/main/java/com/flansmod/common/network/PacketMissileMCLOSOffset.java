@@ -35,7 +35,14 @@ public class PacketMissileMCLOSOffset extends PacketBase {
 
     @Override
     public void handleServerSide(EntityPlayerMP playerEntity) {
+        if (Float.isNaN(yawOffset) || Float.isInfinite(yawOffset)
+                || Float.isNaN(pitchOffset) || Float.isInfinite(pitchOffset)
+                || Math.abs(yawOffset) > 0.1F || Math.abs(pitchOffset) > 0.1F)
+            return;
+
         PlayerData data = PlayerHandler.getPlayerData(playerEntity, Side.SERVER);
+        if (data == null || data.playerControlledBullets.isEmpty())
+            return;
         data.playerControlledBullets.removeIf(bullet -> bullet.isDead);
         for (EntityBullet bullet : data.playerControlledBullets) {
             bullet.pitchOffsetMCLOS += pitchOffset;

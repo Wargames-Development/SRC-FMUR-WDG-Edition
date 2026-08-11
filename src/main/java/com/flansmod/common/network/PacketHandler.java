@@ -22,7 +22,6 @@ import net.minecraft.network.Packet;
 import net.minecraft.server.MinecraftServer;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Flan's Mod packet handler class. Directs packet data to packet classes.
@@ -32,34 +31,40 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 @ChannelHandler.Sharable
 public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketBase> {
-    private static final Queue<Runnable> serverTasks = new ConcurrentLinkedQueue<Runnable>();
     //Map of channels for each side
     private EnumMap<Side, FMLEmbeddedChannel> channels;
     //The list of registered packets. Should contain no more than 256 packets.
     private LinkedList<Class<? extends PacketBase>> packets = new LinkedList<>();
+    //The physical side allowed to receive each packet class.
+    private Map<Class<? extends PacketBase>, EnumSet<Side>> packetReceivers = new HashMap<>();
     //Whether or not Flan's Mod has initialised yet. Once true, no more packets may be registered.
     private boolean modInitialised = false;
-
-    /**
-     * Forge 1.7.10 decodes custom packets on a Netty thread. World, player and
-     * inventory state must only be touched by tasks drained from the server tick.
-     */
-    public static void enqueueServerTask(Runnable task) {
-        serverTasks.offer(task);
-    }
-
-    public static void runServerTasks() {
-        Runnable task;
-        while ((task = serverTasks.poll()) != null) {
-            task.run();
-        }
-    }
 
     /**
      * Registers a packet with the handler
      */
     public boolean registerPacket(Class<? extends PacketBase> cl) {
-        if (packets.size() > 256) {
+        return registerPacket(cl, EnumSet.allOf(Side.class));
+    }
+
+    private boolean registerClientPacket(Class<? extends PacketBase> cl) {
+        return registerPacket(cl, EnumSet.of(Side.CLIENT));
+    }
+
+    private boolean registerServerPacket(Class<? extends PacketBase> cl) {
+        return registerPacket(cl, EnumSet.of(Side.SERVER));
+    }
+
+    private boolean registerBidirectionalPacket(Class<? extends PacketBase> cl) {
+        return registerPacket(cl, EnumSet.allOf(Side.class));
+    }
+
+    private boolean registerDisabledPacket(Class<? extends PacketBase> cl) {
+        return registerPacket(cl, EnumSet.noneOf(Side.class));
+    }
+
+    private boolean registerPacket(Class<? extends PacketBase> cl, EnumSet<Side> receivingSides) {
+        if (packets.size() >= 256) {
             FlansMod.log("Packet limit exceeded in Flan's Mod packet handler by packet " + cl.getCanonicalName() + ".");
             return false;
         }
@@ -73,6 +78,7 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketB
         }
 
         packets.add(cl);
+        packetReceivers.put(cl, EnumSet.copyOf(receivingSides));
         return true;
     }
 
@@ -103,18 +109,26 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketB
         //Get the encoded data from the incoming packet
         ByteBuf encodedData = msg.payload();
         //Get the class for interpreting this packet
-        byte discriminator = encodedData.readByte();
-        Class<? extends PacketBase> cl = packets.get(discriminator);
+        if (!encodedData.isReadable())
+            throw new IllegalArgumentException("Received an empty Flan's Mod packet");
 
-        //If this discriminator returns no class, reject it
-        if (cl == null)
+        int discriminator = encodedData.readUnsignedByte();
+        if (discriminator >= packets.size())
             throw new NullPointerException("Packet not registered for discriminator : " + discriminator);
+
+        Class<? extends PacketBase> cl = packets.get(discriminator);
+        Side receivingSide = msg.getTarget();
+        if (receivingSide == null)
+            receivingSide = FMLCommonHandler.instance().getEffectiveSide();
+        EnumSet<Side> receivers = packetReceivers.get(cl);
+        if (receivers == null || !receivers.contains(receivingSide))
+            throw new SecurityException("Packet " + cl.getCanonicalName() + " is not accepted on side " + receivingSide);
 
         //Create an empty packet and decode our packet data into it
         PacketBase packet = cl.newInstance();
         packet.decodeInto(ctx, encodedData.slice());
         //Check the side and handle our packet accordingly
-        switch (FMLCommonHandler.instance().getEffectiveSide()) {
+        switch (receivingSide) {
             case CLIENT: {
                 packet.handleClientSide(getClientPlayer());
                 break;
@@ -132,69 +146,68 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketB
      */
     public void initialise() {
         channels = NetworkRegistry.INSTANCE.newChannel("FlansMod", this);
-        registerPacket(PacketAPSMarker.class);
-        registerPacket(PacketBFMCKeyInput.class);
-        registerPacket(PacketBlockHit.class);
+        registerClientPacket(PacketAPSMarker.class);
+        registerServerPacket(PacketBFMCKeyInput.class);
+        registerClientPacket(PacketBlockHit.class);
         //registerPacket(PacketSoldierSlot.class);
-        registerPacket(PacketMinigunStart.class);
-        registerPacket(PacketSoldierAim.class);
-        registerPacket(PacketSoldierName.class);
-        registerPacket(PacketSoldierDebug.class);
-        registerPacket(PacketRequestScreenshot.class);
-        registerPacket(PacketAAGunAngles.class);
-        registerPacket(PacketBaseEdit.class);
-        registerPacket(PacketBreakSound.class);
-        registerPacket(PacketBuyArmour.class);
-        registerPacket(PacketBuyWeapon.class);
-        registerPacket(PacketClientExplosion.class);
-        registerPacket(PacketCraftDriveable.class);
-        registerPacket(PacketDriveableControl.class);
-        registerPacket(PacketDriveableDamage.class);
-        registerPacket(PacketDriveableGUI.class);
-        registerPacket(PacketDriveableKey.class);
-        registerPacket(PacketDriveableKeyHeld.class);
-        registerPacket(PacketFlak.class);
-        registerPacket(PacketExplosion.class);
-        registerPacket(PacketGunFire.class);
-        registerPacket(PacketGunMode.class);
-        registerPacket(PacketGunPaint.class);
-        registerPacket(PacketGunSpread.class);
-        registerPacket(PacketKillMessage.class);
-        registerPacket(PacketMechaControl.class);
-        registerPacket(PacketMGFire.class);
-        registerPacket(PacketMGMount.class);
-        registerPacket(PacketOffHandGunInfo.class);
-        registerPacket(PacketParticle.class);
-        registerPacket(PacketPlaneControl.class);
-        registerPacket(PacketPlaySound.class);
-        registerPacket(PacketReload.class);
-        registerPacket(PacketRepairDriveable.class);
-        registerPacket(PacketRoundFinished.class);
-        registerPacket(PacketSeatUpdates.class);
-        registerPacket(PacketSeatCheck.class);
-        registerPacket(PacketSelectOffHandGun.class);
-        registerPacket(PacketTeamInfo.class);
-        registerPacket(PacketTeamSelect.class);
-        registerPacket(PacketVehicleControl.class);
-        registerPacket(PacketVoteCast.class);
-        registerPacket(PacketVoting.class);
-        registerPacket(PacketRequestDebug.class);
-        registerPacket(PacketFlashBang.class);
-        registerPacket(PacketImpactPoint.class);
-        registerPacket(PacketMissileMCLOSOffset.class);
-        registerPacket(PacketMissileMCLOSAccelerate.class);
-        registerPacket(PacketModConfig.class);
-        registerPacket(PacketGunRecoil.class);
-        registerPacket(PacketGunState.class);
-        registerPacket(PacketToggleFlashlight.class);
-        registerPacket(PacketToggleNightVisionGoggles.class);
-        registerPacket(PacketHashSend.class);
-        registerPacket(PacketMuzzleFlash.class);
-        registerPacket(PacketHitMarker.class);
-        registerPacket(PacketSetPreferredAmmo.class);
-        registerPacket(PacketGetPlayerClasses.class);
-        registerPacket(PacketSendPlayerClasses.class);
-        registerPacket(PacketDriveableKeyHeld.class);
+        registerServerPacket(PacketMinigunStart.class);
+        registerClientPacket(PacketSoldierAim.class);
+        registerClientPacket(PacketSoldierName.class);
+        registerServerPacket(PacketSoldierDebug.class);
+        registerClientPacket(PacketRequestScreenshot.class);
+        registerClientPacket(PacketAAGunAngles.class);
+        registerBidirectionalPacket(PacketBaseEdit.class);
+        registerClientPacket(PacketBreakSound.class);
+        registerServerPacket(PacketBuyArmour.class);
+        registerServerPacket(PacketBuyWeapon.class);
+        registerDisabledPacket(PacketClientExplosion.class);
+        registerServerPacket(PacketCraftDriveable.class);
+        registerBidirectionalPacket(PacketDriveableControl.class);
+        registerClientPacket(PacketDriveableDamage.class);
+        registerServerPacket(PacketDriveableGUI.class);
+        registerServerPacket(PacketDriveableKey.class);
+        registerServerPacket(PacketDriveableKeyHeld.class);
+        registerClientPacket(PacketFlak.class);
+        registerClientPacket(PacketExplosion.class);
+        registerServerPacket(PacketGunFire.class);
+        registerBidirectionalPacket(PacketGunMode.class);
+        registerServerPacket(PacketGunPaint.class);
+        registerServerPacket(PacketGunSpread.class);
+        registerClientPacket(PacketKillMessage.class);
+        registerBidirectionalPacket(PacketMechaControl.class);
+        registerServerPacket(PacketMGFire.class);
+        registerClientPacket(PacketMGMount.class);
+        registerClientPacket(PacketOffHandGunInfo.class);
+        registerClientPacket(PacketParticle.class);
+        registerBidirectionalPacket(PacketPlaneControl.class);
+        registerClientPacket(PacketPlaySound.class);
+        registerBidirectionalPacket(PacketReload.class);
+        registerServerPacket(PacketRepairDriveable.class);
+        registerClientPacket(PacketRoundFinished.class);
+        registerBidirectionalPacket(PacketSeatUpdates.class);
+        registerBidirectionalPacket(PacketSeatCheck.class);
+        registerServerPacket(PacketSelectOffHandGun.class);
+        registerClientPacket(PacketTeamInfo.class);
+        registerBidirectionalPacket(PacketTeamSelect.class);
+        registerBidirectionalPacket(PacketVehicleControl.class);
+        registerServerPacket(PacketVoteCast.class);
+        registerClientPacket(PacketVoting.class);
+        registerBidirectionalPacket(PacketRequestDebug.class);
+        registerClientPacket(PacketFlashBang.class);
+        registerDisabledPacket(PacketImpactPoint.class);
+        registerServerPacket(PacketMissileMCLOSOffset.class);
+        registerBidirectionalPacket(PacketMissileMCLOSAccelerate.class);
+        registerClientPacket(PacketModConfig.class);
+        registerClientPacket(PacketGunRecoil.class);
+        registerServerPacket(PacketGunState.class);
+        registerBidirectionalPacket(PacketToggleFlashlight.class);
+        registerServerPacket(PacketToggleNightVisionGoggles.class);
+        registerBidirectionalPacket(PacketHashSend.class);
+        registerClientPacket(PacketMuzzleFlash.class);
+        registerClientPacket(PacketHitMarker.class);
+        registerServerPacket(PacketSetPreferredAmmo.class);
+        registerServerPacket(PacketGetPlayerClasses.class);
+        registerClientPacket(PacketSendPlayerClasses.class);
     }
 
     /**

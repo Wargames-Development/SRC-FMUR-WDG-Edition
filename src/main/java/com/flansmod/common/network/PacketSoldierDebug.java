@@ -5,6 +5,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.entity.Entity;
+import net.minecraft.server.MinecraftServer;
 
 public class PacketSoldierDebug extends PacketBase {
 
@@ -41,7 +43,18 @@ public class PacketSoldierDebug extends PacketBase {
 
     @Override
     public void handleServerSide(EntityPlayerMP playerEntity) {
-        EntitySoldier soldier = (EntitySoldier) playerEntity.worldObj.getEntityByID(entityID);
+        if (!MinecraftServer.getServer().getConfigurationManager().func_152596_g(playerEntity.getGameProfile())
+                || Double.isNaN(posX) || Double.isInfinite(posX)
+                || Double.isNaN(posY) || Double.isInfinite(posY)
+                || Double.isNaN(posZ) || Double.isInfinite(posZ)
+                || playerEntity.getDistanceSq(posX, posY, posZ) > 90000D)
+            return;
+
+        Entity entity = playerEntity.worldObj.getEntityByID(entityID);
+        if (!(entity instanceof EntitySoldier) || playerEntity.getDistanceSqToEntity(entity) > 90000D)
+            return;
+
+        EntitySoldier soldier = (EntitySoldier) entity;
         soldier.moveHelper.setMoveTo(posX, posY, posZ, true);
     }
 

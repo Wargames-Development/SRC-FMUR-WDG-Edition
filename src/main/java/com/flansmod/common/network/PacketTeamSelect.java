@@ -99,7 +99,7 @@ public class PacketTeamSelect extends PacketBase
 		{
 			if(classChoicesPacket)
 			{
-				byte numClasses = data.readByte();
+				int numClasses = data.readUnsignedByte();
 				playerClasses = new PlayerClass[numClasses];
 				for(int i = 0; i < numClasses; i++)
 				{
@@ -108,7 +108,7 @@ public class PacketTeamSelect extends PacketBase
 			}
 			else
 			{
-				byte numTeams = data.readByte();
+				int numTeams = data.readUnsignedByte();
 				teams = new Team[numTeams];
 				for(int i = 0; i < numTeams; i++)
 				{

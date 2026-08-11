@@ -39,9 +39,11 @@ public class PacketSetPreferredAmmo extends PacketBase {
         ItemStack currentItem = playerEntity.inventory.getCurrentItem();
         if (currentItem != null && currentItem.getItem() instanceof ItemGun) {
             ItemGun itemGun = (ItemGun) currentItem.getItem();
-                ShootableType newPreferredAmmo = ShootableType.getShootableType(ammoName);
-                playerEntity.addChatMessage(new ChatComponentText(EnumChatFormatting.GRAY+newPreferredAmmo.name+" is new preferred ammo for "+itemGun.type.name));
-                itemGun.setPreferredAmmoStack(currentItem,ammoName);
+            ShootableType newPreferredAmmo = ShootableType.getShootableType(ammoName);
+            if (newPreferredAmmo == null || !itemGun.type.isAmmo(newPreferredAmmo, currentItem))
+                return;
+            playerEntity.addChatMessage(new ChatComponentText(EnumChatFormatting.GRAY+newPreferredAmmo.name+" is new preferred ammo for "+itemGun.type.name));
+            itemGun.setPreferredAmmoStack(currentItem,ammoName);
         }
     }
 

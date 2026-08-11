@@ -44,39 +44,33 @@ public class PacketGunState extends PacketBase
 	}
 
 	@Override
-	public void handleServerSide(final EntityPlayerMP player)
+	public void handleServerSide(EntityPlayerMP player)
 	{
-		final boolean scoped = isScoped;
-		PacketHandler.enqueueServerTask(new Runnable() {
-			@Override
-			public void run() {
-				boolean holdingGun = player.getCurrentEquippedItem() != null
-						&& player.getCurrentEquippedItem().getItem() instanceof ItemGun;
-				PlayerData data = PlayerHandler.getPlayerData(player);
-				if (data != null)
-					data.isScoped = scoped && holdingGun;
+		boolean holdingGun = player.getCurrentEquippedItem() != null
+				&& player.getCurrentEquippedItem().getItem() instanceof ItemGun;
+		PlayerData data = PlayerHandler.getPlayerData(player);
+		if (data != null)
+			data.isScoped = isScoped && holdingGun;
 
-				if(holdingGun)
-				{
-					ItemGun itemGun = (ItemGun)player.getCurrentEquippedItem().getItem();
-					ItemStack itemstack = player.getCurrentEquippedItem();
-					AttachmentType scope = itemGun.type.getScope(itemstack);
-					boolean hasNightVision = itemGun.type.allowNightVision || scope != null && scope.hasNightVision;
+		if(holdingGun)
+		{
+			ItemGun itemGun = (ItemGun)player.getCurrentEquippedItem().getItem();
+			ItemStack itemstack = player.getCurrentEquippedItem();
+			AttachmentType scope = itemGun.type.getScope(itemstack);
+			boolean hasNightVision = itemGun.type.allowNightVision || scope != null && scope.hasNightVision;
 
-					if(hasNightVision && scoped)
-					{
-						player.addPotionEffect(new PotionEffect(Potion.nightVision.id, 1200, 0));
-						if (!ServerTickEvent.nightVisionPlayers.contains(player))
-							ServerTickEvent.nightVisionPlayers.add(player);
-					}
-					else if(hasNightVision)
-					{
-						player.removePotionEffect(Potion.nightVision.id);
-						ServerTickEvent.nightVisionPlayers.remove(player);
-					}
-				}
+			if(hasNightVision && isScoped)
+			{
+				player.addPotionEffect(new PotionEffect(Potion.nightVision.id, 1200, 0));
+				if (!ServerTickEvent.nightVisionPlayers.contains(player))
+					ServerTickEvent.nightVisionPlayers.add(player);
 			}
-		});
+			else if(hasNightVision)
+			{
+				player.removePotionEffect(Potion.nightVision.id);
+				ServerTickEvent.nightVisionPlayers.remove(player);
+			}
+		}
 	}
 
 	@Override

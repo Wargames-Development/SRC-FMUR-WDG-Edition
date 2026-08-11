@@ -48,6 +48,9 @@ public class PacketSelectOffHandGun extends PacketBase
 	public void handleServerSide(EntityPlayerMP playerEntity) 
 	{
 		PlayerData data = PlayerHandler.getPlayerData(playerEntity, Side.SERVER);
+		if(data == null || slot < 0 || slot > 9 || !data.isValidOffHandWeapon(playerEntity, slot)
+				|| data.offHandGunSlot == slot)
+			return;
 		data.offHandGunSlot = slot;
 		
 		FlansMod.getPacketHandler().sendToAllAround(new PacketOffHandGunInfo(playerEntity, slot), playerEntity.posX, playerEntity.posY, playerEntity.posZ, 50F, playerEntity.dimension);

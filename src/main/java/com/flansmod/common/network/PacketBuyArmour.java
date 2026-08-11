@@ -46,7 +46,16 @@ public class PacketBuyArmour extends PacketBase
 	public void handleServerSide(EntityPlayerMP playerEntity) 
 	{
 		ArmourBoxType box = ArmourBoxType.getBox(boxShortName);
-		box.block.buyArmour(armourShortName, piece, playerEntity.inventory);
+		if(box == null || box.block == null || piece < 0 || piece >= 4)
+			return;
+		for(ArmourBoxType.ArmourBoxEntry entry : box.pages)
+		{
+			if(entry != null && entry.shortName.equals(armourShortName) && entry.armours[piece] != null)
+			{
+				box.block.buyArmour(armourShortName, piece, playerEntity.inventory);
+				return;
+			}
+		}
 	}
 
 	@Override

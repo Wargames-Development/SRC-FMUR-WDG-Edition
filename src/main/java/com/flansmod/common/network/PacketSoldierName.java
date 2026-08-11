@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 
 import static cpw.mods.fml.common.network.ByteBufUtils.readItemStack;
@@ -46,8 +47,9 @@ public class PacketSoldierName extends PacketBase{
 
     @Override
     public void handleClientSide(EntityPlayer clientPlayer) {
-        EntitySoldier soldier = (EntitySoldier) clientPlayer.worldObj.getEntityByID(entityID);
-        if(soldier != null){
+        Entity entity = clientPlayer.worldObj.getEntityByID(entityID);
+        if(entity instanceof EntitySoldier){
+            EntitySoldier soldier = (EntitySoldier) entity;
             soldier.name = name;
             soldier.setCustomNameTag(name);
             if (teamName != null && !teamName.isEmpty()) {

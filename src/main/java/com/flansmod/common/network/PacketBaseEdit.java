@@ -4,6 +4,7 @@ import com.flansmod.client.gui.GuiBaseEditor;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.teams.ITeamBase;
 import com.flansmod.common.teams.TeamsManager;
+import com.flansmod.common.teams.TeamsMap;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import io.netty.buffer.ByteBuf;
@@ -18,6 +19,7 @@ import net.minecraft.server.MinecraftServer;
  * Client to server returns changes */
 public class PacketBaseEdit extends PacketBase 
 {
+	private static final int MAX_MAPS = 256;
 	public int baseID;
 	public String baseName;
 	/** The maps available */
@@ -69,6 +71,8 @@ public class PacketBaseEdit extends PacketBase
 		baseID = data.readInt();
 		baseName = readUTF(data);
 		int mapsLength = data.readInt();
+		if(mapsLength < 0 || mapsLength > MAX_MAPS)
+			throw new IllegalArgumentException("Invalid base map count " + mapsLength);
 		maps = new String[mapsLength];
 		for(int i = 0; i < mapsLength; i++)
 			maps[i] = readUTF(data);
@@ -86,15 +90,22 @@ public class PacketBaseEdit extends PacketBase
 		
 		//Find the base and change its attributes (or destroy it)
 		ITeamBase base = TeamsManager.getInstance().getBase(baseID);
+		if(base == null || teamID < 0 || teamID > 3)
+			return;
 		if(destroy)
 		{
 			base.destroy();
 			return;
 		}
+		if(mapID < -1 || mapID >= maps.length)
+			return;
+		TeamsMap selectedMap = mapID == -1 ? null : TeamsManager.getInstance().getMapFromFullName(maps[mapID]);
+		if(mapID != -1 && selectedMap == null)
+			return;
 		base.setDefaultOwnerID(teamID);
 		base.setOwnerID(teamID);
 		if(mapID != -1)
-			base.setMapFirstTime(TeamsManager.getInstance().getMapFromFullName(maps[mapID]));
+			base.setMapFirstTime(selectedMap);
 		base.setName(baseName);
 		
 		FlansMod.log(playerEntity.getCommandSenderName() + " modified attributes of base " + baseID);

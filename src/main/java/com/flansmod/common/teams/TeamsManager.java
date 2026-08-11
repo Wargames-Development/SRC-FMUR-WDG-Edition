@@ -186,14 +186,14 @@ public class TeamsManager {
             showTeamsMenuToAll(true);
         }
 
-        if (!enabled)
+		if (!enabled) {
+			time++;
             return;
+		}
 
         if (currentRound != null)
             currentRound.gametype.tick();
-        time++;
-
-
+		time++;
         //Tick bases and objects
         for (ITeamBase base : bases)
             base.tick();
@@ -221,7 +221,8 @@ public class TeamsManager {
                     if (interRoundTimeLeft <= votingTime) {
                         if (voteOptions == null)
                             pickVoteOptions();
-                        displayVotingGUI();
+                        if (interRoundTimeLeft == votingTime || interRoundTimeLeft % 20 == 0)
+                            displayVotingGUI();
                     }
                 }
             }
@@ -346,11 +347,11 @@ public class TeamsManager {
     }
 
     public void displayVotingGUI() {
-
+		PacketVoting packet = new PacketVoting(this);
         for (EntityPlayer player : getPlayers()) {
             PlayerData data = PlayerHandler.getPlayerData(player);
             if (!data.builder)
-                sendPacketToPlayer(new PacketVoting(this), (EntityPlayerMP) player);
+				sendPacketToPlayer(packet, (EntityPlayerMP) player);
         }
     }
 

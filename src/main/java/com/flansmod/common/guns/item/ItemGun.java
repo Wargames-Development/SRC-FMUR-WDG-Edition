@@ -470,12 +470,14 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                  * 冲刺时
                  */
                 if (isSprinting || offHandFull) {
+                    boolean wasScoped = FlansModClient.currentScope != null;
                     FlansModClient.currentScope = null;
                     FlansModClient.lastZoomLevel = currentScope.getZoomFactor();
                     gameSettings.thirdPersonView = 0;
                     gameSettings.viewBobbing = true;
                     RenderManager.debugBoundingBox = false;
-                    FlansMod.getPacketHandler().sendToServer(new PacketGunState(false));
+                    if (wasScoped)
+                        FlansMod.getPacketHandler().sendToServer(new PacketGunState(false));
                 }
                 /**
                  * AimType为Toggle(点击)时的开镜代码
@@ -613,10 +615,12 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
 
         }
 
-        FlansMod.getPacketHandler().sendToServer(new PacketMinigunStart());
-        minigunSpeed += 2F;
-        if(minigunSpeed > type.minigunStartSpeed) {
-            minigunSpeed = type.minigunStartSpeed + 2;
+        if (gunType.getFireMode(stack) == EnumFireMode.MINIGUN || gunType.useLoopingSounds) {
+            FlansMod.getPacketHandler().sendToServer(new PacketMinigunStart());
+            minigunSpeed += 2F;
+            if(minigunSpeed > type.minigunStartSpeed) {
+                minigunSpeed = type.minigunStartSpeed + 2;
+            }
         }
 
         //TODO BUG
@@ -803,6 +807,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     data.isShootingRight = data.isShootingLeft = false;
                     data.isScoped = false;
                     data.offHandGunSlot = 0;
+                    data.minigunSpeed = 0F;
                     isScoped = false;
                     /*                    (new PacketSelectOffHandGun(0)).handleServerSide(player);*/
                 }
@@ -819,13 +824,13 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     player.inventory.setInventorySlotContents(player.inventory.currentItem, tryToShoot(itemstack, type, world, player, false));
                 }
                 //Play looping sounds for minigun
-                if (type.useLoopingSounds && data.loopedSoundDelay <= 0 && minigunSpeed > 0.1F && !data.reloadingRight) {
+                if (type.useLoopingSounds && data.loopedSoundDelay <= 0 && data.minigunSpeed > 0.1F && !data.reloadingRight) {
                     data.loopedSoundDelay = data.shouldPlayWarmupSound ? type.warmupSoundLength : type.loopedSoundLength;
                     PacketPlaySound.sendSoundPacket(player.posX, player.posY, player.posZ, FlansMod.soundRange, player.dimension, data.shouldPlayWarmupSound ? type.warmupSound : type.loopedSound, false);
                     data.shouldPlayWarmupSound = false;
                 }
                 //Minigun is sufficiently fast to shoot
-                if (type.getFireMode(itemstack) == EnumFireMode.MINIGUN && minigunSpeed > type.minigunStartSpeed)
+                if (type.getFireMode(itemstack) == EnumFireMode.MINIGUN && data.minigunSpeed > type.minigunStartSpeed)
                     player.inventory.setInventorySlotContents(player.inventory.currentItem, tryToShoot(itemstack, type, world, player, false));
             } else {
                 if (type.useLoopingSounds && data.shouldPlayCooldownSound) {
@@ -851,13 +856,13 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                             player.inventory.setInventorySlotContents(data.offHandGunSlot - 1, tryToShoot(offHandGunStack, offHandGunType, world, player, true));
                         }
                         //Play looping sounds for minigun
-                        if (offHandGunType.useLoopingSounds && data.loopedSoundDelay <= 0 && minigunSpeed > 0.1F && !data.reloadingLeft) {
+                        if (offHandGunType.useLoopingSounds && data.loopedSoundDelay <= 0 && data.minigunSpeed > 0.1F && !data.reloadingLeft) {
                             data.loopedSoundDelay = data.shouldPlayWarmupSound ? offHandGunType.warmupSoundLength : offHandGunType.loopedSoundLength;
                             PacketPlaySound.sendSoundPacket(player.posX, player.posY, player.posZ, FlansMod.soundRange, player.dimension, data.shouldPlayWarmupSound ? offHandGunType.warmupSound : offHandGunType.loopedSound, false);
                             data.shouldPlayWarmupSound = false;
                         }
                         //Minigun is sufficiently fast to shoot
-                        if (offHandGunType.getFireMode(offHandGunStack) == EnumFireMode.MINIGUN && minigunSpeed > offHandGunType.minigunStartSpeed)
+                        if (offHandGunType.getFireMode(offHandGunStack) == EnumFireMode.MINIGUN && data.minigunSpeed > offHandGunType.minigunStartSpeed)
                             player.inventory.setInventorySlotContents(data.offHandGunSlot - 1, tryToShoot(offHandGunStack, offHandGunType, world, player, true));
                     } else {
                         if (offHandGunType.useLoopingSounds && data.shouldPlayCooldownSound) {
@@ -897,7 +902,10 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         type.setDetector(itemstack);
         type.setDuckBill(itemstack);
 
-        minigunSpeed *= 0.95F;
+        if (world.isRemote)
+            minigunSpeed *= 0.95F;
+        else if (player.inventory.getCurrentItem() == itemstack)
+            data.minigunSpeed *= 0.95F;
 
         if (lockOnSoundDelay > 0)
             lockOnSoundDelay--;

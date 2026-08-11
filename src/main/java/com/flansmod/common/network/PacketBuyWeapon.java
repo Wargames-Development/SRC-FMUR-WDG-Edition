@@ -41,7 +41,10 @@ public class PacketBuyWeapon extends PacketBase
 	public void handleServerSide(EntityPlayerMP playerEntity) 
 	{
 		GunBoxType box = GunBoxType.getBox(boxShortName);
-		box.block.buyGun(InfoType.getType(itemShortName), playerEntity.inventory, box);
+		InfoType item = InfoType.getType(itemShortName);
+		if(box == null || box.block == null || item == null)
+			return;
+		box.block.buyGun(item, playerEntity.inventory, box);
 	}
 
 	@Override

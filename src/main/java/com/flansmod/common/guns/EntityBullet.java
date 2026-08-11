@@ -1666,7 +1666,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             if (canAccelerate) {
                 canAccelerate = false;
                 isAccelerating = true;
-                FlansMod.getPacketHandler().sendToAll(new PacketMissileMCLOSAccelerate(getEntityId()));
+                FlansMod.getPacketHandler().sendToDimension(new PacketMissileMCLOSAccelerate(getEntityId()), dimension);
             }
             if (isAccelerating) {
                 motionX *= 2;

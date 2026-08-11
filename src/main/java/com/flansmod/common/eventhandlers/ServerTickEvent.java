@@ -2,7 +2,6 @@ package com.flansmod.common.eventhandlers;
 
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.item.ItemGun;
-import com.flansmod.common.network.PacketHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
@@ -32,7 +31,6 @@ public class ServerTickEvent
         {
         case START :
         {
-            PacketHandler.runServerTasks();
             break;
         }
         case END :

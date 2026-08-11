@@ -33,7 +33,7 @@ public class PacketGetPlayerClasses extends PacketBase {
     public void handleServerSide(EntityPlayerMP playerEntity) {
         if(TeamsManager.instance.currentRound!=null&&TeamsManager.instance.currentRound.teams!=null){
             PlayerData data = PlayerHandler.getPlayerData(playerEntity);
-            if(data!=null&data.team!=null){
+              if(data != null && data.team != null){
                 FlansMod.getPacketHandler().sendTo(new PacketSendPlayerClasses(data.team.classes.toArray(new PlayerClass[data.team.classes.size()])),playerEntity);
             }
         }

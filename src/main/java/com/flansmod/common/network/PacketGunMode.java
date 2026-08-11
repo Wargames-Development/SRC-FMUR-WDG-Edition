@@ -34,6 +34,7 @@ public class PacketGunMode extends PacketBase {
 
     private PacketGunMode(EnumFireMode md) {
         this.mode = md;
+        this.handle = 1;
     }
 
     @Override
@@ -45,7 +46,7 @@ public class PacketGunMode extends PacketBase {
     @Override
     public void decodeInto(ChannelHandlerContext ctx, ByteBuf data) {
         int i = data.readByte();
-        if (i < EnumFireMode.values().length) {
+        if (i >= 0 && i < EnumFireMode.values().length) {
             this.mode = EnumFireMode.values()[i];
         }
         this.handle = data.readByte();
