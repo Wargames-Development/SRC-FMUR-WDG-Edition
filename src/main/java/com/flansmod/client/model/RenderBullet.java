@@ -6,11 +6,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
+import net.minecraft.potion.Potion;
 import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
 public class RenderBullet extends Render
 {
+	private static final float NIGHT_VISION_BRIGHTNESS_MULTIPLIER = 1.35F;
+
 	public RenderBullet()
 	{
 		shadowSize = 0;
@@ -51,6 +54,9 @@ public class RenderBullet extends Render
 		double directionZ = bullet.motionZ / speed;
 		double length = Math.max(0.45D, Math.min(3.25D, speed * 1.35D));
 		Minecraft minecraft = Minecraft.getMinecraft();
+		float nightVisionBrightness = minecraft.thePlayer != null
+				&& minecraft.thePlayer.isPotionActive(Potion.nightVision)
+				? NIGHT_VISION_BRIGHTNESS_MULTIPLIER : 1F;
 		if(minecraft.gameSettings.thirdPersonView == 0 && minecraft.thePlayer != null)
 		{
 			double bulletX = bullet.lastTickPosX + (bullet.posX - bullet.lastTickPosX) * partialTicks;
@@ -73,6 +79,7 @@ public class RenderBullet extends Render
 		double tailY = -directionY * length;
 		double tailZ = -directionZ * length;
 
+		minecraft.entityRenderer.disableLightmap(partialTicks);
 		GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
 		try
 		{
@@ -89,20 +96,30 @@ public class RenderBullet extends Render
 
 			if(length > 0.05D)
 			{
-				drawTracerLine(tailX, tailY, tailZ, 11F, 1F, 0F, 0F, 0.10F);
-				drawTracerLine(tailX, tailY, tailZ, 6F, 1F, 0.015F, 0F, 0.24F);
-				drawTracerLine(tailX, tailY, tailZ, 2.25F, 1F, 0.20F, 0.08F, 0.92F);
+				drawTracerLine(tailX, tailY, tailZ, 11F,
+						1F, 0F, 0F, scaledAlpha(0.10F, nightVisionBrightness));
+				drawTracerLine(tailX, tailY, tailZ, 6F,
+						1F, 0.015F, 0F, scaledAlpha(0.24F, nightVisionBrightness));
+				drawTracerLine(tailX, tailY, tailZ, 2.25F,
+						1F, 0.04F, 0.01F, 1F);
 			}
 
 			GL11.glEnable(GL11.GL_POINT_SMOOTH);
 			GL11.glHint(GL11.GL_POINT_SMOOTH_HINT, GL11.GL_NICEST);
-			drawTracerPoint(9F, 1F, 0F, 0F, 0.16F);
-			drawTracerPoint(3.5F, 1F, 0.28F, 0.12F, 0.95F);
+			drawTracerPoint(9F, 1F, 0F, 0F,
+					scaledAlpha(0.16F, nightVisionBrightness));
+			drawTracerPoint(3.5F, 1F, 0.04F, 0.01F, 1F);
 		}
 		finally
 		{
 			GL11.glPopAttrib();
+			minecraft.entityRenderer.enableLightmap(partialTicks);
 		}
+	}
+
+	private float scaledAlpha(float alpha, float multiplier)
+	{
+		return Math.min(1F, alpha * multiplier);
 	}
 
 	private void drawTracerLine(double tailX, double tailY, double tailZ,

@@ -66,10 +66,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private static final float BLOOD_PARTICLE_RANGE = 64F;
     private static final double MIN_TRACER_VISIBLE_DISTANCE = 5D;
     private static final double TRACER_VISIBLE_DISTANCE_RANGE = 5D;
+    private static final double BULLET_RENDER_DISTANCE_WEIGHT = 64D;
     private static final double BALLISTIC_DUST_DISTANCE = 5D;
     private static final double BALLISTIC_DUST_SPACING = 1.25D;
     private static final double MIN_TRACER_RICOCHET_DISTANCE = 100D;
-    private static final int TRACER_RICOCHET_CHANCE_DENOMINATOR = 12;
+    private static final int TRACER_RICOCHET_CHANCE_DENOMINATOR = 2;
     private static final double NEAR_MISS_MIN_DISTANCE = 0.7D;
     private static final double NEAR_MISS_MAX_DISTANCE = 3.25D;
     private static final float GLASS_PENETRATION_COST = 0.08F;
@@ -156,6 +157,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         super(world);
         ticksInAir = 0;
         setSize(0.5F, 0.5F);
+        // Vanilla scales entity render distance from its bounding box. Most bullets use a
+        // 0.1-block hitbox, which otherwise culls them as the delayed tracer becomes visible.
+        renderDistanceWeight = BULLET_RENDER_DISTANCE_WEIGHT;
     }
 
 
@@ -1858,7 +1862,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             return false;
         }
         String weaponName = firedFrom.shortName.toLowerCase().replaceAll("[^a-z0-9]", "");
-        return weaponName.contains("ntw20");
+        return weaponName.contains("ntw20") || weaponName.contains("snipexalligator");
     }
 
     private boolean stillHoming() {
