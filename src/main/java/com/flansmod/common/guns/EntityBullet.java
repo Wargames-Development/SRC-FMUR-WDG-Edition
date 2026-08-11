@@ -64,8 +64,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private static final int DEFAULT_BULLET_LIFE = 3 * 20; //Kill bullets after 3 seconds
     private static final int BLOOD_PARTICLE_COUNT = 12;
     private static final float BLOOD_PARTICLE_RANGE = 64F;
-    private static final double MIN_TRACER_VISIBLE_DISTANCE = 5D;
-    private static final double TRACER_VISIBLE_DISTANCE_RANGE = 5D;
+    private static final double TRACER_VISIBLE_DISTANCE = 20D;
     private static final double BULLET_RENDER_DISTANCE_WEIGHT = 64D;
     private static final double BALLISTIC_DUST_DISTANCE = 5D;
     private static final double BALLISTIC_DUST_SPACING = 1.25D;
@@ -1727,7 +1726,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             extinguish();
     }
 
-    /** Keeps the entity tracer hidden for a stable per-projectile 5-10 block launch gap. */
+    /** Keeps the entity tracer hidden for the first 20 blocks of projectile travel. */
     public boolean hasTracerReachedVisibleDistance() {
         return hasTracerReachedVisibleDistance(posX, posY, posZ);
     }
@@ -1747,9 +1746,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     }
 
     private double getTracerVisibleDistance() {
-        int mixedId = getEntityId() * 1103515245 + 12345;
-        return MIN_TRACER_VISIBLE_DISTANCE
-                + ((mixedId >>> 8) & 1023) * (TRACER_VISIBLE_DISTANCE_RANGE / 1023D);
+        return TRACER_VISIBLE_DISTANCE;
     }
 
     private boolean shouldSpawnTracerRicochet(MovingObjectPosition hit) {

@@ -1,0 +1,11 @@
+This work is based on "Low-Poly AKM"
+https://sketchfab.com/3d-models/low-poly-akm-849b7cdf8622487485febc40db89e734
+
+Original model by TastyTony:
+https://sketchfab.com/TastyTony
+
+Licensed under Creative Commons Attribution 4.0:
+https://creativecommons.org/licenses/by/4.0/
+
+Modified for Wargames/FMUR by separating the body, magazine, and bolt and by
+converting the original flat materials into a shared texture palette.

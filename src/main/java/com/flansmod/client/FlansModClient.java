@@ -187,6 +187,7 @@ public class FlansModClient extends FlansMod {
      * 储存玩家当前手持物品
      */
     public static Item currentItemInHand = null;
+    private static int currentHotbarSlot = -1;
     /**
      * 玩家是否发生了切枪动作
      */
@@ -458,10 +459,19 @@ public class FlansModClient extends FlansMod {
             item = mc.thePlayer.getHeldItem().getItem();
         }
 
-        isWeaponChange = !Objects.equals(item, currentItemInHand);
+        int hotbarSlot = mc.thePlayer == null ? -1 : mc.thePlayer.inventory.currentItem;
+        isWeaponChange = !Objects.equals(item, currentItemInHand)
+                || hotbarSlot != currentHotbarSlot;
+        if (isWeaponChange && mc.thePlayer != null) {
+            GunAnimations animations = gunAnimationsRight.get(mc.thePlayer);
+            if (animations != null) {
+                animations.cancelReload();
+            }
+        }
         if (mc.thePlayer != null && mc.thePlayer.getHeldItem() != null) {
             currentItemInHand = mc.thePlayer.getHeldItem().getItem();
         } else currentItemInHand = null;
+        currentHotbarSlot = hotbarSlot;
 
         /**  涉及开镜时间的改动  */
         if (currentScope == null) {

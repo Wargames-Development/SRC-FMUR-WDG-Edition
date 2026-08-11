@@ -285,6 +285,18 @@ public class GunAnimations {
 
     }
 
+    public void cancelReload() {
+        reloading = false;
+        reloadTimeLeft = 0;
+        FlansModClient.reloadStart = false;
+        reloadAnimationProgress = 0F;
+        lastReloadAnimationProgress = 0F;
+        timeUntilPump = 0;
+        timeUntilCharge = 0;
+        pumping = false;
+        charging = false;
+    }
+
     public void doMelee(int meleeTime) {
         meleeAnimationLength = meleeTime;
     }

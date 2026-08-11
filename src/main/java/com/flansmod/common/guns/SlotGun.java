@@ -41,8 +41,10 @@ public class SlotGun extends Slot
     {
     	if(stack == null || !(stack.getItem() instanceof ItemAttachment) || !gunSlot.getHasStack() || !(gunSlot.getStack().getItem() instanceof ItemGun))
     		return false;
-    	AttachmentType attachmentType = ((ItemAttachment)stack.getItem()).type;
-    	GunType gunType = ((ItemGun)gunSlot.getStack().getItem()).type;
-    	return gunType.allowAllAttachments || gunType.allowedAttachments.contains(attachmentType);
+		AttachmentType attachmentType = ((ItemAttachment)stack.getItem()).type;
+		GunType gunType = ((ItemGun)gunSlot.getStack().getItem()).type;
+		if(attachmentType.type == EnumAttachmentType.sights && !gunType.allowedScopeAttachments.isEmpty())
+			return gunType.allowedScopeAttachments.contains(attachmentType);
+		return gunType.allowAllAttachments || gunType.allowedAttachments.contains(attachmentType);
     }
 }

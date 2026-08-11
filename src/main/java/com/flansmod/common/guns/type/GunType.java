@@ -438,6 +438,10 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      */
     public ArrayList<AttachmentType> allowedAttachments = new ArrayList<>();
     /**
+     * Optional per-gun scope whitelist. An empty list preserves the legacy attachment rules.
+     */
+    public ArrayList<AttachmentType> allowedScopeAttachments = new ArrayList<>();
+    /**
      * Whether each attachment slot is available
      */
     public boolean allowBarrelAttachments = false, allowScopeAttachments = false,
@@ -930,6 +934,10 @@ public class GunType extends PaintableType implements IScope, IMarkable {
             else if (split[0].equals("AllowAttachments")) {
                 for (int i = 1; i < split.length; i++) {
                     allowedAttachments.add(AttachmentType.getAttachment(split[i]));
+                }
+            } else if (split[0].equals("AllowScopeAttachmentsList")) {
+                for (int i = 1; i < split.length; i++) {
+                    allowedScopeAttachments.add(AttachmentType.getAttachment(split[i]));
                 }
             } else if (split[0].equals("AllowBarrelAttachments"))
                 allowBarrelAttachments = Boolean.parseBoolean(split[1]);

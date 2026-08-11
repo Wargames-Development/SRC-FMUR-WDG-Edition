@@ -31,7 +31,6 @@ import org.lwjgl.opengl.GL11;
 
 import java.util.Random;
 
-import static com.flansmod.client.FlansModClient.isWeaponChange;
 import static com.flansmod.client.FlansModClient.zoomProgress;
 
 public class RenderGun implements IItemRenderer {
@@ -232,7 +231,7 @@ public class RenderGun implements IItemRenderer {
 
                     //持枪位置
                     GL11.glTranslatef(0.15F, 0.25F + 0.155F * actualZoomProgress, -0.8F - 0.205F * actualZoomProgress);
-                    GL11.glRotatef(4.5F * actualZoomProgress, 0F, 0F, 1F);
+                    GL11.glRotatef((4.5F + model.adsRotateZ) * actualZoomProgress, 0F, 0F, 1F);
 
                     //瞄准偏移
                     GL11.glTranslatef((model.crouchZoom - model.zoomOffset) * actualZoomProgress, (model.zoomOffsetY - 0.03F) * actualZoomProgress, model.zoomOffsetZ * actualZoomProgress);
@@ -287,13 +286,6 @@ public class RenderGun implements IItemRenderer {
                             anim = gunType.getGrip(item).model.secondaryAnimType;
 
                         // Calculate the amount of tilt required for the reloading animation
-
-                        if (isWeaponChange) {
-                            animations.reloadAnimationProgress = 1;
-                            animations.lastReloadAnimationProgress = 1;
-                            GL11.glPopMatrix();
-                            return;
-                        }
 
                         reloadRotate = 1F;
                         if (effectiveReloadAnimationProgress < model.tiltGunTime)

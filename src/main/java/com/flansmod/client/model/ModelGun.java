@@ -278,6 +278,8 @@ public class ModelGun extends ModelBase {
      * 瞄准时枪械模型在z轴的偏移
      */
     public float zoomOffsetZ = 0F;
+    /** Additional per-model ADS rotation around the screen-facing Z axis. */
+    public float adsRotateZ = 0F;
     public boolean fancyStance = false;
     public Vector3f stanceTranslate = new Vector3f();
     public Vector3f stanceRotate = new Vector3f();

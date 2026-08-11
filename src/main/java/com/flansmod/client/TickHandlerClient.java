@@ -61,6 +61,7 @@ import java.util.Map;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class TickHandlerClient {
+    private static final float LOCKED_GAMMA = 0F;
     public static final ResourceLocation offHand = new ResourceLocation("flansmod", "gui/offHand.png");
     public static final ResourceLocation aps = new ResourceLocation("flansmod", "gui/aps.png");
     public static final ResourceLocation tvm = new ResourceLocation("flansmod", "gui/TVM.png");
@@ -935,16 +936,8 @@ public class TickHandlerClient {
         FirstPersonNightVisionGogglesRenderer.render(minecraft, event.partialTicks);
         float intensity = NightVisionGogglesEffect.getIntensity(minecraft, event.partialTicks);
         NightVisionGogglesEffect.renderBeforeHud(minecraft, intensity);
-    }
-
-    @SubscribeEvent
-    public void renderNightVisionAfterHud(RenderGameOverlayEvent.Post event) {
-        if (event.type != ElementType.ALL || Minecraft.getMinecraft().gameSettings.hideGUI) {
-            return;
-        }
-        Minecraft minecraft = Minecraft.getMinecraft();
-        float intensity = NightVisionGogglesEffect.getIntensity(minecraft, event.partialTicks);
         NightVisionGogglesEffect.renderAfterHud(minecraft, intensity);
+        AltynHelmetOverlay.render(minecraft);
     }
 
     @SubscribeEvent
@@ -953,14 +946,6 @@ public class TickHandlerClient {
             return;
         }
         renderBallisticNearMissVignette(Minecraft.getMinecraft());
-    }
-
-    @SubscribeEvent
-    public void renderAltynHelmetOverlay(RenderGameOverlayEvent.Post event) {
-        if (event.type != ElementType.HELMET || Minecraft.getMinecraft().gameSettings.hideGUI) {
-            return;
-        }
-        AltynHelmetOverlay.render(Minecraft.getMinecraft());
     }
 
     @SubscribeEvent
@@ -1019,6 +1004,7 @@ public class TickHandlerClient {
      * Handle flashlight block light override
      */
     public void clientTickStart(Minecraft mc) {
+        enforceLockedGamma(mc);
         updateMuzzleFlashLights(mc);
         updateBallisticNearMiss(mc);
         if (mc.currentScreen instanceof GuiGameOver) {
@@ -1217,6 +1203,14 @@ public class TickHandlerClient {
             return localMuzzleFlashBaseLightExposure;
         }
         return measuredExposure;
+    }
+
+    private void enforceLockedGamma(Minecraft minecraft) {
+        if (minecraft.gameSettings.gammaSetting == LOCKED_GAMMA) {
+            return;
+        }
+        minecraft.gameSettings.gammaSetting = LOCKED_GAMMA;
+        minecraft.gameSettings.saveOptions();
     }
 
     public static void triggerBallisticNearMiss(float strength) {
