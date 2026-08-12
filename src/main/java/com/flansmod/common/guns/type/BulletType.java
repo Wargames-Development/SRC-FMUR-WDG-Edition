@@ -36,6 +36,8 @@ public class BulletType extends ShootableType {
      */
 
     public static List<BulletType> bullets = new ArrayList<>();
+    /** Enables the dedicated red tracer renderer for this ammunition type. */
+    public boolean tracer = false;
     //新增:是否显示炮弹弹着点
     public boolean printExplodePoint = false;
     //新增:子弹命中时掉落物品(用于米粉战车
@@ -290,6 +292,9 @@ public class BulletType extends ShootableType {
                     break;
                 case "FlakParticles":
                     flak = Integer.parseInt(split[1]);
+                    break;
+                case "Tracer":
+                    tracer = Boolean.parseBoolean(split[1]);
                     break;
                 case "canLoadChunkWithBullet":
                     canLoadChunkWithBullet = Boolean.parseBoolean(split[1]);

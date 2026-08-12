@@ -1198,6 +1198,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
                     // Cosmetic only. The normal non-bouncy projectile impact below is unchanged.
                     if (!worldObj.isRemote
+                            && type.tracer
                             && !type.enableBounciness
                             && raytraceResult.sideHit == 1
                             && motionY < -0.01D

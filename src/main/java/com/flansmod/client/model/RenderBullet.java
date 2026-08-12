@@ -40,7 +40,7 @@ public class RenderBullet extends Render
 	 */
 	private void renderTracerGlow(EntityBullet bullet, float partialTicks)
 	{
-		if(!bullet.hasTracerReachedVisibleDistance())
+		if(!bullet.type.tracer || !bullet.hasTracerReachedVisibleDistance())
 			return;
 
 		double speed = Math.sqrt(bullet.motionX * bullet.motionX

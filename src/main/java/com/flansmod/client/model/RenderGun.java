@@ -9,6 +9,7 @@ import com.flansmod.common.PlayerData;
 import com.flansmod.common.PlayerHandler;
 import com.flansmod.common.guns.EnumFireMode;
 import com.flansmod.common.guns.IScope;
+import com.flansmod.common.guns.item.ItemBullet;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.item.ItemShootable;
 import com.flansmod.common.guns.type.AttachmentType;
@@ -31,6 +32,7 @@ import org.lwjgl.opengl.GL11;
 
 import java.util.Random;
 
+import static com.flansmod.client.FlansModClient.isWeaponChange;
 import static com.flansmod.client.FlansModClient.zoomProgress;
 
 public class RenderGun implements IItemRenderer {
@@ -286,6 +288,13 @@ public class RenderGun implements IItemRenderer {
                             anim = gunType.getGrip(item).model.secondaryAnimType;
 
                         // Calculate the amount of tilt required for the reloading animation
+
+                        if (isWeaponChange) {
+                            animations.reloadAnimationProgress = 1;
+                            animations.lastReloadAnimationProgress = 1;
+                            GL11.glPopMatrix();
+                            return;
+                        }
 
                         reloadRotate = 1F;
                         if (effectiveReloadAnimationProgress < model.tiltGunTime)
@@ -655,7 +664,7 @@ public class RenderGun implements IItemRenderer {
                                 base.z + defaultOffset.z);
                     }
 
-                    if (model.muzzleFlashPoint != null) {
+                    if (model.muzzleFlashPoint != null && hasTracerAmmo(item, gunType)) {
                         renderMuzzleTracer(model.flashScale);
                     }
 
@@ -1583,6 +1592,18 @@ public class RenderGun implements IItemRenderer {
         } finally {
             GL11.glPopAttrib();
         }
+    }
+
+    private boolean hasTracerAmmo(ItemStack gunStack, GunType gunType) {
+        ItemGun gun = (ItemGun)gunStack.getItem();
+        for (int slot = 0; slot < gunType.getNumAmmoItemsInGun(gunStack); slot++) {
+            ItemStack ammoStack = gun.getBulletItemStack(gunStack, slot);
+            if (ammoStack != null && ammoStack.getItem() instanceof ItemBullet
+                    && ammoStack.getItemDamage() < ammoStack.getMaxDamage()) {
+                return ((ItemBullet)ammoStack.getItem()).type.tracer;
+            }
+        }
+        return false;
     }
 
     private void drawMuzzleTracerLine(float length, float width,

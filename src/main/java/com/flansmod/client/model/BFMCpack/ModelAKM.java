@@ -28,13 +28,13 @@ public class ModelAKM extends ModelGun {
         // The exported OBJ points along +X. These positions are in OBJ units divided by 16.
         barrelAttachPoint = new Vector3f(6.52F / 16F, 1.45F / 16F, 0F);
         gadgetAttachPoint = new Vector3f(2.80F / 16F, 0.60F / 16F, 0F);
-        scopeAttachPoint = new Vector3f(1.35F / 16F, 1.80F / 16F, 0F);
+        scopeAttachPoint = new Vector3f(1.35F / 16F, 1.92F / 16F, 0F);
         gripAttachPoint = new Vector3f(2.80F / 16F, 0.60F / 16F, 0F);
 
         gunOffset = -0.6F;
         gunOffsetX = -2F;
         thirdPersonOffset = new Vector3f(0D, -0.12D, 0D);
-        gunSlideDistance = 0.13F;
+        gunSlideDistance = 0.08F;
         animationType = EnumAnimationType.CUSTOM;
         rotateGunHorizontal = 15F;
         tiltGun = 30F;
