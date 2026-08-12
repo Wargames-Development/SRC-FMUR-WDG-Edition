@@ -7,6 +7,7 @@ import com.flansmod.common.guns.EntityMG;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.raytracing.PlayerSnapshot;
 import com.flansmod.common.guns.type.GunType;
+import com.flansmod.common.network.PacketReload;
 import com.flansmod.common.network.PacketSelectOffHandGun;
 import com.flansmod.common.teams.PlayerClass;
 import com.flansmod.common.teams.Team;
@@ -14,6 +15,7 @@ import com.flansmod.common.vector.Vector3f;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
@@ -152,9 +154,9 @@ public class PlayerData {
 		if (offHandActive && offHandGunSlot > 0 && offHandGunSlot <= player.inventory.getSizeInventory())
 			leftGun = player.inventory.getStackInSlot(offHandGunSlot - 1);
 
-		tickReload(rightGun, false);
+		tickReload(player, rightGun, false);
 		if (leftGun != rightGun)
-			tickReload(leftGun, true);
+			tickReload(player, leftGun, true);
 
 		reloadingRight = isReloading(rightGun, false);
 		reloadingLeft = isReloading(leftGun, true);
@@ -212,20 +214,26 @@ public class PlayerData {
 		return 0F;
 	}
 
-	private void tickReload(ItemStack gunStack, boolean left) {
+	private void tickReload(EntityPlayer player, ItemStack gunStack, boolean left) {
 		ReloadState reloadState = getReloadState(left);
+		ItemStack inventoryStack = gunStack;
+		if (!player.worldObj.isRemote) {
+			// Unequipped reloads pause, but a gun that left server inventory must not reserve the hand forever.
+			inventoryStack = findReloadStack(player, reloadState);
+			if (reloadState != null && inventoryStack == null) {
+				clearReload(reloadState, null, left);
+				if (player instanceof EntityPlayerMP)
+					FlansMod.getPacketHandler().sendTo(new PacketReload(left, 0, 0, false, false, false),
+							(EntityPlayerMP) player);
+				return;
+			}
+		}
 		if (!isReloading(reloadState, gunStack))
 			return;
 
 		reloadState.timeLeft--;
-		if (reloadState.timeLeft <= 0F) {
-			clearReloadId(gunStack, reloadState.reloadId);
-			clearReloadId(reloadState.gunStack, reloadState.reloadId);
-			if (left)
-				reloadLeft = null;
-			else
-				reloadRight = null;
-		}
+		if (reloadState.timeLeft <= 0F)
+			clearReload(reloadState, inventoryStack, left);
 	}
 
 	private ReloadState getReloadState(boolean left) {
@@ -237,8 +245,32 @@ public class PlayerData {
 				&& gunStack != null
 				&& reloadState.timeLeft > 0F
 				&& (reloadState.gunStack == gunStack
-				|| gunStack.hasTagCompound()
-				&& reloadState.reloadId.equals(gunStack.getTagCompound().getString(RELOAD_ID_TAG)));
+				|| reloadState.reloadId.equals(getReloadId(gunStack)));
+	}
+
+	private ItemStack findReloadStack(EntityPlayer player, ReloadState reloadState) {
+		if (player == null || reloadState == null)
+			return null;
+		for (int slot = 0; slot < player.inventory.getSizeInventory(); slot++) {
+			ItemStack candidate = player.inventory.getStackInSlot(slot);
+			if (reloadState.gunStack == candidate || reloadState.reloadId.equals(getReloadId(candidate)))
+				return candidate;
+		}
+		return null;
+	}
+
+	private static String getReloadId(ItemStack gunStack) {
+		return gunStack != null && gunStack.hasTagCompound()
+				? gunStack.getTagCompound().getString(RELOAD_ID_TAG) : "";
+	}
+
+	private void clearReload(ReloadState reloadState, ItemStack inventoryStack, boolean left) {
+		clearReloadId(inventoryStack, reloadState.reloadId);
+		clearReloadId(reloadState.gunStack, reloadState.reloadId);
+		if (left)
+			reloadLeft = null;
+		else
+			reloadRight = null;
 	}
 
 	private void clearReloadId(ItemStack gunStack, String reloadId) {
