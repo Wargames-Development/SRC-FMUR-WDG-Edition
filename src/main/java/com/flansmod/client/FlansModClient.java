@@ -504,6 +504,7 @@ public class FlansModClient extends FlansMod {
             currentItemInHand = mc.thePlayer.getHeldItem().getItem();
         } else currentItemInHand = null;
 
+
         /**  涉及开镜时间的改动  */
         if (currentScope == null) {
             if (mc.thePlayer != null && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemGun) {

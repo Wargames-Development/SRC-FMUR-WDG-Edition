@@ -316,8 +316,12 @@ public class GunAnimations {
 
     }
 
-public void cancelReload() {
+    public void cancelReload() {
+        stopReloadSound();
         reloading = false;
+        reloadInProgress = false;
+        reloadingSlot = -1;
+        reloadingItem = null;
         reloadTimeLeft = 0;
         FlansModClient.reloadStart = false;
         reloadAnimationProgress = 0F;
