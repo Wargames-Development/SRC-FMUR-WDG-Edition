@@ -135,6 +135,8 @@ public class PacketReload extends PacketBase {
         if (data != null && gunStack != null && gunStack.getItem() instanceof ItemGun) { // 如果data不为空 gunstack不为空 且 gunstack确实为枪械
             GunType type = ((ItemGun) gunStack.getItem()).type; // 获取枪械类型
             //检查枪械是否为空仓
+            if (data.isReloading(gunStack) || data.hasReloadInHand(left))
+                return;
             boolean empty = true;
             for (int i = 0; i < type.getNumAmmoItemsInGun(gunStack); i++) { // 遍历枪械的所有弹药槽
                 ItemStack bulletStack = ((ItemGun) gunStack.getItem()).getBulletItemStack(gunStack, i); // 获取该弹药槽
@@ -179,8 +181,7 @@ public class PacketReload extends PacketBase {
                     reloadTime = 0;
                     data.reloadedAfterRespawn = true;
                 }
-                data.shootTimeRight += reloadTime;
-                data.shootTimeLeft += reloadTime;
+                data.startReload(gunStack, reloadTime, left);
                 //Set the reload delay
                 if (left)
                     data.reloadingLeft = true;
@@ -201,7 +202,9 @@ public class PacketReload extends PacketBase {
                     soundToPlay = type.reloadSound;
 
                 if (soundToPlay != null && reloadTime > 0)
-                    PacketPlaySound.sendSoundPacket(playerEntity.posX, playerEntity.posY, playerEntity.posZ, type.reloadSoundRange, playerEntity.dimension, soundToPlay, false);
+                    FlansMod.getPacketHandler().sendToAllExcept(
+                            new PacketPlaySound(playerEntity.posX, playerEntity.posY, playerEntity.posZ, soundToPlay),
+                            playerEntity.posX, playerEntity.posY, playerEntity.posZ, type.reloadSoundRange, playerEntity, playerEntity.dimension);
             }
         }
     }
@@ -230,37 +233,8 @@ public class PacketReload extends PacketBase {
                 }
             }
 
-            int maxAmmo = type.getNumAmmoItemsInGun(stack);
-            boolean singlesReload = maxAmmo > 1;
-            int reloadCount;
-
-            if (singlesReload) {
-                reloadCount = 0;
-                for (int i = 0; i < type.getNumAmmoItemsInGun(stack); i++) {
-                    ItemStack oldBulletStack = ((ItemGun) stack.getItem()).getBulletItemStack(stack, i);
-                    if (oldBulletStack != null && (oldBulletStack.getMaxDamage() - oldBulletStack.getItemDamage()) == 0) {
-                        reloadCount += 1;
-                    } else if (oldBulletStack == null) {
-                        reloadCount += 1;
-                    }
-                }
-            } else {
-                reloadCount = 1;
-            }
-
-            float reloadTime;
-            if(empty){
-                reloadTime = singlesReload ? (type.getEmptyReloadTime(stack) / maxAmmo) * reloadCount : type.getEmptyReloadTime(stack);
-            } else {
-                reloadTime = type.getTacticalReloadTime(stack) / maxAmmo * reloadCount;
-            }
-
-            if (left) {
-                FlansModClient.shootTimeLeft += reloadTime;
-            }
-            else {
-                FlansModClient.shootTimeRight += reloadTime;
-            }
+            int animationReloadTime = Math.max(0, reloadTime);
+            data.startReload(stack, animationReloadTime, left);
 
             //Apply animations
             GunAnimations animations = null;
@@ -283,7 +257,17 @@ public class PacketReload extends PacketBase {
             int pumpTime = type.model == null ? 1 : type.model.pumpTime;
             int chargeDelay = type.model == null ? 0 : type.model.chargeDelayAfterReload;
             int chargeTime = type.model == null ? 1 : type.model.chargeTime;
-            animations.doReload((int) reloadTime, pumpDelay, pumpTime, chargeDelay, chargeTime, amount, singlesReload, !empty);
+            int gunSlot = left ? data.offHandGunSlot - 1 : clientPlayer.inventory.currentItem;
+            String soundToPlay = null;
+            AttachmentType grip = type.getGrip(stack);
+            if (type.getSecondaryFire(stack) && grip != null && grip.secondaryReloadSound != null)
+                soundToPlay = grip.secondaryReloadSound;
+            else if (empty && type.reloadSoundOnEmpty != null)
+                soundToPlay = type.reloadSoundOnEmpty;
+            else if (type.reloadSound != null)
+                soundToPlay = type.reloadSound;
+            animations.doReload(stack, gunSlot, animationReloadTime, pumpDelay, pumpTime, chargeDelay, chargeTime,
+                    amount, singlesReload, !empty, soundToPlay);
 
             //Iterate over all inventory slots and find the magazine / bullet item with the most bullets
             int bestSlot = -1;

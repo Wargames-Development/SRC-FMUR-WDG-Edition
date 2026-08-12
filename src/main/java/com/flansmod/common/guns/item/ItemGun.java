@@ -489,6 +489,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     if ((type.secondaryFunction == EnumSecondaryFunction.ADS_ZOOM || type.secondaryFunction == EnumSecondaryFunction.ZOOM)
                             && Mouse.isButtonDown(FlansModClient.aimButton.getButton())
                             && FlansModClient.scopeTime <= 0
+                            && FlansModClient.reloadTime(false) <= 0
                             && FMLClientHandler.instance().getClient().currentScreen == null
                     ) {
                         if (FlansModClient.currentScope == null) {
@@ -527,6 +528,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     if ((type.secondaryFunction == EnumSecondaryFunction.ADS_ZOOM || type.secondaryFunction == EnumSecondaryFunction.ZOOM)
                             && Mouse.isButtonDown(FlansModClient.aimButton.getButton())
                             && FlansModClient.scopeTime <= 0
+                            && FlansModClient.reloadTime(false) <= 0
                             && FMLClientHandler.instance().getClient().currentScreen == null
                     ) {
                         if (FlansModClient.currentScope == null) {
@@ -1233,7 +1235,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             return gunStack;
 
         //Shoot delay ticker is at (or below) 0. Try and shoot the next bullet
-        if ((left && data.shootTimeLeft <= 0) || (!left && data.shootTimeRight <= 0)) {
+        if (((left && data.shootTimeLeft <= 0) || (!left && data.shootTimeRight <= 0)) && !data.isReloading(gunStack)) {
             //Go through the bullet stacks in the gun and see if any of them are not null
             int bulletID = 0;
             ItemStack bulletStack = null;
@@ -1281,7 +1283,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 if (sprinting && !type.isCanShootWhileRunning)
                     return gunStack;
 
-                if (reload(gunStack, gunType, world, entityplayer, false, left, false, false)) {
+                if (!data.hasReloadInHand(left) && reload(gunStack, gunType, world, entityplayer, false, left, false, false)) {
                     //Set player shoot delay to be the reload delay
                     //Set both gun delays to avoid reloading two guns at once
                     //data.shootTimeRight = data.shootTimeLeft = (int)gunType.getReloadTime(gunStack);
@@ -1293,8 +1295,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                         reloadTime = type.getTacticalReloadTime(gunStack) / maxAmmo * reloadCount;
                     }
 
-                    data.shootTimeRight += reloadTime;
-                    data.shootTimeLeft += reloadTime;
+                    data.startReload(gunStack, reloadTime, left);
                     if (left) {
                         data.reloadingLeft = true;
                         data.burstRoundsRemainingLeft = 0;
@@ -1317,8 +1318,10 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                         soundToPlay = gunType.reloadSound;
 
                     if (soundToPlay != null && type.getNumAmmoItemsInGun(gunStack) == 1) {
-                        PacketPlaySound.sendSoundPacket(entityplayer.posX, entityplayer.posY, entityplayer.posZ,
-                                type.reloadSoundRange, entityplayer.dimension, soundToPlay, false);
+                        FlansMod.getPacketHandler().sendToAllExcept(
+                                new PacketPlaySound(entityplayer.posX, entityplayer.posY, entityplayer.posZ, soundToPlay),
+                                entityplayer.posX, entityplayer.posY, entityplayer.posZ,
+                                type.reloadSoundRange, entityplayer, entityplayer.dimension);
                     }
                 } else if ((gunType.clickSoundOnEmpty != null) && canClick) {
                     PacketPlaySound.sendSoundPacket(entityplayer.posX, entityplayer.posY, entityplayer.posZ, type.reloadSoundRange, entityplayer.dimension, gunType.clickSoundOnEmpty, false);

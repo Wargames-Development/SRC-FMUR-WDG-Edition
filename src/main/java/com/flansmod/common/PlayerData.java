@@ -15,13 +15,16 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ResourceLocation;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 public class PlayerData {
+	private static final String RELOAD_ID_TAG = "FMURReloadId";
 	/**
 	 * Their username
 	 */
@@ -71,6 +74,8 @@ public class PlayerData {
 	public int minigunPacketsThisTick;
 	/** Reloading booleans */
 	public boolean reloadingRight, reloadingLeft;
+	/** Reload state is attached to the gun stack and the hand that started it. */
+	private ReloadState reloadRight, reloadLeft;
 	/** When remote explosives are thrown they are added to this list. When the player uses a remote, the first one from this list detonates */
 	public ArrayList<EntityGrenade> remoteExplosives = new ArrayList<>();
 	public Set<EntityBullet> playerControlledBullets = new HashSet<>();
@@ -135,13 +140,24 @@ public class PlayerData {
 			clientTick(player);
 		if (shootTimeRight > 0)
 			shootTimeRight--;
-		if (shootTimeRight <= 0)
-			reloadingRight = false;
 
 		if (shootTimeLeft > 0)
 			shootTimeLeft--;
-		if(shootTimeLeft <= 0)
-			reloadingLeft = false;
+
+		ItemStack rightGun = player.getCurrentEquippedItem();
+		ItemStack leftGun = null;
+		boolean offHandActive = rightGun != null
+				&& rightGun.getItem() instanceof ItemGun
+				&& ((ItemGun) rightGun.getItem()).type.getOneHanded();
+		if (offHandActive && offHandGunSlot > 0 && offHandGunSlot <= player.inventory.getSizeInventory())
+			leftGun = player.inventory.getStackInSlot(offHandGunSlot - 1);
+
+		tickReload(rightGun, false);
+		if (leftGun != rightGun)
+			tickReload(leftGun, true);
+
+		reloadingRight = isReloading(rightGun, false);
+		reloadingLeft = isReloading(leftGun, true);
 
 		if(shootClickDelay > 0)
 			shootClickDelay--;
@@ -161,6 +177,86 @@ public class PlayerData {
 		System.arraycopy(snapshots, 0, snapshots, 1, snapshots.length - 2 + 1);
 		//Take new snapshot
 		snapshots[0] = new PlayerSnapshot(player);
+	}
+
+	public void startReload(ItemStack gunStack, float reloadTime, boolean left) {
+		if (gunStack == null || reloadTime <= 0F)
+			return;
+		if (!gunStack.hasTagCompound())
+			gunStack.setTagCompound(new NBTTagCompound());
+		String reloadId = UUID.randomUUID().toString();
+		gunStack.getTagCompound().setString(RELOAD_ID_TAG, reloadId);
+		if (left)
+			reloadLeft = new ReloadState(gunStack, reloadId, reloadTime);
+		else
+			reloadRight = new ReloadState(gunStack, reloadId, reloadTime);
+	}
+
+	public boolean hasReloadInHand(boolean left) {
+		return getReloadState(left) != null;
+	}
+
+	public boolean isReloading(ItemStack gunStack) {
+		return isReloading(reloadRight, gunStack) || isReloading(reloadLeft, gunStack);
+	}
+
+	private boolean isReloading(ItemStack gunStack, boolean left) {
+		return isReloading(getReloadState(left), gunStack);
+	}
+
+	public float getReloadTime(ItemStack gunStack) {
+		if (isReloading(reloadRight, gunStack))
+			return reloadRight.timeLeft;
+		if (isReloading(reloadLeft, gunStack))
+			return reloadLeft.timeLeft;
+		return 0F;
+	}
+
+	private void tickReload(ItemStack gunStack, boolean left) {
+		ReloadState reloadState = getReloadState(left);
+		if (!isReloading(reloadState, gunStack))
+			return;
+
+		reloadState.timeLeft--;
+		if (reloadState.timeLeft <= 0F) {
+			clearReloadId(gunStack, reloadState.reloadId);
+			clearReloadId(reloadState.gunStack, reloadState.reloadId);
+			if (left)
+				reloadLeft = null;
+			else
+				reloadRight = null;
+		}
+	}
+
+	private ReloadState getReloadState(boolean left) {
+		return left ? reloadLeft : reloadRight;
+	}
+
+	private boolean isReloading(ReloadState reloadState, ItemStack gunStack) {
+		return reloadState != null
+				&& gunStack != null
+				&& reloadState.timeLeft > 0F
+				&& (reloadState.gunStack == gunStack
+				|| gunStack.hasTagCompound()
+				&& reloadState.reloadId.equals(gunStack.getTagCompound().getString(RELOAD_ID_TAG)));
+	}
+
+	private void clearReloadId(ItemStack gunStack, String reloadId) {
+		if (gunStack != null && gunStack.hasTagCompound()
+				&& reloadId.equals(gunStack.getTagCompound().getString(RELOAD_ID_TAG)))
+			gunStack.getTagCompound().removeTag(RELOAD_ID_TAG);
+	}
+
+	private static class ReloadState {
+		private final ItemStack gunStack;
+		private final String reloadId;
+		private float timeLeft;
+
+		private ReloadState(ItemStack gunStack, String reloadId, float timeLeft) {
+			this.gunStack = gunStack;
+			this.reloadId = reloadId;
+			this.timeLeft = timeLeft;
+		}
 	}
 
 	public void clientTick(EntityPlayer player) {

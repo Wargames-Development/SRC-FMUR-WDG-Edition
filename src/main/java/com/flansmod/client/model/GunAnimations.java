@@ -1,11 +1,16 @@
 package com.flansmod.client.model;
 
 import com.flansmod.client.FlansModClient;
+import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.network.PacketGunState;
 import com.flansmod.common.vector.Vector3f;
 import cpw.mods.fml.client.FMLClientHandler;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.settings.GameSettings;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 
 import java.util.Random;
 
@@ -15,7 +20,7 @@ public class GunAnimations {
     /**
      * 换弹动画剩余时间 自动减少 0为结束
      */
-    public static int reloadTimeLeft = 0;
+    public int reloadTimeLeft = 0;
 
     /**
      * (Purely aesthetic) gun animation variables
@@ -50,6 +55,10 @@ public class GunAnimations {
     public boolean charging = false;
 
     public boolean reloading = false;
+    private boolean reloadInProgress = false;
+    private int reloadingSlot = -1;
+    private Item reloadingItem;
+    private PositionedSoundRecord reloadSound;
     public float reloadAnimationTime = 0;
     public float reloadAnimationProgress = 0F, lastReloadAnimationProgress = 0F;
     public int reloadAmmoCount = 1;
@@ -92,12 +101,25 @@ public class GunAnimations {
 
     }
 
-    public void update() {
+    public int getReloadTimeLeft(int equippedSlot, ItemStack equippedGun) {
+        return isReloadEquipped(equippedSlot, equippedGun) ? reloadTimeLeft : 0;
+    }
 
-        if(reloadTimeLeft > 0)
+    public void update() {
+        update(-1, null);
+    }
+
+    public void update(int equippedSlot, ItemStack equippedGun) {
+
+        boolean reloadEquipped = isReloadEquipped(equippedSlot, equippedGun);
+        if (reloading && !reloadEquipped)
+            stopReloadSound();
+        reloading = reloadEquipped;
+
+        if(reloadEquipped && reloadTimeLeft > 0)
             reloadTimeLeft--;
 
-        FlansModClient.reloadStart = reloadTimeLeft == 1;
+        FlansModClient.reloadStart = reloadEquipped && reloadTimeLeft == 1;
 
         //Assign values
         lastPumped = pumped;
@@ -106,7 +128,7 @@ public class GunAnimations {
         lastCasingStage = casingStage;
 
         //Time until pump-action
-        if (timeUntilPump > 0) {
+        if ((!reloadInProgress || reloadEquipped) && timeUntilPump > 0) {
             timeUntilPump--;
             if (timeUntilPump == 0) {
                 //Pump it!
@@ -118,7 +140,7 @@ public class GunAnimations {
         }
 
         //Timer until pulling back the charge handle/bolt
-        if (timeUntilCharge > 0) {
+        if ((!reloadInProgress || reloadEquipped) && timeUntilCharge > 0) {
             timeUntilCharge--;
             if (timeUntilCharge == 0) {
                 //Pump it!
@@ -201,6 +223,10 @@ public class GunAnimations {
             isGunEmpty = false;
         if (reloading && reloadAnimationProgress >= 1F) {
             reloading = false;
+            reloadInProgress = false;
+            reloadingSlot = -1;
+            reloadingItem = null;
+            stopReloadSound();
         }
 
 
@@ -259,8 +285,12 @@ public class GunAnimations {
         }
     }
 
-    public void doReload(int reloadTime, int pumpDelay, int pumpTime, int chargeDelay, int chargeTime, int ammoCount, boolean single, boolean isTactical) {
+    public void doReload(ItemStack gunStack, int gunSlot, int reloadTime, int pumpDelay, int pumpTime, int chargeDelay, int chargeTime, int ammoCount, boolean single, boolean isTactical, String sound) {
+        stopReloadSound();
         reloading = true;
+        reloadInProgress = true;
+        reloadingSlot = gunSlot;
+        reloadingItem = gunStack == null ? null : gunStack.getItem();
         lastReloadAnimationProgress = reloadAnimationProgress = 0F;
         reloadAnimationTime = reloadTime;
         timeUntilPump = pumpDelay;
@@ -273,18 +303,53 @@ public class GunAnimations {
         FlansModClient.reloadStart = true;
         reloadTimeLeft = reloadTime;
         tacticalReload = isTactical;
+        playReloadSound(sound);
 
         if(FlansModClient.currentScope != null) {
             GameSettings gameSettings = FMLClientHandler.instance().getClient().gameSettings;
             FlansModClient.currentScope = null;
             FlansModClient.lastZoomLevel = 0;
             FlansMod.getPacketHandler().sendToServer(new PacketGunState(false));
-            FlansModClient.scopeTime = reloadTime - 5;
+            FlansModClient.scopeTime = 2;
             gameSettings.viewBobbing = true;
         }
 
     }
 
+public void cancelReload() {
+        reloading = false;
+        reloadTimeLeft = 0;
+        FlansModClient.reloadStart = false;
+        reloadAnimationProgress = 0F;
+        lastReloadAnimationProgress = 0F;
+        timeUntilPump = 0;
+        timeUntilCharge = 0;
+        pumping = false;
+        charging = false;
+    }
+
+    private boolean isReloadEquipped(int equippedSlot, ItemStack equippedGun) {
+        return reloadInProgress
+                && reloadingSlot == equippedSlot
+                && equippedGun != null
+                && equippedGun.getItem() == reloadingItem;
+    }
+
+    private void playReloadSound(String sound) {
+        if (sound == null || sound.isEmpty() || reloadTimeLeft <= 0)
+            return;
+        Minecraft minecraft = Minecraft.getMinecraft();
+        reloadSound = new PositionedSoundRecord(FlansModResourceHandler.getSound(sound), 10F, 1F,
+                (float) minecraft.thePlayer.posX, (float) minecraft.thePlayer.posY, (float) minecraft.thePlayer.posZ);
+        minecraft.getSoundHandler().playSound(reloadSound);
+    }
+
+    private void stopReloadSound() {
+        if (reloadSound != null) {
+            Minecraft.getMinecraft().getSoundHandler().stopSound(reloadSound);
+            reloadSound = null;
+        }
+    }
     public void doMelee(int meleeTime) {
         meleeAnimationLength = meleeTime;
     }

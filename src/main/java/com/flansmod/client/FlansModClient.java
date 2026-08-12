@@ -51,7 +51,7 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
-import java.util.Objects;
+import java.util.Map;
 import java.util.Random;
 
 
@@ -251,7 +251,30 @@ public class FlansModClient extends FlansMod {
     }
 
     public static float shootTime(boolean left) {
-        return left ? shootTimeLeft : shootTimeRight;
+        float delay = left ? shootTimeLeft : shootTimeRight;
+        return Math.max(delay, reloadTime(left));
+    }
+
+    public static float reloadTime(boolean left) {
+        if (minecraft.thePlayer == null)
+            return 0F;
+
+        PlayerData data = PlayerHandler.getPlayerData(minecraft.thePlayer);
+        if (data == null)
+            return 0F;
+
+        ItemStack gunStack = minecraft.thePlayer.getCurrentEquippedItem();
+        int gunSlot = minecraft.thePlayer.inventory.currentItem;
+        if (left && data.offHandGunSlot > 0) {
+            gunStack = minecraft.thePlayer.inventory.getStackInSlot(data.offHandGunSlot - 1);
+            gunSlot = data.offHandGunSlot - 1;
+        }
+
+        GunAnimations animations = left ? gunAnimationsLeft.get(minecraft.thePlayer) : gunAnimationsRight.get(minecraft.thePlayer);
+        float reloadTime = data.getReloadTime(gunStack);
+        if (animations != null)
+            reloadTime = Math.max(reloadTime, animations.getReloadTimeLeft(gunSlot, gunStack));
+        return reloadTime;
     }
 
     public static void tick() {
@@ -399,13 +422,31 @@ public class FlansModClient extends FlansMod {
 
 
         //Update gun animations for the gun in hand
-        for (
-                GunAnimations g : gunAnimationsRight.values()) {
-            g.update();
+        for (Map.Entry<EntityLivingBase, GunAnimations> entry : gunAnimationsRight.entrySet()) {
+            int equippedSlot = -1;
+            ItemStack equippedGun = null;
+            if (entry.getKey() instanceof EntityPlayer) {
+                EntityPlayer player = (EntityPlayer) entry.getKey();
+                equippedSlot = player.inventory.currentItem;
+                equippedGun = player.getCurrentEquippedItem();
+            }
+            entry.getValue().update(equippedSlot, equippedGun);
         }
-        for (
-                GunAnimations g : gunAnimationsLeft.values()) {
-            g.update();
+        for (Map.Entry<EntityLivingBase, GunAnimations> entry : gunAnimationsLeft.entrySet()) {
+            int offHandSlot = -1;
+            ItemStack offHandGun = null;
+            if (entry.getKey() instanceof EntityPlayer) {
+                EntityPlayer player = (EntityPlayer) entry.getKey();
+                PlayerData data = PlayerHandler.getPlayerData(player);
+                ItemStack heldGun = player.getCurrentEquippedItem();
+                if (data != null && data.offHandGunSlot > 0
+                        && heldGun != null && heldGun.getItem() instanceof ItemGun
+                        && ((ItemGun) heldGun.getItem()).type.getOneHanded()) {
+                    offHandSlot = data.offHandGunSlot - 1;
+                    offHandGun = player.inventory.getStackInSlot(offHandSlot);
+                }
+            }
+            entry.getValue().update(offHandSlot, offHandGun);
         }
 
         for (
@@ -491,7 +532,7 @@ public class FlansModClient extends FlansMod {
             GunAnimations gunAnimations = gunAnimationsRight.get(minecraft.thePlayer);
 
             /**  涉及奔跑时间的改动  */
-            if(GunAnimations.reloadTimeLeft == 0) {
+            if(gunAnimations == null || gunAnimations.getReloadTimeLeft(mc.thePlayer.inventory.currentItem, itemstackInHand) == 0) {
                 playerData.lastSprintProgress = playerData.sprintProgress;
                 if (ItemGun.sprinting) {
                     if (playerData.sprintProgress < 1.0F && gunType.getRunPosTime(itemstackInHand) != 0) {
