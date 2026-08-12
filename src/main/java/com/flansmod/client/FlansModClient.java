@@ -184,15 +184,6 @@ public class FlansModClient extends FlansMod {
     public static float lastMouseOffsetX = 0F, lastMouseOffsetY = 0F;
 
     /**
-     * 储存玩家当前手持物品
-     */
-    public static Item currentItemInHand = null;
-    /**
-     * 玩家是否发生了切枪动作
-     */
-    public static boolean isWeaponChange = false;
-
-    /**
      * 闪光弹生效时间
      */
     public static int tickCountFlash = 0;
@@ -489,20 +480,6 @@ public class FlansModClient extends FlansMod {
 
         //Calculate new zoom variables
         lastZoomProgress = zoomProgress;
-
-
-        /**
-         * 检测切枪
-         */
-        Item item = null;
-        if (mc.thePlayer != null && mc.thePlayer.getHeldItem() != null) {
-            item = mc.thePlayer.getHeldItem().getItem();
-        }
-
-        isWeaponChange = !Objects.equals(item, currentItemInHand);
-        if (mc.thePlayer != null && mc.thePlayer.getHeldItem() != null) {
-            currentItemInHand = mc.thePlayer.getHeldItem().getItem();
-        } else currentItemInHand = null;
 
 
         /**  涉及开镜时间的改动  */
