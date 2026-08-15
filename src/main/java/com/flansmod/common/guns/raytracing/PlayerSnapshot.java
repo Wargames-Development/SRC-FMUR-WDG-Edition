@@ -25,13 +25,23 @@ public class PlayerSnapshot {
 	public Vector3f pos;
 	public ArrayList<PlayerHitbox> hitboxes;
 	public long time;
+	private PlayerHitbox conservativeBodyHitbox;
 
 	public PlayerSnapshot(EntityPlayer p) {
 		this.player = p;
+		this.time = System.nanoTime();
 		this.pos = new Vector3f(p.posX, p.posY, p.posZ);
 		if (FlansMod.proxy.isThePlayer(p)) {
 			this.pos = new Vector3f(p.posX, p.posY - 1.600000023841858D, p.posZ);
 		}
+		this.conservativeBodyHitbox = new PlayerHitbox(this.player, new RotatedAxes(),
+				new Vector3f(),
+				new Vector3f(p.boundingBox.minX - this.pos.x, p.boundingBox.minY - this.pos.y,
+						p.boundingBox.minZ - this.pos.z),
+				new Vector3f(p.boundingBox.maxX - p.boundingBox.minX,
+						Math.min(1.4D, p.boundingBox.maxY - p.boundingBox.minY),
+						p.boundingBox.maxZ - p.boundingBox.minZ),
+				EnumHitboxType.BODY);
 
 		this.hitboxes = new ArrayList<>();
 		RotatedAxes bodyAxes = new RotatedAxes(p.rotationYaw, 0.0F, 0.0F);
@@ -86,15 +96,80 @@ public class PlayerSnapshot {
 	}
 
 	public ArrayList<BulletHit> raytrace(Vector3f origin, Vector3f motion) {
-		Vector3f localOrigin = Vector3f.sub(origin, this.pos, null);
+		return raytrace(origin, motion, 0.0F, false);
+	}
+
+	public ArrayList<BulletHit> raytrace(Vector3f origin, Vector3f motion, float padding) {
+		return raytrace(origin, motion, padding, true);
+	}
+
+	/**
+	 * Trace against a pose interpolated between two timestamped snapshots.
+	 * Alpha is measured from {@code older} (0) to this newer snapshot (1).
+	 */
+	public ArrayList<BulletHit> raytraceInterpolated(PlayerSnapshot older, float alpha,
+			Vector3f origin, Vector3f motion, float padding) {
+		if (!canInterpolateWith(older)) {
+			return older != null && alpha < 0.5F
+					? older.raytrace(origin, motion, padding)
+					: raytrace(origin, motion, padding);
+		}
+
+		float interpolation = Math.max(0.0F, Math.min(1.0F, alpha));
+		Vector3f interpolatedPosition = new Vector3f();
+		Vector3f.lerp(older.pos, this.pos, interpolation, interpolatedPosition);
+		Vector3f localOrigin = Vector3f.sub(origin, interpolatedPosition, null);
 		ArrayList<BulletHit> hits = new ArrayList();
-		for (PlayerHitbox hitbox : this.hitboxes) {
-			PlayerBulletHit hit = hitbox.raytrace(localOrigin, motion);
-			if (hit != null && hit.intersectTime >= 0.0F && hit.intersectTime <= 1.0F) {
+		for (int i = 0; i < this.hitboxes.size(); i++) {
+			PlayerBulletHit hit = this.hitboxes.get(i).raytraceInterpolated(
+					older.hitboxes.get(i), localOrigin, motion, interpolation, padding);
+			if (isSegmentHit(hit)) {
 				hits.add(hit);
 			}
 		}
+
+		PlayerBulletHit bodyHit = this.conservativeBodyHitbox.raytraceInterpolated(
+				older.conservativeBodyHitbox, localOrigin, motion, interpolation, padding);
+		if (isSegmentHit(bodyHit)) {
+			hits.add(bodyHit);
+		}
 		return hits;
+	}
+
+	private ArrayList<BulletHit> raytrace(Vector3f origin, Vector3f motion, float padding,
+			boolean includeConservativeBody) {
+		Vector3f localOrigin = Vector3f.sub(origin, this.pos, null);
+		ArrayList<BulletHit> hits = new ArrayList();
+		for (PlayerHitbox hitbox : this.hitboxes) {
+			PlayerBulletHit hit = hitbox.raytrace(localOrigin, motion, padding);
+			if (isSegmentHit(hit)) {
+				hits.add(hit);
+			}
+		}
+
+		if (includeConservativeBody) {
+			PlayerBulletHit bodyHit = this.conservativeBodyHitbox.raytrace(localOrigin, motion, padding);
+			if (isSegmentHit(bodyHit)) {
+				hits.add(bodyHit);
+			}
+		}
+		return hits;
+	}
+
+	private boolean canInterpolateWith(PlayerSnapshot older) {
+		if (older == null || older.hitboxes.size() != this.hitboxes.size()) {
+			return false;
+		}
+		for (int i = 0; i < this.hitboxes.size(); i++) {
+			if (older.hitboxes.get(i).type != this.hitboxes.get(i).type) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private static boolean isSegmentHit(PlayerBulletHit hit) {
+		return hit != null && hit.intersectTime >= 0.0F && hit.intersectTime <= 1.0F;
 	}
 
 	@SideOnly(Side.CLIENT)

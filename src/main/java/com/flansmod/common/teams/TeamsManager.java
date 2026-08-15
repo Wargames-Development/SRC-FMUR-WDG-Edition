@@ -127,6 +127,7 @@ public class TeamsManager {
     public static boolean allowVehicleZoom;
     public static int bulletSnapshotMin = 0;
     public static int bulletSnapshotDivisor = 50;
+    public static int bulletSnapshotMax = 250;
 
     //Disused. Delete when done
     public GameType currentGameType;
@@ -958,11 +959,14 @@ public class TeamsManager {
     }
 
     public void resetInventory(EntityPlayer player) {
-        Team team = PlayerHandler.getPlayerData(player).team;
-        PlayerClass playerClass = PlayerHandler.getPlayerData(player).getPlayerClass();
+        PlayerData playerData = PlayerHandler.getPlayerData(player);
+        Team team = playerData.team;
+        PlayerClass playerClass = playerData.getPlayerClass();
 
         if (team == null)
             return;
+
+        playerData.resetWeaponState(player);
 
         player.inventory.armorInventory = new ItemStack[4];
         player.inventory.mainInventory = new ItemStack[36];

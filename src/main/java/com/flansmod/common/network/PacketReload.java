@@ -9,7 +9,6 @@ import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.item.ItemShootable;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
-import com.flansmod.common.teams.TeamsManager;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import io.netty.buffer.ByteBuf;
@@ -48,6 +47,10 @@ public class PacketReload extends PacketBase {
     public boolean ammoToUpperInventory;
 
     public boolean tacticalReload;
+
+    /** Server-selected weapon identity for reliable client animation setup. */
+    private int gunSlot = -1;
+    private String gunTypeShortName = "";
 
     public PacketReload() {
     }
@@ -101,6 +104,14 @@ public class PacketReload extends PacketBase {
         this.ammoToUpperInventory = ammoToUpperInventory;
     }
 
+    public PacketReload(boolean l, int count, int reloadTime, boolean single, boolean combineAmmo,
+            boolean ammoToUpperInventory, int gunSlot, String gunTypeShortName, boolean tacticalReload) {
+        this(l, count, reloadTime, single, combineAmmo, ammoToUpperInventory);
+        this.gunSlot = gunSlot;
+        this.gunTypeShortName = gunTypeShortName == null ? "" : gunTypeShortName;
+        this.tacticalReload = tacticalReload;
+    }
+
     @Override
     public void encodeInto(ChannelHandlerContext ctx, ByteBuf data) {
         data.writeBoolean(left);
@@ -109,6 +120,9 @@ public class PacketReload extends PacketBase {
         data.writeBoolean(singlesReload);
         data.writeBoolean(combineAmmo);
         data.writeBoolean(ammoToUpperInventory);
+        data.writeInt(gunSlot);
+        writeUTF(data, gunTypeShortName);
+        data.writeBoolean(tacticalReload);
     }
 
     @Override
@@ -119,6 +133,12 @@ public class PacketReload extends PacketBase {
         singlesReload = data.readBoolean();
         combineAmmo = data.readBoolean();
         ammoToUpperInventory = data.readBoolean();
+        // These fields were appended so older reload-intent packets remain valid.
+        if (data.readableBytes() >= 6) {
+            gunSlot = data.readInt();
+            gunTypeShortName = readUTF(data);
+            tacticalReload = data.readBoolean();
+        }
     }
 
     //服务端处理逻辑
@@ -155,11 +175,10 @@ public class PacketReload extends PacketBase {
                 reloadCount = 0; // 初始化装弹数量为 0
                 for (int i = 0; i < type.getNumAmmoItemsInGun(gunStack); i++) { // 遍历
                     ItemStack oldBulletStack = ((ItemGun) gunStack.getItem()).getBulletItemStack(gunStack, i); // 遍历到的gun中原有的弹药槽
-                    if (oldBulletStack != null && (oldBulletStack.getMaxDamage() - oldBulletStack.getItemDamage()) == 0) {
-                        // 若旧弹匣不为空 , 且旧弹匣已经用完 , 则需要一个换弹 , reloadCount自增
-                        reloadCount += 1;
-                    } else if (oldBulletStack == null) {
-                        // 若旧弹匣为空 , 则一定需要一次换弹 , 自增
+                    if (oldBulletStack == null
+                            || oldBulletStack.getMaxDamage() - oldBulletStack.getItemDamage() == 0
+                            || type.canForceReload) {
+                        // Manual reload replaces this slot, so include it in the animation duration.
                         reloadCount += 1;
                     }
                 }
@@ -168,7 +187,8 @@ public class PacketReload extends PacketBase {
                 // 如果不为单发换弹 , 则只需要一次换弹 , 直接赋值为1
             }
 
-            if (((ItemGun) gunStack.getItem()).reload(gunStack, type, playerEntity.worldObj, playerEntity, true, left, combineAmmo, ammoToUpperInventory)) { // 执行装弹逻辑
+            ItemGun gunItem = (ItemGun) gunStack.getItem();
+            if (gunItem.canReload(gunStack, type, playerEntity.inventory, true)) {
                 // 若成功装弹
                 float reloadTime;
                 if(empty){
@@ -177,18 +197,18 @@ public class PacketReload extends PacketBase {
                     reloadTime = type.getTacticalReloadTime(gunStack) / maxAmmo * reloadCount;
                 }
 
-                if (!data.reloadedAfterRespawn && TeamsManager.getInstance().currentMap != null) {
-                    reloadTime = 0;
-                    data.reloadedAfterRespawn = true;
-                }
-                data.startReload(gunStack, reloadTime, left);
+                int reloadTicks = Math.max(1, (int) Math.ceil(reloadTime));
+                data.startReload(gunStack, reloadTicks, left, true, combineAmmo, ammoToUpperInventory);
                 //Set the reload delay
                 if (left)
                     data.reloadingLeft = true;
                 else data.reloadingRight = true;
                 //Send reload packet to induce reload effects client side
 
-                FlansMod.getPacketHandler().sendTo(new PacketReload(left, reloadCount, (int) reloadTime, singlesReload, combineAmmo, ammoToUpperInventory), playerEntity);
+                int reloadSlot = left ? data.offHandGunSlot - 1 : playerEntity.inventory.currentItem;
+                FlansMod.getPacketHandler().sendTo(new PacketReload(left, reloadCount, reloadTicks,
+                        singlesReload, combineAmmo, ammoToUpperInventory, reloadSlot, type.shortName, !empty),
+                        playerEntity);
 
                 //Play reload sound, empty variant if not null
                 String soundToPlay = null;
@@ -201,7 +221,7 @@ public class PacketReload extends PacketBase {
                 else if (type.reloadSound != null)
                     soundToPlay = type.reloadSound;
 
-                if (soundToPlay != null && reloadTime > 0)
+                if (soundToPlay != null && reloadTicks > 0)
                     FlansMod.getPacketHandler().sendToAllExcept(
                             new PacketPlaySound(playerEntity.posX, playerEntity.posY, playerEntity.posZ, soundToPlay),
                             playerEntity.posX, playerEntity.posY, playerEntity.posZ, type.reloadSoundRange, playerEntity, playerEntity.dimension);
@@ -220,24 +240,36 @@ public class PacketReload extends PacketBase {
             return;
         }
 
-        ItemStack stack = clientPlayer.getCurrentEquippedItem();
         PlayerData data = PlayerHandler.getPlayerData(clientPlayer, Side.CLIENT);
+        int animationSlot = gunSlot;
+        if (animationSlot < 0)
+            animationSlot = left ? data.offHandGunSlot - 1 : clientPlayer.inventory.currentItem;
+        ItemStack stack = animationSlot >= 0 && animationSlot < clientPlayer.inventory.getSizeInventory()
+                ? clientPlayer.inventory.getStackInSlot(animationSlot) : null;
         if (left) {
-            stack = clientPlayer.inventory.getStackInSlot(data.offHandGunSlot - 1);
             data.burstRoundsRemainingLeft = 0;
         } else {
             data.burstRoundsRemainingRight = 0;
         }
 
-        if (stack != null && stack.getItem() instanceof ItemGun) {
-            GunType type = ((ItemGun) stack.getItem()).type;
+        GunType type = gunTypeShortName.isEmpty() ? null : GunType.getGun(gunTypeShortName);
+        if (type == null && stack != null && stack.getItem() instanceof ItemGun)
+            type = ((ItemGun) stack.getItem()).type;
 
-            boolean empty = true;
-            for (int i = 0; i < type.getNumAmmoItemsInGun(stack); i++) {
-                ItemStack bulletStack = ((ItemGun) stack.getItem()).getBulletItemStack(stack, i);
-                if (bulletStack != null && bulletStack.getItem() != null && bulletStack.getItemDamage() < bulletStack.getMaxDamage()) {
-                    empty = false;
-                    break;
+        if (type != null && type.item instanceof ItemGun) {
+            if (stack == null || stack.getItem() != type.item)
+                stack = new ItemStack(type.item);
+
+            boolean empty = !tacticalReload;
+            if (gunTypeShortName.isEmpty()) {
+                empty = true;
+                for (int i = 0; i < type.getNumAmmoItemsInGun(stack); i++) {
+                    ItemStack bulletStack = ((ItemGun) stack.getItem()).getBulletItemStack(stack, i);
+                    if (bulletStack != null && bulletStack.getItem() != null
+                            && bulletStack.getItemDamage() < bulletStack.getMaxDamage()) {
+                        empty = false;
+                        break;
+                    }
                 }
             }
 
@@ -264,7 +296,6 @@ public class PacketReload extends PacketBase {
             int pumpTime = type.model == null ? 1 : type.model.pumpTime;
             int chargeDelay = type.model == null ? 0 : type.model.chargeDelayAfterReload;
             int chargeTime = type.model == null ? 1 : type.model.chargeTime;
-            int gunSlot = left ? data.offHandGunSlot - 1 : clientPlayer.inventory.currentItem;
             String soundToPlay = null;
             AttachmentType grip = type.getGrip(stack);
             if (type.getSecondaryFire(stack) && grip != null && grip.secondaryReloadSound != null)
@@ -273,7 +304,7 @@ public class PacketReload extends PacketBase {
                 soundToPlay = type.reloadSoundOnEmpty;
             else if (type.reloadSound != null)
                 soundToPlay = type.reloadSound;
-            animations.doReload(stack, gunSlot, animationReloadTime, pumpDelay, pumpTime, chargeDelay, chargeTime,
+            animations.doReload(stack, animationSlot, animationReloadTime, pumpDelay, pumpTime, chargeDelay, chargeTime,
                     amount, singlesReload, !empty, soundToPlay);
 
             //Iterate over all inventory slots and find the magazine / bullet item with the most bullets

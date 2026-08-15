@@ -75,6 +75,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private static final float GLASS_PENETRATION_COST = 0.08F;
     private static final float LEAVES_PENETRATION_COST = 0.04F;
     private static final float IRON_BARS_PENETRATION_COST = 0.75F;
+    private static final long NANOS_PER_MILLISECOND = 1_000_000L;
+    private static final double NOMINAL_SNAPSHOT_MILLISECONDS = 50.0D;
+    private static final float MAX_PLAYER_HITBOX_PADDING = 0.05F;
 
     @SideOnly(Side.CLIENT)
     public EntityLivingBase bulletFollowCamera;
@@ -95,6 +98,8 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
      * If this is non-zero, then the player raytrace code will look back in time to when the player thinks their bullet should have hit
      */
     public int pingOfShooter = 0;
+    /** Frozen when the server accepts the shot; never changes during flight. */
+    private long playerRewindNanos = 0L;
     /**
      * Stop repeat detonations
      */
@@ -168,8 +173,10 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private EntityBullet(World world, EntityLivingBase shooter, float gunDamage, BulletType bulletType, InfoType shotFrom) {
         this(world);
         owner = shooter;
-        if (shooter instanceof EntityPlayerMP)
+        if (shooter instanceof EntityPlayerMP) {
             pingOfShooter = ((EntityPlayerMP) shooter).ping;
+            playerRewindNanos = calculatePlayerRewindNanos(pingOfShooter);
+        }
         type = bulletType;
         firedFrom = shotFrom;
         damage = gunDamage;
@@ -383,6 +390,51 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         }
     }
 
+    private static long calculatePlayerRewindNanos(int shooterPing) {
+        double rewindMilliseconds = Math.max(0, TeamsManager.bulletSnapshotMin)
+                * NOMINAL_SNAPSHOT_MILLISECONDS;
+        if (TeamsManager.bulletSnapshotDivisor > 0) {
+            rewindMilliseconds += Math.max(0, shooterPing) * NOMINAL_SNAPSHOT_MILLISECONDS
+                    / TeamsManager.bulletSnapshotDivisor;
+        }
+        rewindMilliseconds = Math.min(rewindMilliseconds, Math.max(0, TeamsManager.bulletSnapshotMax));
+        return Math.round(rewindMilliseconds * NANOS_PER_MILLISECOND);
+    }
+
+    /**
+     * Select and interpolate history by monotonic wall time. This preserves the
+     * configured BltSS scaling while avoiding integer snapshot jumps and the
+     * old assumption that every server tick was exactly 50 ms.
+     */
+    private static ArrayList<BulletHit> raytracePlayerHistory(PlayerSnapshot[] snapshots,
+            long targetTime, Vector3f origin, Vector3f motion, float padding) {
+        PlayerSnapshot newer = null;
+        PlayerSnapshot oldest = null;
+        for (PlayerSnapshot snapshot : snapshots) {
+            if (snapshot == null) {
+                continue;
+            }
+
+            oldest = snapshot;
+            if (targetTime >= snapshot.time) {
+                if (newer == null) {
+                    return snapshot.raytrace(origin, motion, padding);
+                }
+
+                long interval = newer.time - snapshot.time;
+                if (interval <= 0L) {
+                    return newer.raytrace(origin, motion, padding);
+                }
+
+                float interpolation = (float) (targetTime - snapshot.time) / (float) interval;
+                return newer.raytraceInterpolated(snapshot, interpolation, origin, motion, padding);
+            }
+            newer = snapshot;
+        }
+
+        return oldest == null ? null : oldest.raytrace(origin, motion, padding);
+    }
+
     @Override
     public void setVelocity(double d, double d1, double d2) {
         motionX = d;
@@ -493,11 +545,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             tracerOriginSet = true;
         }
 
-
-        // Update the ping for hit detection
-        if (!worldObj.isRemote && owner instanceof EntityPlayerMP) {
-            pingOfShooter = ((EntityPlayerMP) owner).ping;
-        }
 
         prevPosX = posX;
         prevPosY = posY;
@@ -682,6 +729,10 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         Vector3f origin = new Vector3f(this.posX, this.posY, this.posZ);
         Vector3f motion = new Vector3f(this.motionX, this.motionY, this.motionZ);
         float hitBoxSize = Math.max(this.type.hitBoxSize, 0.0F);
+        // Shootable hitBoxSize is the entity width. Use half as a radius, but
+        // cap player padding so legacy content cannot create oversized targets.
+        float playerHitboxPadding = Math.min(hitBoxSize * 0.5F, MAX_PLAYER_HITBOX_PADDING);
+        long playerSnapshotTime = System.nanoTime() - playerRewindNanos;
 
         float speed = motion.length();
         this.speedA = speed;
@@ -722,32 +773,17 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     if (player == owner && ticksInAir < 20)
                         continue;
 
-                    snapshotToTry = TeamsManager.bulletSnapshotMin;
-                    if (TeamsManager.bulletSnapshotDivisor > 0) {
-                        snapshotToTry += this.pingOfShooter / TeamsManager.bulletSnapshotDivisor;
-                    }
-
-                    if (snapshotToTry >= data.snapshots.length) {
-                        snapshotToTry = data.snapshots.length - 1;
-                    }
-
-                    PlayerSnapshot snapshot;
-                    if (data.snapshots[snapshotToTry] != null) {
-                        snapshot = data.snapshots[snapshotToTry];
-                    } else {
-                        snapshot = data.snapshots[0];
-                    }
-
-                    if (snapshot == null) {
+                    ArrayList<BulletHit> playerHits = raytracePlayerHistory(data.snapshots,
+                            playerSnapshotTime, origin, motion, playerHitboxPadding);
+                    if (playerHits == null) {
                         shouldDoNormalHitDetect = true;
                     } else {
-                        ArrayList<BulletHit> playerHits = snapshot.raytrace(origin, motion);
                         hits.addAll(playerHits);
                     }
                 }
 
                 if (data == null || shouldDoNormalHitDetect) {
-                    MovingObjectPosition mop = player.boundingBox.expand(hitBoxSize, hitBoxSize, hitBoxSize).calculateIntercept(origin.toVec3(), Vec3.createVectorHelper(this.posX + this.motionX, this.posY + this.motionY, this.posZ + this.motionZ));
+                    MovingObjectPosition mop = player.boundingBox.expand(playerHitboxPadding, playerHitboxPadding, playerHitboxPadding).calculateIntercept(origin.toVec3(), Vec3.createVectorHelper(this.posX + this.motionX, this.posY + this.motionY, this.posZ + this.motionZ));
                     if (mop != null) {
                         origin2 = new Vector3f(mop.hitVec.xCoord - this.posX, mop.hitVec.yCoord - this.posY, mop.hitVec.zCoord - this.posZ);
                         x = 1.0F;

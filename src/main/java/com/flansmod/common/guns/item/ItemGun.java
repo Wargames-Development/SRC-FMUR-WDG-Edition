@@ -1283,7 +1283,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 if (sprinting && !type.isCanShootWhileRunning)
                     return gunStack;
 
-                if (!data.hasReloadInHand(left) && reload(gunStack, gunType, world, entityplayer, false, left, false, false)) {
+                if (!data.hasReloadInHand(left) && canReload(gunStack, gunType, entityplayer.inventory, false)) {
                     //Set player shoot delay to be the reload delay
                     //Set both gun delays to avoid reloading two guns at once
                     //data.shootTimeRight = data.shootTimeLeft = (int)gunType.getReloadTime(gunStack);
@@ -1295,7 +1295,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                         reloadTime = type.getTacticalReloadTime(gunStack) / maxAmmo * reloadCount;
                     }
 
-                    data.startReload(gunStack, reloadTime, left);
+                    int reloadTicks = Math.max(1, (int) Math.ceil(reloadTime));
+                    data.startReload(gunStack, reloadTicks, left, false, false, false);
                     if (left) {
                         data.reloadingLeft = true;
                         data.burstRoundsRemainingLeft = 0;
@@ -1305,7 +1306,9 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     }
                     //Send reload packet to induce reload effects client side
                     //ItemGun.setReloadCount(gunStack, reloadCount);
-                    FlansMod.getPacketHandler().sendTo(new PacketReload(left, reloadCount, (int) reloadTime, singlesReload, false, false), entityplayer);
+                    int reloadSlot = left ? data.offHandGunSlot - 1 : entityplayer.inventory.currentItem;
+                    FlansMod.getPacketHandler().sendTo(new PacketReload(left, reloadCount, reloadTicks,
+                            singlesReload, false, false, reloadSlot, gunType.shortName, false), entityplayer);
                     //Play reload sound
                     String soundToPlay = null;
                     AttachmentType grip = gunType.getGrip(gunStack);
@@ -1383,6 +1386,35 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
     }
 
     /**
+     * Check whether a player reload can start without moving ammunition. The
+     * authoritative inventory exchange is deferred until the reload completes.
+     */
+    public boolean canReload(ItemStack gunStack, GunType gunType, IInventory inventory, boolean forceReload) {
+        if (gunStack == null || gunType.deployable || gunType.ammo.isEmpty()
+                || forceReload && !gunType.canForceReload)
+            return false;
+
+        for (int ammoSlot = 0; ammoSlot < gunType.getNumAmmoItemsInGun(gunStack); ammoSlot++) {
+            ItemStack loadedAmmo = getBulletItemStack(gunStack, ammoSlot);
+            boolean needsAmmo = loadedAmmo == null
+                    || loadedAmmo.getItemDamage() == loadedAmmo.getMaxDamage()
+                    || forceReload;
+            if (!needsAmmo)
+                continue;
+
+            for (int inventorySlot = 0; inventorySlot < inventory.getSizeInventory(); inventorySlot++) {
+                ItemStack candidate = inventory.getStackInSlot(inventorySlot);
+                if (candidate != null && candidate.stackSize > 0
+                        && candidate.getItem() instanceof ItemShootable
+                        && candidate.getItemDamage() < candidate.getMaxDamage()
+                        && gunType.isAmmo(((ItemShootable) candidate.getItem()).type, gunStack))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Reload方法 , 换弹逻辑所在 , 检查枪支的弹药槽，寻找可用的弹药并装填到枪支中 , 若返回 true 则换弹成功 反之失败
      */
     public boolean reload(ItemStack gunStack, GunType gunType, World world, Entity entity, IInventory inventory, boolean creative, boolean forceReload, boolean combineAmmoOnReload, boolean ammoToUpperInventory) {
@@ -1415,7 +1447,9 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 boolean bestSlotIsPreferred = false;
                 for (int j = 0; j < inventory.getSizeInventory(); j++) {
                     ItemStack item = inventory.getStackInSlot(j);
-                    if (item != null && item.getItem() instanceof ItemShootable && gunType.isAmmo(((ItemShootable) (item.getItem())).type, gunStack)) {
+                    if (item != null && item.getItem() instanceof ItemShootable
+                            && item.getItemDamage() < item.getMaxDamage()
+                            && gunType.isAmmo(((ItemShootable) (item.getItem())).type, gunStack)) {
                         int bulletsInThisSlot = item.getMaxDamage() - item.getItemDamage();
                         boolean isPreferred = ((ItemShootable) item.getItem()).type.shortName.equals(preferredAmmoShortname);
 

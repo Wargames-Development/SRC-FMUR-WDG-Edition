@@ -89,8 +89,6 @@ public class PlayerData {
 	public int meleeProgress, meleeLength;
 	/** When the player shoots a burst fire weapon, one shot is fired immediately and this counter keeps track of how many more should be fired */
 	public int burstRoundsRemainingLeft = 0, burstRoundsRemainingRight = 0;
-	public boolean reloadedAfterRespawn = false;
-
 	public Vector3f[] lastMeleePositions;
 
 	//Teams related fields
@@ -181,7 +179,8 @@ public class PlayerData {
 		snapshots[0] = new PlayerSnapshot(player);
 	}
 
-	public void startReload(ItemStack gunStack, float reloadTime, boolean left) {
+	public void startReload(ItemStack gunStack, float reloadTime, boolean left, boolean forceReload,
+			boolean combineAmmo, boolean ammoToUpperInventory) {
 		if (gunStack == null || reloadTime <= 0F)
 			return;
 		if (!gunStack.hasTagCompound())
@@ -189,9 +188,11 @@ public class PlayerData {
 		String reloadId = UUID.randomUUID().toString();
 		gunStack.getTagCompound().setString(RELOAD_ID_TAG, reloadId);
 		if (left)
-			reloadLeft = new ReloadState(gunStack, reloadId, reloadTime);
+			reloadLeft = new ReloadState(gunStack, reloadId, reloadTime, forceReload,
+					combineAmmo, ammoToUpperInventory);
 		else
-			reloadRight = new ReloadState(gunStack, reloadId, reloadTime);
+			reloadRight = new ReloadState(gunStack, reloadId, reloadTime, forceReload,
+					combineAmmo, ammoToUpperInventory);
 	}
 
 	public boolean hasReloadInHand(boolean left) {
@@ -216,15 +217,14 @@ public class PlayerData {
 
 	private void tickReload(EntityPlayer player, ItemStack gunStack, boolean left) {
 		ReloadState reloadState = getReloadState(left);
+		if (reloadState == null)
+			return;
+
 		ItemStack inventoryStack = gunStack;
 		if (!player.worldObj.isRemote) {
-			// Unequipped reloads pause, but a gun that left server inventory must not reserve the hand forever.
 			inventoryStack = findReloadStack(player, reloadState);
-			if (reloadState != null && inventoryStack == null) {
-				clearReload(reloadState, null, left);
-				if (player instanceof EntityPlayerMP)
-					FlansMod.getPacketHandler().sendTo(new PacketReload(left, 0, 0, false, false, false),
-							(EntityPlayerMP) player);
+			if (inventoryStack == null || !isReloading(reloadState, gunStack)) {
+				cancelReload(player, reloadState, inventoryStack, left);
 				return;
 			}
 		}
@@ -232,8 +232,22 @@ public class PlayerData {
 			return;
 
 		reloadState.timeLeft--;
-		if (reloadState.timeLeft <= 0F)
+		if (reloadState.timeLeft <= 0F) {
+			if (!player.worldObj.isRemote && inventoryStack.getItem() instanceof ItemGun) {
+				ItemGun gunItem = (ItemGun) inventoryStack.getItem();
+				gunItem.reload(inventoryStack, gunItem.type, player.worldObj, player,
+						reloadState.forceReload, left, reloadState.combineAmmo,
+						reloadState.ammoToUpperInventory);
+			}
 			clearReload(reloadState, inventoryStack, left);
+		}
+	}
+
+	private void cancelReload(EntityPlayer player, ReloadState reloadState, ItemStack inventoryStack, boolean left) {
+		clearReload(reloadState, inventoryStack, left);
+		if (!player.worldObj.isRemote && player instanceof EntityPlayerMP)
+			FlansMod.getPacketHandler().sendTo(new PacketReload(left, 0, 0, false, false, false),
+					(EntityPlayerMP) player);
 	}
 
 	private ReloadState getReloadState(boolean left) {
@@ -279,15 +293,47 @@ public class PlayerData {
 			gunStack.getTagCompound().removeTag(RELOAD_ID_TAG);
 	}
 
+	/** Clear transient weapon state before a server-side loadout replacement. */
+	public void resetWeaponState(EntityPlayer player) {
+		if (reloadRight != null)
+			clearReload(reloadRight, findReloadStack(player, reloadRight), false);
+		if (reloadLeft != null)
+			clearReload(reloadLeft, findReloadStack(player, reloadLeft), true);
+
+		offHandGunSlot = 0;
+		shootTimeRight = shootTimeLeft = 0F;
+		shootClickDelay = 0;
+		isShootingRight = isShootingLeft = false;
+		isScoped = false;
+		minigunSpeed = 0F;
+		reloadingRight = reloadingLeft = false;
+		loopedSoundDelay = 0;
+		shouldPlayCooldownSound = shouldPlayWarmupSound = false;
+		burstRoundsRemainingLeft = burstRoundsRemainingRight = 0;
+
+		if (!player.worldObj.isRemote && player instanceof EntityPlayerMP) {
+			EntityPlayerMP playerMP = (EntityPlayerMP) player;
+			FlansMod.getPacketHandler().sendTo(new PacketReload(false, 0, 0, false, false, false), playerMP);
+			FlansMod.getPacketHandler().sendTo(new PacketReload(true, 0, 0, false, false, false), playerMP);
+		}
+	}
+
 	private static class ReloadState {
 		private final ItemStack gunStack;
 		private final String reloadId;
+		private final boolean forceReload;
+		private final boolean combineAmmo;
+		private final boolean ammoToUpperInventory;
 		private float timeLeft;
 
-		private ReloadState(ItemStack gunStack, String reloadId, float timeLeft) {
+		private ReloadState(ItemStack gunStack, String reloadId, float timeLeft, boolean forceReload,
+				boolean combineAmmo, boolean ammoToUpperInventory) {
 			this.gunStack = gunStack;
 			this.reloadId = reloadId;
 			this.timeLeft = timeLeft;
+			this.forceReload = forceReload;
+			this.combineAmmo = combineAmmo;
+			this.ammoToUpperInventory = ammoToUpperInventory;
 		}
 	}
 
