@@ -212,6 +212,14 @@ public class PacketReload extends PacketBase {
     @Override
     @SideOnly(Side.CLIENT)
     public void handleClientSide(EntityPlayer clientPlayer) {
+        if (reloadTime <= 0) {
+            GunAnimations animations = left ? FlansModClient.gunAnimationsLeft.get(clientPlayer)
+                    : FlansModClient.gunAnimationsRight.get(clientPlayer);
+            if (animations != null)
+                animations.cancelReload();
+            return;
+        }
+
         ItemStack stack = clientPlayer.getCurrentEquippedItem();
         PlayerData data = PlayerHandler.getPlayerData(clientPlayer, Side.CLIENT);
         if (left) {
@@ -234,7 +242,6 @@ public class PacketReload extends PacketBase {
             }
 
             int animationReloadTime = Math.max(0, reloadTime);
-            data.startReload(stack, animationReloadTime, left);
 
             //Apply animations
             GunAnimations animations = null;
