@@ -13,6 +13,7 @@ import com.flansmod.common.guns.item.ItemBullet;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.item.ItemShootable;
 import com.flansmod.common.guns.type.AttachmentType;
+import com.flansmod.common.guns.type.BulletType;
 import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.paintjob.Paintjob;
 import com.flansmod.common.vector.Vector3f;
@@ -634,10 +635,10 @@ public class RenderGun implements IItemRenderer {
             }
             GL11.glPopMatrix();
 
-            // Option to offset flash location with a barrel attachment (location + offset =
-            // new location)
-            boolean isFlashEnabled = barrelAttachment == null || !barrelAttachment.disableMuzzleFlash;
+            boolean isFlashEnabled = (barrelAttachment == null || !barrelAttachment.disableMuzzleFlash)
+                    && gunType.getShouldShowMuzzleFlash();
 
+            // Keep the tracer and particle burst aligned with the configured muzzle point.
             if (animations.muzzleFlashTime > 0 && !gunType.getSecondaryFire(item)) {
                 GL11.glPushMatrix();
                 GL11.glScalef(model.flashScale, model.flashScale, model.flashScale);
@@ -656,17 +657,24 @@ public class RenderGun implements IItemRenderer {
                                 base.z + defaultOffset.z);
                     }
 
-                    if (model.muzzleFlashPoint != null && hasTracerAmmo(item, gunType)) {
-                        renderMuzzleTracer(model.flashScale);
+                    BulletType loadedAmmo = getLoadedAmmo(item, gunType);
+                    BulletType tracerAmmo = loadedAmmo != null && loadedAmmo.tracer
+                            ? loadedAmmo : null;
+                    if (model.muzzleFlashPoint != null && tracerAmmo != null) {
+                        renderMuzzleTracer(model.flashScale, tracerAmmo.greenTracer);
                     }
 
-                    if (isFlashEnabled && gunType.flashModel != null) {
-                        renderEngine.bindTexture(FlansModResourceHandler.getAuxiliaryTexture(gunType.flashTexture));
-                        ModelGun.glowOn();
-                        gunType.flashModel.renderFlash(f, animations.flashInt);
-                        ModelGun.glowOff();
-                        renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(gunType.getPaintjob(item.getItemDamage())));
+                    if (isFlashEnabled) {
+                        float combinedScale = Math.max(0.001F,
+                                model.flashScale * gunType.modelScale);
+                        MuzzleFlashRenderer.render(animations.flashInt,
+                                animations.muzzleFlashTime, 1F / combinedScale, loadedAmmo,
+                                animations.showMuzzleFireball,
+                                animations.muzzleFlashSizeMultiplier);
+                        renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(
+                                gunType.getPaintjob(item.getItemDamage())));
                     }
+
                 }
                 GL11.glPopMatrix();
             }
@@ -1562,8 +1570,12 @@ public class RenderGun implements IItemRenderer {
      * Bridges the visible muzzle to the synchronized entity tracer without
      * predicting a separate projectile path.
      */
-    private void renderMuzzleTracer(float flashScale) {
+    private void renderMuzzleTracer(float flashScale, boolean greenTracer) {
         float length = 0.65F / Math.max(0.05F, Math.abs(flashScale));
+        float glowRed = greenTracer ? 0F : 1F;
+        float glowGreen = greenTracer ? 1F : 0F;
+        float accentRed = greenTracer ? 0.22F : 1F;
+        float coreGreen = greenTracer ? 1F : 0.22F;
 
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         try {
@@ -1578,24 +1590,26 @@ public class RenderGun implements IItemRenderer {
             GL11.glEnable(GL11.GL_LINE_SMOOTH);
             GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
 
-            drawMuzzleTracerLine(length, 9F, 1F, 0F, 0F, 0.12F);
-            drawMuzzleTracerLine(length, 5F, 1F, 0.03F, 0F, 0.30F);
-            drawMuzzleTracerLine(length, 2F, 1F, 0.22F, 0.08F, 0.95F);
+            drawMuzzleTracerLine(length, 9F, glowRed, glowGreen, 0F, 0.12F);
+            drawMuzzleTracerLine(length, 5F,
+                    greenTracer ? 0.03F : 1F, greenTracer ? 1F : 0.03F, 0F, 0.30F);
+            drawMuzzleTracerLine(length, 2F, accentRed, coreGreen, 0.08F, 0.95F);
         } finally {
             GL11.glPopAttrib();
         }
     }
 
-    private boolean hasTracerAmmo(ItemStack gunStack, GunType gunType) {
+    private BulletType getLoadedAmmo(ItemStack gunStack, GunType gunType) {
         ItemGun gun = (ItemGun)gunStack.getItem();
         for (int slot = 0; slot < gunType.getNumAmmoItemsInGun(gunStack); slot++) {
             ItemStack ammoStack = gun.getBulletItemStack(gunStack, slot);
             if (ammoStack != null && ammoStack.getItem() instanceof ItemBullet
                     && ammoStack.getItemDamage() < ammoStack.getMaxDamage()) {
-                return ((ItemBullet)ammoStack.getItem()).type.tracer;
+                BulletType bulletType = ((ItemBullet)ammoStack.getItem()).type;
+                return bulletType;
             }
         }
-        return false;
+        return null;
     }
 
     private void drawMuzzleTracerLine(float length, float width,

@@ -3,6 +3,7 @@ package com.flansmod.common.mob;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.types.InfoType;
 import com.flansmod.common.medical.CorpseMedicalService;
+import com.flansmod.common.teams.PlayerEquipmentInventory;
 import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
 import io.netty.buffer.ByteBuf;
@@ -214,6 +215,15 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
             ItemStack stack = player.inventory.getStackInSlot(slot);
             if (stack != null) {
                 storedInventory.add(new StoredItem(slot, stack.copy()));
+            }
+        }
+        PlayerEquipmentInventory equipment = PlayerEquipmentInventory.get(player);
+        if (equipment != null) {
+            for (int slot = 0; slot < equipment.getSizeInventory(); slot++) {
+                ItemStack stack = equipment.getStackInSlot(slot);
+                if (stack != null) {
+                    storedInventory.add(new StoredItem(player.inventory.getSizeInventory() + slot, stack.copy()));
+                }
             }
         }
     }

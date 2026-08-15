@@ -1,6 +1,7 @@
 package com.flansmod.client;
 
 import com.flansmod.common.teams.ItemNightVisionGoggles;
+import com.flansmod.common.teams.PlayerEquipmentInventory;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.Minecraft;
@@ -56,8 +57,10 @@ public final class NightVisionGogglesAnimation {
     }
 
     private static boolean isWearingLoweredGoggles(EntityLivingBase entity) {
-        ItemStack boots = entity.getEquipmentInSlot(1);
-        return ItemNightVisionGoggles.isLowered(boots);
+        ItemStack goggles = entity instanceof EntityPlayer
+                ? PlayerEquipmentInventory.getStack((EntityPlayer)entity,
+                PlayerEquipmentInventory.NIGHT_VISION_SLOT) : null;
+        return ItemNightVisionGoggles.isLowered(goggles);
     }
 
     private static final class State {

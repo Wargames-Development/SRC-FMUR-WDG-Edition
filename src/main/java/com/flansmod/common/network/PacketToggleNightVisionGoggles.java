@@ -1,6 +1,7 @@
 package com.flansmod.common.network;
 
 import com.flansmod.common.teams.ItemNightVisionGoggles;
+import com.flansmod.common.teams.PlayerEquipmentInventory;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import io.netty.buffer.ByteBuf;
@@ -9,7 +10,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 
-/** Client request to toggle the GPNVG currently equipped in the boots slot. */
+/** Client intent to toggle the GPNVG in the dedicated night-vision slot. */
 public class PacketToggleNightVisionGoggles extends PacketBase {
     public PacketToggleNightVisionGoggles() {
     }
@@ -24,7 +25,9 @@ public class PacketToggleNightVisionGoggles extends PacketBase {
 
     @Override
     public void handleServerSide(EntityPlayerMP player) {
-        ItemStack goggles = player.getEquipmentInSlot(1);
+        PlayerEquipmentInventory equipment = PlayerEquipmentInventory.get(player);
+        ItemStack goggles = equipment == null ? null
+                : equipment.getStackInSlot(PlayerEquipmentInventory.NIGHT_VISION_SLOT);
         if (goggles == null || !(goggles.getItem() instanceof ItemNightVisionGoggles)) {
             return;
         }
@@ -40,7 +43,7 @@ public class PacketToggleNightVisionGoggles extends PacketBase {
         if (lowered) {
             player.playSound("flansmod:nvg_on", 0.8F, 1F);
         }
-        player.inventory.markDirty();
+        equipment.markDirty();
         player.inventoryContainer.detectAndSendChanges();
     }
 

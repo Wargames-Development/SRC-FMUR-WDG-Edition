@@ -18,6 +18,8 @@ public class ArmourType extends InfoType {
      * 0 = Helmet, 1 = Chestplate, 2 = Legs, 3 = Shoes
      */
     public int type;
+    /** True when this content-pack item belongs in the dedicated face slot. */
+    public boolean faceSlot;
     /**
      * The amount of damage to absorb. From 0 to 1. Stacks additively between armour pieces
      */
@@ -118,6 +120,10 @@ public class ArmourType extends InfoType {
                     type = 2;
                 if (split[1].equals("Shoes") || split[1].equals("Boots"))
                     type = 3;
+                if (split[1].equals("Face")) {
+                    type = 3;
+                    faceSlot = true;
+                }
             }
 
             if (split[0].equals("DamageReduction") || split[0].equals("Defence"))

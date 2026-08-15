@@ -16,6 +16,8 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.block.BlockDispenser;
+import net.minecraft.dispenser.BehaviorDefaultDispenseItem;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
@@ -51,6 +53,9 @@ public class ItemTeamArmour extends ItemArmor implements ISpecialArmor, IFlanIte
         else if (FlansMod.breakableArmor == 1)
             setMaxDamage(FlansMod.defaultArmorDurability);
         GameRegistry.registerItem(this, type.shortName, FlansMod.MODID);
+        if (type.faceSlot) {
+            BlockDispenser.dispenseBehaviorRegistry.putObject(this, new BehaviorDefaultDispenseItem());
+        }
     }
 
     public ItemTeamArmour(ItemArmor.ArmorMaterial armorMaterial, int renderIndex, int armourType) {
@@ -70,6 +75,24 @@ public class ItemTeamArmour extends ItemArmor implements ISpecialArmor, IFlanIte
     @Override
     public int getArmorDisplay(EntityPlayer player, ItemStack armor, int slot) {
         return (int) (type.defence * 20);
+    }
+
+    @Override
+    public boolean isValidArmor(ItemStack stack, int armorType, Entity entity) {
+        return !type.faceSlot && super.isValidArmor(stack, armorType, entity);
+    }
+
+    @Override
+    public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
+        if (!type.faceSlot) {
+            return super.onItemRightClick(stack, world, player);
+        }
+        PlayerEquipmentInventory equipment = PlayerEquipmentInventory.get(player);
+        if (equipment != null && equipment.getStackInSlot(PlayerEquipmentInventory.FACE_SLOT) == null) {
+            equipment.setInventorySlotContents(PlayerEquipmentInventory.FACE_SLOT, stack.copy());
+            stack.stackSize = 0;
+        }
+        return stack;
     }
 
     @Override

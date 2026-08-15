@@ -8,6 +8,7 @@ import com.flansmod.common.eventhandlers.EnumBFMCKeyType;
 import com.flansmod.common.guns.FlashlightState;
 import com.flansmod.common.network.*;
 import com.flansmod.common.teams.ItemNightVisionGoggles;
+import com.flansmod.common.teams.PlayerEquipmentInventory;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.client.registry.ClientRegistry;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
@@ -131,13 +132,14 @@ public class KeyInputHandler {
         Entity ridingEntity = player.ridingEntity; // 玩家正在骑乘的载具
 
         if (nightVisionGogglesKey.isPressed()) {
-            ItemStack boots = player.getEquipmentInSlot(1);
+            ItemStack goggles = PlayerEquipmentInventory.getStack(player,
+                    PlayerEquipmentInventory.NIGHT_VISION_SLOT);
             long now = System.currentTimeMillis();
-            if (now >= nextNightVisionToggleTime && boots != null
-                    && boots.getItem() instanceof ItemNightVisionGoggles
-                    && ItemNightVisionGoggles.canToggle(boots,
+            if (now >= nextNightVisionToggleTime && goggles != null
+                    && goggles.getItem() instanceof ItemNightVisionGoggles
+                    && ItemNightVisionGoggles.canToggle(goggles,
                     player.worldObj.getTotalWorldTime())) {
-                if (!ItemNightVisionGoggles.isLowered(boots)) {
+                if (!ItemNightVisionGoggles.isLowered(goggles)) {
                     mc.getSoundHandler().playSound(new PositionedSoundRecord(
                             new ResourceLocation("flansmod", "nvg_on"),
                             0.8F, 1F,

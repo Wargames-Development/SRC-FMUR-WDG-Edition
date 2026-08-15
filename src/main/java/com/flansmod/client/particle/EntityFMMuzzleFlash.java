@@ -1,100 +1,227 @@
 package com.flansmod.client.particle;
 
-import cpw.mods.fml.client.FMLClientHandler;
+import net.minecraft.client.particle.EffectRenderer;
 import net.minecraft.client.particle.EntityFX;
+import net.minecraft.client.particle.EntitySmokeFX;
 import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.util.AxisAlignedBB;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
-import org.lwjgl.opengl.GL11;
 
-public class EntityFMMuzzleFlash extends EntityFX
-{
-	public EntityFMMuzzleFlash(World w, double px, double py, double pz, double mx, double my, double mz)
-	{
-		super(w, px, py, pz, mx, my, mz);
-		this.particleMaxAge *= 0.25;
-		this.particleGravity = 0;
-		this.motionX = mx;
-		this.motionY = my;
-		this.motionZ = mz;
-	}
-	
-	public int getFXLayer()
-	{
-			 return 3;
-	}
+import java.util.Random;
 
-	public float getEntityBrightness(float f)
-	{
-			return 1.0F;
-	}
+/** A short, layered muzzle flame assembled from particles instead of a flash PNG. */
+public class EntityFMMuzzleFlash extends EntityFX {
+    private static final int FLAME_PARTICLES = 18;
+    private static final int SPARK_RAYS = 6;
+    private static final int SMOKE_DIRECTIONS = 4;
+    private static final int SMOKE_PER_DIRECTION = 2;
 
-    public void renderParticle(Tessellator par1Tessellator, float par2, float par3, float par4, float par5, float par6, float par7)
-    {
-        //func_98187_b() = bindTexture();
-    	GL11.glPushMatrix();
-    	par1Tessellator.startDrawingQuads();
-		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-		GL11.glEnable(GL11.GL_BLEND);
+    private final float initialScale;
 
-		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-		int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-		GL11.glDepthMask(false);
-		double progress = (double)this.particleAge / (double)this.particleMaxAge;
-		if (progress < 0.3) {
-			FMLClientHandler.instance().getClient().renderEngine.bindTexture(new ResourceLocation("flansmod", "particle/Boom1.png"));
-		} else if (progress < 0.6) {
-			FMLClientHandler.instance().getClient().renderEngine.bindTexture(new ResourceLocation("flansmod", "particle/Boom2.png"));
-		} else if (progress < 0.8) {
-			FMLClientHandler.instance().getClient().renderEngine.bindTexture(new ResourceLocation("flansmod", "particle/Boom3alt.png"));
-		} else {
-			FMLClientHandler.instance().getClient().renderEngine.bindTexture(new ResourceLocation("flansmod", "particle/Boom4alt.png"));
-		}
-
-        float scale = 0.1F * this.particleScale;
-        float xPos = (float) (this.prevPosX + (this.posX - this.prevPosX) * (double) par2 - interpPosX);
-        float yPos = (float) (this.prevPosY + (this.posY - this.prevPosY) * (double) par2 - interpPosY);
-        float zPos = (float) (this.prevPosZ + (this.posZ - this.prevPosZ) * (double) par2 - interpPosZ);
-        float colorIntensity = 1.0F;
-        par1Tessellator.setColorOpaque_F(this.particleRed * colorIntensity, this.particleGreen * colorIntensity, this.particleBlue * colorIntensity);//, 1.0F);
-		par1Tessellator.setBrightness(15728880);
-        par1Tessellator.addVertexWithUV((double) (xPos - par3 * scale - par6 * scale), (double) (yPos - par4 * scale), (double) (zPos - par5 * scale - par7 * scale), 0D, 1D);
-        par1Tessellator.addVertexWithUV((double) (xPos - par3 * scale + par6 * scale), (double) (yPos + par4 * scale), (double) (zPos - par5 * scale + par7 * scale), 1D, 1D);
-        par1Tessellator.addVertexWithUV((double) (xPos + par3 * scale + par6 * scale), (double) (yPos + par4 * scale), (double) (zPos + par5 * scale + par7 * scale), 1D, 0D);
-        par1Tessellator.addVertexWithUV((double) (xPos + par3 * scale - par6 * scale), (double) (yPos - par4 * scale), (double) (zPos + par5 * scale - par7 * scale), 0D, 0D);
-        par1Tessellator.draw();
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-		GL11.glDisable(GL11.GL_BLEND);
-		GL11.glDepthMask(true);
-		GL11.glPopMatrix();
-    }
-	
-	@Override
-    public AxisAlignedBB getBoundingBox()
-    {
-		boundingBox.expand(1, 1, 1);
-        return boundingBox;
+    private EntityFMMuzzleFlash(World world, double x, double y, double z,
+                                double motionX, double motionY, double motionZ,
+                                float scale, float red, float green, float blue,
+                                int maxAge) {
+        super(world, x, y, z, motionX, motionY, motionZ);
+        this.motionX = motionX;
+        this.motionY = motionY;
+        this.motionZ = motionZ;
+        this.initialScale = scale;
+        this.particleScale = scale;
+        this.particleMaxAge = maxAge;
+        this.particleGravity = 0F;
+        this.noClip = true;
+        setParticleTextureIndex(7);
+        setRBGColorF(red, green, blue);
     }
 
-	public void onUpdate()
-	{
-		this.prevPosX = this.posX;
-		this.prevPosY = this.posY;
-		this.prevPosZ = this.posZ;
+    public static void spawnBurst(World world, EffectRenderer renderer,
+                                  double x, double y, double z,
+                                  double directionX, double directionY, double directionZ,
+                                  float requestedScale) {
+        if (world == null || renderer == null) {
+            return;
+        }
 
-		this.motionX += rand.nextGaussian() * 0.005;
-		this.motionY += rand.nextGaussian() * 0.005;
-		this.motionZ += rand.nextGaussian() * 0.005;
-		this.moveEntity(this.motionX, this.motionY, this.motionZ);
-		this.motionX *= 0.5;
-		this.motionY *= 0.1;
-		this.motionZ *= 0.5;
+        double directionLength = length(directionX, directionY, directionZ);
+        if (directionLength < 0.0001D) {
+            directionX = 1D;
+            directionY = 0D;
+            directionZ = 0D;
+        } else {
+            directionX /= directionLength;
+            directionY /= directionLength;
+            directionZ /= directionLength;
+        }
 
-		if(this.onGround || this.particleAge++ >= this.particleMaxAge)
-		{
-			setDead();
-		}
-	}
+        // Build a stable barrel-local right/up basis. Looking straight up or down
+        // uses a fixed right axis so all four smoke ports remain distinct.
+        double rightX = -directionZ;
+        double rightY = 0D;
+        double rightZ = directionX;
+        double rightLength = length(rightX, rightY, rightZ);
+        if (rightLength < 0.0001D) {
+            rightX = 1D;
+            rightY = 0D;
+            rightZ = 0D;
+        } else {
+            rightX /= rightLength;
+            rightZ /= rightLength;
+        }
+        double upX = rightY * directionZ - rightZ * directionY;
+        double upY = rightZ * directionX - rightX * directionZ;
+        double upZ = rightX * directionY - rightY * directionX;
+
+        Random random = world.rand;
+        float scale = Math.max(0.25F, requestedScale);
+
+        for (int i = 0; i < FLAME_PARTICLES; i++) {
+            double angle = random.nextDouble() * Math.PI * 2D;
+            double radialX = rightX * Math.cos(angle) + upX * Math.sin(angle);
+            double radialY = rightY * Math.cos(angle) + upY * Math.sin(angle);
+            double radialZ = rightZ * Math.cos(angle) + upZ * Math.sin(angle);
+            double axialOffset = scale * (0.04D + random.nextDouble() * 0.48D);
+            double radialOffset = scale * random.nextDouble() * (i < 6 ? 0.06D : 0.18D);
+            double forwardSpeed = scale * (0.035D + random.nextDouble() * 0.08D);
+            double radialSpeed = scale * (random.nextDouble() - 0.35D) * 0.035D;
+
+            float red = 1F;
+            float green = i < 6 ? 1F : (i < 14 ? 0.92F : 0.79F);
+            float blue = i < 6 ? 0.86F : (i < 14 ? 0.46F : 0.22F);
+            float flameScale = scale * (2.4F + random.nextFloat() * 2.0F);
+            renderer.addEffect(new EntityFMMuzzleFlash(world,
+                    x + directionX * axialOffset + radialX * radialOffset,
+                    y + directionY * axialOffset + radialY * radialOffset,
+                    z + directionZ * axialOffset + radialZ * radialOffset,
+                    directionX * forwardSpeed + radialX * radialSpeed,
+                    directionY * forwardSpeed + radialY * radialSpeed,
+                    directionZ * forwardSpeed + radialZ * radialSpeed,
+                    flameScale, red, green, blue, 3 + random.nextInt(3)));
+        }
+
+        for (int ray = 0; ray < SPARK_RAYS; ray++) {
+            double angle = random.nextDouble() * Math.PI * 2D;
+            double radialX = rightX * Math.cos(angle) + upX * Math.sin(angle);
+            double radialY = rightY * Math.cos(angle) + upY * Math.sin(angle);
+            double radialZ = rightZ * Math.cos(angle) + upZ * Math.sin(angle);
+            double forwardSpeed = scale * (0.22D + random.nextDouble() * 0.24D);
+            double radialSpeed = scale * (random.nextDouble() - 0.25D) * 0.18D;
+            double sparkMotionX = directionX * forwardSpeed + radialX * radialSpeed;
+            double sparkMotionY = directionY * forwardSpeed + radialY * radialSpeed;
+            double sparkMotionZ = directionZ * forwardSpeed + radialZ * radialSpeed;
+
+            // Two particles along each ray read as a short incandescent streak.
+            for (int segment = 0; segment < 2; segment++) {
+                double segmentOffset = segment * scale * 0.075D;
+                renderer.addEffect(new MuzzleSparkParticle(world,
+                        x + directionX * segmentOffset,
+                        y + directionY * segmentOffset,
+                        z + directionZ * segmentOffset,
+                        sparkMotionX, sparkMotionY, sparkMotionZ,
+                        scale * (0.44F + random.nextFloat() * 0.28F)));
+            }
+        }
+
+        double[][] smokeDirections = {
+                {upX, upY, upZ},
+                {-upX, -upY, -upZ},
+                {rightX, rightY, rightZ},
+                {-rightX, -rightY, -rightZ}
+        };
+        for (int direction = 0; direction < SMOKE_DIRECTIONS; direction++) {
+            for (int i = 0; i < SMOKE_PER_DIRECTION; i++) {
+                double smokeSpeed = scale * (0.035D + random.nextDouble() * 0.025D);
+                double smokeForward = scale * (0.012D + random.nextDouble() * 0.018D);
+                double smokeX = smokeDirections[direction][0];
+                double smokeY = smokeDirections[direction][1];
+                double smokeZ = smokeDirections[direction][2];
+                EntitySmokeFX smoke = new EntitySmokeFX(world,
+                        x + smokeX * scale * 0.035D,
+                        y + smokeY * scale * 0.035D,
+                        z + smokeZ * scale * 0.035D,
+                        smokeX * smokeSpeed + directionX * smokeForward,
+                        smokeY * smokeSpeed + directionY * smokeForward,
+                        smokeZ * smokeSpeed + directionZ * smokeForward,
+                        scale * (0.9F + random.nextFloat() * 0.4F));
+                smoke.setRBGColorF(0.48F, 0.46F, 0.42F);
+                smoke.setAlphaF(0.42F);
+                renderer.addEffect(smoke);
+            }
+        }
+    }
+
+    private static double length(double x, double y, double z) {
+        return Math.sqrt(x * x + y * y + z * z);
+    }
+
+    @Override
+    public void renderParticle(Tessellator tessellator, float partialTick,
+                               float rotationX, float rotationXZ, float rotationZ,
+                               float rotationYZ, float rotationXY) {
+        tessellator.setBrightness(15728880);
+        super.renderParticle(tessellator, partialTick, rotationX, rotationXZ,
+                rotationZ, rotationYZ, rotationXY);
+    }
+
+    @Override
+    public void onUpdate() {
+        prevPosX = posX;
+        prevPosY = posY;
+        prevPosZ = posZ;
+        if (particleAge++ >= particleMaxAge) {
+            setDead();
+            return;
+        }
+
+        float life = 1F - particleAge / (float) particleMaxAge;
+        particleAlpha = Math.max(0F, life);
+        particleScale = initialScale * (0.82F + particleAge * 0.12F);
+        moveEntity(motionX, motionY, motionZ);
+        motionX *= 0.68D;
+        motionY *= 0.68D;
+        motionZ *= 0.68D;
+    }
+
+    private static final class MuzzleSparkParticle extends EntityFX {
+        private MuzzleSparkParticle(World world, double x, double y, double z,
+                                    double motionX, double motionY, double motionZ,
+                                    float scale) {
+            super(world, x, y, z, motionX, motionY, motionZ);
+            this.motionX = motionX;
+            this.motionY = motionY;
+            this.motionZ = motionZ;
+            this.particleScale = scale;
+            this.particleMaxAge = 4 + world.rand.nextInt(3);
+            this.particleGravity = 0.15F;
+            this.noClip = true;
+            setParticleTextureIndex(65);
+            setRBGColorF(1F, 0.52F + world.rand.nextFloat() * 0.28F, 0.08F);
+        }
+
+        @Override
+        public void renderParticle(Tessellator tessellator, float partialTick,
+                                   float rotationX, float rotationXZ, float rotationZ,
+                                   float rotationYZ, float rotationXY) {
+            tessellator.setBrightness(15728880);
+            super.renderParticle(tessellator, partialTick, rotationX, rotationXZ,
+                    rotationZ, rotationYZ, rotationXY);
+        }
+
+        @Override
+        public void onUpdate() {
+            prevPosX = posX;
+            prevPosY = posY;
+            prevPosZ = posZ;
+            if (particleAge++ >= particleMaxAge) {
+                setDead();
+                return;
+            }
+
+            particleAlpha = Math.max(0F, 1F - particleAge / (float) particleMaxAge);
+            moveEntity(motionX, motionY, motionZ);
+            motionY -= 0.04D * particleGravity;
+            motionX *= 0.88D;
+            motionY *= 0.88D;
+            motionZ *= 0.88D;
+        }
+    }
 }

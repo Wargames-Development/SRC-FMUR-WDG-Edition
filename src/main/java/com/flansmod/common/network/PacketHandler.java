@@ -202,6 +202,8 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketB
         registerServerPacket(PacketGunState.class);
         registerBidirectionalPacket(PacketToggleFlashlight.class);
         registerServerPacket(PacketToggleNightVisionGoggles.class);
+        // Keep the custom equipment packet lexically last so existing sorted packet IDs stay stable.
+        registerBidirectionalPacket(PacketZPlayerEquipmentSync.class);
         registerBidirectionalPacket(PacketHashSend.class);
         registerClientPacket(PacketMuzzleFlash.class);
         registerClientPacket(PacketHitMarker.class);
