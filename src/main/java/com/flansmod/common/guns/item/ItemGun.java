@@ -692,7 +692,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 } else {
                     animations.doShoot(pumpDelay, pumpTime, hammerDelay, hammerAngle, althammerAngle, casingDelay);
                     TickHandlerClient.triggerShotScreenShake(
-                            FlansModClient.currentScope != null ? 0.3F : 1F);
+                            FlansModClient.currentScope != null ? 0.5F : 0.3F);
                 }
 
                 //Old client side recoil, moved to PacketGunRecoil
