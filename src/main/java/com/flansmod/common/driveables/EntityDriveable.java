@@ -62,7 +62,7 @@ import static com.flansmod.client.FlansModClient.isBulletTrackingActive;
 
 public abstract class EntityDriveable extends Entity implements IControllable, IExplodeable, IEntityAdditionalSpawnData {
     private static final float MOUNTED_50_CAL_MUZZLE_FLASH_SCALE = (1F / 3F) * 2.20F;
-    private static final float MOUNTED_50_CAL_SCREEN_SHAKE = 1F;
+    private static final float MOUNTED_50_CAL_SCREEN_SHAKE = 0.3F;
 
     public boolean syncFromServer = true;
     /**
