@@ -117,9 +117,9 @@ public class GunAnimations {
         boolean reloadEquipped = isReloadEquipped(equippedSlot, equippedGun);
         if (reloading && !reloadEquipped)
             stopReloadSound();
-        reloading = reloadEquipped;
+        reloading = reloadInProgress && reloadEquipped;
 
-        if(reloadEquipped && reloadTimeLeft > 0)
+        if(reloadInProgress && reloadTimeLeft > 0)
             reloadTimeLeft--;
 
         FlansModClient.reloadStart = reloadEquipped && reloadTimeLeft == 1;
@@ -131,7 +131,7 @@ public class GunAnimations {
         lastCasingStage = casingStage;
 
         //Time until pump-action
-        if ((!reloadInProgress || reloadEquipped) && timeUntilPump > 0) {
+        if (timeUntilPump > 0) {
             timeUntilPump--;
             if (timeUntilPump == 0) {
                 //Pump it!
@@ -143,7 +143,7 @@ public class GunAnimations {
         }
 
         //Timer until pulling back the charge handle/bolt
-        if ((!reloadInProgress || reloadEquipped) && timeUntilCharge > 0) {
+        if (timeUntilCharge > 0) {
             timeUntilCharge--;
             if (timeUntilCharge == 0) {
                 //Pump it!
@@ -220,11 +220,11 @@ public class GunAnimations {
 
         //Reload
         lastReloadAnimationProgress = reloadAnimationProgress;
-        if (reloading)
+        if (reloadInProgress)
             reloadAnimationProgress += 1F / reloadAnimationTime;
-        if (reloading && reloadAnimationProgress >= 0.9F)    //reset if slide locked
+        if (reloadInProgress && reloadAnimationProgress >= 0.9F)    //reset if slide locked
             isGunEmpty = false;
-        if (reloading && reloadAnimationProgress >= 1F) {
+        if (reloadInProgress && (reloadTimeLeft <= 0 || reloadAnimationProgress >= 1F)) {
             reloading = false;
             reloadInProgress = false;
             reloadingSlot = -1;

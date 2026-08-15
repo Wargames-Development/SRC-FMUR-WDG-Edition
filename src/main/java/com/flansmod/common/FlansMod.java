@@ -65,7 +65,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.server.MinecraftServer;
 import net.minecraftforge.common.ForgeChunkManager;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.config.ConfigCategory;
 import net.minecraftforge.common.config.Configuration;
 import net.minecraftforge.event.AnvilUpdateEvent;
 import net.minecraftforge.event.entity.item.ItemTossEvent;
@@ -860,6 +859,7 @@ public class FlansMod {
         noticeSpawnKillTime = configFile.getInt("NoticeSpawnKillTime", "Teams/advanced settings", 10, 0, 600, "Min");
         TeamsManager.bulletSnapshotMin = configFile.getInt("BltSS_Min", "Teams/advanced settings", 0, 0, 1000, "Min");
         TeamsManager.bulletSnapshotDivisor = configFile.getInt("BltSS_Divisor", "Teams/advanced settings", 50, 0, 1000, "Divisor");
+        TeamsManager.bulletSnapshotMax = configFile.getInt("BltSS_Max", "Teams/advanced settings", 250, 0, 1000, "Maximum player rewind in milliseconds");
 
         //Server/Gameplay Settings (Server-client synced)
         gunCarryLimitEnable = configFile.getBoolean("gunCarryLimitEnable", "Gameplay Settings (synced)", gunCarryLimitEnable, "Enable a soft limit to hotbar weapons, applies slowness++ when >= limit");
@@ -916,6 +916,7 @@ public class FlansMod {
         noticeSpawnKillTime = configFile.getInt("NoticeSpawnKillTime", "Teams/advanced settings", 10, 0, 600, "Min");
         TeamsManager.bulletSnapshotMin = configFile.getInt("BltSS_Min", "Teams/advanced settings", 0, 0, 1000, "Min");
         TeamsManager.bulletSnapshotDivisor = configFile.getInt("BltSS_Divisor", "Teams/advanced settings", 50, 0, 1000, "Divisor");
+        TeamsManager.bulletSnapshotMax = configFile.getInt("BltSS_Max", "Teams/advanced settings", 250, 0, 1000, "Maximum player rewind in milliseconds");
 
         //Server/Gameplay Settings (Server-client synced)
         gunCarryLimitEnable = configFile.getBoolean("gunCarryLimitEnable", "Gameplay Settings (synced)", gunCarryLimitEnable, "Enable a soft limit to hotbar weapons, applies slowness++ when >= limit");
@@ -998,17 +999,17 @@ public class FlansMod {
     }
 
     public static void updateBltssConfig(int min, int divisor) {
-        ConfigCategory category = configFile.getCategory(Configuration.CATEGORY_GENERAL);
-        if (category == null) return;
-        if (category.containsKey("BltSS_Min")) {
-            category.get("BltSS_Min").set(min);
-        }
-        if (category.containsKey("BltSS_Divisor")) {
-            category.get("BltSS_Divisor").set(divisor);
-        }
+        updateBltssConfig(min, divisor, TeamsManager.bulletSnapshotMax);
+    }
+
+    public static void updateBltssConfig(int min, int divisor, int max) {
+        configFile.get("Teams/advanced settings", "BltSS_Min", min).set(min);
+        configFile.get("Teams/advanced settings", "BltSS_Divisor", divisor).set(divisor);
+        configFile.get("Teams/advanced settings", "BltSS_Max", max).set(max);
 
         TeamsManager.bulletSnapshotMin = min;
         TeamsManager.bulletSnapshotDivisor = divisor;
+        TeamsManager.bulletSnapshotMax = max;
         configFile.save();
     }
 

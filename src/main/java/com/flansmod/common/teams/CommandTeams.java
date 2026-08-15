@@ -698,29 +698,33 @@ public class CommandTeams extends CommandBase {
             return;
         }
         if (split[0].equals("bltss")) {
-            if (split.length != 3) {
-                sender.addChatMessage(new ChatComponentText("Incorrect Usage : Should be /teams bltss <0 ... 100> <0 ... 1000>"));
-                sender.addChatMessage(new ChatComponentText("Bullet use player snapshot = Min[default=0] + (Ping / Divisor[default=50])"));
+            if (split.length != 3 && split.length != 4) {
+                sender.addChatMessage(new ChatComponentText("Incorrect Usage : Should be /teams bltss <min 0 ... 100> <divisor 0 ... 1000> [max ms 0 ... 1000]"));
+                sender.addChatMessage(new ChatComponentText("Player rewind ms = 50 * Min + Ping * 50 / Divisor, smoothly interpolated and capped by BltSS_Max"));
                 return;
             }
             int bmn = Integer.parseInt(split[1]);
             int bdv = Integer.parseInt(split[2]);
+            int bmx = split.length == 4 ? Integer.parseInt(split[3]) : TeamsManager.bulletSnapshotMax;
             if (bmn < 0) bmn = 0;
             if (bmn > 100) bmn = 100;
             if (bdv < 0) bdv = 0;
             if (bdv > 1000) bdv = 1000;
-            if (TeamsManager.bulletSnapshotMin != bmn || TeamsManager.bulletSnapshotDivisor != bdv) {
+            if (bmx < 0) bmx = 0;
+            if (bmx > 1000) bmx = 1000;
+            if (TeamsManager.bulletSnapshotMin != bmn || TeamsManager.bulletSnapshotDivisor != bdv || TeamsManager.bulletSnapshotMax != bmx) {
                 TeamsManager.bulletSnapshotMin = bmn;
                 TeamsManager.bulletSnapshotDivisor = bdv;
-                FlansMod.updateBltssConfig(bmn, bdv);
+                TeamsManager.bulletSnapshotMax = bmx;
+                FlansMod.updateBltssConfig(bmn, bdv, bmx);
             }
 
-            sender.addChatMessage(new ChatComponentText("[BulletDelay] Min=" + bmn + " : Divisor=" + bdv));
+            sender.addChatMessage(new ChatComponentText("[BulletDelay] Min=" + bmn + " : Divisor=" + bdv + " : MaxMs=" + bmx));
 
             return;
         }
         if (split[0].equals("showbltss")) {
-            sender.addChatMessage(new ChatComponentText("[BulletDelay] Min=" + TeamsManager.bulletSnapshotMin + " : Divisor=" + TeamsManager.bulletSnapshotDivisor));
+            sender.addChatMessage(new ChatComponentText("[BulletDelay] Min=" + TeamsManager.bulletSnapshotMin + " : Divisor=" + TeamsManager.bulletSnapshotDivisor + " : MaxMs=" + TeamsManager.bulletSnapshotMax));
             return;
         }
 

@@ -16,11 +16,14 @@ import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.MathHelper;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 import net.minecraft.world.World;
 
 public class PlayerHitbox {
+    private static final float RAY_EPSILON = 1.0E-7F;
+
     /**
      *
      */
@@ -86,67 +89,110 @@ public class PlayerHitbox {
     }
 
     public PlayerBulletHit raytrace(Vector3f origin, Vector3f motion) {
-        origin = Vector3f.sub(origin, this.rP, null);
-        origin = this.axes.findGlobalVectorLocally(origin);
-        motion = this.axes.findGlobalVectorLocally(motion);
-        float intersectTime;
-        float intersectX;
-        float intersectZ;
-        if (motion.x != 0.0F) {
-            if (origin.x < this.o.x) {
-                intersectTime = (this.o.x - origin.x) / motion.x;
-                intersectX = origin.y + motion.y * intersectTime;
-                intersectZ = origin.z + motion.z * intersectTime;
-                if (intersectX >= this.o.y && intersectX <= this.o.y + this.d.y && intersectZ >= this.o.z && intersectZ <= this.o.z + this.d.z) {
-                    return new PlayerBulletHit(this, intersectTime);
-                }
-            } else if (origin.x > this.o.x + this.d.x) {
-                intersectTime = (this.o.x + this.d.x - origin.x) / motion.x;
-                intersectX = origin.y + motion.y * intersectTime;
-                intersectZ = origin.z + motion.z * intersectTime;
-                if (intersectX >= this.o.y && intersectX <= this.o.y + this.d.y && intersectZ >= this.o.z && intersectZ <= this.o.z + this.d.z) {
-                    return new PlayerBulletHit(this, intersectTime);
-                }
-            }
+        return raytrace(origin, motion, 0.0F);
+    }
+
+    /**
+     * Intersect a swept point / sphere with this oriented box. The previous
+     * face-by-face implementation had no result when the ray began inside the
+     * box, which made overlapping point-blank shots deterministic misses.
+     */
+    public PlayerBulletHit raytrace(Vector3f origin, Vector3f motion, float padding) {
+        return raytrace(origin, motion, this.axes, this.rP, this.o, this.d, padding);
+    }
+
+    public PlayerBulletHit raytraceInterpolated(PlayerHitbox older, Vector3f origin, Vector3f motion,
+                                                 float interpolation, float padding) {
+        if (older == null || older.type != this.type) {
+            return raytrace(origin, motion, padding);
         }
 
-        if (motion.z != 0.0F) {
-            if (origin.z < this.o.z) {
-                intersectTime = (this.o.z - origin.z) / motion.z;
-                intersectX = origin.x + motion.x * intersectTime;
-                intersectZ = origin.y + motion.y * intersectTime;
-                if (intersectX >= this.o.x && intersectX <= this.o.x + this.d.x && intersectZ >= this.o.y && intersectZ <= this.o.y + this.d.y) {
-                    return new PlayerBulletHit(this, intersectTime);
-                }
-            } else if (origin.z > this.o.z + this.d.z) {
-                intersectTime = (this.o.z + this.d.z - origin.z) / motion.z;
-                intersectX = origin.x + motion.x * intersectTime;
-                intersectZ = origin.y + motion.y * intersectTime;
-                if (intersectX >= this.o.x && intersectX <= this.o.x + this.d.x && intersectZ >= this.o.y && intersectZ <= this.o.y + this.d.y) {
-                    return new PlayerBulletHit(this, intersectTime);
-                }
+        float alpha = Math.max(0.0F, Math.min(1.0F, interpolation));
+        RotatedAxes interpolatedAxes = new RotatedAxes(
+                interpolateAngle(older.axes.getYaw(), this.axes.getYaw(), alpha),
+                interpolateAngle(older.axes.getPitch(), this.axes.getPitch(), alpha),
+                interpolateAngle(older.axes.getRoll(), this.axes.getRoll(), alpha));
+        Vector3f interpolatedRotationPoint = interpolate(older.rP, this.rP, alpha);
+        Vector3f interpolatedOrigin = interpolate(older.o, this.o, alpha);
+        Vector3f interpolatedDimensions = interpolate(older.d, this.d, alpha);
+        return raytrace(origin, motion, interpolatedAxes, interpolatedRotationPoint,
+                interpolatedOrigin, interpolatedDimensions, padding);
+    }
+
+    private PlayerBulletHit raytrace(Vector3f origin, Vector3f motion, RotatedAxes boxAxes,
+                                     Vector3f rotationPoint, Vector3f boxOrigin,
+                                     Vector3f boxDimensions, float padding) {
+        Vector3f localOrigin = boxAxes.findGlobalVectorLocally(Vector3f.sub(origin, rotationPoint, null));
+        Vector3f localMotion = boxAxes.findGlobalVectorLocally(motion);
+        float expansion = Math.max(0.0F, padding);
+
+        float minX = Math.min(boxOrigin.x, boxOrigin.x + boxDimensions.x) - expansion;
+        float maxX = Math.max(boxOrigin.x, boxOrigin.x + boxDimensions.x) + expansion;
+        float minY = Math.min(boxOrigin.y, boxOrigin.y + boxDimensions.y) - expansion;
+        float maxY = Math.max(boxOrigin.y, boxOrigin.y + boxDimensions.y) + expansion;
+        float minZ = Math.min(boxOrigin.z, boxOrigin.z + boxDimensions.z) - expansion;
+        float maxZ = Math.max(boxOrigin.z, boxOrigin.z + boxDimensions.z) + expansion;
+
+        float entryTime = 0.0F;
+        float exitTime = 1.0F;
+
+        if (Math.abs(localMotion.x) <= RAY_EPSILON) {
+            if (localOrigin.x < minX || localOrigin.x > maxX) return null;
+        } else {
+            float first = (minX - localOrigin.x) / localMotion.x;
+            float second = (maxX - localOrigin.x) / localMotion.x;
+            if (first > second) {
+                float swap = first;
+                first = second;
+                second = swap;
             }
+            entryTime = Math.max(entryTime, first);
+            exitTime = Math.min(exitTime, second);
+            if (entryTime > exitTime) return null;
         }
 
-        if (motion.y != 0.0F) {
-            if (origin.y < this.o.y) {
-                intersectTime = (this.o.y - origin.y) / motion.y;
-                intersectX = origin.x + motion.x * intersectTime;
-                intersectZ = origin.z + motion.z * intersectTime;
-                if (intersectX >= this.o.x && intersectX <= this.o.x + this.d.x && intersectZ >= this.o.z && intersectZ <= this.o.z + this.d.z) {
-                    return new PlayerBulletHit(this, intersectTime);
-                }
-            } else if (origin.y > this.o.y + this.d.y) {
-                intersectTime = (this.o.y + this.d.y - origin.y) / motion.y;
-                intersectX = origin.x + motion.x * intersectTime;
-                intersectZ = origin.z + motion.z * intersectTime;
-                if (intersectX >= this.o.x && intersectX <= this.o.x + this.d.x && intersectZ >= this.o.z && intersectZ <= this.o.z + this.d.z) {
-                    return new PlayerBulletHit(this, intersectTime);
-                }
+        if (Math.abs(localMotion.y) <= RAY_EPSILON) {
+            if (localOrigin.y < minY || localOrigin.y > maxY) return null;
+        } else {
+            float first = (minY - localOrigin.y) / localMotion.y;
+            float second = (maxY - localOrigin.y) / localMotion.y;
+            if (first > second) {
+                float swap = first;
+                first = second;
+                second = swap;
             }
+            entryTime = Math.max(entryTime, first);
+            exitTime = Math.min(exitTime, second);
+            if (entryTime > exitTime) return null;
         }
 
-        return null;
+        if (Math.abs(localMotion.z) <= RAY_EPSILON) {
+            if (localOrigin.z < minZ || localOrigin.z > maxZ) return null;
+        } else {
+            float first = (minZ - localOrigin.z) / localMotion.z;
+            float second = (maxZ - localOrigin.z) / localMotion.z;
+            if (first > second) {
+                float swap = first;
+                first = second;
+                second = swap;
+            }
+            entryTime = Math.max(entryTime, first);
+            exitTime = Math.min(exitTime, second);
+            if (entryTime > exitTime) return null;
+        }
+
+        return new PlayerBulletHit(this, entryTime);
+    }
+
+    private static Vector3f interpolate(Vector3f older, Vector3f newer, float alpha) {
+        return new Vector3f(
+                older.x + (newer.x - older.x) * alpha,
+                older.y + (newer.y - older.y) * alpha,
+                older.z + (newer.z - older.z) * alpha);
+    }
+
+    private static float interpolateAngle(float older, float newer, float alpha) {
+        return older + MathHelper.wrapAngleTo180_float(newer - older) * alpha;
     }
 
     public float hitByBullet(EntityBullet bullet, float penetratingPower, double distanceDamageModifier) {
