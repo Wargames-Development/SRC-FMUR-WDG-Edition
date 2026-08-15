@@ -1,5 +1,6 @@
 package com.flansmod.common.network;
 
+import com.flansmod.client.TickHandlerClient;
 import com.flansmod.common.FlansMod;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -10,6 +11,9 @@ import net.minecraft.entity.player.EntityPlayerMP;
 
 public class PacketParticle extends PacketBase
 {
+	public static final String MUZZLE_FLASH = "flansmod.muzzleflash";
+	public static final String SHOT_SCREEN_SHAKE = "flansmod.shotshake";
+
 	public float x, y, z;
 	public float mx, my, mz;
 	public float scale;
@@ -69,6 +73,11 @@ public class PacketParticle extends PacketBase
 	@SideOnly(Side.CLIENT)
 	public void handleClientSide(EntityPlayer clientPlayer) 
 	{
+		if(SHOT_SCREEN_SHAKE.equals(particleType))
+		{
+			TickHandlerClient.triggerShotScreenShake(scale);
+			return;
+		}
 		FlansMod.proxy.spawnParticle(particleType, x, y, z, mx, my, mz, scale);
 	}
 }

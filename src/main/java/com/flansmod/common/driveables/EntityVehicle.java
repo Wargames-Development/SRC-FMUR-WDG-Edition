@@ -235,7 +235,7 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
             case 0: //Accelerate : Increase the throttle, up to 1.
             {
                 if (isEngineActive()) {
-                    if (type.useRealisticAcceleration) {
+                    if (type.useRealisticAcceleration && data.engine != null) {
                         throttle += data.engine.enginePower / type.mass;
                     } else {
                         throttle += 0.01F;
@@ -250,7 +250,7 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
             case 1: //Decelerate : Decrease the throttle, down to -1, or 0 if the vehicle cannot reverse
             {
                 if (isEngineActive()) {
-                    if (type.useRealisticAcceleration) {
+                    if (type.useRealisticAcceleration && data.engine != null) {
                         throttle -= data.engine.enginePower / type.mass;
                     } else {
                         throttle -= 0.01F;
@@ -426,6 +426,8 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
             FlansMod.log("Vehicle type null. Not ticking vehicle");
             return;
         }
+        float engineSpeed = data.engine == null ? 0F : data.engine.engineSpeed;
+        float fuelConsumption = data.engine == null ? 0F : data.engine.fuelConsumption;
 
         if (type.shootWithOpenDoor) {
             canFire = varDoor;
@@ -559,7 +561,7 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
             //If the player driving this is in creative, then we can thrust, no matter what
             boolean canThrustCreatively = !TeamsManager.vehiclesNeedFuel || type.fuelTankSize < 0 || (seats != null && seats[0] != null && seats[0].riddenByEntity instanceof EntityPlayer && ((EntityPlayer) seats[0].riddenByEntity).capabilities.isCreativeMode);
             //Otherwise, check the fuel tanks!
-            if ((canThrustCreatively || type.fuelTankSize < 0 || data.fuelInTank > Math.abs(data.engine.fuelConsumption * throttle)) && isEngineActive()) {
+            if ((canThrustCreatively || type.fuelTankSize < 0 || data.fuelInTank > Math.abs(fuelConsumption * throttle)) && isEngineActive()) {
                 if (getVehicleType().tank) {
                     boolean left = wheel.ID == 0 || wheel.ID == 3;
 
@@ -569,10 +571,10 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
                     float velocityScale = 0;
                     if (isUnderWater()) {
                         velocityScale = 0.04F * (throttle > 0 ? type.maxThrottleInWater : type.maxNegativeThrottle)
-                                * data.engine.engineSpeed;
+                                * engineSpeed;
                     } else {
                         velocityScale = 0.04F * (throttle > 0 ? type.maxThrottle : type.maxNegativeThrottle)
-                            * data.engine.engineSpeed;
+                            * engineSpeed;
 
                     }
                     float steeringScale = 0.1F * (wheelsYaw > 0 ? type.turnLeftModifier : type.turnRightModifier);
@@ -587,11 +589,11 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
                         if (isUnderWater()) {
                             velocityScale = 0.1F * throttle
                                 * (throttle > 0 ? type.maxThrottleInWater : type.maxNegativeThrottle)
-                                * data.engine.engineSpeed;
+                                * engineSpeed;
                         } else {
                             velocityScale = 0.1F * throttle
                                 * (throttle > 0 ? type.maxThrottle : type.maxNegativeThrottle)
-                                * data.engine.engineSpeed;
+                                * engineSpeed;
 
                         }
                         wheel.motionX += Math.cos(wheel.rotationYaw * 3.14159265F / 180F) * velocityScale;
@@ -611,7 +613,7 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
                 }
 
                 if (!canThrustCreatively && TeamsManager.vehiclesNeedFuel) {
-                    data.fuelInTank -= Math.abs(data.engine.fuelConsumption * throttle) * 0.1;
+                    data.fuelInTank -= Math.abs(fuelConsumption * throttle) * 0.1;
                 }
             }
 
@@ -754,7 +756,7 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
                 float effectiveWheelSpeed;
                 if (isEngineActive()) {
                     float velocityScale = 0.04F * (throttle > 0 ? type.maxThrottle : type.maxNegativeThrottle)
-                            * data.engine.engineSpeed;
+                            * engineSpeed;
                     float steeringScale = 0.1F * (wheelsYaw > 0 ? type.turnLeftModifier : type.turnRightModifier);
                     effectiveWheelSpeed = ((wheelsYaw * steeringScale)) * velocityScale;
                 } else {
@@ -763,7 +765,7 @@ public class EntityVehicle extends EntityDriveable implements IExplodeable {
 
                 yaw = axes.getYaw() / 180F * 3.14159F + effectiveWheelSpeed;
             } else {
-                float velocityScale = 0.1F * throttle * (throttle > 0 ? type.maxThrottle : type.maxNegativeThrottle) * data.engine.engineSpeed;
+                float velocityScale = 0.1F * throttle * (throttle > 0 ? type.maxThrottle : type.maxNegativeThrottle) * engineSpeed;
                 float steeringScale = 0.1F * (wheelsYaw > 0 ? type.turnLeftModifier : type.turnRightModifier);
                 float effectiveWheelSpeed = ((wheelsYaw * steeringScale)) * velocityScale;
                 yaw = axes.getYaw() / 180F * 3.14159F + (effectiveWheelSpeed);

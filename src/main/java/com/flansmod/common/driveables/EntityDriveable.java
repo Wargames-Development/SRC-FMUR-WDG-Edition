@@ -56,10 +56,14 @@ import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 import static com.flansmod.client.FlansModClient.isBulletTrackingActive;
 
 public abstract class EntityDriveable extends Entity implements IControllable, IExplodeable, IEntityAdditionalSpawnData {
+    private static final float MOUNTED_50_CAL_MUZZLE_FLASH_SCALE = (1F / 3F) * 2.20F;
+    private static final float MOUNTED_50_CAL_SCREEN_SHAKE = 1F;
+
     public boolean syncFromServer = true;
     /**
      * Ticks since last server update. Use to smoothly transition to new position
@@ -714,6 +718,21 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
                     spawnParticle(type.shootParticle(secondary), shootPoint, gunVec);
                     //Spawn a new bullet item
                     worldObj.spawnEntityInWorld(((ItemShootable) bulletItemStack.getItem()).getEntity(worldObj, Vector3f.add(new Vector3f(posX, posY, posZ), gunVec, null), lookVector, (EntityLivingBase) seats[0].riddenByEntity, gunType.bulletSpread / 2, gunType.damage * damageMultiplier, shellSpeed, bulletItemStack.getItemDamage(), type));
+                    if (this instanceof EntityVehicle && isFiftyCalAmmo(bullet)) {
+                        FlansMod.getPacketHandler().sendToAllAround(
+                                new PacketParticle(PacketParticle.MUZZLE_FLASH,
+                                        posX + gunVec.x, posY + gunVec.y, posZ + gunVec.z,
+                                        lookVector.x, lookVector.y, lookVector.z,
+                                        MOUNTED_50_CAL_MUZZLE_FLASH_SCALE),
+                                posX + gunVec.x, posY + gunVec.y, posZ + gunVec.z, 150F, dimension);
+                        if (seats[0].riddenByEntity instanceof EntityPlayerMP) {
+                            FlansMod.getPacketHandler().sendTo(
+                                    new PacketParticle(PacketParticle.SHOT_SCREEN_SHAKE,
+                                            0D, 0D, 0D, 0D, 0D, 0D,
+                                            MOUNTED_50_CAL_SCREEN_SHAKE),
+                                    (EntityPlayerMP) seats[0].riddenByEntity);
+                        }
+                    }
                     //Play the shoot sound
                     PacketPlaySound.sendSoundPacket(posX, posY, posZ, FlansMod.soundRange, dimension, type.shootSound(secondary), false);
                     //Get the bullet item damage and increment it
@@ -860,6 +879,10 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
                     break;
             }
         }
+    }
+
+    private static boolean isFiftyCalAmmo(ShootableType ammo) {
+        return ammo.shortName != null && ammo.shortName.toLowerCase(Locale.ROOT).startsWith("50cal");
     }
 
     public Vector3f getOrigin(ShootPoint dp) {
@@ -1379,6 +1402,10 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
         if (data.fuelInTank >= type.fuelTankSize)
             return;
 
+        //Stationary driveables such as tripod guns do not require an engine.
+        if (data.engine == null)
+            return;
+
         //Look through the entire inventory for fuel cans, buildcraft fuel buckets and RedstoneFlux power sources
         for (int i = 0; i < data.getSizeInventory(); i++) {
             ItemStack stack = data.getStackInSlot(i);
@@ -1813,6 +1840,8 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
     public boolean hasEnoughFuel() {
         //if (seats == null || seats[0] == null || seats[0].riddenByEntity == null)
         //return false;
+        if (driveableData.engine == null)
+            return getDriveableType().maxThrottle == 0F && getDriveableType().maxNegativeThrottle == 0F;
         return driverIsCreative() || driveableData.fuelInTank > Math.abs(driveableData.engine.fuelConsumption * throttle) || getDriveableType().fuelTankSize < 0;
     }
 

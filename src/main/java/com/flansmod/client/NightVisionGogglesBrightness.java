@@ -7,6 +7,7 @@ import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.teams.ItemNightVisionGoggles;
+import com.flansmod.common.teams.PlayerEquipmentInventory;
 import cpw.mods.fml.common.ObfuscationReflectionHelper;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -73,8 +74,9 @@ public final class NightVisionGogglesBrightness {
         if (minecraft.thePlayer == null || minecraft.theWorld == null) {
             return false;
         }
-        ItemStack boots = minecraft.thePlayer.getEquipmentInSlot(1);
-        return ItemNightVisionGoggles.isLowered(boots)
+        ItemStack goggles = PlayerEquipmentInventory.getStack(minecraft.thePlayer,
+                PlayerEquipmentInventory.NIGHT_VISION_SLOT);
+        return ItemNightVisionGoggles.isLowered(goggles)
                 && NightVisionGogglesAnimation.getLoweredProgress(
                 minecraft.thePlayer, 1F) >= 0.999F;
     }

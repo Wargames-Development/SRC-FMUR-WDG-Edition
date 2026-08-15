@@ -3,6 +3,7 @@ package com.flansmod.common.guns.item;
 import com.flansmod.common.wgc.Integrations;
 import com.flansmod.client.AimType;
 import com.flansmod.client.FlansModClient;
+import com.flansmod.client.TickHandlerClient;
 import com.flansmod.client.debug.EntityDebugDot;
 import com.flansmod.client.debug.EntityDebugVector;
 import com.flansmod.client.model.GunAnimations;
@@ -690,6 +691,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     animations.miniGunRotate();
                 } else {
                     animations.doShoot(pumpDelay, pumpTime, hammerDelay, hammerAngle, althammerAngle, casingDelay);
+                    TickHandlerClient.triggerShotScreenShake(
+                            FlansModClient.currentScope != null ? 1F : 0.3F);
                 }
 
                 //Old client side recoil, moved to PacketGunRecoil
@@ -1543,7 +1546,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         PacketMuzzleFlash muzzlePacket = new PacketMuzzleFlash(entityPlayer,
                 showMuzzleFlash ? type.muzzleFlashParticle : "",
                 type.muzzleFlashParticleSize,
-                showMuzzleFlash && type.flashTexture == null,
+                showMuzzleFlash,
                 gunType.shortName);
         FlansMod.packetHandler.sendToAllAround(muzzlePacket, entityPlayer.posX, entityPlayer.posY,
                 entityPlayer.posZ, 160, entityPlayer.dimension);

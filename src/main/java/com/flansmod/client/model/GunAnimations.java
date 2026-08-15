@@ -70,6 +70,9 @@ public class GunAnimations {
 
     public int muzzleFlashTime = 0;
     public int flashInt = 0;
+    public boolean showMuzzleFireball = true;
+    public float muzzleFlashSizeMultiplier = 1F;
+    public float muzzleFlashRotation = 0F;
 
     /**
      * Casing mechanics
@@ -266,14 +269,7 @@ public class GunAnimations {
         timeUntilCasing = casingDelay;
         hammerRotation = hammerAngle;
         althammerRotation = althammerAngle;
-        muzzleFlashTime = 2;
-
-        int Low = -1;
-        int High = 3;
-        int result = r.nextInt(High - Low) + Low;
-        if (result == -1) result = 0;
-        if (result == 3) result = 2;
-        flashInt = result;
+        triggerMuzzleFlash(r);
 
         casingRandom.x = ((r.nextFloat() * 2) - 1);
         casingRandom.y = ((r.nextFloat() * 2) - 1);
@@ -283,6 +279,14 @@ public class GunAnimations {
         if (pumpDelay == 0) {
             FlansModClient.shotState = 1;
         }
+    }
+
+    public void triggerMuzzleFlash(Random random) {
+        muzzleFlashTime = 2;
+        flashInt = random.nextInt();
+        showMuzzleFireball = random.nextFloat() < 0.70F;
+        muzzleFlashSizeMultiplier = 0.80F + random.nextFloat() * 0.20F;
+        muzzleFlashRotation = random.nextFloat() * 360F;
     }
 
     public void doReload(ItemStack gunStack, int gunSlot, int reloadTime, int pumpDelay, int pumpTime, int chargeDelay, int chargeTime, int ammoCount, boolean single, boolean isTactical, String sound) {

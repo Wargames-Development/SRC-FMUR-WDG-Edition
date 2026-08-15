@@ -2,6 +2,7 @@ package com.flansmod.client;
 
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.teams.ItemNightVisionGoggles;
+import com.flansmod.common.teams.PlayerEquipmentInventory;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.Minecraft;
@@ -34,11 +35,12 @@ public final class FirstPersonNightVisionGogglesRenderer {
         if (minecraft.thePlayer == null || minecraft.gameSettings.thirdPersonView != 0) {
             return;
         }
-        ItemStack boots = minecraft.thePlayer.getEquipmentInSlot(1);
-        if (boots == null || !(boots.getItem() instanceof ItemNightVisionGoggles)) {
+        ItemStack gogglesStack = PlayerEquipmentInventory.getStack(minecraft.thePlayer,
+                PlayerEquipmentInventory.NIGHT_VISION_SLOT);
+        if (gogglesStack == null || !(gogglesStack.getItem() instanceof ItemNightVisionGoggles)) {
             return;
         }
-        ItemNightVisionGoggles goggles = (ItemNightVisionGoggles)boots.getItem();
+        ItemNightVisionGoggles goggles = (ItemNightVisionGoggles)gogglesStack.getItem();
 
         float progress = NightVisionGogglesAnimation.getLoweredProgress(
                 minecraft.thePlayer, partialTicks);

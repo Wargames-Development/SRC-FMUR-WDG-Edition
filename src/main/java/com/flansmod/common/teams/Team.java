@@ -36,6 +36,7 @@ public class Team extends InfoType
 	public ItemStack chest;
 	public ItemStack legs;
 	public ItemStack shoes;
+	public ItemStack face;
 	
 	public Team(String s, String s1, int teamCol, char textCol)
 	{
@@ -152,6 +153,17 @@ public class Team extends InfoType
 					ArmourType armour = ((ItemTeamArmour)item).type;
 					if(armour != null && armour.shortName.equals(split[1]))
 						shoes = new ItemStack(item);
+				}
+			}
+			if(split[0].equals("Face"))
+			{
+				if(split[1].equals("None"))
+					return;
+				for(Item item : FlansMod.armourItems)
+				{
+					ArmourType armour = ((ItemTeamArmour)item).type;
+					if(armour != null && armour.faceSlot && armour.shortName.equals(split[1]))
+						face = new ItemStack(item);
 				}
 			}
 			if(split[0].equals("AddDefaultClass") || split[0].equals("AddClass"))

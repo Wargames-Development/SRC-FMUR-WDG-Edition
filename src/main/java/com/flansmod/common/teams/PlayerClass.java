@@ -27,7 +27,7 @@ public class PlayerClass extends InfoType
 	public boolean horse = false;
 	
 	/** Override armour. If this is set, then it will override the team armour */
-	public ItemStack hat, chest, legs, shoes;
+	public ItemStack hat, chest, legs, shoes, face;
 	
 	public PlayerClass(TypeFile file)
 	{
@@ -87,6 +87,17 @@ public class PlayerClass extends InfoType
 				ArmourType armour = ((ItemTeamArmour)item).type;
 				if(armour != null && armour.shortName.equals(split[1]))
 					shoes = new ItemStack(item);
+			}
+		}
+		if(split[0].equals("Face"))
+		{
+			if(split[1].equals("None"))
+				return;
+			for(Item item : FlansMod.armourItems)
+			{
+				ArmourType armour = ((ItemTeamArmour)item).type;
+				if(armour != null && armour.faceSlot && armour.shortName.equals(split[1]))
+					face = new ItemStack(item);
 			}
 		}
 	}

@@ -1,7 +1,9 @@
 package com.flansmod.common.network;
 
 import com.flansmod.common.FlansMod;
+import com.flansmod.client.FlansModClient;
 import com.flansmod.client.TickHandlerClient;
+import com.flansmod.client.model.GunAnimations;
 import com.flansmod.common.RotatedAxes;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
@@ -66,6 +68,10 @@ public class PacketMuzzleFlash extends PacketBase
     @SideOnly(Side.CLIENT)
     public void handleClientSide(EntityPlayer clientPlayer)
     {
+        if (type == null || type.isEmpty()) {
+            return;
+        }
+
         boolean isThisPlayer = playerID == clientPlayer.getEntityId();
         TickHandlerClient.triggerMuzzleFlashLight(playerID);
         GunType g = GunType.getGun(gunType);
@@ -73,21 +79,34 @@ public class PacketMuzzleFlash extends PacketBase
             return;
         }
 
-        if (!isThisPlayer || (showMuzzleFlashParticlesToShooter && (Minecraft.getMinecraft().gameSettings.thirdPersonView != 0 || g.showMuzzleFlashParticlesFirstPerson))) {
+        if (!isThisPlayer || showMuzzleFlashParticlesToShooter) {
             Entity p = clientPlayer.worldObj.getEntityByID(playerID);
             if (p instanceof EntityPlayer) {
                 EntityPlayer entityPlayer = (EntityPlayer) p;
+                if (!isThisPlayer) {
+                    GunAnimations animations = FlansModClient.getGunAnimations(entityPlayer, false);
+                    animations.triggerMuzzleFlash(entityPlayer.worldObj.rand);
+                }
+
+                // The default effect is rendered on the gun's exact model muzzle point.
+                // Only custom content-pack particle names use the legacy world-space path.
+                if ("flansmod.muzzleflash".equals(type)) {
+                    return;
+                }
+
+                boolean firstPerson = isThisPlayer
+                        && Minecraft.getMinecraft().gameSettings.thirdPersonView == 0;
 
                 AttachmentType barrelAttachment = g.getBarrel(entityPlayer.getHeldItem());
 
                 RotatedAxes axes = new RotatedAxes(entityPlayer.rotationYawHead+90, entityPlayer.rotationPitch, 0);
 
-                Vector3f shoulderOffset = isThisPlayer ? new Vector3f(0, -22F/16F, 0) : new Vector3f(0, 0, 0);
+                Vector3f shoulderOffset = firstPerson ? new Vector3f(0, -22F/16F, 0) : new Vector3f(0, 0, 0);
                 Vector3f handOffset = getMuzzleModelOffset(g, barrelAttachment);
 
                 Vector3f.add(shoulderOffset, g.muzzleFlashParticlesShoulderOffset, shoulderOffset);
 
-                if (isThisPlayer/* && Minecraft.getMinecraft().gameSettings.thirdPersonView == 0*/) {
+                if (firstPerson) {
                     Vector3f.add(handOffset, new Vector3f(-0.7, -0.35, 0.1), handOffset);
                 } else {
                     handOffset = transformThirdPersonMuzzleOffset(g, handOffset);
@@ -95,15 +114,16 @@ public class PacketMuzzleFlash extends PacketBase
 
                 Vector3f.add(handOffset, g.muzzleFlashParticlesHandOffset, handOffset);
 
-                Vector3f pos = PlayerItemPositionUtils.GetPlayerHandPosition(entityPlayer, shoulderOffset, handOffset, !isThisPlayer);
-                if (!isThisPlayer) {
+                Vector3f pos = PlayerItemPositionUtils.GetPlayerHandPosition(entityPlayer, shoulderOffset, handOffset, !firstPerson);
+                if (!firstPerson) {
                     Vector3f backwardCorrection = new Vector3f(axes.getXAxis());
                     backwardCorrection.scale(2F);
                     Vector3f.sub(pos, backwardCorrection, pos);
                     pos.y -= 1.5F;
                 }
 
-                Vector3f v = (Vector3f) axes.getXAxis().translate((float)Math.random() * 2 - 1, (float)Math.random() * 2 - 1, (float)Math.random() * 2 - 1).scale(0.05F);
+                Vector3f v = axes.getXAxis();
+                v.scale(0.05F);
 
                 FlansMod.proxy.spawnParticle(type, pos.x, pos.y, pos.z, v.x, v.y, v.z, scale);
             }

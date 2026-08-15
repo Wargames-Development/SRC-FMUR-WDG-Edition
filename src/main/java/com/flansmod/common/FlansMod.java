@@ -170,6 +170,8 @@ public class FlansMod {
     //Handlers
     public static final PacketHandler packetHandler = new PacketHandler();
     public static final PlayerHandler playerHandler = new PlayerHandler();
+    public static final PlayerEquipmentInventory.Events playerEquipmentEvents =
+            new PlayerEquipmentInventory.Events();
     public static final TeamsManager teamsManager = new TeamsManager();
     public static final CommonTickHandler tickHandler = new CommonTickHandler();
     public static FlansHooks hooks = new FlansHooks();

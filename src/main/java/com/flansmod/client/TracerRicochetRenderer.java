@@ -23,8 +23,9 @@ public final class TracerRicochetRenderer {
     }
 
     public static void addRicochet(double x, double y, double z,
-                                   double incomingX, double incomingY, double incomingZ) {
-        PENDING.add(new RicochetSpawn(x, y, z, incomingX, incomingY, incomingZ));
+                                   double incomingX, double incomingY, double incomingZ,
+                                   boolean greenTracer) {
+        PENDING.add(new RicochetSpawn(x, y, z, incomingX, incomingY, incomingZ, greenTracer));
     }
 
     public static void tick() {
@@ -97,10 +98,17 @@ public final class TracerRicochetRenderer {
                 double tailY = y - ricochet.motionY / speed * length;
                 double tailZ = z - ricochet.motionZ / speed * length;
                 float life = 1F - ricochet.age / (float) ricochet.maxAge;
+                float glowRed = ricochet.greenTracer ? 0F : 1F;
+                float glowGreen = ricochet.greenTracer ? 1F : 0F;
 
-                drawLine(tailX, tailY, tailZ, x, y, z, 10F, 1F, 0F, 0F, 0.09F * life);
-                drawLine(tailX, tailY, tailZ, x, y, z, 5F, 1F, 0.03F, 0F, 0.25F * life);
-                drawLine(tailX, tailY, tailZ, x, y, z, 2F, 1F, 0.24F, 0.08F, 0.92F * life);
+                drawLine(tailX, tailY, tailZ, x, y, z, 10F,
+                        glowRed, glowGreen, 0F, 0.09F * life);
+                drawLine(tailX, tailY, tailZ, x, y, z, 5F,
+                        ricochet.greenTracer ? 0.03F : 1F,
+                        ricochet.greenTracer ? 1F : 0.03F, 0F, 0.25F * life);
+                drawLine(tailX, tailY, tailZ, x, y, z, 2F,
+                        ricochet.greenTracer ? 0.24F : 1F,
+                        ricochet.greenTracer ? 1F : 0.24F, 0.08F, 0.92F * life);
             }
         } finally {
             GL11.glPopAttrib();
@@ -126,15 +134,18 @@ public final class TracerRicochetRenderer {
         private final double incomingX;
         private final double incomingY;
         private final double incomingZ;
+        private final boolean greenTracer;
 
         private RicochetSpawn(double x, double y, double z,
-                              double incomingX, double incomingY, double incomingZ) {
+                              double incomingX, double incomingY, double incomingZ,
+                              boolean greenTracer) {
             this.x = x;
             this.y = y;
             this.z = z;
             this.incomingX = incomingX;
             this.incomingY = incomingY;
             this.incomingZ = incomingZ;
+            this.greenTracer = greenTracer;
         }
     }
 
@@ -148,6 +159,7 @@ public final class TracerRicochetRenderer {
         private double motionX;
         private double motionY;
         private double motionZ;
+        private final boolean greenTracer;
         private final int maxAge;
         private int age;
 
@@ -155,6 +167,7 @@ public final class TracerRicochetRenderer {
             x = lastX = spawn.x;
             y = lastY = spawn.y;
             z = lastZ = spawn.z;
+            greenTracer = spawn.greenTracer;
 
             long seed = Double.doubleToLongBits(spawn.x)
                     ^ Long.rotateLeft(Double.doubleToLongBits(spawn.z), 21)

@@ -78,6 +78,11 @@ public class RenderBullet extends Render
 		double tailX = -directionX * length;
 		double tailY = -directionY * length;
 		double tailZ = -directionZ * length;
+		boolean greenTracer = bullet.type.greenTracer;
+		float glowRed = greenTracer ? 0F : 1F;
+		float glowGreen = greenTracer ? 1F : 0F;
+		float accentRed = greenTracer ? 0.04F : 1F;
+		float coreGreen = greenTracer ? 1F : 0.04F;
 
 		minecraft.entityRenderer.disableLightmap(partialTicks);
 		GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
@@ -97,18 +102,19 @@ public class RenderBullet extends Render
 			if(length > 0.05D)
 			{
 				drawTracerLine(tailX, tailY, tailZ, 11F,
-						1F, 0F, 0F, scaledAlpha(0.10F, nightVisionBrightness));
+						glowRed, glowGreen, 0F, scaledAlpha(0.10F, nightVisionBrightness));
 				drawTracerLine(tailX, tailY, tailZ, 6F,
-						1F, 0.015F, 0F, scaledAlpha(0.24F, nightVisionBrightness));
+						greenTracer ? 0.015F : 1F, greenTracer ? 1F : 0.015F, 0F,
+						scaledAlpha(0.24F, nightVisionBrightness));
 				drawTracerLine(tailX, tailY, tailZ, 2.25F,
-						1F, 0.04F, 0.01F, 1F);
+						accentRed, coreGreen, 0.01F, 1F);
 			}
 
 			GL11.glEnable(GL11.GL_POINT_SMOOTH);
 			GL11.glHint(GL11.GL_POINT_SMOOTH_HINT, GL11.GL_NICEST);
-			drawTracerPoint(9F, 1F, 0F, 0F,
+			drawTracerPoint(9F, glowRed, glowGreen, 0F,
 					scaledAlpha(0.16F, nightVisionBrightness));
-			drawTracerPoint(3.5F, 1F, 0.04F, 0.01F, 1F);
+			drawTracerPoint(3.5F, accentRed, coreGreen, 0.01F, 1F);
 		}
 		finally
 		{

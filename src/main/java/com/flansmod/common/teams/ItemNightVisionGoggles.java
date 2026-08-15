@@ -6,6 +6,8 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.block.BlockDispenser;
+import net.minecraft.dispenser.BehaviorDefaultDispenseItem;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -13,13 +15,11 @@ import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.world.World;
 
 import java.util.List;
 
-/**
- * Self-contained GPNVG test item. It deliberately occupies the boots slot so it
- * can be worn alongside content-pack helmets without changing their definitions.
- */
+/** Self-contained GPNVG item for the dedicated night-vision equipment slot. */
 public class ItemNightVisionGoggles extends ItemArmor {
     public enum PhosphorType {
         GREEN_TAN(false, "gpnvg", "gpnvg", "armor/GPNVG_1.png"),
@@ -56,6 +56,23 @@ public class ItemNightVisionGoggles extends ItemArmor {
         setTextureName(FlansMod.MODID + ":" + phosphorType.iconName);
         setCreativeTab(FlansMod.tabFlanTeams);
         setMaxStackSize(1);
+        BlockDispenser.dispenseBehaviorRegistry.putObject(this, new BehaviorDefaultDispenseItem());
+    }
+
+    @Override
+    public boolean isValidArmor(ItemStack stack, int armorType, Entity entity) {
+        return false;
+    }
+
+    @Override
+    public ItemStack onItemRightClick(ItemStack stack, World world, EntityPlayer player) {
+        PlayerEquipmentInventory equipment = PlayerEquipmentInventory.get(player);
+        if (equipment != null
+                && equipment.getStackInSlot(PlayerEquipmentInventory.NIGHT_VISION_SLOT) == null) {
+            equipment.setInventorySlotContents(PlayerEquipmentInventory.NIGHT_VISION_SLOT, stack.copy());
+            stack.stackSize = 0;
+        }
+        return stack;
     }
 
     public static boolean isLowered(ItemStack stack) {

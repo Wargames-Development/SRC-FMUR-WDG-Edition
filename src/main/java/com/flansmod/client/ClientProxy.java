@@ -102,6 +102,7 @@ public class ClientProxy extends CommonProxy {
             MinecraftForgeClient.registerItemRenderer(mechaType.item, mechaRenderer);
 
         FMLCommonHandler.instance().bus().register(new KeyInputHandler());
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new PlayerEquipmentClientHandler());
         new TickHandlerClient();
     }
 
@@ -488,9 +489,11 @@ public class ClientProxy extends CommonProxy {
                 BulletHoleDecalRenderer.addBulletHole(p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
                 return null;
             }
-            if (p_72726_1_.equals("flansmod.tracerricochet")) {
+            if (p_72726_1_.equals("flansmod.tracerricochet")
+                    || p_72726_1_.equals("flansmod.greentracerricochet")) {
                 TracerRicochetRenderer.addRicochet(p_72726_2_, p_72726_4_, p_72726_6_,
-                        p_72726_8_, p_72726_10_, p_72726_12_);
+                        p_72726_8_, p_72726_10_, p_72726_12_,
+                        p_72726_1_.equals("flansmod.greentracerricochet"));
                 return null;
             }
 
@@ -554,8 +557,10 @@ public class ClientProxy extends CommonProxy {
                     } else if (p_72726_1_.equals("flansmod.fmtracerred")) {
                         entityfx = new EntityFMTracerRed(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
                     } else if (p_72726_1_.equals("flansmod.muzzleflash")) {
-                        entityfx = new EntityFMMuzzleFlash(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
-                        entityfx.multipleParticleScaleBy(scale);
+                        EntityFMMuzzleFlash.spawnBurst(theWorld, mc.effectRenderer,
+                                p_72726_2_, p_72726_4_, p_72726_6_,
+                                p_72726_8_, p_72726_10_, p_72726_12_, scale);
+                        return null;
                     } else if (p_72726_1_.equals("flansmod.afterburn")) {
                         entityfx = new EntityAfterburn(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
                     } else if (p_72726_1_.equals("flansmod.fmsmoke")) { //小烟雾

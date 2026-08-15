@@ -3,6 +3,7 @@ package com.flansmod.client;
 import com.flansmod.client.model.RenderGun;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.teams.ItemNightVisionGoggles;
+import com.flansmod.common.teams.PlayerEquipmentInventory;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.Minecraft;
@@ -182,8 +183,9 @@ public final class NightVisionGogglesEffect {
         if (minecraft.thePlayer == null) {
             return 0F;
         }
-        ItemStack boots = minecraft.thePlayer.getEquipmentInSlot(1);
-        if (!ItemNightVisionGoggles.isLowered(boots)) {
+        ItemStack goggles = PlayerEquipmentInventory.getStack(minecraft.thePlayer,
+                PlayerEquipmentInventory.NIGHT_VISION_SLOT);
+        if (!ItemNightVisionGoggles.isLowered(goggles)) {
             return 0F;
         }
         return NightVisionGogglesAnimation.getLoweredProgress(
@@ -398,7 +400,8 @@ public final class NightVisionGogglesEffect {
         GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "flashlightExposure"),
                 NightVisionGogglesBrightness.getFlashlightExposure(minecraft));
         ItemStack goggles = minecraft.thePlayer == null ? null
-                : minecraft.thePlayer.getEquipmentInSlot(1);
+                : PlayerEquipmentInventory.getStack(minecraft.thePlayer,
+                PlayerEquipmentInventory.NIGHT_VISION_SLOT);
         GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "whitePhosphor"),
                 ItemNightVisionGoggles.isWhitePhosphor(goggles) ? 1F : 0F);
         GL20.glUniform1i(GL20.glGetUniformLocation(shaderProgram, "renderPass"), renderPass);
@@ -424,7 +427,8 @@ public final class NightVisionGogglesEffect {
             GL11.glEnable(GL11.GL_BLEND);
             GL11.glBlendFunc(GL11.GL_ZERO, GL11.GL_SRC_COLOR);
             ItemStack goggles = minecraft.thePlayer == null ? null
-                    : minecraft.thePlayer.getEquipmentInSlot(1);
+                    : PlayerEquipmentInventory.getStack(minecraft.thePlayer,
+                    PlayerEquipmentInventory.NIGHT_VISION_SLOT);
             if (ItemNightVisionGoggles.isWhitePhosphor(goggles)) {
                 GL11.glColor4f(1F - 0.44F * intensity,
                         1F - 0.24F * intensity, 1F, 1F);

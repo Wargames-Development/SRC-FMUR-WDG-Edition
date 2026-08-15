@@ -1242,7 +1242,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                                     MIN_TRACER_RICOCHET_DISTANCE)
                             && shouldSpawnTracerRicochet(raytraceResult)) {
                         FlansMod.getPacketHandler().sendToAllAround(
-                                new PacketParticle("flansmod.tracerricochet",
+                                new PacketParticle(type.greenTracer
+                                        ? "flansmod.greentracerricochet"
+                                        : "flansmod.tracerricochet",
                                         hitVec.xCoord, hitVec.yCoord + 0.03D, hitVec.zCoord,
                                         motionX, motionY, motionZ, 1.0F),
                                 hitVec.xCoord, hitVec.yCoord, hitVec.zCoord, 160F, dimension);

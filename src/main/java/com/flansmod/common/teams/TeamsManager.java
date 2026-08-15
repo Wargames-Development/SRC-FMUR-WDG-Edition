@@ -792,6 +792,7 @@ public class TeamsManager {
             return;
         player.inventory.armorInventory = new ItemStack[4];
         player.inventory.mainInventory = new ItemStack[36];
+        PlayerEquipmentInventory.get(player).clear();
         player.heal(9001);
         if (forceAdventureMode)
             player.setGameType(net.minecraft.world.WorldSettings.GameType.ADVENTURE);
@@ -881,6 +882,7 @@ public class TeamsManager {
             data.newTeam = data.team = Team.spectators;
             player.inventory.armorInventory = new ItemStack[4];
             player.inventory.mainInventory = new ItemStack[36];
+            PlayerEquipmentInventory.get(player).clear();
             data.team.addPlayer(player);
             player.heal(9001);
             respawnPlayer(player, true);
@@ -970,6 +972,8 @@ public class TeamsManager {
 
         player.inventory.armorInventory = new ItemStack[4];
         player.inventory.mainInventory = new ItemStack[36];
+        PlayerEquipmentInventory equipment = PlayerEquipmentInventory.get(player);
+        equipment.clear();
 
         //Set team armour
         if (team.hat != null)
@@ -980,6 +984,8 @@ public class TeamsManager {
             player.inventory.armorInventory[1] = team.legs.copy();
         if (team.shoes != null)
             player.inventory.armorInventory[0] = team.shoes.copy();
+        if (team.face != null)
+            equipment.setInventorySlotContents(PlayerEquipmentInventory.FACE_SLOT, team.face.copy());
 
         if (playerClass == null)
             return;
@@ -993,6 +999,8 @@ public class TeamsManager {
             player.inventory.armorInventory[1] = playerClass.legs.copy();
         if (playerClass.shoes != null)
             player.inventory.armorInventory[0] = playerClass.shoes.copy();
+        if (playerClass.face != null)
+            equipment.setInventorySlotContents(PlayerEquipmentInventory.FACE_SLOT, playerClass.face.copy());
 
         for (ItemStack stack : playerClass.startingItems) {
             player.inventory.addItemStackToInventory(stack.copy());

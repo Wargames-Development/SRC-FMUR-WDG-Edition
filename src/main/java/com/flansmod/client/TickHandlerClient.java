@@ -58,6 +58,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class TickHandlerClient {
@@ -75,6 +76,14 @@ public class TickHandlerClient {
     private static final int MUZZLE_FLASH_LIGHT_LEVEL = 6;
     private static float localMuzzleFlashExposure;
     private static float localMuzzleFlashBaseLightExposure = -1F;
+    private static final Random SHOT_SHAKE_RANDOM = new Random();
+    private static final long SHOT_SHAKE_DURATION_NANOS = 110000000L;
+    private static long shotShakeStartNanos = Long.MIN_VALUE;
+    private static float shotShakePitchAmplitude;
+    private static float shotShakeYawAmplitude;
+    private static boolean shotShakeApplied;
+    private static float appliedShotShakePitch;
+    private static float appliedShotShakeYaw;
     private static final int BALLISTIC_NEAR_MISS_DURATION_TICKS = 14;
     private static int ballisticNearMissTicks;
     private static float ballisticNearMissStrength;
@@ -132,6 +141,14 @@ public class TickHandlerClient {
                 killMessage.timer = 0;
         }
         killMessages.add(new KillMessage(headshot, infoType, itmDmg, killer, killed));
+    }
+
+    /** Starts a brief render-only camera impulse for a shot fired by the local player. */
+    public static void triggerShotScreenShake(float degrees) {
+        shotShakeStartNanos = System.nanoTime();
+        shotShakePitchAmplitude = degrees;
+        float horizontalDirection = SHOT_SHAKE_RANDOM.nextBoolean() ? 1F : -1F;
+        shotShakeYawAmplitude = horizontalDirection * degrees;
     }
 
     @SubscribeEvent
@@ -961,10 +978,12 @@ public class TickHandlerClient {
                 NightVisionGogglesBrightness.beginFrame(Minecraft.getMinecraft());
                 RenderGun.smoothing = event.renderTickTime;
                 renderTickStart(Minecraft.getMinecraft(), event.renderTickTime);
+                applyShotScreenShake(Minecraft.getMinecraft());
                 break;
             case END:
                 try {
                     Minecraft minecraft = Minecraft.getMinecraft();
+                    restoreShotScreenShake(minecraft);
                     renderTickEnd(minecraft, event.renderTickTime);
                     renderEquipmentEffectsWithHiddenHud(minecraft, event.renderTickTime);
                 } finally {
@@ -1231,6 +1250,45 @@ public class TickHandlerClient {
         } else {
             ballisticNearMissStrength = 0F;
         }
+    }
+
+    private static void applyShotScreenShake(Minecraft minecraft) {
+        if (minecraft.thePlayer == null || shotShakeApplied || shotShakeStartNanos == Long.MIN_VALUE) {
+            return;
+        }
+
+        long elapsedNanos = System.nanoTime() - shotShakeStartNanos;
+        if (elapsedNanos < 0L || elapsedNanos >= SHOT_SHAKE_DURATION_NANOS) {
+            shotShakeStartNanos = Long.MIN_VALUE;
+            return;
+        }
+
+        float progress = elapsedNanos / (float) SHOT_SHAKE_DURATION_NANOS;
+        float decay = 1F - progress;
+        appliedShotShakePitch = shotShakePitchAmplitude * decay
+                * (float) Math.sin(progress * Math.PI * 3D);
+        appliedShotShakeYaw = shotShakeYawAmplitude * decay
+                * (float) Math.cos(progress * Math.PI * 4D);
+
+        minecraft.thePlayer.rotationPitch += appliedShotShakePitch;
+        minecraft.thePlayer.prevRotationPitch += appliedShotShakePitch;
+        minecraft.thePlayer.rotationYaw += appliedShotShakeYaw;
+        minecraft.thePlayer.prevRotationYaw += appliedShotShakeYaw;
+        shotShakeApplied = true;
+    }
+
+    private static void restoreShotScreenShake(Minecraft minecraft) {
+        if (!shotShakeApplied) {
+            return;
+        }
+        if (minecraft.thePlayer != null) {
+            // Subtract only our contribution so mouse movement made during this frame is preserved.
+            minecraft.thePlayer.rotationPitch -= appliedShotShakePitch;
+            minecraft.thePlayer.prevRotationPitch -= appliedShotShakePitch;
+            minecraft.thePlayer.rotationYaw -= appliedShotShakeYaw;
+            minecraft.thePlayer.prevRotationYaw -= appliedShotShakeYaw;
+        }
+        shotShakeApplied = false;
     }
 
     private static void renderBallisticNearMissVignette(Minecraft minecraft) {

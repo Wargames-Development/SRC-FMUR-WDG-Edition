@@ -100,7 +100,7 @@ public class DriveableData implements IInventory {
 
     public void writeToNBT(NBTTagCompound tag) {
         tag.setString("Type", type);
-        tag.setString("Engine", engine.shortName);
+        tag.setString("Engine", engine == null ? "" : engine.shortName);
         tag.setInteger("Paint", paintjobID);
         for (int i = 0; i < ammo.length; i++) {
             if (ammo[i] != null)
