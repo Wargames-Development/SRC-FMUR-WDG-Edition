@@ -337,8 +337,9 @@ public class GunAnimations {
     }
 
     private boolean isReloadEquipped(int equippedSlot, ItemStack equippedGun) {
+        // Kit plugins can replace inventory contents before the selected slot reaches the client.
+        // Match presentation to the server-selected gun item; server reload state still owns cancellation.
         return reloadInProgress
-                && reloadingSlot == equippedSlot
                 && equippedGun != null
                 && equippedGun.getItem() == reloadingItem;
     }
