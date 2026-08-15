@@ -670,7 +670,8 @@ public class RenderGun implements IItemRenderer {
                         MuzzleFlashRenderer.render(animations.flashInt,
                                 animations.muzzleFlashTime, 1F / combinedScale, loadedAmmo,
                                 animations.showMuzzleFireball,
-                                animations.muzzleFlashSizeMultiplier);
+                                animations.muzzleFlashSizeMultiplier,
+                                animations.muzzleFlashRotation);
                         renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(
                                 gunType.getPaintjob(item.getItemDamage())));
                     }

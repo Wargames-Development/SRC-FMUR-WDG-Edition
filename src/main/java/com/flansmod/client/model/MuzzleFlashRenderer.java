@@ -16,18 +16,25 @@ public final class MuzzleFlashRenderer {
     private static final int PUFF_TEXTURE_INDEX = 7;
     private static final int SPARK_TEXTURE_INDEX = 65;
     private static final float BASE_556_SIZE = 1F / 3F;
+    private static final float NON_SMOKE_SIZE_MULTIPLIER = 0.25F;
 
     private MuzzleFlashRenderer() {
     }
 
     public static void render(int pattern, int remainingTicks, float inverseModelFlashScale,
                               BulletType loadedAmmo, boolean showFireball,
-                              float sizeMultiplier) {
+                              float sizeMultiplier, float rotationDegrees) {
         float downwardOnlyVariation = Math.max(0.80F, Math.min(1F, sizeMultiplier));
         float unit = Math.max(0.001F, inverseModelFlashScale)
                 * BASE_556_SIZE * getCaliberScale(loadedAmmo) * downwardOnlyVariation;
+        float nonSmokeUnit = unit * NON_SMOKE_SIZE_MULTIPLIER;
         float phase = remainingTicks >= 2 ? 0F : 1F;
+        double rotationRadians = Math.toRadians(rotationDegrees);
         Random random = new Random(0x4D555A5AL + pattern * 0x9E3779B9L);
+        int flameParticleCount = 14 + random.nextInt(9);
+        int coreParticleCount = 4 + random.nextInt(4);
+        int middleParticleCount = 6 + random.nextInt(5);
+        int sparkCount = 5 + random.nextInt(5);
         Tessellator tessellator = Tessellator.instance;
 
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
@@ -43,17 +50,18 @@ public final class MuzzleFlashRenderer {
             if (showFireball) {
                 tessellator.startDrawingQuads();
                 tessellator.setBrightness(15728880);
-                for (int i = 0; i < 18; i++) {
-                    double angle = random.nextDouble() * Math.PI * 2D;
-                    boolean core = i < 6;
-                    boolean middle = i >= 6 && i < 14;
+                for (int i = 0; i < flameParticleCount; i++) {
+                    double angle = random.nextDouble() * Math.PI * 2D + rotationRadians;
+                    boolean core = i < coreParticleCount;
+                    boolean middle = i >= coreParticleCount
+                            && i < coreParticleCount + middleParticleCount;
                     float axial = (0.10F + random.nextFloat() * (core ? 0.52F : 1.05F)
-                            + phase * 0.16F) * unit;
-                    float radial = random.nextFloat() * (core ? 0.12F : 0.31F) * unit;
+                            + phase * 0.16F) * nonSmokeUnit;
+                    float radial = random.nextFloat() * (core ? 0.12F : 0.31F) * nonSmokeUnit;
                     float y = (float) Math.cos(angle) * radial;
                     float z = (float) Math.sin(angle) * radial;
                     float size = (core ? 0.36F + random.nextFloat() * 0.18F
-                            : 0.32F + random.nextFloat() * 0.24F) * unit;
+                            : 0.32F + random.nextFloat() * 0.24F) * nonSmokeUnit;
                     float red = 1F;
                     float green = core ? 1F : (middle ? 0.92F : 0.79F);
                     float blue = core ? 0.86F : (middle ? 0.46F : 0.22F);
@@ -67,14 +75,14 @@ public final class MuzzleFlashRenderer {
             // Thin pale-yellow spark streaks embedded in the flame cloud.
             tessellator.startDrawingQuads();
             tessellator.setBrightness(15728880);
-            for (int i = 0; i < 7; i++) {
-                double angle = random.nextDouble() * Math.PI * 2D;
-                float radial = (0.04F + random.nextFloat() * 0.24F) * unit;
+            for (int i = 0; i < sparkCount; i++) {
+                double angle = random.nextDouble() * Math.PI * 2D + rotationRadians;
+                float radial = (0.04F + random.nextFloat() * 0.24F) * nonSmokeUnit;
                 float y = (float) Math.cos(angle) * radial;
                 float z = (float) Math.sin(angle) * radial;
-                float start = (0.18F + random.nextFloat() * 0.32F) * unit;
-                float end = start + (0.46F + random.nextFloat() * 0.72F) * unit;
-                float width = (0.028F + random.nextFloat() * 0.022F) * unit;
+                float start = (0.18F + random.nextFloat() * 0.32F) * nonSmokeUnit;
+                float end = start + (0.46F + random.nextFloat() * 0.72F) * nonSmokeUnit;
+                float width = (0.028F + random.nextFloat() * 0.022F) * nonSmokeUnit;
                 addSpark(tessellator, start, end, y, z, width,
                         1F, 0.94F, 0.52F, 0.9F);
             }
@@ -84,15 +92,18 @@ public final class MuzzleFlashRenderer {
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             tessellator.startDrawingQuads();
             tessellator.setBrightness(15728880);
-            int[][] directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-            for (int direction = 0; direction < directions.length; direction++) {
-                for (int i = 0; i < 2; i++) {
+            for (int direction = 0; direction < 4; direction++) {
+                double directionAngle = rotationRadians + direction * Math.PI / 2D;
+                float directionY = (float)Math.cos(directionAngle);
+                float directionZ = (float)Math.sin(directionAngle);
+                float perpendicularY = -directionZ;
+                float perpendicularZ = directionY;
+                int smokeCount = 1 + random.nextInt(3);
+                for (int i = 0; i < smokeCount; i++) {
                     float distance = (0.16F + phase * 0.25F + i * 0.08F) * unit;
                     float jitter = (random.nextFloat() - 0.5F) * 0.08F * unit;
-                    float y = directions[direction][0] * distance
-                            + directions[direction][1] * jitter;
-                    float z = directions[direction][1] * distance
-                            + directions[direction][0] * jitter;
+                    float y = directionY * distance + perpendicularY * jitter;
+                    float z = directionZ * distance + perpendicularZ * jitter;
                     float x = (0.08F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
                     float size = (0.34F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
                     addCrossedParticle(tessellator, x, y, z, size,

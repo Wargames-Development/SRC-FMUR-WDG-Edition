@@ -72,6 +72,7 @@ public class GunAnimations {
     public int flashInt = 0;
     public boolean showMuzzleFireball = true;
     public float muzzleFlashSizeMultiplier = 1F;
+    public float muzzleFlashRotation = 0F;
 
     /**
      * Casing mechanics
@@ -282,9 +283,10 @@ public class GunAnimations {
 
     public void triggerMuzzleFlash(Random random) {
         muzzleFlashTime = 2;
-        flashInt = random.nextInt(3);
+        flashInt = random.nextInt();
         showMuzzleFireball = random.nextFloat() < 0.70F;
         muzzleFlashSizeMultiplier = 0.80F + random.nextFloat() * 0.20F;
+        muzzleFlashRotation = random.nextFloat() * 360F;
     }
 
     public void doReload(ItemStack gunStack, int gunSlot, int reloadTime, int pumpDelay, int pumpTime, int chargeDelay, int chargeTime, int ammoCount, boolean single, boolean isTactical, String sound) {

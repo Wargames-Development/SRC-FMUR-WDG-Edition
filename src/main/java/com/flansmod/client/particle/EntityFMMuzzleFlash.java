@@ -10,10 +10,7 @@ import java.util.Random;
 
 /** A short, layered muzzle flame assembled from particles instead of a flash PNG. */
 public class EntityFMMuzzleFlash extends EntityFX {
-    private static final int FLAME_PARTICLES = 18;
-    private static final int SPARK_RAYS = 6;
     private static final int SMOKE_DIRECTIONS = 4;
-    private static final int SMOKE_PER_DIRECTION = 2;
 
     private final float initialScale;
 
@@ -72,52 +69,75 @@ public class EntityFMMuzzleFlash extends EntityFX {
         double upZ = rightX * directionY - rightY * directionX;
 
         Random random = world.rand;
+        double burstRotation = random.nextDouble() * Math.PI * 2D;
+        double rotationCos = Math.cos(burstRotation);
+        double rotationSin = Math.sin(burstRotation);
+        double rotatedRightX = rightX * rotationCos + upX * rotationSin;
+        double rotatedRightY = rightY * rotationCos + upY * rotationSin;
+        double rotatedRightZ = rightZ * rotationCos + upZ * rotationSin;
+        upX = upX * rotationCos - rightX * rotationSin;
+        upY = upY * rotationCos - rightY * rotationSin;
+        upZ = upZ * rotationCos - rightZ * rotationSin;
+        rightX = rotatedRightX;
+        rightY = rotatedRightY;
+        rightZ = rotatedRightZ;
+
         float scale = Math.max(0.25F, requestedScale);
+        float nonSmokeScale = scale * 0.25F;
+        int flameParticleCount = 14 + random.nextInt(9);
+        int coreParticleCount = 4 + random.nextInt(4);
+        int middleParticleCount = 6 + random.nextInt(5);
+        int sparkRayCount = 4 + random.nextInt(5);
 
-        for (int i = 0; i < FLAME_PARTICLES; i++) {
-            double angle = random.nextDouble() * Math.PI * 2D;
-            double radialX = rightX * Math.cos(angle) + upX * Math.sin(angle);
-            double radialY = rightY * Math.cos(angle) + upY * Math.sin(angle);
-            double radialZ = rightZ * Math.cos(angle) + upZ * Math.sin(angle);
-            double axialOffset = scale * (0.04D + random.nextDouble() * 0.48D);
-            double radialOffset = scale * random.nextDouble() * (i < 6 ? 0.06D : 0.18D);
-            double forwardSpeed = scale * (0.035D + random.nextDouble() * 0.08D);
-            double radialSpeed = scale * (random.nextDouble() - 0.35D) * 0.035D;
+        if (random.nextFloat() < 0.70F) {
+            for (int i = 0; i < flameParticleCount; i++) {
+                double angle = random.nextDouble() * Math.PI * 2D;
+                double radialX = rightX * Math.cos(angle) + upX * Math.sin(angle);
+                double radialY = rightY * Math.cos(angle) + upY * Math.sin(angle);
+                double radialZ = rightZ * Math.cos(angle) + upZ * Math.sin(angle);
+                double axialOffset = nonSmokeScale * (0.04D + random.nextDouble() * 0.48D);
+                boolean core = i < coreParticleCount;
+                boolean middle = i >= coreParticleCount
+                        && i < coreParticleCount + middleParticleCount;
+                double radialOffset = nonSmokeScale * random.nextDouble() * (core ? 0.06D : 0.18D);
+                double forwardSpeed = nonSmokeScale * (0.035D + random.nextDouble() * 0.08D);
+                double radialSpeed = nonSmokeScale * (random.nextDouble() - 0.35D) * 0.035D;
 
-            float red = 1F;
-            float green = i < 6 ? 1F : (i < 14 ? 0.92F : 0.79F);
-            float blue = i < 6 ? 0.86F : (i < 14 ? 0.46F : 0.22F);
-            float flameScale = scale * (2.4F + random.nextFloat() * 2.0F);
-            renderer.addEffect(new EntityFMMuzzleFlash(world,
-                    x + directionX * axialOffset + radialX * radialOffset,
-                    y + directionY * axialOffset + radialY * radialOffset,
-                    z + directionZ * axialOffset + radialZ * radialOffset,
-                    directionX * forwardSpeed + radialX * radialSpeed,
-                    directionY * forwardSpeed + radialY * radialSpeed,
-                    directionZ * forwardSpeed + radialZ * radialSpeed,
-                    flameScale, red, green, blue, 3 + random.nextInt(3)));
+                float red = 1F;
+                float green = core ? 1F : (middle ? 0.92F : 0.79F);
+                float blue = core ? 0.86F : (middle ? 0.46F : 0.22F);
+                float flameScale = nonSmokeScale * (2.4F + random.nextFloat() * 2.0F);
+                renderer.addEffect(new EntityFMMuzzleFlash(world,
+                        x + directionX * axialOffset + radialX * radialOffset,
+                        y + directionY * axialOffset + radialY * radialOffset,
+                        z + directionZ * axialOffset + radialZ * radialOffset,
+                        directionX * forwardSpeed + radialX * radialSpeed,
+                        directionY * forwardSpeed + radialY * radialSpeed,
+                        directionZ * forwardSpeed + radialZ * radialSpeed,
+                        flameScale, red, green, blue, 3 + random.nextInt(3)));
+            }
         }
 
-        for (int ray = 0; ray < SPARK_RAYS; ray++) {
+        for (int ray = 0; ray < sparkRayCount; ray++) {
             double angle = random.nextDouble() * Math.PI * 2D;
             double radialX = rightX * Math.cos(angle) + upX * Math.sin(angle);
             double radialY = rightY * Math.cos(angle) + upY * Math.sin(angle);
             double radialZ = rightZ * Math.cos(angle) + upZ * Math.sin(angle);
-            double forwardSpeed = scale * (0.22D + random.nextDouble() * 0.24D);
-            double radialSpeed = scale * (random.nextDouble() - 0.25D) * 0.18D;
+            double forwardSpeed = nonSmokeScale * (0.22D + random.nextDouble() * 0.24D);
+            double radialSpeed = nonSmokeScale * (random.nextDouble() - 0.25D) * 0.18D;
             double sparkMotionX = directionX * forwardSpeed + radialX * radialSpeed;
             double sparkMotionY = directionY * forwardSpeed + radialY * radialSpeed;
             double sparkMotionZ = directionZ * forwardSpeed + radialZ * radialSpeed;
 
             // Two particles along each ray read as a short incandescent streak.
             for (int segment = 0; segment < 2; segment++) {
-                double segmentOffset = segment * scale * 0.075D;
+                double segmentOffset = segment * nonSmokeScale * 0.075D;
                 renderer.addEffect(new MuzzleSparkParticle(world,
                         x + directionX * segmentOffset,
                         y + directionY * segmentOffset,
                         z + directionZ * segmentOffset,
                         sparkMotionX, sparkMotionY, sparkMotionZ,
-                        scale * (0.44F + random.nextFloat() * 0.28F)));
+                        nonSmokeScale * (0.44F + random.nextFloat() * 0.28F)));
             }
         }
 
@@ -128,7 +148,8 @@ public class EntityFMMuzzleFlash extends EntityFX {
                 {-rightX, -rightY, -rightZ}
         };
         for (int direction = 0; direction < SMOKE_DIRECTIONS; direction++) {
-            for (int i = 0; i < SMOKE_PER_DIRECTION; i++) {
+            int smokeCount = 1 + random.nextInt(3);
+            for (int i = 0; i < smokeCount; i++) {
                 double smokeSpeed = scale * (0.035D + random.nextDouble() * 0.025D);
                 double smokeForward = scale * (0.012D + random.nextDouble() * 0.018D);
                 double smokeX = smokeDirections[direction][0];

@@ -66,7 +66,9 @@ public class ItemVehicle extends ItemMapBase implements IPaintableItem
 			{
 				stack.stackTagCompound = new NBTTagCompound();
 				stack.stackTagCompound.setString("Type", type.shortName);
-				stack.stackTagCompound.setString("Engine", PartType.defaultEngines.get(EnumType.vehicle).shortName);
+				PartType defaultEngine = PartType.defaultEngines.get(EnumType.vehicle);
+				if(defaultEngine != null)
+					stack.stackTagCompound.setString("Engine", defaultEngine.shortName);
 			}
 		}
 		return stack.stackTagCompound;
