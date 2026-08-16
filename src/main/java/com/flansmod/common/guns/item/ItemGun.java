@@ -735,12 +735,20 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         if (player == Minecraft.getMinecraft().thePlayer) {
             FlansMod.getPacketHandler().sendToServer(new C09PacketHeldItemChange(player.inventory.currentItem));
         }
-        FlansMod.getPacketHandler().sendToServer(new PacketGunFire(left, held, player.rotationYaw, player.rotationPitch));
+        FlansMod.getPacketHandler().sendToServer(createGunFirePacket(player, left, held));
     }
 
     @SideOnly(Side.CLIENT)
     private void refreshGunFireAim(EntityPlayer player, boolean left, boolean held) {
-        FlansMod.getPacketHandler().sendToServer(new PacketGunFire(left, held, player.rotationYaw, player.rotationPitch));
+        FlansMod.getPacketHandler().sendToServer(createGunFirePacket(player, left, held));
+    }
+
+    @SideOnly(Side.CLIENT)
+    private PacketGunFire createGunFirePacket(EntityPlayer player, boolean left, boolean held) {
+        PlayerData data = PlayerHandler.getPlayerData(player);
+        int intentSequence = data == null ? 0 : ++data.nextGunFireIntentSequence;
+        return new PacketGunFire(left, held, player.rotationYaw, player.rotationPitch,
+                intentSequence, player.ticksExisted, player.posX, player.posY, player.posZ);
     }
 
     public void onUpdateServer(ItemStack itemstack, World world, Entity entity, int i, boolean flag) {
@@ -1576,8 +1584,13 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             }
 
             PlayerData playerData = PlayerHandler.getPlayerData(entityPlayer);
+            boolean shotScoped = playerData != null && playerData.isScoped;
+            if (playerData != null && playerData.hasShotContext
+                    && playerData.shotIntentLeft == left) {
+                shotScoped = playerData.shotIntentServerScoped;
+            }
             if (spread <= 0) {
-                spread = playerData != null && playerData.isScoped
+                spread = shotScoped
                         ? gunType.getADSSpread(stack, entityPlayer.isSneaking(), entityPlayer.isSprinting())
                         : gunType.getDefaultSpread(stack);
             }
@@ -1588,16 +1601,43 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 entityPlayer.rotationYaw = playerData.shotYaw;
                 entityPlayer.rotationPitch = playerData.shotPitch;
             }
+            long serverShotId = playerData == null ? 0L : ++playerData.nextServerShotId;
+            long serverShotTimeNanos = System.nanoTime();
             try {
+                // EntityPlayerMP movement is network-driven, so motionX / motionZ and the vanilla
+                // previous-position fields can already be zeroed by the time the gun fires. Use two
+                // consecutive server-end snapshots instead. This represents the player's observed
+                // horizontal displacement over one server tick. Vertical motion is intentionally excluded.
+                double shooterVelocityX = 0D;
+                double shooterVelocityZ = 0D;
+                if (playerData != null && playerData.snapshots != null && playerData.snapshots.length > 1
+                        && playerData.snapshots[0] != null && playerData.snapshots[1] != null) {
+                    shooterVelocityX = playerData.snapshots[0].pos.x - playerData.snapshots[1].pos.x;
+                    shooterVelocityZ = playerData.snapshots[0].pos.z - playerData.snapshots[1].pos.z;
+                }
                 for (int k = 0; k < numBullets; k++) {
-                    world.spawnEntityInWorld(itemShootable.getEntity(
+                    EntityShootable shootableEntity = itemShootable.getEntity(
                             world,
                             entityPlayer,
                             gunType.getDamage(stack),
                             gunType.getBulletSpeed(stack, bulletStack),
                             numBullets > 1,
                             bulletStack.getItemDamage(),
-                            gunType, spread, type.isDuckBill() ? spread * 2.0F : spread));
+                            gunType, spread, type.isDuckBill() ? spread * 2.0F : spread);
+                    if (shootableType instanceof BulletType) {
+                        shootableEntity.motionX += shooterVelocityX;
+                        shootableEntity.motionZ += shooterVelocityZ;
+                    }
+                    if (shootableEntity instanceof EntityBullet) {
+                        EntityBullet bulletEntity = (EntityBullet) shootableEntity;
+                        bulletEntity.setPlayerShotContext(
+                                serverShotId, serverShotTimeNanos, playerData, left,
+                                shooterVelocityX, shooterVelocityZ);
+                        bulletEntity.fastForwardForShooterLatency();
+                    }
+                    if (!shootableEntity.isDead) {
+                        world.spawnEntityInWorld(shootableEntity);
+                    }
                 }
             } finally {
                 entityPlayer.rotationYaw = previousYaw;

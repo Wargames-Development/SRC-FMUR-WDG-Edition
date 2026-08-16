@@ -78,6 +78,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private static final long NANOS_PER_MILLISECOND = 1_000_000L;
     private static final double NOMINAL_SNAPSHOT_MILLISECONDS = 50.0D;
     private static final float MAX_PLAYER_HITBOX_PADDING = 0.05F;
+    private static final long MAX_SHOT_CONTEXT_AGE_NANOS = 1_000_000_000L;
+    private static final double MAX_PLAYER_HISTORY_ORIGIN_OFFSET = 16.0D;
+    private static final int MAX_LATENCY_FAST_FORWARD_TICKS = 2;
+    private static final float PLAYER_HISTORY_TRACE_STEP_DISTANCE = 10.0F;
+    private static final int MAX_PLAYER_HISTORY_TRACE_STEPS = 4;
 
     @SideOnly(Side.CLIENT)
     public EntityLivingBase bulletFollowCamera;
@@ -100,6 +105,23 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     public int pingOfShooter = 0;
     /** Frozen when the server accepts the shot; never changes during flight. */
     private long playerRewindNanos = 0L;
+    /** Server-only metadata for reconstructing the player's shot timeline in later stages. */
+    private long serverShotId = 0L;
+    private long serverShotTimeNanos = 0L;
+    private int shotIntentSequence = 0;
+    private int shotClientTick = 0;
+    private long shotIntentReceivedNanos = 0L;
+    private double shotClientPosX, shotClientPosY, shotClientPosZ;
+    private double shotIntentServerPosX, shotIntentServerPosY, shotIntentServerPosZ;
+    private double shotServerVelocityX, shotServerVelocityZ;
+    /** Offset from the physical projectile path to the server-authoritative client-shot shooter path. */
+    private double playerHistoryOriginOffsetX, playerHistoryOriginOffsetY, playerHistoryOriginOffsetZ;
+    /** Estimated server wall time at which the client generated the aim/fire intent. */
+    private long playerProjectileOriginTimeNanos;
+    /** Historical target time that the shooter was actually seeing when that intent was generated. */
+    private long playerTargetHistoryOriginTimeNanos;
+    private boolean hasPlayerHistoryOrigin;
+    private boolean shotIntentLeft, shotIntentHeld, hasPlayerShotContext;
     /**
      * Stop repeat detonations
      */
@@ -192,6 +214,130 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         this(world, Vec3.createVectorHelper(shooter.posX, shooter.posY + shooter.getEyeHeight(), shooter.posZ), shooter.rotationYaw, shooter.rotationPitch, shooter, gunDamage, type1, speed, shotFrom, pitchSpread, yawSpread);
         initialSpeed = speed;
         shotgun = shot;
+    }
+
+    /**
+     * Attach validated fire-intent metadata and the server-owned time / movement
+     * context used by historical player hit detection.
+     */
+    public void setPlayerShotContext(long shotId, long authoritativeShotTimeNanos,
+            PlayerData playerData, boolean left, double serverVelocityX, double serverVelocityZ) {
+        serverShotId = shotId;
+        serverShotTimeNanos = authoritativeShotTimeNanos;
+        shotServerVelocityX = serverVelocityX;
+        shotServerVelocityZ = serverVelocityZ;
+
+        long contextAge = playerData == null ? Long.MAX_VALUE
+                : System.nanoTime() - playerData.shotIntentReceivedNanos;
+        if (playerData == null || !playerData.hasShotContext || playerData.shotIntentLeft != left
+                || contextAge < 0L || contextAge > MAX_SHOT_CONTEXT_AGE_NANOS) {
+            hasPlayerShotContext = false;
+            return;
+        }
+
+        shotIntentSequence = playerData.shotIntentSequence;
+        shotClientTick = playerData.shotClientTick;
+        shotIntentReceivedNanos = playerData.shotIntentReceivedNanos;
+        shotClientPosX = playerData.shotClientPosX;
+        shotClientPosY = playerData.shotClientPosY;
+        shotClientPosZ = playerData.shotClientPosZ;
+        shotIntentServerPosX = playerData.shotIntentServerPosX;
+        shotIntentServerPosY = playerData.shotIntentServerPosY;
+        shotIntentServerPosZ = playerData.shotIntentServerPosZ;
+        shotIntentLeft = playerData.shotIntentLeft;
+        shotIntentHeld = playerData.shotIntentHeld;
+        hasPlayerShotContext = true;
+        if (owner == null) {
+            return;
+        }
+
+        /*
+         * The local shooter and the remote target are not on the same visual time.
+         * The shooter's own position is immediate on their client, while the target
+         * they aimed at is an older server state. Rewinding the shooter by the same
+         * amount as the target destroys that geometry and makes moving targets require
+         * artificial lead. Estimate the client fire time with half the measured RTT,
+         * but keep target history on the configured full rewind.
+         */
+        long oneWayLatencyNanos = Math.max(0L,
+                Math.round(Math.max(0, pingOfShooter) * 0.5D * NANOS_PER_MILLISECOND));
+        playerProjectileOriginTimeNanos = Math.min(serverShotTimeNanos,
+                shotIntentReceivedNanos - oneWayLatencyNanos);
+        playerTargetHistoryOriginTimeNanos = shotIntentReceivedNanos - playerRewindNanos;
+
+        Vector3f historicalShooterPos = reconstructHistoricalShooterPosition(
+                playerData.snapshots, playerProjectileOriginTimeNanos, shotIntentReceivedNanos,
+                shotIntentServerPosX, shotIntentServerPosY, shotIntentServerPosZ);
+        if (historicalShooterPos != null) {
+            double historicalEyeX = historicalShooterPos.x;
+            double historicalEyeY = historicalShooterPos.y + owner.getEyeHeight();
+            double historicalEyeZ = historicalShooterPos.z;
+            double offsetX = historicalEyeX - posX;
+            double offsetY = historicalEyeY - posY;
+            double offsetZ = historicalEyeZ - posZ;
+
+            // Reject teleport / discontinuity-sized offsets instead of allowing lag
+            // compensation to create a remote firing origin.
+            double offsetSq = offsetX * offsetX + offsetY * offsetY + offsetZ * offsetZ;
+            if (offsetSq <= MAX_PLAYER_HISTORY_ORIGIN_OFFSET * MAX_PLAYER_HISTORY_ORIGIN_OFFSET) {
+                playerHistoryOriginOffsetX = offsetX;
+                playerHistoryOriginOffsetY = offsetY;
+                playerHistoryOriginOffsetZ = offsetZ;
+                hasPlayerHistoryOrigin = true;
+            }
+        }
+    }
+
+
+    /**
+     * Conservatively catch a newly accepted handheld projectile up to the
+     * estimated client-shot time before it is exposed to clients. Each whole
+     * tick is simulated through the normal bullet update, so block, entity and
+     * historical-player collision all use the same swept paths as ordinary
+     * flight instead of teleporting the projectile.
+     *
+     * Catch-up duration is measured from the estimated client fire time to the
+     * actual authoritative server shot time. This includes both one-way packet
+     * travel and normal packet/tick phase delay. Only complete 50 ms simulation
+     * ticks are applied; the fractional remainder is deliberately left
+     * uncompensated rather than overshooting a fast projectile.
+     */
+    public void fastForwardForShooterLatency() {
+        if (worldObj == null || worldObj.isRemote || !(owner instanceof EntityPlayerMP)
+                || type == null || !hasPlayerShotContext || isDead
+                || hasLatencySensitiveSpecialBehavior()) {
+            return;
+        }
+
+        long elapsedNanos = Math.max(0L, serverShotTimeNanos - playerProjectileOriginTimeNanos);
+        long nominalTickNanos = Math.round(NOMINAL_SNAPSHOT_MILLISECONDS * NANOS_PER_MILLISECOND);
+        int fastForwardTicks = nominalTickNanos <= 0L ? 0
+                : (int) Math.min(MAX_LATENCY_FAST_FORWARD_TICKS, elapsedNanos / nominalTickNanos);
+
+        for (int i = 0; i < fastForwardTicks && !isDead; i++) {
+            onUpdate();
+        }
+    }
+
+    private boolean hasLatencySensitiveSpecialBehavior() {
+        return type.torpedo
+                || type.VLS
+                || type.manualGuidance
+                || type.enableSACLOS
+                || type.enableMCLOS
+                || type.hasLine
+                || type.enableBoost
+                || type.enableCallArtillery
+                || type.enableAirburst
+                || type.hasSubmunitions
+                || type.livingProximityTrigger > 0F
+                || type.driveableProximityTrigger > 0F
+                || type.airburstRange > 0F
+                || type.lockOnToPlanes
+                || type.lockOnToVehicles
+                || type.lockOnToMechas
+                || type.lockOnToPlayers
+                || type.lockOnToLivings;
     }
 
     /**
@@ -390,6 +536,62 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         }
     }
 
+    /**
+     * Reconstruct a server-authoritative player position at a historical wall time.
+     * Client coordinates never become the result: the newest sample is the server
+     * position captured when the fire intent arrived, followed by server snapshots.
+     */
+    private static Vector3f reconstructHistoricalShooterPosition(PlayerSnapshot[] snapshots,
+            long targetTime, long receiptTime, double receiptX, double receiptY, double receiptZ) {
+        Vector3f receiptPos = new Vector3f(receiptX, receiptY, receiptZ);
+        if (targetTime >= receiptTime || snapshots == null || snapshots.length == 0) {
+            return receiptPos;
+        }
+
+        PlayerSnapshot newer = null;
+        PlayerSnapshot oldest = null;
+        for (PlayerSnapshot snapshot : snapshots) {
+            if (snapshot == null) {
+                continue;
+            }
+
+            if (newer == null) {
+                // Bridge the gap between the newest completed snapshot and the exact
+                // server position captured when the fire intent arrived.
+                if (targetTime >= snapshot.time) {
+                    long interval = receiptTime - snapshot.time;
+                    if (interval <= 0L) {
+                        return receiptPos;
+                    }
+                    float interpolation = (float) (targetTime - snapshot.time) / (float) interval;
+                    Vector3f interpolated = new Vector3f();
+                    Vector3f.lerp(snapshot.pos, receiptPos,
+                            Math.max(0.0F, Math.min(1.0F, interpolation)), interpolated);
+                    return interpolated;
+                }
+                newer = snapshot;
+                oldest = snapshot;
+                continue;
+            }
+
+            oldest = snapshot;
+            if (targetTime >= snapshot.time) {
+                long interval = newer.time - snapshot.time;
+                if (interval <= 0L) {
+                    return new Vector3f(newer.pos);
+                }
+                float interpolation = (float) (targetTime - snapshot.time) / (float) interval;
+                Vector3f interpolated = new Vector3f();
+                Vector3f.lerp(snapshot.pos, newer.pos,
+                        Math.max(0.0F, Math.min(1.0F, interpolation)), interpolated);
+                return interpolated;
+            }
+            newer = snapshot;
+        }
+
+        return oldest == null ? receiptPos : new Vector3f(oldest.pos);
+    }
+
     private static long calculatePlayerRewindNanos(int shooterPing) {
         double rewindMilliseconds = Math.max(0, TeamsManager.bulletSnapshotMin)
                 * NOMINAL_SNAPSHOT_MILLISECONDS;
@@ -433,6 +635,51 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         }
 
         return oldest == null ? null : oldest.raytrace(origin, motion, padding);
+    }
+
+    /**
+     * Raytrace a fast projectile segment against the target as its historical pose
+     * advances during that same 50 ms simulation interval. Sampling one pose for an
+     * entire 30+ block rifle segment can move a strafing target by most of a player
+     * width between the pose being tested and the actual intersection time.
+     */
+    private static ArrayList<BulletHit> raytracePlayerHistoryDuringSegment(PlayerSnapshot[] snapshots,
+            long segmentStartTime, Vector3f origin, Vector3f motion, float padding) {
+        float segmentLength = motion.length();
+        int steps = Math.max(1, Math.min(MAX_PLAYER_HISTORY_TRACE_STEPS,
+                (int) Math.ceil(segmentLength / PLAYER_HISTORY_TRACE_STEP_DISTANCE)));
+        if (steps == 1) {
+            return raytracePlayerHistory(snapshots, segmentStartTime, origin, motion, padding);
+        }
+
+        ArrayList<BulletHit> result = new ArrayList<>();
+        Vector3f stepMotion = new Vector3f(motion.x / steps, motion.y / steps, motion.z / steps);
+        long tickNanos = Math.round(NOMINAL_SNAPSHOT_MILLISECONDS * NANOS_PER_MILLISECOND);
+
+        for (int step = 0; step < steps; step++) {
+            float startFraction = (float) step / (float) steps;
+            Vector3f stepOrigin = new Vector3f(
+                    origin.x + motion.x * startFraction,
+                    origin.y + motion.y * startFraction,
+                    origin.z + motion.z * startFraction);
+            long stepTime = segmentStartTime
+                    + Math.round(tickNanos * ((double) step / (double) steps));
+
+            ArrayList<BulletHit> stepHits = raytracePlayerHistory(
+                    snapshots, stepTime, stepOrigin, stepMotion, padding);
+            if (stepHits == null) {
+                return null;
+            }
+            if (!stepHits.isEmpty()) {
+                for (BulletHit hit : stepHits) {
+                    hit.intersectTime = (step + hit.intersectTime) / (float) steps;
+                    result.add(hit);
+                }
+                // Any hit in this subsegment occurs before every later subsegment.
+                break;
+            }
+        }
+        return result;
     }
 
     @Override
@@ -727,12 +974,28 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         //建立列表处理子弹撞击
         ArrayList<BulletHit> hits = new ArrayList();
         Vector3f origin = new Vector3f(this.posX, this.posY, this.posZ);
+        Vector3f playerHistoryOrigin = hasPlayerHistoryOrigin
+                ? new Vector3f(this.posX + playerHistoryOriginOffsetX,
+                        this.posY + playerHistoryOriginOffsetY,
+                        this.posZ + playerHistoryOriginOffsetZ)
+                : origin;
         Vector3f motion = new Vector3f(this.motionX, this.motionY, this.motionZ);
         float hitBoxSize = Math.max(this.type.hitBoxSize, 0.0F);
         // Shootable hitBoxSize is the entity width. Use half as a radius, but
         // cap player padding so legacy content cannot create oversized targets.
         float playerHitboxPadding = Math.min(hitBoxSize * 0.5F, MAX_PLAYER_HITBOX_PADDING);
-        long playerSnapshotTime = System.nanoTime() - playerRewindNanos;
+        /*
+         * ticksInAir is incremented before this collision pass. The segment being
+         * tested now is therefore [ticksInAir - 1, ticksInAir], not the end time
+         * ticksInAir. Sampling at the end was a full 50 ms lead on every moving
+         * target and was enough to move a fast-strafing player by an entire hitbox.
+         */
+        long completedTicksBeforeSegment = Math.max(0, ticksInAir - 1);
+        long playerSnapshotTime = hasPlayerHistoryOrigin
+                ? playerTargetHistoryOriginTimeNanos
+                        + Math.round(completedTicksBeforeSegment * NOMINAL_SNAPSHOT_MILLISECONDS)
+                                * NANOS_PER_MILLISECOND
+                : System.nanoTime() - playerRewindNanos;
 
         float speed = motion.length();
         this.speedA = speed;
@@ -773,8 +1036,8 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     if (player == owner && ticksInAir < 20)
                         continue;
 
-                    ArrayList<BulletHit> playerHits = raytracePlayerHistory(data.snapshots,
-                            playerSnapshotTime, origin, motion, playerHitboxPadding);
+                    ArrayList<BulletHit> playerHits = raytracePlayerHistoryDuringSegment(data.snapshots,
+                            playerSnapshotTime, playerHistoryOrigin, motion, playerHitboxPadding);
                     if (playerHits == null) {
                         shouldDoNormalHitDetect = true;
                     } else {

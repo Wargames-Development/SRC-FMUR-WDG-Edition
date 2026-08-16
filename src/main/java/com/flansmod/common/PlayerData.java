@@ -69,6 +69,16 @@ public class PlayerData {
 	/** Latest finite client camera aim accepted by the server for gunfire. */
 	public float shotYaw, shotPitch;
 	public boolean hasShotAim;
+	/** Client-side sequence source for gun-fire intent packets. */
+	public int nextGunFireIntentSequence;
+	/** Latest validated client fire-intent context, retained server-side for the next authoritative shot. */
+	public int shotIntentSequence, shotClientTick;
+	public double shotClientPosX, shotClientPosY, shotClientPosZ;
+	public long shotIntentReceivedNanos;
+	public double shotIntentServerPosX, shotIntentServerPosY, shotIntentServerPosZ;
+	public boolean shotIntentLeft, shotIntentHeld, shotIntentServerScoped, hasShotContext;
+	/** Server-owned monotonically increasing identifier for authoritative gun shots. */
+	public long nextServerShotId;
 	/** The speed of the minigun the player is using */
 	public float minigunSpeed = 0F;
 	/** Server-side limiter for the two legitimate hand updates accepted each tick. */
