@@ -60,19 +60,6 @@ dependencies {
     compileOnly "inventorytweaks:InventoryTweaks:1.59-dev:deobf"
 }
 
-def versionPropsFile = file("gradle.properties")
-
-task incrementBuildVersion {
-    doLast {
-        def props = new Properties()
-        props.load(new FileInputStream(versionPropsFile))
-        def currentBuild = props['modBuildNumber'].toInteger() + 1
-        props['modBuildNumber'] = currentBuild.toString()
-        props.store(new FileOutputStream(versionPropsFile), null)
-        println "Auto-incremented build number to ${currentBuild}"
-    }
-}
-
 processResources {
     inputs.property "version", project.version
     inputs.property "mcversion", project.minecraft.version
@@ -106,5 +93,3 @@ jar {
     version = null // prevents double versioning like -1.8.3_X83
     destinationDir = file("build/libs")
 }
-
-build.dependsOn incrementBuildVersion
