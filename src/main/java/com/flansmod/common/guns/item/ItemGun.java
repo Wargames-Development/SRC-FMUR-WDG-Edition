@@ -1310,8 +1310,12 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     //Send reload packet to induce reload effects client side
                     //ItemGun.setReloadCount(gunStack, reloadCount);
                     int reloadSlot = left ? data.offHandGunSlot - 1 : entityplayer.inventory.currentItem;
-                    FlansMod.getPacketHandler().sendTo(new PacketReload(left, reloadCount, reloadTicks,
-                            singlesReload, false, false, reloadSlot, gunType.shortName, false), entityplayer);
+                    PacketReload animationPacket = new PacketReload(left, reloadCount, reloadTicks,
+                            singlesReload, false, false, reloadSlot, gunType.shortName, false,
+                            entityplayer.getEntityId());
+                    FlansMod.getPacketHandler().sendToAllAround(animationPacket, entityplayer.posX,
+                            entityplayer.posY, entityplayer.posZ, PacketReload.ANIMATION_SYNC_RANGE,
+                            entityplayer.dimension);
                     //Play reload sound
                     String soundToPlay = null;
                     AttachmentType grip = gunType.getGrip(gunStack);

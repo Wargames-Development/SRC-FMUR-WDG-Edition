@@ -246,8 +246,7 @@ public class PlayerData {
 	private void cancelReload(EntityPlayer player, ReloadState reloadState, ItemStack inventoryStack, boolean left) {
 		clearReload(reloadState, inventoryStack, left);
 		if (!player.worldObj.isRemote && player instanceof EntityPlayerMP)
-			FlansMod.getPacketHandler().sendTo(new PacketReload(left, 0, 0, false, false, false),
-					(EntityPlayerMP) player);
+			syncReloadCancellation(player, left);
 	}
 
 	private ReloadState getReloadState(boolean left) {
@@ -312,10 +311,16 @@ public class PlayerData {
 		burstRoundsRemainingLeft = burstRoundsRemainingRight = 0;
 
 		if (!player.worldObj.isRemote && player instanceof EntityPlayerMP) {
-			EntityPlayerMP playerMP = (EntityPlayerMP) player;
-			FlansMod.getPacketHandler().sendTo(new PacketReload(false, 0, 0, false, false, false), playerMP);
-			FlansMod.getPacketHandler().sendTo(new PacketReload(true, 0, 0, false, false, false), playerMP);
+			syncReloadCancellation(player, false);
+			syncReloadCancellation(player, true);
 		}
+	}
+
+	private void syncReloadCancellation(EntityPlayer player, boolean left) {
+		PacketReload packet = new PacketReload(left, 0, 0, false, false, false, -1, "", false,
+				player.getEntityId());
+		FlansMod.getPacketHandler().sendToAllAround(packet, player.posX, player.posY, player.posZ,
+				PacketReload.ANIMATION_SYNC_RANGE, player.dimension);
 	}
 
 	private static class ReloadState {

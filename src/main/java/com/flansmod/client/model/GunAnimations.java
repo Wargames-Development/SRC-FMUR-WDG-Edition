@@ -62,6 +62,8 @@ public class GunAnimations {
     public float reloadAnimationTime = 0;
     public float reloadAnimationProgress = 0F, lastReloadAnimationProgress = 0F;
     public int reloadAmmoCount = 1;
+    public int lastBulletReload = 0;
+    public boolean localPlayerReload = false;
 
     public boolean singlesReload = false;
 
@@ -115,14 +117,15 @@ public class GunAnimations {
     public void update(int equippedSlot, ItemStack equippedGun) {
 
         boolean reloadEquipped = isReloadEquipped(equippedSlot, equippedGun);
-        if (reloading && !reloadEquipped)
-            stopReloadSound();
-        reloading = reloadInProgress && reloadEquipped;
+        // The server acknowledgement owns presentation lifetime. Inventory sync can temporarily
+        // arrive after the acknowledgement, especially during multiplayer kit/loadout updates.
+        reloading = reloadInProgress;
 
         if(reloadInProgress && reloadTimeLeft > 0)
             reloadTimeLeft--;
 
-        FlansModClient.reloadStart = reloadEquipped && reloadTimeLeft == 1;
+        if (localPlayerReload)
+            FlansModClient.reloadStart = reloadEquipped && reloadTimeLeft == 1;
 
         //Assign values
         lastPumped = pumped;
@@ -225,10 +228,13 @@ public class GunAnimations {
         if (reloadInProgress && reloadAnimationProgress >= 0.9F)    //reset if slide locked
             isGunEmpty = false;
         if (reloadInProgress && (reloadTimeLeft <= 0 || reloadAnimationProgress >= 1F)) {
+            if (localPlayerReload)
+                FlansModClient.reloadStart = false;
             reloading = false;
             reloadInProgress = false;
             reloadingSlot = -1;
             reloadingItem = null;
+            localPlayerReload = false;
             stopReloadSound();
         }
 
@@ -289,7 +295,9 @@ public class GunAnimations {
         muzzleFlashRotation = random.nextFloat() * 360F;
     }
 
-    public void doReload(ItemStack gunStack, int gunSlot, int reloadTime, int pumpDelay, int pumpTime, int chargeDelay, int chargeTime, int ammoCount, boolean single, boolean isTactical, String sound) {
+    public void doReload(ItemStack gunStack, int gunSlot, int reloadTime, int pumpDelay, int pumpTime,
+            int chargeDelay, int chargeTime, int ammoCount, boolean single, boolean isTactical, String sound,
+            boolean applyLocalPlayerEffects) {
         stopReloadSound();
         reloading = true;
         reloadInProgress = true;
@@ -303,13 +311,15 @@ public class GunAnimations {
         timeToChargeFor = chargeTime;
         reloadAmmoCount = ammoCount;
         singlesReload = single;
-        FlansModClient.lastBulletReload = ammoCount - 1;
-        FlansModClient.reloadStart = true;
+        lastBulletReload = ammoCount - 1;
+        localPlayerReload = applyLocalPlayerEffects;
+        if (applyLocalPlayerEffects)
+            FlansModClient.reloadStart = true;
         reloadTimeLeft = reloadTime;
         tacticalReload = isTactical;
         playReloadSound(sound);
 
-        if(FlansModClient.currentScope != null) {
+        if(applyLocalPlayerEffects && FlansModClient.currentScope != null) {
             GameSettings gameSettings = FMLClientHandler.instance().getClient().gameSettings;
             FlansModClient.currentScope = null;
             FlansModClient.lastZoomLevel = 0;
@@ -322,12 +332,14 @@ public class GunAnimations {
 
     public void cancelReload() {
         stopReloadSound();
+        if (localPlayerReload)
+            FlansModClient.reloadStart = false;
         reloading = false;
         reloadInProgress = false;
         reloadingSlot = -1;
         reloadingItem = null;
         reloadTimeLeft = 0;
-        FlansModClient.reloadStart = false;
+        localPlayerReload = false;
         reloadAnimationProgress = 0F;
         lastReloadAnimationProgress = 0F;
         timeUntilPump = 0;

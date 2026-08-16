@@ -430,7 +430,9 @@ public class FlansModClient extends FlansMod {
                 EntityPlayer player = (EntityPlayer) entry.getKey();
                 PlayerData data = PlayerHandler.getPlayerData(player);
                 ItemStack heldGun = player.getCurrentEquippedItem();
-                if (data != null && data.offHandGunSlot > 0
+                if (player != minecraft.thePlayer && data != null && data.offHandGunStack != null) {
+                    offHandGun = data.offHandGunStack;
+                } else if (data != null && data.offHandGunSlot > 0
                         && heldGun != null && heldGun.getItem() instanceof ItemGun
                         && ((ItemGun) heldGun.getItem()).type.getOneHanded()) {
                     offHandSlot = data.offHandGunSlot - 1;
