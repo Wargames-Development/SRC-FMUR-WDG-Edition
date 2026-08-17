@@ -83,6 +83,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private static final int MAX_LATENCY_FAST_FORWARD_TICKS = 2;
     private static final float PLAYER_HISTORY_TRACE_STEP_DISTANCE = 10.0F;
     private static final int MAX_PLAYER_HISTORY_TRACE_STEPS = 4;
+    private static final float DEFAULT_DRIVEABLE_BROADPHASE_RADIUS = 5.0F;
+    private static volatile int cachedDriveableTypeCount = -1;
+    private static float cachedDriveableBroadphaseRadius = DEFAULT_DRIVEABLE_BROADPHASE_RADIUS;
 
     @SideOnly(Side.CLIENT)
     public EntityLivingBase bulletFollowCamera;
@@ -534,6 +537,49 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             if (closestEntity != null)
                 lockedOnTo = closestEntity;
         }
+    }
+
+    /**
+     * Uses the world's chunk entity index instead of walking every loaded entity
+     * for every projectile tick. The box follows this tick's complete motion, so
+     * fast bullets and rockets still test every entity their segment can cross.
+     */
+    private List getBulletCollisionCandidates(float hitBoxSize) {
+        double padding = Math.max(Math.max(0.0F, hitBoxSize), getDriveableBroadphaseRadius());
+        AxisAlignedBB sweptBounds = boundingBox.addCoord(motionX, motionY, motionZ)
+                .expand(padding, padding, padding);
+        List candidates = worldObj.getEntitiesWithinAABBExcludingEntity(this, sweptBounds);
+
+        /*
+         * Player snapshots may be behind their current entity position. Keep the
+         * player set global and small so lag-compensated hit registration remains
+         * independent of the current-position broad phase.
+         */
+        if (!worldObj.isRemote) {
+            for (Object player : worldObj.playerEntities) {
+                if (player != this && !candidates.contains(player)) {
+                    candidates.add(player);
+                }
+            }
+        }
+        return candidates;
+    }
+
+    /** Cache content-defined vehicle extents; the type list is stable after loading. */
+    private static float getDriveableBroadphaseRadius() {
+        int typeCount = DriveableType.types.size();
+        if (typeCount != cachedDriveableTypeCount) {
+            float maximumRadius = DEFAULT_DRIVEABLE_BROADPHASE_RADIUS;
+            for (DriveableType driveableType : DriveableType.types) {
+                if (driveableType != null && !Float.isNaN(driveableType.bulletDetectionRadius)
+                        && !Float.isInfinite(driveableType.bulletDetectionRadius)) {
+                    maximumRadius = Math.max(maximumRadius, driveableType.bulletDetectionRadius);
+                }
+            }
+            cachedDriveableBroadphaseRadius = maximumRadius;
+            cachedDriveableTypeCount = typeCount;
+        }
+        return cachedDriveableBroadphaseRadius;
     }
 
     /**
@@ -1011,8 +1057,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         Vector3f origin2;
 
         //遍历世界实体
-        for (int i = 0; i < this.worldObj.loadedEntityList.size(); ++i) {
-            Object obj = this.worldObj.loadedEntityList.get(i);
+        // Query only chunks crossed by this tick's swept projectile segment. Players
+        // are added separately so historical hit registration cannot lose a target
+        // that has moved out of the broad-phase box since the shot was accepted.
+        List collisionCandidates = getBulletCollisionCandidates(hitBoxSize);
+        for (Object obj : collisionCandidates) {
 
             //将载具射击添加到列表中
             if (obj instanceof EntityDriveable) {
