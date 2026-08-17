@@ -14,7 +14,8 @@ apply plugin: 'forge'
 
 group = "com.hfr"
 archivesBaseName = jarBaseName
-version = "${modMainVersion}.${modSubVersion}.${modPatchVersion}_X${modBuildNumber}"
+def branchSuffix = project.hasProperty("branch") ? "-${project.branch}" : ""
+version = "${modMainVersion}.${modSubVersion}.${modPatchVersion}_X${modBuildNumber}${branchSuffix}"
 
 compileJava.options.encoding = 'UTF-8'
 sourceCompatibility = targetCompatibility = '1.8'
@@ -31,6 +32,8 @@ def modInfo = [
 minecraft {
     version = "${mcVersion}-10.13.4.1614-1.7.10"
     runDir = "eclipse"
+    replaceIn "com/flansmod/common/FlansMod.java"
+    replace "@VERSION@", project.version
 }
 
 repositories {
@@ -62,19 +65,14 @@ dependencies {
 
 processResources {
     inputs.property "version", project.version
-    inputs.property "mcversion", project.minecraft.version
+    inputs.property "mcversion", mcVersion
 
     from(sourceSets.main.resources.srcDirs) {
         include 'mcmod.info'
         filesMatching('mcmod.info') {
-            def modVersionString = project.version
-            if (project.hasProperty("branch")) {
-                modVersionString += "-${project.branch}"
-            }
-
             expand([
-                version: modVersionString,
-                mcversion: project.minecraft.version,
+                version: project.version,
+                mcversion: mcVersion,
                 modid: modBaseName,
                 name: modDisplayName
             ])
@@ -87,9 +85,7 @@ processResources {
 }
 
 jar {
-    def suffix = project.hasProperty("branch") ? "-${project.branch}" : ""
-    def fullVersion = "${modMainVersion}.${modSubVersion}.${modPatchVersion}_X${modBuildNumber}"
-    baseName = "${jarBaseName}-${fullVersion}${suffix}"
+    baseName = "${jarBaseName}-${project.version}"
     version = null // prevents double versioning like -1.8.3_X83
     destinationDir = file("build/libs")
 }

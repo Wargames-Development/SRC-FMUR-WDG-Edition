@@ -48,6 +48,7 @@ import cpw.mods.fml.common.Mod.Instance;
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.*;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.network.NetworkCheckHandler;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.EntityRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -82,13 +83,14 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
-@Mod(modid = FlansMod.MODID, name = "Flan's Mod Ultimate (Stability Edition)", version = FlansMod.VERSION, acceptableRemoteVersions = FlansMod.VERSION, guiFactory = "com.flansmod.client.gui.config.ModGuiFactory")
+@Mod(modid = FlansMod.MODID, name = "Flan's Mod Ultimate (Stability Edition)", version = FlansMod.VERSION, guiFactory = "com.flansmod.client.gui.config.ModGuiFactory")
 public class FlansMod {
 //TODO : Here, change the screenshot server IP.
     public static final String SERVER_IP = "";
@@ -110,6 +112,12 @@ public class FlansMod {
     public static Configuration configFile;
     public static final String MODID = "flansmod";
     public static final String VERSION = "@VERSION@";
+
+    @NetworkCheckHandler
+    public boolean acceptsRemoteVersion(Map<String, String> remoteVersions, Side remoteSide) {
+        return VERSION.equals(remoteVersions.get(MODID));
+    }
+
     @Instance(MODID)
     public static FlansMod INSTANCE;
     public static boolean printDebugLog = true;
