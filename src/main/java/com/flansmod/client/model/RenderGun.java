@@ -36,6 +36,7 @@ import java.util.Random;
 import static com.flansmod.client.FlansModClient.zoomProgress;
 
 public class RenderGun implements IItemRenderer {
+    private static final float ADS_SIGHT_SWAY_LIMIT_DEGREES = 0.1F;
     public static float smoothing;
     public static float actualZoomProgress;
     public static float actualStanceProgress;
@@ -211,6 +212,12 @@ public class RenderGun implements IItemRenderer {
                     if (FlansModClient.currentScope == null) {
                         mouseOffsetX *= 5.0F;
                         mouseOffsetY *= 5.0F;
+                    } else if (FlansModClient.currentScope.getDotOverlayTexture() != null) {
+                        // Keep the optic housing around the screen-centred overlay reticle.
+                        mouseOffsetX = MathHelper.clamp_float(mouseOffsetX,
+                                -ADS_SIGHT_SWAY_LIMIT_DEGREES, ADS_SIGHT_SWAY_LIMIT_DEGREES);
+                        mouseOffsetY = MathHelper.clamp_float(mouseOffsetY,
+                                -ADS_SIGHT_SWAY_LIMIT_DEGREES, ADS_SIGHT_SWAY_LIMIT_DEGREES);
                     }
 
                     actualZoomProgress = FlansModClient.lastZoomProgress + (FlansModClient.zoomProgress - FlansModClient.lastZoomProgress) * (float) Math.sin(smoothing);

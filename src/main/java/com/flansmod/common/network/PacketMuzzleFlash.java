@@ -18,6 +18,8 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 
+import java.util.Locale;
+
 public class PacketMuzzleFlash extends PacketBase
 {
     public int playerID;
@@ -91,6 +93,10 @@ public class PacketMuzzleFlash extends PacketBase
                 // The default effect is rendered on the gun's exact model muzzle point.
                 // Only custom content-pack particle names use the legacy world-space path.
                 if ("flansmod.muzzleflash".equals(type)) {
+                    return;
+                }
+                if (!FlansMod.showGunFiringSmoke
+                        && type.toLowerCase(Locale.ROOT).contains("smoke")) {
                     return;
                 }
 

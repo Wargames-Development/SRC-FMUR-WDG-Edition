@@ -13,6 +13,7 @@ import com.flansmod.common.driveables.mechas.*;
 import com.flansmod.common.eventhandlers.PlayerDeathEventListener;
 import com.flansmod.common.eventhandlers.PlayerLoginEventListener;
 import com.flansmod.common.eventhandlers.ServerTickEvent;
+import com.flansmod.common.eventhandlers.VanillaExplosionEventListener;
 import com.flansmod.common.guns.*;
 import com.flansmod.common.guns.boxes.BlockGunBox;
 import com.flansmod.common.guns.boxes.GunBoxEntry;
@@ -164,6 +165,8 @@ public class FlansMod {
     public static boolean seatCollisions = true;
     public static boolean showItemDescriptions = true;
     public static boolean showMuzzleFlashParticlesDefault = true;
+    public static boolean showBallisticDustSmoke = true;
+    public static boolean showGunFiringSmoke = true;
     public static boolean showFlashesWhenWounded = true;
     public static boolean playerCorpsesEnabled = true;
     public static int corpseLifetimeSeconds = 60;
@@ -510,6 +513,7 @@ public class FlansMod {
         //Starting the EventListener
         new PlayerDeathEventListener();
         new PlayerLoginEventListener();
+        new VanillaExplosionEventListener();
         //new PlayerAttackVehicleEventListener();
         new ServerTickEvent();
         log("Loading complete.");
@@ -902,6 +906,8 @@ public class FlansMod {
         //Client Side Settings
         armsEnable = configFile.getBoolean("Enable Arms", Configuration.CATEGORY_GENERAL, armsEnable, "Enable arms rendering");
         casingEnable = configFile.getBoolean("Enable casings", Configuration.CATEGORY_GENERAL, casingEnable, "Enable bullet casing ejections");
+        showBallisticDustSmoke = configFile.getBoolean("Enable Ballistic Dust Smoke", Configuration.CATEGORY_GENERAL, showBallisticDustSmoke, "Render cosmetic bullet-path smoke separately from muzzle flash smoke.");
+        showGunFiringSmoke = configFile.getBoolean("Enable Gun Firing Smoke", Configuration.CATEGORY_GENERAL, showGunFiringSmoke, "Render custom smoke particles spawned in front of guns when they fire.");
         hdHitCrosshair = configFile.getBoolean("Enable HD hit marker", Configuration.CATEGORY_GENERAL, hdHitCrosshair, "");
         addAllPaintjobsToCreative = configFile.getBoolean("Add All Paintjobs To Creative", Configuration.CATEGORY_GENERAL, addAllPaintjobsToCreative, "Whether to list all available paintjobs in the Creative menu");
         fancyCrosshair = configFile.getBoolean("Fancy Crosshair", Configuration.CATEGORY_GENERAL, fancyCrosshair, "Change colour of crosshair based on hit. (Red = no penetration, green = full damage, light blue = headshot. Overrides normal colour settings.");
@@ -959,6 +965,8 @@ public class FlansMod {
         //Client Side Settings
         armsEnable = configFile.getBoolean("Enable Arms", Configuration.CATEGORY_GENERAL, armsEnable, "Enable arms rendering");
         casingEnable = configFile.getBoolean("Enable casings", Configuration.CATEGORY_GENERAL, casingEnable, "Enable bullet casing ejections");
+        showBallisticDustSmoke = configFile.getBoolean("Enable Ballistic Dust Smoke", Configuration.CATEGORY_GENERAL, showBallisticDustSmoke, "Render cosmetic bullet-path smoke separately from muzzle flash smoke.");
+        showGunFiringSmoke = configFile.getBoolean("Enable Gun Firing Smoke", Configuration.CATEGORY_GENERAL, showGunFiringSmoke, "Render custom smoke particles spawned in front of guns when they fire.");
         hdHitCrosshair = configFile.getBoolean("Enable HD hit marker", Configuration.CATEGORY_GENERAL, hdHitCrosshair, "");
         addAllPaintjobsToCreative = configFile.getBoolean("Add All Paintjobs To Creative", Configuration.CATEGORY_GENERAL, addAllPaintjobsToCreative, "Whether to list all available paintjobs in the Creative menu");
         fancyCrosshair = configFile.getBoolean("Fancy Crosshair", Configuration.CATEGORY_GENERAL, fancyCrosshair, "Change colour of crosshair based on hit. (Red = no penetration, green = full damage, light blue = headshot. Overrides normal colour settings.");

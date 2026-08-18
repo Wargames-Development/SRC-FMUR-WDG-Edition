@@ -36,6 +36,7 @@ public final class MuzzleFlashRenderer {
         int middleParticleCount = 6 + random.nextInt(5);
         int sparkCount = 5 + random.nextInt(5);
         Tessellator tessellator = Tessellator.instance;
+        Minecraft minecraft = Minecraft.getMinecraft();
 
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         try {
@@ -43,7 +44,7 @@ public final class MuzzleFlashRenderer {
             GL11.glDisable(GL11.GL_CULL_FACE);
             GL11.glEnable(GL11.GL_BLEND);
             GL11.glDepthMask(false);
-            Minecraft.getMinecraft().renderEngine.bindTexture(PARTICLE_TEXTURE);
+            minecraft.renderEngine.bindTexture(PARTICLE_TEXTURE);
 
             // White-hot core, pale yellow middle, and a light gold outer cloud.
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
@@ -91,7 +92,8 @@ public final class MuzzleFlashRenderer {
             // Smoke expands through the barrel-local up, down, left, and right axes.
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             tessellator.startDrawingQuads();
-            tessellator.setBrightness(15728880);
+            tessellator.setBrightness(minecraft.thePlayer == null
+                    ? 0 : minecraft.thePlayer.getBrightnessForRender(1F));
             for (int direction = 0; direction < 4; direction++) {
                 double directionAngle = rotationRadians + direction * Math.PI / 2D;
                 float directionY = (float)Math.cos(directionAngle);
@@ -107,7 +109,7 @@ public final class MuzzleFlashRenderer {
                     float x = (0.08F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
                     float size = (0.34F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
                     addCrossedParticle(tessellator, x, y, z, size,
-                            0.68F, 0.66F, 0.60F, phase == 0F ? 0.32F : 0.19F,
+                            0.68F, 0.66F, 0.60F, phase == 0F ? 0.16F : 0.095F,
                             PUFF_TEXTURE_INDEX);
                 }
             }

@@ -61,7 +61,14 @@ public final class NightVisionGogglesEffect {
             "float sourceMask(vec2 coordinate) {\n" +
             "    vec3 source = texture2D(sceneTexture, coordinate).rgb;\n" +
             "    float warmEmission = max(0.0, source.r - source.b) * 0.55;\n" +
-            "    return smoothstep(0.78, 0.96, luminance(source) + warmEmission);\n" +
+            "    float brightSource = smoothstep(0.78, 0.96, luminance(source) + warmEmission);\n" +
+            "    float redDominance = source.r - max(source.g, source.b);\n" +
+            "    float saturatedRed = smoothstep(0.55, 0.85, source.r)\n" +
+            "            * smoothstep(0.35, 0.75, redDominance);\n" +
+            "    float greenDominance = source.g - max(source.r, source.b);\n" +
+            "    float saturatedGreen = smoothstep(0.55, 0.85, source.g)\n" +
+            "            * smoothstep(0.35, 0.75, greenDominance);\n" +
+            "    return max(brightSource, max(saturatedRed, saturatedGreen) * 0.72);\n" +
             "}\n" +
             "float horizontalBloom(vec2 uv, vec2 pixel) {\n" +
             "    float bloom = 0.0;\n" +
@@ -126,18 +133,18 @@ public final class NightVisionGogglesEffect {
             "    halo += smoothstep(0.76, 1.0, nearbyLight) * 0.055;\n" +
             "    float directOverload = sourceMask(uv);\n" +
             "    float bloomBlast = clamp(bloom * 7.2, 0.0, 1.0);\n" +
-            "    intensified += directOverload * 1.25 + bloomBlast * 2.8;\n" +
-            "    float daylightBlindness = smoothstep(0.12, 0.62, daylightExposure);\n" +
-            "    float indoorExposure = smoothstep(0.08, 0.78, localLightExposure);\n" +
+            "    intensified += directOverload * 0.70 + bloomBlast * 1.45;\n" +
+            "    float daylightBlindness = smoothstep(0.05, 0.90, daylightExposure);\n" +
+            "    float indoorExposure = smoothstep(0.05, 0.82, localLightExposure);\n" +
             "    indoorExposure *= 1.0 - daylightBlindness;\n" +
             "    float chemPresence = smoothstep(0.02, 0.20, chemLightExposure);\n" +
             "    intensified = max(intensified, 0.11);\n" +
-            "    intensified = mix(intensified, max(intensified, 1.10), indoorExposure * 0.88 * (1.0 - chemPresence));\n" +
+            "    intensified = mix(intensified, max(intensified, 1.02), indoorExposure * 0.44 * (1.0 - chemPresence));\n" +
             "    float chemAmplified = 1.0 - exp(-light * 5.0);\n" +
             "    chemAmplified = pow(clamp(chemAmplified, 0.0, 1.0), 0.88) * 0.86;\n" +
             "    intensified = mix(intensified, max(intensified, chemAmplified), chemLightExposure * 0.90);\n" +
-            "    intensified += flashlightExposure * 2.4;\n" +
-            "    intensified += daylightBlindness * 4.0;\n" +
+            "    intensified += flashlightExposure * 1.35;\n" +
+            "    intensified += daylightBlindness * 2.0;\n" +
             "    float whiteProfile = clamp(whitePhosphor, 0.0, 1.0);\n" +
             "    float whiteContrast = smoothstep(0.035, 0.90, intensified);\n" +
             "    intensified = mix(intensified, whiteContrast, whiteProfile * 0.42);\n" +
@@ -155,10 +162,10 @@ public final class NightVisionGogglesEffect {
             "    vec3 haloColor = mix(vec3(0.045, 0.31, 0.085), vec3(0.15, 0.27, 0.34), whiteProfile);\n" +
             "    vec3 phosphor = intensified * phosphorColor;\n" +
             "    phosphor += halo * haloColor * mix(1.0, 0.68, whiteProfile);\n" +
-            "    float whiteout = clamp(directOverload * 1.15 + bloom * 14.4, 0.0, 1.0);\n" +
-            "    whiteout = max(whiteout, indoorExposure * 0.78 * (1.0 - chemPresence));\n" +
-            "    whiteout = max(whiteout, smoothstep(0.04, 0.72, flashlightExposure) * 0.98);\n" +
-            "    whiteout = max(whiteout, daylightBlindness * 0.98);\n" +
+            "    float whiteout = clamp(directOverload * 0.65 + bloom * 8.0, 0.0, 1.0);\n" +
+            "    whiteout = max(whiteout, indoorExposure * 0.38 * (1.0 - chemPresence));\n" +
+            "    whiteout = max(whiteout, smoothstep(0.06, 0.82, flashlightExposure) * 0.58);\n" +
+            "    whiteout = max(whiteout, daylightBlindness * 0.52);\n" +
             "    vec3 overloadColor = mix(vec3(0.78, 1.0, 0.80), vec3(0.86, 0.96, 1.0), whiteProfile);\n" +
             "    phosphor = mix(phosphor, overloadColor, whiteout);\n" +
             "    phosphor *= lensFalloff;\n" +
@@ -382,17 +389,15 @@ public final class NightVisionGogglesEffect {
         float halfFov = minecraft.gameSettings.fovSetting * (float)Math.PI / 360F;
         GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "cameraPitch"), cameraPitch);
         GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "tanHalfFov"), (float)Math.tan(halfFov));
-        float skyExposure = NightVisionGogglesBrightness.getSkyExposure(minecraft);
+        float skyExposure = NightVisionGogglesBrightness.getSmoothedSkyExposure(minecraft);
         float daylightExposure = minecraft.theWorld == null ? 0F
                 : skyExposure * minecraft.theWorld.getSunBrightness(1F);
         GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "skyExposure"), skyExposure);
         GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "daylightExposure"), daylightExposure);
-        // The muzzle flash already exists as a short-lived level-6 world light.
-        // Use the captured pre-flash block-light level for overload calculations,
-        // preserving unrelated torches while excluding only the synthetic pulse.
-        float localLightExposure = NightVisionGogglesBrightness.getLocalLightExposure(minecraft);
-        localLightExposure = TickHandlerClient.getLocalMuzzleFlashBaseLightExposure(
-                localLightExposure);
+        // Only actual emitting blocks within two blocks create broad overload.
+        // Propagated and synthetic muzzle-flash light no longer white out a room.
+        float localLightExposure = NightVisionGogglesBrightness
+                .getSmoothedLocalLightExposure(minecraft);
         GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "localLightExposure"),
                 localLightExposure);
         GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "chemLightExposure"),

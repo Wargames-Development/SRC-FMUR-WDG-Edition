@@ -164,7 +164,7 @@ public class EntityFMMuzzleFlash extends EntityFX {
                         smokeZ * smokeSpeed + directionZ * smokeForward,
                         scale * (0.9F + random.nextFloat() * 0.4F));
                 smoke.setRBGColorF(0.48F, 0.46F, 0.42F);
-                smoke.setAlphaF(0.42F);
+                smoke.setAlphaF(0.21F);
                 renderer.addEffect(smoke);
             }
         }

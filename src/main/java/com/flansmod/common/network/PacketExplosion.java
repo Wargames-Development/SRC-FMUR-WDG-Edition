@@ -1,5 +1,6 @@
 package com.flansmod.common.network;
 
+import com.flansmod.client.TickHandlerClient;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.guns.FlansModExplosion;
 import cpw.mods.fml.relauncher.Side;
@@ -62,5 +63,6 @@ public class PacketExplosion extends PacketBase
 	{
 		FlansModExplosion.clientExplosion(clientPlayer.worldObj,
 				explosionSize, explosionX, explosionY, explosionZ, breakingBlocks, breakingBreakableBlocks);
+		TickHandlerClient.triggerExplosionScreenShake(clientPlayer, explosionX, explosionY, explosionZ);
 	}
 }

@@ -16,6 +16,7 @@ import com.flansmod.common.guns.item.ItemGrenade;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
+import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketTeamInfo;
 import com.flansmod.common.teams.ItemTeamArmour;
 import com.flansmod.common.types.InfoType;
@@ -27,6 +28,7 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiGameOver;
 import net.minecraft.client.gui.GuiScreen;
@@ -62,7 +64,7 @@ import java.util.Random;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class TickHandlerClient {
-    private static final float LOCKED_GAMMA = 0F;
+    private static final float MAX_ALLOWED_GAMMA = 0.5F;
     public static final ResourceLocation offHand = new ResourceLocation("flansmod", "gui/offHand.png");
     public static final ResourceLocation aps = new ResourceLocation("flansmod", "gui/aps.png");
     public static final ResourceLocation tvm = new ResourceLocation("flansmod", "gui/TVM.png");
@@ -76,9 +78,13 @@ public class TickHandlerClient {
     private static final int MUZZLE_FLASH_LIGHT_LEVEL = 6;
     private static float localMuzzleFlashExposure;
     private static float localMuzzleFlashBaseLightExposure = -1F;
-    private static final Random SHOT_SHAKE_RANDOM = new Random();
+    private static final Random SCREEN_SHAKE_RANDOM = new Random();
     private static final long SHOT_SHAKE_DURATION_NANOS = 110000000L;
+    private static final long EXPLOSION_SHAKE_DURATION_NANOS = SHOT_SHAKE_DURATION_NANOS * 2L;
+    private static final float EXPLOSION_SHAKE_MAX_DEGREES = 10F;
+    private static final float VANILLA_EXPLOSION_TINNITUS_RANGE = 10F;
     private static long shotShakeStartNanos = Long.MIN_VALUE;
+    private static long shotShakeDurationNanos = SHOT_SHAKE_DURATION_NANOS;
     private static float shotShakePitchAmplitude;
     private static float shotShakeYawAmplitude;
     private static boolean shotShakeApplied;
@@ -143,12 +149,48 @@ public class TickHandlerClient {
         killMessages.add(new KillMessage(headshot, infoType, itmDmg, killer, killed));
     }
 
-    /** Starts a brief render-only camera impulse for a shot fired by the local player. */
-    public static void triggerShotScreenShake(float degrees) {
+    /** Starts a brief render-only camera impulse for the local player. */
+    public static void triggerScreenShake(float degrees) {
+        triggerScreenShake(degrees, SHOT_SHAKE_DURATION_NANOS);
+    }
+
+    public static void triggerExplosionScreenShake(float degrees) {
+        if(degrees > 0F)
+            triggerScreenShake(degrees, EXPLOSION_SHAKE_DURATION_NANOS);
+    }
+
+    public static void triggerExplosionScreenShake(EntityPlayer player, double x, double y, double z) {
+        triggerExplosionScreenShake(getExplosionScreenShakeDegrees(player, x, y, z));
+    }
+
+    public static void triggerVanillaExplosionEffects(EntityPlayer player, double x, double y, double z) {
+        float distance = (float)Math.sqrt(player.getDistanceSq(x, y, z));
+        triggerExplosionScreenShake(getExplosionScreenShakeDegrees(distance));
+        if(distance <= VANILLA_EXPLOSION_TINNITUS_RANGE)
+        {
+            Minecraft.getMinecraft().getSoundHandler().playSound(PositionedSoundRecord.func_147673_a(
+                    FlansModResourceHandler.getSound("flash")));
+        }
+    }
+
+    private static float getExplosionScreenShakeDegrees(EntityPlayer player, double x, double y, double z) {
+        return getExplosionScreenShakeDegrees((float)Math.sqrt(player.getDistanceSq(x, y, z)));
+    }
+
+    private static float getExplosionScreenShakeDegrees(float distance) {
+        return EXPLOSION_SHAKE_MAX_DEGREES
+                * Math.max(0F, 1F - distance / PacketParticle.EXPLOSION_EFFECT_RANGE);
+    }
+
+    private static void triggerScreenShake(float degrees, long durationNanos) {
         shotShakeStartNanos = System.nanoTime();
-        shotShakePitchAmplitude = degrees;
-        float horizontalDirection = SHOT_SHAKE_RANDOM.nextBoolean() ? 1F : -1F;
-        shotShakeYawAmplitude = horizontalDirection * degrees;
+        shotShakeDurationNanos = durationNanos;
+        shotShakePitchAmplitude = (SCREEN_SHAKE_RANDOM.nextBoolean() ? 1F : -1F) * degrees;
+        shotShakeYawAmplitude = (SCREEN_SHAKE_RANDOM.nextBoolean() ? 1F : -1F) * degrees;
+    }
+
+    public static void triggerShotScreenShake(float degrees) {
+        triggerScreenShake(degrees);
     }
 
     @SubscribeEvent
@@ -279,43 +321,9 @@ public class TickHandlerClient {
             }
 
             //瞄具准心
-            if (dotTexture != null) {
-
-                MouseHelper mouse = Minecraft.getMinecraft().mouseHelper;
-                int mx = mouse.deltaX;
-                int my = mouse.deltaY;
-                if(mx * mx + my * my < 1000) {
-                    FlansModClient.minecraft.entityRenderer.setupOverlayRendering();
-                    GL11.glEnable(3042 /* GL_BLEND */);
-                    GL11.glDisable(2929 /* GL_DEPTH_TEST */);
-                    GL11.glDepthMask(false);
-                    GL11.glBlendFunc(770, 771);
-                    GL11.glColor4f(dotR, dotG, dotB, dotA);
-                    GL11.glDisable(3008 /* GL_ALPHA_TEST */);
-
-                    double w = 10;
-                    double h = 10;
-
-                    w *= FlansModClient.currentScope.getDotOverlayTextureScale();
-                    h *= FlansModClient.currentScope.getDotOverlayTextureScale();
-
-                    mc.renderEngine.bindTexture(FlansModResourceHandler.getScope(dotTexture));
-
-                    double x = (i - w) / 2D;
-                    double y = (j - h) / 2D;
-
-                    tessellator.startDrawingQuads();
-                    tessellator.addVertexWithUV(x, y + h, -90D, 0.0D, 1.0D);
-                    tessellator.addVertexWithUV(x + w, y + h, -90D, 1.0D, 1.0D);
-                    tessellator.addVertexWithUV(x + w, y, -90D, 1.0D, 0.0D);
-                    tessellator.addVertexWithUV(x, y, -90D, 0.0D, 0.0D);
-                    tessellator.draw();
-                    GL11.glDepthMask(true);
-                    GL11.glEnable(2929 /* GL_DEPTH_TEST */);
-                    GL11.glEnable(3008 /* GL_ALPHA_TEST */);
-                    GL11.glColor4f(1F, 1F, 1F, 1.0F);
-                }
-
+            if (dotTexture != null
+                    && NightVisionGogglesEffect.getIntensity(mc, event.partialTicks) <= 0.001F) {
+                renderScopeReticle(mc, i, j, dotTexture);
             }
 
             //载具准心
@@ -944,6 +952,68 @@ public class TickHandlerClient {
         }
     }
 
+    private static void renderScopeReticle(Minecraft minecraft, int screenWidth,
+                                            int screenHeight, String dotTexture) {
+        if (dotTexture == null || FlansModClient.currentScope == null) {
+            return;
+        }
+        minecraft.entityRenderer.setupOverlayRendering();
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        GL11.glDepthMask(false);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
+        minecraft.renderEngine.bindTexture(FlansModResourceHandler.getScope(dotTexture));
+
+        double size = 10D * FlansModClient.currentScope.getDotOverlayTextureScale();
+        boolean greenReticle = isOkp7Scope();
+        float reticleRed = greenReticle ? 0F : dotR;
+        float reticleGreen = greenReticle ? 1F : dotG;
+        float reticleBlue = greenReticle ? 0F : dotB;
+        float redStrength = MathHelper.clamp_float(
+                reticleRed - Math.max(reticleGreen, reticleBlue), 0F, 1F) * dotA;
+        float greenStrength = MathHelper.clamp_float(
+                reticleGreen - Math.max(reticleRed, reticleBlue), 0F, 1F) * dotA;
+        float glowStrength = Math.max(redStrength, greenStrength);
+        Tessellator tessellator = Tessellator.instance;
+
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glColor4f(reticleRed, reticleGreen, reticleBlue, dotA);
+        drawCenteredReticleQuad(tessellator, screenWidth, screenHeight, size);
+
+        if (glowStrength > 0F) {
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+            GL11.glColor4f(redStrength, greenStrength, 0F, glowStrength * 0.5F);
+            drawCenteredReticleQuad(tessellator, screenWidth, screenHeight, size);
+        }
+
+        GL11.glDepthMask(true);
+        GL11.glEnable(GL11.GL_DEPTH_TEST);
+        GL11.glEnable(GL11.GL_ALPHA_TEST);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+    }
+
+    private static boolean isOkp7Scope() {
+        if (!(FlansModClient.currentScope instanceof InfoType)) {
+            return false;
+        }
+        String shortName = ((InfoType)FlansModClient.currentScope).shortName;
+        return shortName != null
+                && "okp7".equalsIgnoreCase(shortName.replace("_", "").replace("-", ""));
+    }
+
+    private static void drawCenteredReticleQuad(Tessellator tessellator,
+                                                 int screenWidth, int screenHeight,
+                                                 double size) {
+        double x = (screenWidth - size) / 2D;
+        double y = (screenHeight - size) / 2D;
+        tessellator.startDrawingQuads();
+        tessellator.addVertexWithUV(x, y + size, -90D, 0D, 1D);
+        tessellator.addVertexWithUV(x + size, y + size, -90D, 1D, 1D);
+        tessellator.addVertexWithUV(x + size, y, -90D, 1D, 0D);
+        tessellator.addVertexWithUV(x, y, -90D, 0D, 0D);
+        tessellator.draw();
+    }
+
     @SubscribeEvent
     public void renderNightVisionBeforeHud(RenderGameOverlayEvent.Pre event) {
         if (event.type != ElementType.ALL || Minecraft.getMinecraft().gameSettings.hideGUI) {
@@ -952,6 +1022,14 @@ public class TickHandlerClient {
         Minecraft minecraft = Minecraft.getMinecraft();
         FirstPersonNightVisionGogglesRenderer.render(minecraft, event.partialTicks);
         float intensity = NightVisionGogglesEffect.getIntensity(minecraft, event.partialTicks);
+        if (intensity > 0.001F && FlansModClient.currentScope != null
+                && minecraft.currentScreen == null && FlansModClient.zoomProgress > 0.95F) {
+            ScaledResolution resolution = new ScaledResolution(minecraft,
+                    minecraft.displayWidth, minecraft.displayHeight);
+            renderScopeReticle(minecraft, resolution.getScaledWidth(),
+                    resolution.getScaledHeight(),
+                    FlansModClient.currentScope.getDotOverlayTexture());
+        }
         NightVisionGogglesEffect.renderBeforeHud(minecraft, intensity);
         NightVisionGogglesEffect.renderAfterHud(minecraft, intensity);
         AltynHelmetOverlay.render(minecraft);
@@ -1023,7 +1101,7 @@ public class TickHandlerClient {
      * Handle flashlight block light override
      */
     public void clientTickStart(Minecraft mc) {
-        enforceLockedGamma(mc);
+        enforceGammaLimit(mc);
         updateMuzzleFlashLights(mc);
         updateBallisticNearMiss(mc);
         if (mc.currentScreen instanceof GuiGameOver) {
@@ -1224,11 +1302,13 @@ public class TickHandlerClient {
         return measuredExposure;
     }
 
-    private void enforceLockedGamma(Minecraft minecraft) {
-        if (minecraft.gameSettings.gammaSetting == LOCKED_GAMMA) {
+    private void enforceGammaLimit(Minecraft minecraft) {
+        float gamma = minecraft.gameSettings.gammaSetting;
+        if (gamma >= 0F && gamma <= MAX_ALLOWED_GAMMA) {
             return;
         }
-        minecraft.gameSettings.gammaSetting = LOCKED_GAMMA;
+        minecraft.gameSettings.gammaSetting = MathHelper.clamp_float(
+                gamma, 0F, MAX_ALLOWED_GAMMA);
         minecraft.gameSettings.saveOptions();
     }
 
@@ -1258,12 +1338,12 @@ public class TickHandlerClient {
         }
 
         long elapsedNanos = System.nanoTime() - shotShakeStartNanos;
-        if (elapsedNanos < 0L || elapsedNanos >= SHOT_SHAKE_DURATION_NANOS) {
+        if (elapsedNanos < 0L || elapsedNanos >= shotShakeDurationNanos) {
             shotShakeStartNanos = Long.MIN_VALUE;
             return;
         }
 
-        float progress = elapsedNanos / (float) SHOT_SHAKE_DURATION_NANOS;
+        float progress = elapsedNanos / (float) shotShakeDurationNanos;
         float decay = 1F - progress;
         appliedShotShakePitch = shotShakePitchAmplitude * decay
                 * (float) Math.sin(progress * Math.PI * 3D);

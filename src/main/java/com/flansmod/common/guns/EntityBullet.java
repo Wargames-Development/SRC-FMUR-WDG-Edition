@@ -2153,7 +2153,8 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     }
 
     private boolean shouldSpawnBallisticDust() {
-        return owner instanceof EntityPlayer
+        return FlansMod.showBallisticDustSmoke
+                && owner instanceof EntityPlayer
                 && (type.weaponType == EnumWeaponType.NONE || type.weaponType == EnumWeaponType.GUN);
     }
 
