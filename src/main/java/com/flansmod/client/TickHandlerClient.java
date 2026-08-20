@@ -82,17 +82,16 @@ public class TickHandlerClient {
     private static final long SHOT_SHAKE_DURATION_NANOS = 110000000L;
     private static final long EXPLOSION_SHAKE_DURATION_NANOS = SHOT_SHAKE_DURATION_NANOS * 2L;
     private static final float EXPLOSION_SHAKE_MAX_DEGREES = 10F;
+    private static final float MCHELI_EXPLOSION_SHAKE_RANGE = 128F;
     private static final float VANILLA_EXPLOSION_TINNITUS_RANGE = 10F;
     private static long shotShakeStartNanos = Long.MIN_VALUE;
     private static long shotShakeDurationNanos = SHOT_SHAKE_DURATION_NANOS;
     private static float shotShakePitchAmplitude;
     private static float shotShakeYawAmplitude;
     private static boolean shotShakeApplied;
+    private static Entity shotShakeViewEntity;
     private static float appliedShotShakePitch;
     private static float appliedShotShakeYaw;
-    private static final int BALLISTIC_NEAR_MISS_DURATION_TICKS = 14;
-    private static int ballisticNearMissTicks;
-    private static float ballisticNearMissStrength;
     public static int lightOverrideRefreshRate = 5;
     public static int vehicleLightOverrideRefreshRate = 1;
     public static boolean enableDefaultCrossHair = true;
@@ -118,7 +117,6 @@ public class TickHandlerClient {
     private static GuiScreen guiDriveableController = null;
     int tickCount = 0;
     int tickCountFlash = 0;
-    int tickCountWounded = 0;
     EntityPlayer entityPlayerFlash;
     private boolean isInFlash;
     private int flashTime;
@@ -163,6 +161,15 @@ public class TickHandlerClient {
         triggerExplosionScreenShake(getExplosionScreenShakeDegrees(player, x, y, z));
     }
 
+    public static void triggerMCHeliExplosionScreenShake(double x, double y, double z) {
+        EntityPlayer player = Minecraft.getMinecraft().thePlayer;
+        if (player != null) {
+            float distance = (float)Math.sqrt(player.getDistanceSq(x, y, z));
+            triggerExplosionScreenShake(getExplosionScreenShakeDegrees(
+                    distance, MCHELI_EXPLOSION_SHAKE_RANGE));
+        }
+    }
+
     public static void triggerVanillaExplosionEffects(EntityPlayer player, double x, double y, double z) {
         float distance = (float)Math.sqrt(player.getDistanceSq(x, y, z));
         triggerExplosionScreenShake(getExplosionScreenShakeDegrees(distance));
@@ -178,8 +185,12 @@ public class TickHandlerClient {
     }
 
     private static float getExplosionScreenShakeDegrees(float distance) {
+        return getExplosionScreenShakeDegrees(distance, PacketParticle.EXPLOSION_EFFECT_RANGE);
+    }
+
+    private static float getExplosionScreenShakeDegrees(float distance, float range) {
         return EXPLOSION_SHAKE_MAX_DEGREES
-                * Math.max(0F, 1F - distance / PacketParticle.EXPLOSION_EFFECT_RANGE);
+                * Math.max(0F, 1F - distance / range);
     }
 
     private static void triggerScreenShake(float degrees, long durationNanos) {
@@ -833,36 +844,6 @@ public class TickHandlerClient {
                 GL11.glColor4f(1F, 1F, 1F, 1F);
             }
 
-            if (mc.thePlayer.hurtTime > 0) {
-                tickCountWounded = 40;
-            }
-            if (tickCountWounded > 0 && FlansMod.showFlashesWhenWounded) {
-                FlansModClient.minecraft.entityRenderer.setupOverlayRendering();
-                GL11.glEnable(3042 /* GL_BLEND */);
-                GL11.glDisable(2929 /* GL_DEPTH_TEST */);
-                GL11.glDepthMask(false);
-                GL11.glBlendFunc(770, 771);
-                GL11.glColor4f(
-                        FlansMod.hitCrossHairColor[1],
-                        FlansMod.hitCrossHairColor[2],
-                        FlansMod.hitCrossHairColor[3],
-                        FlansMod.hitCrossHairColor[0] * (float) tickCountWounded / 20);
-                GL11.glDisable(3008 /* GL_ALPHA_TEST */);
-
-                mc.renderEngine.bindTexture(new ResourceLocation("flansmod", "gui/Blood.png"));
-
-                tessellator.startDrawingQuads();
-                tessellator.addVertexWithUV(i / 2D - 2 * j, j, -90D, 0.0D, 1.0D);
-                tessellator.addVertexWithUV(i / 2D + 2 * j, j, -90D, 1.0D, 1.0D);
-                tessellator.addVertexWithUV(i / 2D + 2 * j, 0.0D, -90D, 1.0D, 0.0D);
-                tessellator.addVertexWithUV(i / 2D - 2 * j, 0.0D, -90D, 0.0D, 0.0D);
-                tessellator.draw();
-                GL11.glDepthMask(true);
-                GL11.glEnable(2929 /* GL_DEPTH_TEST */);
-                GL11.glEnable(3008 /* GL_ALPHA_TEST */);
-                GL11.glColor4f(1F, 1F, 1F, 1F);
-            }
-
             //DEBUG vehicles
             if (mc.thePlayer.ridingEntity instanceof EntitySeat) {
                 EntityDriveable driveable = ((EntitySeat) mc.thePlayer.ridingEntity).driveable;
@@ -1037,10 +1018,10 @@ public class TickHandlerClient {
 
     @SubscribeEvent
     public void renderBallisticNearMissVignette(RenderGameOverlayEvent.Post event) {
-        if (event.type != ElementType.ALL || ballisticNearMissStrength <= 0F) {
+        if (event.type != ElementType.ALL || !SuppressionScreenEffect.isActive()) {
             return;
         }
-        renderBallisticNearMissVignette(Minecraft.getMinecraft());
+        SuppressionScreenEffect.render(Minecraft.getMinecraft(), event.partialTicks);
     }
 
     @SubscribeEvent
@@ -1083,6 +1064,7 @@ public class TickHandlerClient {
         NightVisionGogglesEffect.renderBeforeHud(minecraft, intensity);
         AltynHelmetOverlay.render(minecraft);
         NightVisionGogglesEffect.renderAfterHud(minecraft, intensity);
+        SuppressionScreenEffect.render(minecraft, partialTicks);
     }
 
     @SubscribeEvent
@@ -1102,6 +1084,7 @@ public class TickHandlerClient {
      */
     public void clientTickStart(Minecraft mc) {
         enforceGammaLimit(mc);
+        MCHeliExplosionCompat.clientTick();
         updateMuzzleFlashLights(mc);
         updateBallisticNearMiss(mc);
         if (mc.currentScreen instanceof GuiGameOver) {
@@ -1124,9 +1107,6 @@ public class TickHandlerClient {
         }
         if (apsMarkerTime > 0) {
             apsMarkerTime--;
-        }
-        if (tickCountWounded > 0) {
-            tickCountWounded--;
         }
         BulletHoleDecalRenderer.tick();
         TracerRicochetRenderer.tick();
@@ -1313,27 +1293,17 @@ public class TickHandlerClient {
     }
 
     public static void triggerBallisticNearMiss(float strength) {
-        ballisticNearMissStrength = Math.max(ballisticNearMissStrength,
-                MathHelper.clamp_float(strength, 0F, 1F));
-        ballisticNearMissTicks = BALLISTIC_NEAR_MISS_DURATION_TICKS;
+        SuppressionScreenEffect.triggerNearMiss(strength);
     }
 
     private static void updateBallisticNearMiss(Minecraft minecraft) {
-        if (minecraft.theWorld == null || minecraft.thePlayer == null) {
-            ballisticNearMissTicks = 0;
-            ballisticNearMissStrength = 0F;
-            return;
-        }
-        if (ballisticNearMissTicks > 0) {
-            ballisticNearMissTicks--;
-            ballisticNearMissStrength *= 0.9F;
-        } else {
-            ballisticNearMissStrength = 0F;
-        }
+        SuppressionScreenEffect.tick(minecraft);
     }
 
     private static void applyShotScreenShake(Minecraft minecraft) {
-        if (minecraft.thePlayer == null || shotShakeApplied || shotShakeStartNanos == Long.MIN_VALUE) {
+        Entity viewEntity = minecraft.renderViewEntity != null
+                ? minecraft.renderViewEntity : minecraft.thePlayer;
+        if (viewEntity == null || shotShakeApplied || shotShakeStartNanos == Long.MIN_VALUE) {
             return;
         }
 
@@ -1350,10 +1320,11 @@ public class TickHandlerClient {
         appliedShotShakeYaw = shotShakeYawAmplitude * decay
                 * (float) Math.cos(progress * Math.PI * 4D);
 
-        minecraft.thePlayer.rotationPitch += appliedShotShakePitch;
-        minecraft.thePlayer.prevRotationPitch += appliedShotShakePitch;
-        minecraft.thePlayer.rotationYaw += appliedShotShakeYaw;
-        minecraft.thePlayer.prevRotationYaw += appliedShotShakeYaw;
+        viewEntity.rotationPitch += appliedShotShakePitch;
+        viewEntity.prevRotationPitch += appliedShotShakePitch;
+        viewEntity.rotationYaw += appliedShotShakeYaw;
+        viewEntity.prevRotationYaw += appliedShotShakeYaw;
+        shotShakeViewEntity = viewEntity;
         shotShakeApplied = true;
     }
 
@@ -1361,71 +1332,15 @@ public class TickHandlerClient {
         if (!shotShakeApplied) {
             return;
         }
-        if (minecraft.thePlayer != null) {
+        if (shotShakeViewEntity != null) {
             // Subtract only our contribution so mouse movement made during this frame is preserved.
-            minecraft.thePlayer.rotationPitch -= appliedShotShakePitch;
-            minecraft.thePlayer.prevRotationPitch -= appliedShotShakePitch;
-            minecraft.thePlayer.rotationYaw -= appliedShotShakeYaw;
-            minecraft.thePlayer.prevRotationYaw -= appliedShotShakeYaw;
+            shotShakeViewEntity.rotationPitch -= appliedShotShakePitch;
+            shotShakeViewEntity.prevRotationPitch -= appliedShotShakePitch;
+            shotShakeViewEntity.rotationYaw -= appliedShotShakeYaw;
+            shotShakeViewEntity.prevRotationYaw -= appliedShotShakeYaw;
         }
+        shotShakeViewEntity = null;
         shotShakeApplied = false;
-    }
-
-    private static void renderBallisticNearMissVignette(Minecraft minecraft) {
-        ScaledResolution resolution = new ScaledResolution(minecraft,
-                minecraft.displayWidth, minecraft.displayHeight);
-        int width = resolution.getScaledWidth();
-        int height = resolution.getScaledHeight();
-        float life = ballisticNearMissTicks / (float) BALLISTIC_NEAR_MISS_DURATION_TICKS;
-        float alpha = Math.min(0.34F, ballisticNearMissStrength * life * 0.34F);
-        if (alpha <= 0.005F) {
-            return;
-        }
-
-        float edgeX = Math.max(36F, width * 0.22F);
-        float edgeY = Math.max(28F, height * 0.25F);
-        minecraft.entityRenderer.setupOverlayRendering();
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
-        GL11.glDisable(GL11.GL_DEPTH_TEST);
-        GL11.glDisable(GL11.GL_ALPHA_TEST);
-        GL11.glDepthMask(false);
-        GL11.glEnable(GL11.GL_BLEND);
-        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glShadeModel(GL11.GL_SMOOTH);
-
-        Tessellator tessellator = Tessellator.instance;
-        tessellator.startDrawingQuads();
-        addNearMissVignetteVertex(tessellator, 0, 0, alpha);
-        addNearMissVignetteVertex(tessellator, width, 0, alpha);
-        addNearMissVignetteVertex(tessellator, width, edgeY, 0F);
-        addNearMissVignetteVertex(tessellator, 0, edgeY, 0F);
-
-        addNearMissVignetteVertex(tessellator, 0, height - edgeY, 0F);
-        addNearMissVignetteVertex(tessellator, width, height - edgeY, 0F);
-        addNearMissVignetteVertex(tessellator, width, height, alpha);
-        addNearMissVignetteVertex(tessellator, 0, height, alpha);
-
-        addNearMissVignetteVertex(tessellator, 0, 0, alpha);
-        addNearMissVignetteVertex(tessellator, edgeX, 0, 0F);
-        addNearMissVignetteVertex(tessellator, edgeX, height, 0F);
-        addNearMissVignetteVertex(tessellator, 0, height, alpha);
-
-        addNearMissVignetteVertex(tessellator, width - edgeX, 0, 0F);
-        addNearMissVignetteVertex(tessellator, width, 0, alpha);
-        addNearMissVignetteVertex(tessellator, width, height, alpha);
-        addNearMissVignetteVertex(tessellator, width - edgeX, height, 0F);
-        tessellator.draw();
-
-        GL11.glShadeModel(GL11.GL_FLAT);
-        GL11.glPopAttrib();
-        GL11.glColor4f(1F, 1F, 1F, 1F);
-    }
-
-    private static void addNearMissVignetteVertex(Tessellator tessellator,
-                                                   double x, double y, float alpha) {
-        tessellator.setColorRGBA_F(0.07F, 0.055F, 0.045F, alpha);
-        tessellator.addVertex(x, y, -90D);
     }
 
     private static void updateMuzzleFlashLights(Minecraft minecraft) {

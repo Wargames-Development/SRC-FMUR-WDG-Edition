@@ -734,7 +734,10 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
                         }
                     }
                     //Play the shoot sound
-                    PacketPlaySound.sendSoundPacket(posX, posY, posZ, FlansMod.soundRange, dimension, type.shootSound(secondary), false);
+                    PacketPlaySound.sendSoundPacket(posX, posY, posZ, gunType.gunSoundRange,
+                            dimension, type.shootSound(secondary), false);
+                    PacketPlaySound.sendDistantGunSound(posX, posY, posZ, dimension,
+                            gunType, bullet, false);
                     //Get the bullet item damage and increment it
                     int damage = bulletItemStack.getItemDamage();
                     bulletItemStack.setItemDamage(damage + 1);
@@ -792,6 +795,10 @@ public abstract class EntityDriveable extends Entity implements IControllable, I
 
                             if (type.shootSound(secondary) != null)
                                 PacketPlaySound.sendSoundPacket(posX, posY, posZ, FlansMod.soundRange, dimension, type.shootSound(secondary), false);
+                            if (weaponType == EnumWeaponType.SHELL) {
+                                PacketPlaySound.sendDistantBallisticSound(posX, posY, posZ,
+                                        dimension, FlansMod.soundRange, bulletItem.type);
+                            }
                             if (!driverIsCreative()) {
                                 bulletStack.setItemDamage(bulletStack.getItemDamage() + 1);
                                 if (bulletStack.getItemDamage() == bulletStack.getMaxDamage()) {

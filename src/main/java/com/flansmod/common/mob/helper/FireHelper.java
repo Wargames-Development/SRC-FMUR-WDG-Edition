@@ -132,6 +132,8 @@ public class FireHelper {
                     int countRest = Math.min(type.countRestAfterShoot, itemBullet.type.roundsPerItem - bulletStack.getItemDamage());
 
                     PacketPlaySound.sendSoundPacket(entity.posX, entity.posY, entity.posZ, gun.type.gunSoundRange, entity.dimension, gun.type.shootSound, gun.type.distortSound);
+                    PacketPlaySound.sendDistantGunSound(entity.posX, entity.posY, entity.posZ,
+                            entity.dimension, gun.type, itemBullet.type, false);
 
                     if (shootTimeCount >= countRest && !entity.worldObj.isRemote) {
                         shootTimeCount = 0;

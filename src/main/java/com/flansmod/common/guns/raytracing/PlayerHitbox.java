@@ -8,6 +8,7 @@ import com.flansmod.common.RotatedAxes;
 import com.flansmod.common.guns.EntityBullet;
 import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.guns.item.ItemGun;
+import com.flansmod.common.network.PacketZPlayerHitEffect;
 import com.flansmod.common.teams.ItemTeamArmour;
 import com.flansmod.common.teams.TeamsManager;
 import com.flansmod.common.vector.Vector3f;
@@ -272,6 +273,10 @@ public class PlayerHitbox {
                     if (player.attackEntityFrom(damagesource, hitDamage)) {
                         player.arrowHitTimer++;
                         player.hurtResistantTime = player.maxHurtResistantTime / 2;
+                        if (!player.worldObj.isRemote && player instanceof EntityPlayerMP) {
+                            FlansMod.getPacketHandler().sendTo(
+                                    new PacketZPlayerHitEffect(), (EntityPlayerMP)player);
+                        }
                     }
 
                     Vector3f motAfter = new Vector3f(player.motionX, player.motionY, player.motionZ);

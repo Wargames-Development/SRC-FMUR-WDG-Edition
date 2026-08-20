@@ -14,5 +14,34 @@
   "nvg_on": {
     "category": "player",
     "sounds": ["flansmod:nvg_on"]
+  },
+  "bulletwhiz1": {
+    "category": "player",
+    "sounds": ["flansmod:bulletwhiz1"]
+  },
+  "bulletwhiz2": {
+    "category": "player",
+    "sounds": ["flansmod:bulletwhiz2"]
+  },
+  "bulletwhiz3": {
+    "category": "player",
+    "sounds": ["flansmod:bulletwhiz3"]
+  },
+  "standardshotdistant": {
+    "category": "player",
+    "sounds": ["flansmod:standardshotdistant"]
+  },
+  "distantexplosion": {
+    "category": "player",
+    "sounds": ["flansmod:distantexplosion"]
+  },
+  "ambientdistantgunfire": {
+    "category": "ambient",
+    "sounds": [
+      {
+        "name": "flansmod:ambientdistantgunfire",
+        "stream": true
+      }
+    ]
   }
 }

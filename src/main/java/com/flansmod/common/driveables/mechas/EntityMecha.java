@@ -480,10 +480,8 @@ public class EntityMecha extends EntityDriveable
 			if(left)
 				soundDelayLeft = gunType.shootSoundLength;
 			else soundDelayRight = gunType.shootSoundLength;
-			if (gunType.distantShootSound != null) {
-				FlansMod.packetHandler.sendToDonut(new PacketPlaySound(posX, posY, posZ, gunType.distantShootSound), posX,
-						posY, posZ, gunType.gunSoundRange, gunType.distantSoundRange, dimension);
-			}
+			PacketPlaySound.sendDistantGunSound(posX, posY, posZ, dimension,
+					gunType, bulletType, false);
         }
 	}
 

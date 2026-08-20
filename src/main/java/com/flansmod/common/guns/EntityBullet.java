@@ -2115,7 +2115,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         EntityPlayer listener = minecraft.thePlayer;
         if (nearMissTriggered || listener == null || owner == null
                 || owner.getEntityId() == listener.getEntityId()
-                || (type.weaponType != EnumWeaponType.NONE && type.weaponType != EnumWeaponType.GUN)) {
+                || !isNearMissBallisticRound()) {
             return;
         }
 
@@ -2150,6 +2150,16 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                 / (NEAR_MISS_MAX_DISTANCE - NEAR_MISS_MIN_DISTANCE));
         intensity = Math.max(0.15F, Math.min(1F, intensity));
         TickHandlerClient.triggerBallisticNearMiss(intensity);
+    }
+
+    private boolean isNearMissBallisticRound() {
+        if (type.weaponType == EnumWeaponType.NONE || type.weaponType == EnumWeaponType.GUN) {
+            return true;
+        }
+        // Some content packs classify placed .50-cal machine-gun ammunition as a
+        // shell. Keep true cannon rounds (20 mm and larger) out of this small-arms VFX.
+        return type.weaponType == EnumWeaponType.SHELL
+                && type.isLargeCaliber() && !type.isExtraLargeCaliber();
     }
 
     private boolean shouldSpawnBallisticDust() {

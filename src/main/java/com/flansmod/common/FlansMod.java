@@ -33,6 +33,7 @@ import com.flansmod.common.parts.PartType;
 import com.flansmod.common.sync.Sync;
 import com.flansmod.common.sync.SyncEventHandler;
 import com.flansmod.common.teams.*;
+import com.flansmod.common.tileentity.TileEntityAmbientWarSound;
 import com.flansmod.common.tools.EntityParachute;
 import com.flansmod.common.tools.ItemTool;
 import com.flansmod.common.tools.ToolType;
@@ -195,6 +196,7 @@ public class FlansMod {
 
     //Items and creative tabs
     public static BlockFlansWorkbench workbench;
+    public static BlockAmbientWarSound ambientWarSound;
     public static BlockPaintjobTable paintjobTable;
     public static BlockSpawner spawner;
     public static ItemOpStick opStick;
@@ -317,6 +319,11 @@ public class FlansMod {
         GameRegistry.registerBlock(workbench, ItemBlockManyNames.class, "flansWorkbench");
         GameRegistry.addRecipe(new ItemStack(workbench, 1, 0), "BBB", "III", "III", 'B', Items.bowl, 'I', Items.iron_ingot);
         GameRegistry.addRecipe(new ItemStack(workbench, 1, 1), "ICI", "III", 'C', Items.cauldron, 'I', Items.iron_ingot);
+
+        ambientWarSound = new BlockAmbientWarSound();
+        GameRegistry.registerBlock(ambientWarSound, "ambientWarSound");
+        GameRegistry.registerTileEntity(TileEntityAmbientWarSound.class,
+                MODID + ":ambientWarSound");
 
         opStick = new ItemOpStick();
         GameRegistry.registerItem(opStick, "opStick", MODID);

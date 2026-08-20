@@ -149,6 +149,7 @@ public class BulletType extends ShootableType {
     private Boolean inferredLargeCaliber;
     private Boolean extraLargeCaliber;
     private Boolean inferredExtraLargeCaliber;
+    private float distantSoundPitch = -1F;
     public boolean canSpotEntityDriveable = false;
     public int maxRange = -1;
 
@@ -291,6 +292,9 @@ public class BulletType extends ShootableType {
                 case "ExtraLargeCaliber":
                 case "IsExtraLargeCaliber":
                     extraLargeCaliber = Boolean.parseBoolean(split[1]);
+                    break;
+                case "DistantSoundPitch":
+                    distantSoundPitch = Math.max(0.5F, Math.min(2F, Float.parseFloat(split[1])));
                     break;
                 case "FlakParticles":
                     flak = Integer.parseInt(split[1]);
@@ -673,6 +677,56 @@ public class BulletType extends ShootableType {
     private String getNormalizedCaliberIdentifier() {
         return ((shortName == null ? "" : shortName)
                 + (name == null ? "" : name)).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
+    }
+
+    /**
+     * Pitch for the shared distant gun report. The source recording represents
+     * 5.56 mm at 1.0; progressively heavier cartridges shift it downward.
+     */
+    public float getDistantSoundPitch() {
+        if (distantSoundPitch > 0F) {
+            return distantSoundPitch;
+        }
+
+        String identifier = getNormalizedCaliberIdentifier();
+        if (isExtraLargeCaliber()) {
+            return 0.58F;
+        }
+        if (isLargeCaliber()) {
+            return identifier.contains("145") ? 0.62F : 0.68F;
+        }
+        if (identifier.contains("12gauge") || identifier.contains("12ga")
+                || identifier.contains("12g")) {
+            return 0.78F;
+        }
+        if (identifier.contains("338")) {
+            return 0.80F;
+        }
+        if (isPistolCaliber()) {
+            return identifier.contains("22lr") ? 1.30F : 1.16F;
+        }
+        if (identifier.contains("762") || identifier.contains("308")
+                || identifier.contains("3006")) {
+            return 0.88F;
+        }
+        if (identifier.contains("300blk") || identifier.contains("300aac")) {
+            return 0.90F;
+        }
+        if (identifier.contains("68spc") || identifier.contains("65creed")
+                || identifier.contains("65grendel")) {
+            return 0.94F;
+        }
+        if (identifier.contains("545")) {
+            return 1.03F;
+        }
+        // 5.56 / .223 and unidentified intermediate rifle rounds use the source pitch.
+        return 1.0F;
+    }
+
+    /** Compensates for the perceived level lost when heavy rounds are pitched down. */
+    public float getDistantSoundVolume() {
+        float pitch = getDistantSoundPitch();
+        return Math.max(10F, Math.min(18F, 10F * (1F + (1F - pitch) * 1.5F)));
     }
 
     /**

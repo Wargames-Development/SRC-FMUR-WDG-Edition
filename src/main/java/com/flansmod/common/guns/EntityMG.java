@@ -188,10 +188,8 @@ public class EntityMG extends Entity implements IEntityAdditionalSpawnData
 			{
 				soundDelay = type.shootSoundLength;
 				PacketPlaySound.sendSoundPacket(posX, posY, posZ, type.gunSoundRange, dimension, type.shootSound, type.distortSound);
-				if (type.distantShootSound != null) {
-					FlansMod.packetHandler.sendToDonut(new PacketPlaySound(posX, posY, posZ, type.distantShootSound),
-							posX, posY, posZ, type.gunSoundRange, type.distantSoundRange, dimension);
-				}
+				PacketPlaySound.sendDistantGunSound(posX, posY, posZ, dimension,
+						type, bullet, false);
 			}
 		}
 		if (soundDelay > 0)
@@ -250,10 +248,8 @@ public class EntityMG extends Entity implements IEntityAdditionalSpawnData
 					float distortion = type.distortSound ? 1.0F / (rand.nextFloat() * 0.4F + 0.8F) : 1F;
 					//worldObj.playSoundAtEntity(this, type.shootSound, 1.0F, distortion);
 					PacketPlaySound.sendSoundPacket(posX, posY, posZ, type.gunSoundRange, dimension, type.shootSound, type.distortSound);
-					if (type.distantShootSound != null) {
-						FlansMod.packetHandler.sendToDonut(new PacketPlaySound(posX, posY, posZ, type.distantShootSound),
-								posX, posY, posZ, type.gunSoundRange, type.distantSoundRange, dimension);
-					}
+					PacketPlaySound.sendDistantGunSound(posX, posY, posZ, dimension,
+							type, bullet, false);
 					soundDelay = type.shootSoundLength;
 				}
 			} else if(gunner != null)

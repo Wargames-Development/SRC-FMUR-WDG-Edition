@@ -694,11 +694,8 @@ public class EntitySeat extends Entity implements IControllable, IEntityAddition
                                 //播放射击音效
                                 if (soundDelay <= 0) {
                                     PacketPlaySound.sendSoundPacket(posX, posY, posZ, gun.gunSoundRange, dimension, gun.shootSound, false);
-                                    if (gun.distantShootSound != null) {
-                                        FlansMod.packetHandler.sendToDonut(
-                                                new PacketPlaySound(posX, posY, posZ, gun.distantShootSound), posX,
-                                                posY, posZ, gun.gunSoundRange, gun.distantSoundRange, dimension);
-                                    }
+                                    PacketPlaySound.sendDistantGunSound(posX, posY, posZ,
+                                            dimension, gun, bullet, false);
                                     soundDelay = gun.shootSoundLength;
                                 }
 

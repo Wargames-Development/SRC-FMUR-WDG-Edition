@@ -8,6 +8,7 @@ import com.flansmod.common.hook.MCHeliUtil;
 import com.flansmod.common.network.PacketExplosion;
 import com.flansmod.common.network.PacketHitMarker;
 import com.flansmod.common.network.PacketParticle;
+import com.flansmod.common.network.PacketPlaySound;
 import com.flansmod.common.types.InfoType;
 import net.minecraft.block.Block;
 import net.minecraft.enchantment.EnchantmentProtection;
@@ -76,6 +77,8 @@ public class FlansModExplosion extends Explosion
         
         if(!worldObj.isRemote)
         {
+			PacketPlaySound.sendDistantExplosionSound(x, y, z, worldObj.provider.dimensionId,
+					explosionRadius, FlansMod.soundRange);
             for (Object playerEntity : worldObj.playerEntities) {
             	if(playerEntity instanceof EntityPlayerMP)
             	{
