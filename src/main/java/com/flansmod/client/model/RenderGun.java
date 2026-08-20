@@ -22,12 +22,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.renderer.RenderBlocks;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MathHelper;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.IItemRenderer;
 import org.lwjgl.opengl.GL11;
 
@@ -37,6 +39,10 @@ import static com.flansmod.client.FlansModClient.zoomProgress;
 
 public class RenderGun implements IItemRenderer {
     private static final float ADS_SIGHT_SWAY_LIMIT_DEGREES = 0.1F;
+    private static final ResourceLocation RED_TRACER_TEXTURE =
+            new ResourceLocation("flansmod", "particle/FMTracerRed.png");
+    private static final ResourceLocation GREEN_TRACER_TEXTURE =
+            new ResourceLocation("flansmod", "particle/FMTracerGreen.png");
     public static float smoothing;
     public static float actualZoomProgress;
     public static float actualStanceProgress;
@@ -669,6 +675,8 @@ public class RenderGun implements IItemRenderer {
                             ? loadedAmmo : null;
                     if (model.muzzleFlashPoint != null && tracerAmmo != null) {
                         renderMuzzleTracer(model.flashScale, tracerAmmo.greenTracer);
+                        renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(
+                                gunType.getPaintjob(item.getItemDamage())));
                     }
 
                     if (isFlashEnabled) {
@@ -1589,7 +1597,9 @@ public class RenderGun implements IItemRenderer {
 
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         try {
-            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            // The first-person shader program remains active here. Feed it valid
+            // textured/lightmapped vertices so tracer rendering cannot poison hand state.
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
             GL11.glDisable(GL11.GL_LIGHTING);
             GL11.glDisable(GL11.GL_ALPHA_TEST);
             GL11.glDisable(GL11.GL_CULL_FACE);
@@ -1599,6 +1609,7 @@ public class RenderGun implements IItemRenderer {
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
             GL11.glEnable(GL11.GL_LINE_SMOOTH);
             GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
+            renderEngine.bindTexture(greenTracer ? GREEN_TRACER_TEXTURE : RED_TRACER_TEXTURE);
 
             drawMuzzleTracerLine(length, 9F, glowRed, glowGreen, 0F, 0.12F);
             drawMuzzleTracerLine(length, 5F,
@@ -1606,6 +1617,7 @@ public class RenderGun implements IItemRenderer {
             drawMuzzleTracerLine(length, 2F, accentRed, coreGreen, 0.08F, 0.95F);
         } finally {
             GL11.glPopAttrib();
+            GL11.glColor4f(1F, 1F, 1F, 1F);
         }
     }
 
@@ -1624,12 +1636,15 @@ public class RenderGun implements IItemRenderer {
 
     private void drawMuzzleTracerLine(float length, float width,
                                       float red, float green, float blue, float alpha) {
+        Tessellator tessellator = Tessellator.instance;
         GL11.glLineWidth(width);
-        GL11.glColor4f(red, green, blue, alpha);
-        GL11.glBegin(GL11.GL_LINES);
-        GL11.glVertex3f(0F, 0F, 0F);
-        GL11.glVertex3f(length, 0F, 0F);
-        GL11.glEnd();
+        tessellator.startDrawing(GL11.GL_LINES);
+        tessellator.setBrightness(15728880);
+        tessellator.setColorRGBA_F(red, green, blue, alpha);
+        tessellator.setNormal(0F, 1F, 0F);
+        tessellator.addVertexWithUV(0F, 0F, 0F, 0.5D, 0.5D);
+        tessellator.addVertexWithUV(length, 0F, 0F, 0.5D, 0.5D);
+        tessellator.draw();
     }
 
     /**

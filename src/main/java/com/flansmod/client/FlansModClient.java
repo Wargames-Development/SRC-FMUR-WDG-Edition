@@ -155,6 +155,8 @@ public class FlansModClient extends FlansMod {
      * 游戏中的鼠标灵敏度
      */
     public static float gamingMouseSensitivity = 0.5F;
+    private static boolean scopedMouseSensitivityApplied = false;
+    private static float scopedMouseSensitivityBase = 0.5F;
     /**
      * 玩家最初的FOV
      */
@@ -274,8 +276,10 @@ public class FlansModClient extends FlansMod {
             minecraft.gameSettings.particleSetting = 1;
         }
 
-        if (minecraft.thePlayer == null || minecraft.theWorld == null)
+        if (minecraft.thePlayer == null || minecraft.theWorld == null) {
+            restoreScopedMouseSensitivity();
             return;
+        }
 
         if (minecraft.thePlayer.ridingEntity instanceof IControllable && minecraft.currentScreen == null)
             minecraft.displayGuiScreen(new GuiDriveableController((IControllable) minecraft.thePlayer.ridingEntity));
@@ -459,7 +463,7 @@ public class FlansModClient extends FlansMod {
         }
 
         Minecraft mc = Minecraft.getMinecraft();
-        if (FlansMod.canChangeSettings) {
+        if (FlansMod.canChangeSettings && !scopedMouseSensitivityApplied) {
             originalMouseSensitivity = minecraft.gameSettings.mouseSensitivity;
         }
 
@@ -657,6 +661,8 @@ public class FlansModClient extends FlansMod {
             }
         }
 
+        updateScopedMouseSensitivity();
+
         /**
          * 计算dps
          */
@@ -704,6 +710,62 @@ public class FlansModClient extends FlansMod {
         }
         if (controlModeSwitchTimer > 0)
             controlModeSwitchTimer--;
+    }
+
+    private static void updateScopedMouseSensitivity() {
+        if (minecraft == null || minecraft.gameSettings == null) {
+            return;
+        }
+
+        if (minecraft.thePlayer == null || minecraft.theWorld == null
+                || minecraft.currentScreen != null || currentScope == null) {
+            restoreScopedMouseSensitivity();
+            return;
+        }
+
+        double scopeMagnification = (double) currentScope.getZoomFactor() * currentScope.getFOVFactor();
+        if (Double.isNaN(scopeMagnification) || Double.isInfinite(scopeMagnification)
+                || scopeMagnification <= 1D) {
+            restoreScopedMouseSensitivity();
+            return;
+        }
+
+        if (!scopedMouseSensitivityApplied) {
+            scopedMouseSensitivityBase = minecraft.gameSettings.mouseSensitivity;
+            originalMouseSensitivity = scopedMouseSensitivityBase;
+            scopedMouseSensitivityApplied = true;
+        }
+
+        float progress = Math.max(0F, Math.min(1F, zoomProgress));
+        double effectiveMagnification = 1D + (scopeMagnification - 1D) * progress;
+
+        // Vanilla 1.7.10 converts the sensitivity setting to mouse gain with
+        // (sensitivity * 0.6 + 0.2)^3. Invert that curve so a scope that is N
+        // times magnified gets exactly 1/N of the normal angular movement.
+        // This avoids the coarse minimum step produced by dividing the raw
+        // sensitivity value directly, especially on high-power sniper scopes.
+        double baseGain = gamingMouseSensitivity * 0.6D + 0.2D;
+        if (baseGain <= 0D) {
+            restoreScopedMouseSensitivity();
+            return;
+        }
+
+        double scopedGain = baseGain / Math.cbrt(effectiveMagnification);
+        float adjustedSensitivity = (float) ((scopedGain - 0.2D) / 0.6D);
+        minecraft.gameSettings.mouseSensitivity = adjustedSensitivity;
+        MouseSenNedToChange = gamingMouseSensitivity - adjustedSensitivity;
+    }
+
+    private static void restoreScopedMouseSensitivity() {
+        if (!scopedMouseSensitivityApplied || minecraft == null || minecraft.gameSettings == null) {
+            return;
+        }
+
+        minecraft.gameSettings.mouseSensitivity = scopedMouseSensitivityBase;
+        originalMouseSensitivity = scopedMouseSensitivityBase;
+        gamingMouseSensitivity = scopedMouseSensitivityBase;
+        MouseSenNedToChange = 0F;
+        scopedMouseSensitivityApplied = false;
     }
 
     public static void renderTick(float smoothing) {

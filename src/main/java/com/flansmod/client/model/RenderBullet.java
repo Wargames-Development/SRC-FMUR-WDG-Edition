@@ -4,6 +4,7 @@ import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.common.guns.EntityBullet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.ModelBase;
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
@@ -18,6 +19,10 @@ public class RenderBullet extends Render
 {
 	private static final float NIGHT_VISION_BRIGHTNESS_MULTIPLIER = 1.35F;
 	private static final double MAX_HANDHELD_VISUAL_CORRECTION = 3D;
+	private static final ResourceLocation RED_TRACER_TEXTURE =
+			new ResourceLocation("flansmod", "particle/FMTracerRed.png");
+	private static final ResourceLocation GREEN_TRACER_TEXTURE =
+			new ResourceLocation("flansmod", "particle/FMTracerGreen.png");
 	private final Map<EntityBullet, VisualOriginCorrection> visualOriginCorrections =
 			new WeakHashMap<EntityBullet, VisualOriginCorrection>();
 
@@ -161,11 +166,12 @@ public class RenderBullet extends Render
 		float accentRed = greenTracer ? 0.04F : 1F;
 		float coreGreen = greenTracer ? 1F : 0.04F;
 
-		minecraft.entityRenderer.disableLightmap(partialTicks);
 		GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
 		try
 		{
-			GL11.glDisable(GL11.GL_TEXTURE_2D);
+			// Shader packs still run their entity program here. Keep texturing enabled and
+			// submit complete vertex data instead of raw untextured immediate-mode lines.
+			GL11.glEnable(GL11.GL_TEXTURE_2D);
 			GL11.glDisable(GL11.GL_LIGHTING);
 			GL11.glDisable(GL11.GL_ALPHA_TEST);
 			GL11.glDisable(GL11.GL_CULL_FACE);
@@ -175,6 +181,7 @@ public class RenderBullet extends Render
 			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
 			GL11.glEnable(GL11.GL_LINE_SMOOTH);
 			GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
+			minecraft.renderEngine.bindTexture(greenTracer ? GREEN_TRACER_TEXTURE : RED_TRACER_TEXTURE);
 
 			if(length > 0.05D)
 			{
@@ -196,7 +203,8 @@ public class RenderBullet extends Render
 		finally
 		{
 			GL11.glPopAttrib();
-			minecraft.entityRenderer.enableLightmap(partialTicks);
+			GL11.glColor4f(1F, 1F, 1F, 1F);
+			bindEntityTexture(bullet);
 		}
 	}
 
@@ -208,21 +216,27 @@ public class RenderBullet extends Render
 	private void drawTracerLine(double tailX, double tailY, double tailZ,
 			float width, float red, float green, float blue, float alpha)
 	{
+		Tessellator tessellator = Tessellator.instance;
 		GL11.glLineWidth(width);
-		GL11.glColor4f(red, green, blue, alpha);
-		GL11.glBegin(GL11.GL_LINES);
-		GL11.glVertex3d(tailX, tailY, tailZ);
-		GL11.glVertex3d(0D, 0D, 0D);
-		GL11.glEnd();
+		tessellator.startDrawing(GL11.GL_LINES);
+		tessellator.setBrightness(15728880);
+		tessellator.setColorRGBA_F(red, green, blue, alpha);
+		tessellator.setNormal(0F, 1F, 0F);
+		tessellator.addVertexWithUV(tailX, tailY, tailZ, 0.5D, 0.5D);
+		tessellator.addVertexWithUV(0D, 0D, 0D, 0.5D, 0.5D);
+		tessellator.draw();
 	}
 
 	private void drawTracerPoint(float size, float red, float green, float blue, float alpha)
 	{
+		Tessellator tessellator = Tessellator.instance;
 		GL11.glPointSize(size);
-		GL11.glColor4f(red, green, blue, alpha);
-		GL11.glBegin(GL11.GL_POINTS);
-		GL11.glVertex3d(0D, 0D, 0D);
-		GL11.glEnd();
+		tessellator.startDrawing(GL11.GL_POINTS);
+		tessellator.setBrightness(15728880);
+		tessellator.setColorRGBA_F(red, green, blue, alpha);
+		tessellator.setNormal(0F, 1F, 0F);
+		tessellator.addVertexWithUV(0D, 0D, 0D, 0.5D, 0.5D);
+		tessellator.draw();
 	}
 
 	@Override
