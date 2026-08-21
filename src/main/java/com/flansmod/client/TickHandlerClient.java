@@ -84,6 +84,9 @@ public class TickHandlerClient {
     private static final long EXPLOSION_SHAKE_DURATION_NANOS = SHOT_SHAKE_DURATION_NANOS * 2L;
     private static final float EXPLOSION_SHAKE_DEGREES_PER_SIZE = 0.4F;
     private static final float EXPLOSION_SHAKE_MAX_DEGREES = 30F;
+    private static final float SMALL_EXPLOSION_SHAKE_RANGE = 15F;
+    private static final float MCHELI_EXPLOSION_SHAKE_CHANCE = 0.5F;
+    private static final float MCHELI_EXPLOSION_SHAKE_MAX_DEGREES = 50F;
     private static final float VANILLA_EXPLOSION_TINNITUS_RANGE = 10F;
     private static long shotShakeStartNanos = Long.MIN_VALUE;
     private static long shotShakeDurationNanos = SHOT_SHAKE_DURATION_NANOS;
@@ -160,23 +163,28 @@ public class TickHandlerClient {
 
     public static void triggerExplosionScreenShake(EntityPlayer player, double x, double y, double z,
                                                    float explosionSize) {
-        triggerExplosionScreenShake(getExplosionScreenShakeDegrees(player, x, y, z, explosionSize));
+        float distance = (float)Math.sqrt(player.getDistanceSq(x, y, z));
+        triggerExplosionScreenShake(getExplosionScreenShakeDegrees(
+                distance, explosionSize, getExplosionScreenShakeRange(explosionSize)));
     }
 
     public static void triggerMCHeliExplosionScreenShake(double x, double y, double z,
                                                          float explosionSize) {
         EntityPlayer player = Minecraft.getMinecraft().thePlayer;
-        if (player != null) {
+        if (player != null && player.ridingEntity == null
+                && SCREEN_SHAKE_RANDOM.nextFloat() < MCHELI_EXPLOSION_SHAKE_CHANCE) {
             float distance = (float)Math.sqrt(player.getDistanceSq(x, y, z));
-            triggerExplosionScreenShake(getExplosionScreenShakeDegrees(
-                    distance, explosionSize));
+            float maxDegrees = getMCHeliExplosionShakeMaxDegrees(explosionSize);
+            triggerExplosionScreenShake(maxDegrees * Math.max(0F,
+                    1F - distance / PacketParticle.EXPLOSION_EFFECT_RANGE));
         }
     }
 
     public static void triggerVanillaExplosionEffects(EntityPlayer player, double x, double y, double z,
                                                       float explosionSize) {
         float distance = (float)Math.sqrt(player.getDistanceSq(x, y, z));
-        triggerExplosionScreenShake(getExplosionScreenShakeDegrees(distance, explosionSize));
+        triggerExplosionScreenShake(getExplosionScreenShakeDegrees(
+                distance, explosionSize, getExplosionScreenShakeRange(explosionSize)));
         if(distance <= VANILLA_EXPLOSION_TINNITUS_RANGE)
         {
             Minecraft.getMinecraft().getSoundHandler().playSound(PositionedSoundRecord.func_147673_a(
@@ -184,24 +192,47 @@ public class TickHandlerClient {
         }
     }
 
-    private static float getExplosionScreenShakeDegrees(EntityPlayer player, double x, double y, double z,
-                                                        float explosionSize) {
-        return getExplosionScreenShakeDegrees(
-                (float)Math.sqrt(player.getDistanceSq(x, y, z)), explosionSize);
+    private static float getExplosionScreenShakeRange(float explosionSize) {
+        return explosionSize <= 4F
+                ? SMALL_EXPLOSION_SHAKE_RANGE : PacketParticle.EXPLOSION_EFFECT_RANGE;
     }
 
-    private static float getExplosionScreenShakeDegrees(float distance, float explosionSize) {
+    private static float getExplosionScreenShakeDegrees(float distance, float explosionSize,
+                                                         float range) {
         if (explosionSize <= 0F || Float.isNaN(explosionSize) || Float.isInfinite(explosionSize)) {
             return 0F;
         }
         float sizeAmplitude = Math.min(EXPLOSION_SHAKE_MAX_DEGREES,
                 explosionSize * EXPLOSION_SHAKE_DEGREES_PER_SIZE);
-        float distanceFalloff = Math.max(0F,
-                1F - distance / PacketParticle.EXPLOSION_EFFECT_RANGE);
+        float distanceFalloff = Math.max(0F, 1F - distance / range);
         return sizeAmplitude * distanceFalloff;
     }
 
+    private static float getMCHeliExplosionShakeMaxDegrees(float explosionSize) {
+        if (explosionSize <= 0F || Float.isNaN(explosionSize) || Float.isInfinite(explosionSize)) {
+            return 0F;
+        }
+        if (explosionSize <= 3F) {
+            // MCHeli 20 mm and 30 mm HE rounds use sizes 1 through 3.
+            return explosionSize * 0.2F;
+        }
+        if (explosionSize <= 5F) {
+            // MCHeli 120 mm HE uses size 5 and should remain a strong impulse.
+            return 0.6F + (explosionSize - 3F) * 4.7F;
+        }
+        if (explosionSize <= 20F) {
+            return 10F + (explosionSize - 5F) * 0.5F;
+        }
+        // FAB-3000 (size 75) reaches 45 degrees; extreme pack values cap at 50.
+        return Math.min(MCHELI_EXPLOSION_SHAKE_MAX_DEGREES,
+                17.5F + (explosionSize - 20F) * 0.5F);
+    }
+
     private static void triggerScreenShake(float degrees, long durationNanos) {
+        EntityPlayer player = Minecraft.getMinecraft().thePlayer;
+        if (player != null && player.ridingEntity != null) {
+            return;
+        }
         shotShakeStartNanos = System.nanoTime();
         shotShakeDurationNanos = durationNanos;
         shotShakePitchAmplitude = (SCREEN_SHAKE_RANDOM.nextBoolean() ? 1F : -1F) * degrees;
@@ -1318,6 +1349,10 @@ public class TickHandlerClient {
     }
 
     private static void applyShotScreenShake(Minecraft minecraft) {
+        if (minecraft.thePlayer != null && minecraft.thePlayer.ridingEntity != null) {
+            shotShakeStartNanos = Long.MIN_VALUE;
+            return;
+        }
         Entity viewEntity = minecraft.renderViewEntity != null
                 ? minecraft.renderViewEntity : minecraft.thePlayer;
         if (viewEntity == null || shotShakeApplied || shotShakeStartNanos == Long.MIN_VALUE) {

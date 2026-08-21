@@ -16,7 +16,8 @@ public class VanillaExplosionEventListener {
 
     @SubscribeEvent
     public void onExplosionDetonate(ExplosionEvent.Detonate event) {
-        if(event.world.isRemote || event.explosion instanceof FlansModExplosion)
+        if(event.world.isRemote || event.explosion instanceof FlansModExplosion
+                || event.explosion.getClass().getName().startsWith("mcheli."))
             return;
 
         double x = event.explosion.explosionX;
