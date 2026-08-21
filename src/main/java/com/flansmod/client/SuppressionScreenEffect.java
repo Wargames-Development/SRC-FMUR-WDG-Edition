@@ -17,11 +17,10 @@ import org.lwjgl.opengl.GLContext;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-/** Short-lived post-process used for nearby hostile rounds and confirmed bullet hits. */
+/** Short-lived post-process used for nearby hostile rounds. */
 @SideOnly(Side.CLIENT)
 public final class SuppressionScreenEffect {
     private static final int NEAR_MISS_DURATION_TICKS = 40;
-    private static final int HIT_DURATION_TICKS = 60;
     private static final long START_TIME = System.nanoTime();
     private static final Random SOUND_RANDOM = new Random();
     private static final String[] NEAR_MISS_SOUNDS = {
@@ -43,8 +42,6 @@ public final class SuppressionScreenEffect {
             "uniform float elapsedTime;\n" +
             "uniform float suppression;\n" +
             "uniform float nearMissIntensity;\n" +
-            "uniform float hitIntensity;\n" +
-            "uniform float redEdges;\n" +
             "varying vec2 textureCoordinate;\n" +
             "float luminance(vec3 color) {\n" +
             "    return dot(color, vec3(0.2126, 0.7152, 0.0722));\n" +
@@ -59,7 +56,7 @@ public final class SuppressionScreenEffect {
             "    vec2 center = uv - vec2(0.5);\n" +
             "    float radius = length(center);\n" +
             "    vec2 direction = center / max(radius, 0.001);\n" +
-            "    float chromaPixels = suppression * (1.2 + hitIntensity * 4.8)\n" +
+            "    float chromaPixels = suppression * 1.2\n" +
             "            * (0.28 + radius * 1.35);\n" +
             "    vec2 chromaOffset = direction * chromaPixels / resolution;\n" +
             "    vec3 color = vec3(\n" +
@@ -73,30 +70,27 @@ public final class SuppressionScreenEffect {
             "    edge = max(edge, abs(baseLight - luminance(texture2D(sceneTexture, uv + vec2(0.0, pixel.y)).rgb)));\n" +
             "    edge = max(edge, abs(baseLight - luminance(texture2D(sceneTexture, uv - vec2(0.0, pixel.y)).rgb)));\n" +
             "    float outline = smoothstep(0.025, 0.18, edge);\n" +
-            "    outline *= suppression * (0.42 + hitIntensity * 0.58);\n" +
+            "    outline *= suppression * 0.42;\n" +
             "    float gray = luminance(color);\n" +
-            "    color = mix(color, vec3(gray), suppression * (0.18 + hitIntensity * 0.24));\n" +
+            "    color = mix(color, vec3(gray), suppression * 0.18);\n" +
             "    color = (color - 0.5) * (1.0 + suppression * 0.28) + 0.5;\n" +
-            "    color += vec3(outline * (0.44 + hitIntensity * 0.40));\n" +
+            "    color += vec3(outline * 0.44);\n" +
             "    float frame = floor(elapsedTime * 24.0);\n" +
             "    float fineGrain = noise(vec3(floor(gl_FragCoord.xy), frame)) - 0.5;\n" +
             "    float coarseGrain = noise(vec3(floor(gl_FragCoord.xy / 3.0), frame + 41.0)) - 0.5;\n" +
             "    color += vec3((fineGrain + coarseGrain * 0.55)\n" +
-            "            * suppression * (0.105 + hitIntensity * 0.12));\n" +
+            "            * suppression * 0.105);\n" +
             "    float edgeDistance = max(abs(center.x) * 2.0, abs(center.y) * 2.0);\n" +
             "    float vignette = smoothstep(0.48, 1.0, edgeDistance);\n" +
             "    float nearVignette = smoothstep(0.0, 0.35, nearMissIntensity);\n" +
             "    color = mix(color, vec3(0.018, 0.015, 0.013),\n" +
             "            vignette * nearVignette * 0.64);\n" +
-            "    color += vec3(vignette * suppression * (0.08 + hitIntensity * 0.10));\n" +
-            "    float red = vignette * hitIntensity * redEdges;\n" +
-            "    color = mix(color, vec3(0.72, 0.015, 0.008), red * 0.68);\n" +
+            "    color += vec3(vignette * suppression * 0.08);\n" +
             "    gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);\n" +
             "}\n";
 
     private static int nearMissTicks;
     private static float nearMissStrength;
-    private static int hitTicks;
     private static int shaderProgram = -1;
     private static int captureTexture = -1;
     private static int captureWidth = -1;
@@ -117,27 +111,19 @@ public final class SuppressionScreenEffect {
         }
     }
 
-    public static void triggerHit() {
-        hitTicks = HIT_DURATION_TICKS;
-    }
-
     public static void tick(Minecraft minecraft) {
         if (minecraft.theWorld == null || minecraft.thePlayer == null) {
             nearMissTicks = 0;
             nearMissStrength = 0F;
-            hitTicks = 0;
             return;
         }
         if (nearMissTicks > 0 && --nearMissTicks == 0) {
             nearMissStrength = 0F;
         }
-        if (hitTicks > 0) {
-            hitTicks--;
-        }
     }
 
     public static boolean isActive() {
-        return nearMissTicks > 0 || hitTicks > 0;
+        return nearMissTicks > 0;
     }
 
     public static void render(Minecraft minecraft, float partialTicks) {
@@ -146,16 +132,14 @@ public final class SuppressionScreenEffect {
         }
 
         float nearLife = remainingLife(nearMissTicks, NEAR_MISS_DURATION_TICKS, partialTicks);
-        float hitLife = remainingLife(hitTicks, HIT_DURATION_TICKS, partialTicks);
         float nearIntensity = nearMissStrength * smooth(nearLife);
-        float hitIntensity = smooth(hitLife);
-        float suppression = MathHelper.clamp_float(nearIntensity * 0.72F + hitIntensity, 0F, 1F);
+        float suppression = MathHelper.clamp_float(nearIntensity * 0.72F, 0F, 1F);
         if (suppression <= 0.002F) {
             return;
         }
 
         if (!ensureShader()) {
-            renderFallback(minecraft, suppression, nearIntensity, hitIntensity);
+            renderFallback(minecraft, suppression, nearIntensity);
             return;
         }
 
@@ -184,10 +168,6 @@ public final class SuppressionScreenEffect {
                     (System.nanoTime() - START_TIME) / 1_000_000_000F);
             GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "suppression"), suppression);
             GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "nearMissIntensity"), nearIntensity);
-            GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "hitIntensity"), hitIntensity);
-            GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "redEdges"),
-                    FlansMod.showFlashesWhenWounded ? 1F : 0F);
-
             ScaledResolution scaled = new ScaledResolution(minecraft,
                     minecraft.displayWidth, minecraft.displayHeight);
             drawQuad(scaled.getScaledWidth(), scaled.getScaledHeight());
@@ -278,7 +258,7 @@ public final class SuppressionScreenEffect {
     }
 
     private static void renderFallback(Minecraft minecraft, float suppression,
-                                       float nearIntensity, float hitIntensity) {
+                                       float nearIntensity) {
         ScaledResolution scaled = new ScaledResolution(minecraft,
                 minecraft.displayWidth, minecraft.displayHeight);
         int width = scaled.getScaledWidth();
@@ -287,7 +267,6 @@ public final class SuppressionScreenEffect {
         float edgeY = Math.max(28F, height * 0.25F);
         float nearAlpha = smooth(MathHelper.clamp_float(nearIntensity / 0.35F, 0F, 1F)) * 0.64F;
         float whiteAlpha = suppression * 0.22F;
-        float redAlpha = FlansMod.showFlashesWhenWounded ? hitIntensity * 0.52F : 0F;
 
         minecraft.entityRenderer.setupOverlayRendering();
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
@@ -302,9 +281,6 @@ public final class SuppressionScreenEffect {
                 drawVignette(width, height, edgeX, edgeY, 0.018F, 0.015F, 0.013F, nearAlpha);
             }
             drawVignette(width, height, edgeX, edgeY, 1F, 1F, 1F, whiteAlpha);
-            if (redAlpha > 0F) {
-                drawVignette(width, height, edgeX, edgeY, 0.75F, 0F, 0F, redAlpha);
-            }
         } finally {
             GL11.glPopAttrib();
             GL11.glColor4f(1F, 1F, 1F, 1F);

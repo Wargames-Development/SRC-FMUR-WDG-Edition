@@ -1,6 +1,5 @@
 package com.flansmod.common.network;
 
-import com.flansmod.client.SuppressionScreenEffect;
 import com.flansmod.common.FlansMod;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -24,6 +23,6 @@ public class PacketZPlayerHitEffect extends PacketBase {
 
     @Override
     public void handleClientSide(EntityPlayer clientPlayer) {
-        SuppressionScreenEffect.triggerHit();
+        // Retained as a no-op so removing the hit overlay does not change packet registration order.
     }
 }
