@@ -806,27 +806,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         return -1F;
     }
 
-    private static boolean isMetalMaterial(Material material) {
-        return material == Material.iron || material == Material.anvil;
-    }
-
-    @SideOnly(Side.CLIENT)
-    private void spawnMetalImpactEffects(MovingObjectPosition hit) {
-        double[] normal = getHitNormal(hit.sideHit);
-        int sparkCount = type.isLargeCaliber() ? 10 : 7;
-        for (int i = 0; i < sparkCount; i++) {
-            double speed = 0.08D + rand.nextDouble() * 0.16D;
-            FlansMod.proxy.spawnParticle("fireworksSpark",
-                    hit.hitVec.xCoord + normal[0] * 0.02D,
-                    hit.hitVec.yCoord + normal[1] * 0.02D,
-                    hit.hitVec.zCoord + normal[2] * 0.02D,
-                    normal[0] * speed + rand.nextGaussian() * 0.07D,
-                    normal[1] * speed + rand.nextGaussian() * 0.07D,
-                    normal[2] * speed + rand.nextGaussian() * 0.07D,
-                    0.7F);
-        }
-    }
-
     @Override
     public void onUpdate() {
         super.onUpdate();
@@ -1499,10 +1478,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
                     Block block = worldObj.getBlock(xTile, yTile, zTile);
                     Material mat = block.getMaterial();
-
-                    if (worldObj.isRemote && isMetalMaterial(mat)) {
-                        spawnMetalImpactEffects(raytraceResult);
-                    }
 
                     // Glass destruction is server-owned and happens before penetration continues.
                     if (!worldObj.isRemote && mat == Material.glass && TeamsManager.canBreakGlass) {
