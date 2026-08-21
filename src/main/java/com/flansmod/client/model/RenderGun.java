@@ -1396,15 +1396,44 @@ public class RenderGun implements IItemRenderer {
         ModelAttachment model = attachment.model;
         if (model != null) {
             if(zoomProgress > 0.8F) {
-                model.renderZDepthModel(f);
+                renderZDepthModel(model, f, type);
                 model.renderAttachment(f);
             } else {
                 model.renderAttachment(f);
-                model.renderZDepthModel(f);
+                renderZDepthModel(model, f, type);
             }
         }
 
         renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(paintjob));
+    }
+
+    private void renderZDepthModel(ModelAttachment model, float f, ItemRenderType type) {
+        if (model.zDepthModel == null || model.zDepthModel.length == 0) {
+            return;
+        }
+
+        if (type != ItemRenderType.EQUIPPED_FIRST_PERSON) {
+            model.renderZDepthModel(f);
+            return;
+        }
+
+        boolean primaryColorOnly = ShaderRenderCompat.beginPrimaryColorOnly();
+        if (!primaryColorOnly) {
+            // No MRT shader pass is active. Preserve the original z-depth behavior.
+            model.renderZDepthModel(f);
+            return;
+        }
+
+        GL11.glPushAttrib(GL11.GL_DEPTH_BUFFER_BIT);
+        try {
+            // Shader packs use world depth for fog, water and horizon effects.
+            // Keep the lens visible without replacing that world depth.
+            GL11.glDepthMask(false);
+            model.renderZDepthModel(f);
+        } finally {
+            GL11.glPopAttrib();
+            ShaderRenderCompat.endPrimaryColorOnly(true);
+        }
     }
 
     /**

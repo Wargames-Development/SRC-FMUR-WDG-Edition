@@ -1026,6 +1026,7 @@ public class TickHandlerClient {
 
     @SubscribeEvent
     public void renderWorldLast(RenderWorldLastEvent event) {
+        MuzzleSmokeRenderer.render(event);
         BulletHoleDecalRenderer.render(event);
         TracerRicochetRenderer.render(event);
     }
@@ -1108,6 +1109,7 @@ public class TickHandlerClient {
         if (apsMarkerTime > 0) {
             apsMarkerTime--;
         }
+        MuzzleSmokeRenderer.tick();
         BulletHoleDecalRenderer.tick();
         TracerRicochetRenderer.tick();
         if (FlansMod.ticker % lightOverrideRefreshRate == 0 && mc.theWorld != null) {

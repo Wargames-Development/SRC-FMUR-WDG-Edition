@@ -38,6 +38,7 @@ public final class MuzzleFlashRenderer {
         Tessellator tessellator = Tessellator.instance;
         Minecraft minecraft = Minecraft.getMinecraft();
 
+        boolean primaryColorOnly = ShaderRenderCompat.beginPrimaryColorOnly();
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         try {
             GL11.glDisable(GL11.GL_LIGHTING);
@@ -89,33 +90,12 @@ public final class MuzzleFlashRenderer {
             }
             tessellator.draw();
 
-            // Smoke expands through the barrel-local up, down, left, and right axes.
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            tessellator.startDrawingQuads();
-            tessellator.setBrightness(minecraft.thePlayer == null
-                    ? 0 : minecraft.thePlayer.getBrightnessForRender(1F));
-            for (int direction = 0; direction < 4; direction++) {
-                double directionAngle = rotationRadians + direction * Math.PI / 2D;
-                float directionY = (float)Math.cos(directionAngle);
-                float directionZ = (float)Math.sin(directionAngle);
-                float perpendicularY = -directionZ;
-                float perpendicularZ = directionY;
-                int smokeCount = 1 + random.nextInt(3);
-                for (int i = 0; i < smokeCount; i++) {
-                    float distance = (0.16F + phase * 0.25F + i * 0.08F) * unit;
-                    float jitter = (random.nextFloat() - 0.5F) * 0.08F * unit;
-                    float y = directionY * distance + perpendicularY * jitter;
-                    float z = directionZ * distance + perpendicularZ * jitter;
-                    float x = (0.08F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
-                    float size = (0.34F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
-                    addCrossedParticle(tessellator, x, y, z, size,
-                            0.68F, 0.66F, 0.60F, phase == 0F ? 0.16F : 0.095F,
-                            PUFF_TEXTURE_INDEX);
-                }
-            }
-            tessellator.draw();
+            // Smoke is spawned as a normal world particle by PacketMuzzleFlash.
+            // Keeping translucent smoke out of the held-item pass lets shader packs
+            // process it with their particle/translucency G-buffer program instead.
         } finally {
             GL11.glPopAttrib();
+            ShaderRenderCompat.endPrimaryColorOnly(primaryColorOnly);
             GL11.glColor4f(1F, 1F, 1F, 1F);
         }
     }
