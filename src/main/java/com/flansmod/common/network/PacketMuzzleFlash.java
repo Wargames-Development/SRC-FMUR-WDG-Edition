@@ -4,7 +4,6 @@ import com.flansmod.common.FlansMod;
 import com.flansmod.client.FlansModClient;
 import com.flansmod.client.TickHandlerClient;
 import com.flansmod.client.model.GunAnimations;
-import com.flansmod.client.MuzzleSmokeRenderer;
 import com.flansmod.common.RotatedAxes;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
@@ -92,9 +91,10 @@ public class PacketMuzzleFlash extends PacketBase
                 }
 
                 boolean defaultMuzzleFlash = "flansmod.muzzleflash".equals(type);
-                boolean legacySmokeParticle = isLegacyMuzzleSmokeType(type);
-                boolean suppressCustomSmoke = !FlansMod.showGunFiringSmoke
-                        && type.toLowerCase(Locale.ROOT).contains("smoke");
+                boolean customSmokeParticle = type.toLowerCase(Locale.ROOT).contains("smoke");
+                if (defaultMuzzleFlash || customSmokeParticle) {
+                    return;
+                }
 
                 boolean firstPerson = isThisPlayer
                         && Minecraft.getMinecraft().gameSettings.thirdPersonView == 0;
@@ -132,24 +132,9 @@ public class PacketMuzzleFlash extends PacketBase
                 Vector3f v = axes.getXAxis();
                 v.scale(0.05F);
 
-                // The model-attached renderer keeps only the short flame/sparks.
-                // Muzzle smoke renders after the translucent world pass so it cannot
-                // replace shader-pack water or Distant Horizons composition data.
-                float smokeScale = "largesmoke".equals(type) ? scale * 1.85F : scale;
-                MuzzleSmokeRenderer.addBurst(clientPlayer.worldObj,
-                        pos.x, pos.y, pos.z, v.x, v.y, v.z, smokeScale, firstPerson);
-
-                if (defaultMuzzleFlash || legacySmokeParticle || suppressCustomSmoke) {
-                    return;
-                }
-
                 FlansMod.proxy.spawnParticle(type, pos.x, pos.y, pos.z, v.x, v.y, v.z, scale);
             }
         }
-    }
-
-    private static boolean isLegacyMuzzleSmokeType(String particleType) {
-        return "smoke".equals(particleType) || "largesmoke".equals(particleType);
     }
 
     private static Vector3f getMuzzleModelOffset(GunType gun, AttachmentType barrelAttachment) {

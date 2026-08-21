@@ -2,6 +2,7 @@ package com.flansmod.client.model;
 
 import com.flansmod.common.guns.type.BulletType;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
@@ -37,6 +38,8 @@ public final class MuzzleFlashRenderer {
         int sparkCount = 5 + random.nextInt(5);
         Tessellator tessellator = Tessellator.instance;
         Minecraft minecraft = Minecraft.getMinecraft();
+        int ambientBrightness = ((int)OpenGlHelper.lastBrightnessY << 16)
+                | ((int)OpenGlHelper.lastBrightnessX & 0xFFFF);
 
         boolean primaryColorOnly = ShaderRenderCompat.beginPrimaryColorOnly();
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
@@ -94,9 +97,30 @@ public final class MuzzleFlashRenderer {
             }
             tessellator.draw();
 
-            // Smoke is spawned as a normal world particle by PacketMuzzleFlash.
-            // Keeping translucent smoke out of the held-item pass lets shader packs
-            // process it with their particle/translucency G-buffer program instead.
+            // Semi-transparent smoke remains attached to the two-frame fireball.
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            tessellator.startDrawingQuads();
+            tessellator.setBrightness(ambientBrightness);
+            for (int direction = 0; direction < 4; direction++) {
+                double directionAngle = rotationRadians + direction * Math.PI / 2D;
+                float directionY = (float)Math.cos(directionAngle);
+                float directionZ = (float)Math.sin(directionAngle);
+                float perpendicularY = -directionZ;
+                float perpendicularZ = directionY;
+                int smokeCount = 1 + random.nextInt(3);
+                for (int i = 0; i < smokeCount; i++) {
+                    float distance = (0.16F + phase * 0.25F + i * 0.08F) * unit;
+                    float jitter = (random.nextFloat() - 0.5F) * 0.08F * unit;
+                    float y = directionY * distance + perpendicularY * jitter;
+                    float z = directionZ * distance + perpendicularZ * jitter;
+                    float x = (0.08F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
+                    float size = (0.34F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
+                    addCrossedParticle(tessellator, x, y, z, size,
+                            0.68F, 0.66F, 0.60F, phase == 0F ? 0.16F : 0.095F,
+                            PUFF_TEXTURE_INDEX);
+                }
+            }
+            tessellator.draw();
         } finally {
             GL11.glPopAttrib();
             ShaderRenderCompat.endPrimaryColorOnly(primaryColorOnly);

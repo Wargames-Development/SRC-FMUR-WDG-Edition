@@ -66,8 +66,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private static final float BLOOD_PARTICLE_RANGE = 64F;
     private static final double TRACER_VISIBLE_DISTANCE = 20D;
     private static final double BULLET_RENDER_DISTANCE_WEIGHT = 64D;
-    private static final double BALLISTIC_DUST_DISTANCE = 5D;
-    private static final double BALLISTIC_DUST_SPACING = 1.25D;
     private static final double MIN_TRACER_RICOCHET_DISTANCE = 100D;
     private static final int TRACER_RICOCHET_CHANCE_DENOMINATOR = 2;
     private static final double NEAR_MISS_MIN_DISTANCE = 0.7D;
@@ -171,7 +169,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private double tracerOriginX;
     private double tracerOriginY;
     private double tracerOriginZ;
-    private double nextBallisticDustDistance = 0.75D;
     private boolean nearMissTriggered;
     public int penetrationBlockCount = 0;
     private int ticksInAir;
@@ -2040,9 +2037,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         if (worldObj.isRemote) {
             handleNearMissVignette();
         }
-        if (worldObj.isRemote && shouldSpawnBallisticDust()) {
-            spawnBallisticDust();
-        }
         if (type.trailParticles && worldObj.isRemote && ticksInAir > 1) {
             spawnParticles();
         }
@@ -2135,68 +2129,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         // shell. Keep true cannon rounds (20 mm and larger) out of this small-arms VFX.
         return type.weaponType == EnumWeaponType.SHELL
                 && type.isLargeCaliber() && !type.isExtraLargeCaliber();
-    }
-
-    private boolean shouldSpawnBallisticDust() {
-        return FlansMod.showBallisticDustSmoke
-                && owner instanceof EntityPlayer
-                && (type.weaponType == EnumWeaponType.NONE || type.weaponType == EnumWeaponType.GUN);
-    }
-
-    @SideOnly(Side.CLIENT)
-    private void spawnBallisticDust() {
-        double startX = prevPosX - tracerOriginX;
-        double startY = prevPosY - tracerOriginY;
-        double startZ = prevPosZ - tracerOriginZ;
-        double endX = posX - tracerOriginX;
-        double endY = posY - tracerOriginY;
-        double endZ = posZ - tracerOriginZ;
-        double startDistance = Math.sqrt(startX * startX + startY * startY + startZ * startZ);
-        double endDistance = Math.sqrt(endX * endX + endY * endY + endZ * endZ);
-        double visibleEnd = Math.min(endDistance, BALLISTIC_DUST_DISTANCE);
-        double segmentLength = endDistance - startDistance;
-        if (segmentLength <= 0.001D || nextBallisticDustDistance > visibleEnd) {
-            return;
-        }
-
-        boolean pistolCaliber = type.isPistolCaliber();
-        boolean extraLargeCaliber = isExtraLargeSmokeCaliber();
-        boolean largeCaliber = type.isLargeCaliber();
-        double cloudSpread = extraLargeCaliber ? 2.7D : largeCaliber ? 1.8D : pistolCaliber ? 0.55D : 1D;
-        double particleSpacing = extraLargeCaliber ? 0.55D : largeCaliber ? 0.85D : pistolCaliber ? 1.5D : BALLISTIC_DUST_SPACING;
-        float particleScale = extraLargeCaliber
-                ? 2.9F + rand.nextFloat() * 0.55F
-                : largeCaliber ? 1.8F + rand.nextFloat() * 0.35F
-                : pistolCaliber ? 0.42F + rand.nextFloat() * 0.13F
-                : 0.9F + rand.nextFloat() * 0.25F;
-        double motionLength = Math.sqrt(motionX * motionX + motionY * motionY + motionZ * motionZ);
-        while (nextBallisticDustDistance <= visibleEnd) {
-            double progress = (nextBallisticDustDistance - startDistance) / segmentLength;
-            progress = Math.max(0D, Math.min(1D, progress));
-            double x = prevPosX + (posX - prevPosX) * progress + rand.nextGaussian() * 0.18D * cloudSpread;
-            double y = prevPosY + (posY - prevPosY) * progress + rand.nextGaussian() * 0.12D * cloudSpread;
-            double z = prevPosZ + (posZ - prevPosZ) * progress + rand.nextGaussian() * 0.18D * cloudSpread;
-            double forwardX = motionLength > 0.001D ? motionX / motionLength * 0.018D : 0D;
-            double forwardY = motionLength > 0.001D ? motionY / motionLength * 0.018D : 0D;
-            double forwardZ = motionLength > 0.001D ? motionZ / motionLength * 0.018D : 0D;
-            FlansMod.proxy.spawnParticle("flansmod.ballisticdust", x, y, z,
-                    forwardX + rand.nextGaussian() * 0.012D,
-                    forwardY + 0.018D + rand.nextGaussian() * 0.008D,
-                    forwardZ + rand.nextGaussian() * 0.012D,
-                    particleScale);
-            nextBallisticDustDistance += particleSpacing;
-        }
-    }
-
-    private boolean isExtraLargeSmokeCaliber() {
-        if (type.isExtraLargeCaliber()) {
-            return true;
-        }
-        if (firedFrom == null || firedFrom.shortName == null) {
-            return false;
-        }
-        String weaponName = firedFrom.shortName.toLowerCase().replaceAll("[^a-z0-9]", "");
-        return weaponName.contains("ntw20") || weaponName.contains("snipexalligator");
     }
 
     private boolean stillHoming() {

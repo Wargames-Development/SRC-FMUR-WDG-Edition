@@ -529,12 +529,7 @@ public class ClientProxy extends CommonProxy {
                     return null;
                 } else {
                     // FLANS PARTICLES
-                    if (p_72726_1_.equals("flansmod.ballisticdust")) {
-                        entityfx = new EntitySmokeFX(theWorld, p_72726_2_, p_72726_4_, p_72726_6_,
-                                p_72726_8_, p_72726_10_, p_72726_12_, 3.2F * Math.max(0.1F, scale));
-                        entityfx.setAlphaF(0.11F);
-                        entityfx.setRBGColorF(0.64F, 0.61F, 0.55F);
-                    } else if (p_72726_1_.equals("flansmod.flare")) {
+                    if (p_72726_1_.equals("flansmod.flare")) {
                         entityfx = new EntityFlare(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
                     } else if (p_72726_1_.equals("flansmod.bloodchunk")) {
                         entityfx = new EntityBloodChunkFX(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);

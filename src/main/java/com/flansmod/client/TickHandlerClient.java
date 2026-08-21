@@ -24,7 +24,6 @@ import com.flansmod.common.vector.Vector3f;
 import com.flansmod.common.vector.Vector3i;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
-import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
@@ -1034,13 +1033,6 @@ public class TickHandlerClient {
         tessellator.draw();
     }
 
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public void renderFirstPersonMuzzleSmoke(RenderGameOverlayEvent.Pre event) {
-        if (event.type == ElementType.ALL) {
-            MuzzleSmokeRenderer.renderFirstPerson(event.partialTicks);
-        }
-    }
-
     @SubscribeEvent
     public void renderNightVisionBeforeHud(RenderGameOverlayEvent.Pre event) {
         if (event.type != ElementType.ALL || Minecraft.getMinecraft().gameSettings.hideGUI) {
@@ -1072,7 +1064,6 @@ public class TickHandlerClient {
 
     @SubscribeEvent
     public void renderWorldLast(RenderWorldLastEvent event) {
-        MuzzleSmokeRenderer.render(event);
         BulletHoleDecalRenderer.render(event);
         TracerRicochetRenderer.render(event);
     }
@@ -1155,7 +1146,6 @@ public class TickHandlerClient {
         if (apsMarkerTime > 0) {
             apsMarkerTime--;
         }
-        MuzzleSmokeRenderer.tick();
         BulletHoleDecalRenderer.tick();
         TracerRicochetRenderer.tick();
         if (FlansMod.ticker % lightOverrideRefreshRate == 0 && mc.theWorld != null) {
