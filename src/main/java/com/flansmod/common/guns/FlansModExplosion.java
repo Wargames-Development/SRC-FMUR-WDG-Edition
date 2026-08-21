@@ -83,7 +83,8 @@ public class FlansModExplosion extends Explosion
             	if(playerEntity instanceof EntityPlayerMP)
             	{
             		EntityPlayerMP entityplayer = (EntityPlayerMP)playerEntity;
-            		if (entityplayer.getDistanceSq(x, y, z) < 4096.0D)
+					if (entityplayer.getDistanceSq(x, y, z)
+							< PacketParticle.EXPLOSION_EFFECT_RANGE * PacketParticle.EXPLOSION_EFFECT_RANGE)
             		{
 						FlansMod.getPacketHandler().sendTo(new PacketExplosion(x, y, z, explosionRadius,
 								this.breakBlocks, this.breakBreakableBlocks), entityplayer);

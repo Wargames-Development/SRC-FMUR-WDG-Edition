@@ -24,9 +24,10 @@ public class VanillaExplosionEventListener {
         double z = event.explosion.explosionZ;
         PacketPlaySound.sendDistantExplosionSound(x, y, z,
                 event.world.provider.dimensionId, event.explosion.explosionSize,
-                PacketParticle.EXPLOSION_EFFECT_RANGE);
+                PacketParticle.EXPLOSION_DISTANT_SOUND_NEAR_RANGE);
         FlansMod.getPacketHandler().sendToAllAround(
-                new PacketParticle(PacketParticle.VANILLA_EXPLOSION_EFFECT, x, y, z, 0D, 0D, 0D),
+                new PacketParticle(PacketParticle.VANILLA_EXPLOSION_EFFECT,
+                        x, y, z, 0D, 0D, 0D, event.explosion.explosionSize),
                 x, y, z, PacketParticle.EXPLOSION_EFFECT_RANGE, event.world.provider.dimensionId);
     }
 }

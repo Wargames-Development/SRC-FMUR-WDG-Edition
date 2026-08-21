@@ -63,6 +63,7 @@ public class PacketExplosion extends PacketBase
 	{
 		FlansModExplosion.clientExplosion(clientPlayer.worldObj,
 				explosionSize, explosionX, explosionY, explosionZ, breakingBlocks, breakingBreakableBlocks);
-		TickHandlerClient.triggerExplosionScreenShake(clientPlayer, explosionX, explosionY, explosionZ);
+		TickHandlerClient.triggerExplosionScreenShake(clientPlayer, explosionX, explosionY, explosionZ,
+				explosionSize);
 	}
 }

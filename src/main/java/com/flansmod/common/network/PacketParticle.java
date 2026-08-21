@@ -14,7 +14,8 @@ public class PacketParticle extends PacketBase
 	public static final String MUZZLE_FLASH = "flansmod.muzzleflash";
 	public static final String SHOT_SCREEN_SHAKE = "flansmod.shotshake";
 	public static final String VANILLA_EXPLOSION_EFFECT = "flansmod.vanillaexplosioneffect";
-	public static final float EXPLOSION_EFFECT_RANGE = 64F;
+	public static final float EXPLOSION_EFFECT_RANGE = 128F;
+	public static final float EXPLOSION_DISTANT_SOUND_NEAR_RANGE = 64F;
 
 	public float x, y, z;
 	public float mx, my, mz;
@@ -82,7 +83,7 @@ public class PacketParticle extends PacketBase
 		}
 		if(VANILLA_EXPLOSION_EFFECT.equals(particleType))
 		{
-			TickHandlerClient.triggerVanillaExplosionEffects(clientPlayer, x, y, z);
+			TickHandlerClient.triggerVanillaExplosionEffects(clientPlayer, x, y, z, scale);
 			return;
 		}
 		FlansMod.proxy.spawnParticle(particleType, x, y, z, mx, my, mz, scale);

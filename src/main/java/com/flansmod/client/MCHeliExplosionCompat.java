@@ -36,10 +36,10 @@ public final class MCHeliExplosionCompat {
         ExplosionPosition explosion;
         while ((explosion = PENDING_EXPLOSIONS.poll()) != null) {
             TickHandlerClient.triggerMCHeliExplosionScreenShake(
-                    explosion.x, explosion.y, explosion.z);
+                    explosion.x, explosion.y, explosion.z, explosion.size);
             PacketPlaySound.playDistantExplosionClient(
                     explosion.x, explosion.y, explosion.z, explosion.size,
-                    PacketParticle.EXPLOSION_EFFECT_RANGE);
+                    PacketParticle.EXPLOSION_DISTANT_SOUND_NEAR_RANGE);
         }
     }
 

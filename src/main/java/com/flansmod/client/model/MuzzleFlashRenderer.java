@@ -45,6 +45,10 @@ public final class MuzzleFlashRenderer {
             GL11.glDisable(GL11.GL_CULL_FACE);
             GL11.glEnable(GL11.GL_BLEND);
             GL11.glDepthMask(false);
+            // Preserve framebuffer alpha used by water and deferred composition.
+            // The atlas quad should add visible RGB only, including its transparent
+            // pixels, rather than stamping its rectangular alpha footprint.
+            GL11.glColorMask(true, true, true, false);
             minecraft.renderEngine.bindTexture(PARTICLE_TEXTURE);
 
             // White-hot core, pale yellow middle, and a light gold outer cloud.

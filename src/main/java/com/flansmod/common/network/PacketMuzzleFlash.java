@@ -109,6 +109,11 @@ public class PacketMuzzleFlash extends PacketBase
                 Vector3f.add(shoulderOffset, g.muzzleFlashParticlesShoulderOffset, shoulderOffset);
 
                 if (firstPerson) {
+                    // RenderGun applies both scales before translating to the model's
+                    // muzzle point. Without the same conversion here, model units are
+                    // treated as world blocks and the smoke can spawn behind nearby
+                    // translucent geometry even though the visible muzzle is in front.
+                    handOffset.scale(g.modelScale * g.model.flashScale);
                     Vector3f.add(handOffset, new Vector3f(-0.7, -0.35, 0.1), handOffset);
                 } else {
                     handOffset = transformThirdPersonMuzzleOffset(g, handOffset);
@@ -132,7 +137,7 @@ public class PacketMuzzleFlash extends PacketBase
                 // replace shader-pack water or Distant Horizons composition data.
                 float smokeScale = "largesmoke".equals(type) ? scale * 1.85F : scale;
                 MuzzleSmokeRenderer.addBurst(clientPlayer.worldObj,
-                        pos.x, pos.y, pos.z, v.x, v.y, v.z, smokeScale);
+                        pos.x, pos.y, pos.z, v.x, v.y, v.z, smokeScale, firstPerson);
 
                 if (defaultMuzzleFlash || legacySmokeParticle || suppressCustomSmoke) {
                     return;

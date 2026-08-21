@@ -24,6 +24,7 @@ import com.flansmod.common.vector.Vector3f;
 import com.flansmod.common.vector.Vector3i;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
@@ -81,8 +82,8 @@ public class TickHandlerClient {
     private static final Random SCREEN_SHAKE_RANDOM = new Random();
     private static final long SHOT_SHAKE_DURATION_NANOS = 110000000L;
     private static final long EXPLOSION_SHAKE_DURATION_NANOS = SHOT_SHAKE_DURATION_NANOS * 2L;
-    private static final float EXPLOSION_SHAKE_MAX_DEGREES = 10F;
-    private static final float MCHELI_EXPLOSION_SHAKE_RANGE = 128F;
+    private static final float EXPLOSION_SHAKE_DEGREES_PER_SIZE = 0.4F;
+    private static final float EXPLOSION_SHAKE_MAX_DEGREES = 30F;
     private static final float VANILLA_EXPLOSION_TINNITUS_RANGE = 10F;
     private static long shotShakeStartNanos = Long.MIN_VALUE;
     private static long shotShakeDurationNanos = SHOT_SHAKE_DURATION_NANOS;
@@ -157,22 +158,25 @@ public class TickHandlerClient {
             triggerScreenShake(degrees, EXPLOSION_SHAKE_DURATION_NANOS);
     }
 
-    public static void triggerExplosionScreenShake(EntityPlayer player, double x, double y, double z) {
-        triggerExplosionScreenShake(getExplosionScreenShakeDegrees(player, x, y, z));
+    public static void triggerExplosionScreenShake(EntityPlayer player, double x, double y, double z,
+                                                   float explosionSize) {
+        triggerExplosionScreenShake(getExplosionScreenShakeDegrees(player, x, y, z, explosionSize));
     }
 
-    public static void triggerMCHeliExplosionScreenShake(double x, double y, double z) {
+    public static void triggerMCHeliExplosionScreenShake(double x, double y, double z,
+                                                         float explosionSize) {
         EntityPlayer player = Minecraft.getMinecraft().thePlayer;
         if (player != null) {
             float distance = (float)Math.sqrt(player.getDistanceSq(x, y, z));
             triggerExplosionScreenShake(getExplosionScreenShakeDegrees(
-                    distance, MCHELI_EXPLOSION_SHAKE_RANGE));
+                    distance, explosionSize));
         }
     }
 
-    public static void triggerVanillaExplosionEffects(EntityPlayer player, double x, double y, double z) {
+    public static void triggerVanillaExplosionEffects(EntityPlayer player, double x, double y, double z,
+                                                      float explosionSize) {
         float distance = (float)Math.sqrt(player.getDistanceSq(x, y, z));
-        triggerExplosionScreenShake(getExplosionScreenShakeDegrees(distance));
+        triggerExplosionScreenShake(getExplosionScreenShakeDegrees(distance, explosionSize));
         if(distance <= VANILLA_EXPLOSION_TINNITUS_RANGE)
         {
             Minecraft.getMinecraft().getSoundHandler().playSound(PositionedSoundRecord.func_147673_a(
@@ -180,17 +184,21 @@ public class TickHandlerClient {
         }
     }
 
-    private static float getExplosionScreenShakeDegrees(EntityPlayer player, double x, double y, double z) {
-        return getExplosionScreenShakeDegrees((float)Math.sqrt(player.getDistanceSq(x, y, z)));
+    private static float getExplosionScreenShakeDegrees(EntityPlayer player, double x, double y, double z,
+                                                        float explosionSize) {
+        return getExplosionScreenShakeDegrees(
+                (float)Math.sqrt(player.getDistanceSq(x, y, z)), explosionSize);
     }
 
-    private static float getExplosionScreenShakeDegrees(float distance) {
-        return getExplosionScreenShakeDegrees(distance, PacketParticle.EXPLOSION_EFFECT_RANGE);
-    }
-
-    private static float getExplosionScreenShakeDegrees(float distance, float range) {
-        return EXPLOSION_SHAKE_MAX_DEGREES
-                * Math.max(0F, 1F - distance / range);
+    private static float getExplosionScreenShakeDegrees(float distance, float explosionSize) {
+        if (explosionSize <= 0F || Float.isNaN(explosionSize) || Float.isInfinite(explosionSize)) {
+            return 0F;
+        }
+        float sizeAmplitude = Math.min(EXPLOSION_SHAKE_MAX_DEGREES,
+                explosionSize * EXPLOSION_SHAKE_DEGREES_PER_SIZE);
+        float distanceFalloff = Math.max(0F,
+                1F - distance / PacketParticle.EXPLOSION_EFFECT_RANGE);
+        return sizeAmplitude * distanceFalloff;
     }
 
     private static void triggerScreenShake(float degrees, long durationNanos) {
@@ -993,6 +1001,13 @@ public class TickHandlerClient {
         tessellator.addVertexWithUV(x + size, y, -90D, 1D, 0D);
         tessellator.addVertexWithUV(x, y, -90D, 0D, 0D);
         tessellator.draw();
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public void renderFirstPersonMuzzleSmoke(RenderGameOverlayEvent.Pre event) {
+        if (event.type == ElementType.ALL) {
+            MuzzleSmokeRenderer.renderFirstPerson(event.partialTicks);
+        }
     }
 
     @SubscribeEvent
