@@ -116,6 +116,50 @@ public class TexturedPolygon
 
 		tessellator.draw();
 	}
+
+	boolean isBatchCompatible()
+	{
+		if(nVertices != 3 && nVertices != 4)
+			return false;
+		for(PositionTextureVertex vertex : vertexPositions)
+			if(vertex instanceof PositionTransformVertex)
+				return false;
+		return true;
+	}
+
+	void addToBatch(TmtTessellator tessellator, int drawMode, ModelRendererTurbo.BatchTransform transform)
+	{
+		if((drawMode == GL11.GL_TRIANGLES && nVertices != 3) || (drawMode == GL11.GL_QUADS && nVertices != 4))
+			return;
+
+		if(iNormals.size() == 0)
+		{
+			if(normals.length == 3)
+			{
+				float direction = invertNormal ? -1F : 1F;
+				transform.setNormal(tessellator, normals[0] * direction, normals[1] * direction, normals[2] * direction);
+			}
+			else
+			{
+				Vec3 edgeA = vertexPositions[1].vector3D.subtract(vertexPositions[0].vector3D);
+				Vec3 edgeB = vertexPositions[1].vector3D.subtract(vertexPositions[2].vector3D);
+				Vec3 normal = edgeB.crossProduct(edgeA).normalize();
+				float direction = invertNormal ? -1F : 1F;
+				transform.setNormal(tessellator, (float)normal.xCoord * direction, (float)normal.yCoord * direction, (float)normal.zCoord * direction);
+			}
+		}
+
+		for(int i = 0; i < nVertices; i++)
+		{
+			if(i < iNormals.size())
+			{
+				Vec3 normal = iNormals.get(i);
+				float direction = invertNormal ? -1F : 1F;
+				transform.setNormal(tessellator, (float)normal.xCoord * direction, (float)normal.yCoord * direction, (float)normal.zCoord * direction);
+			}
+			transform.addVertex(tessellator, vertexPositions[i]);
+		}
+	}
 	
 	public PositionTextureVertex[] vertexPositions;
 	public int nVertices;

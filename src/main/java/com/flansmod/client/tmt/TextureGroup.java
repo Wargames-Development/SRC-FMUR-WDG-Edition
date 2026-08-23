@@ -8,6 +8,9 @@ import java.util.ArrayList;
 
 public class TextureGroup
 {
+	private String cachedTexture = "";
+	private ResourceLocation cachedTextureLocation;
+
 	public TextureGroup()
 	{
 		poly = new ArrayList<TexturedPolygon>();
@@ -28,8 +31,13 @@ public class TextureGroup
 	{
 		if(!texture.equals(""))
 		{
+			if(cachedTextureLocation == null || !texture.equals(cachedTexture))
+			{
+				cachedTexture = texture;
+				cachedTextureLocation = new ResourceLocation("", texture);
+			}
 			TextureManager renderengine = RenderManager.instance.renderEngine;
-			renderengine.bindTexture(new ResourceLocation("", texture));
+			renderengine.bindTexture(cachedTextureLocation);
 		}
 		else if(defaultTexture > -1)
 		{

@@ -6,6 +6,7 @@ import net.minecraft.client.model.ModelBase;
 
 public class ModelAttachment extends ModelBase 
 {
+	private final ModelRendererTurbo.RenderBatchCache renderBatchCache = new ModelRendererTurbo.RenderBatchCache();
 	public ModelRendererTurbo[] attachmentModel = new ModelRendererTurbo[0];
 	public ModelRendererTurbo[] ammoModel = new ModelRendererTurbo[0];
 	public ModelRendererTurbo[] zDepthModel = new ModelRendererTurbo[0];
@@ -29,23 +30,17 @@ public class ModelAttachment extends ModelBase
 
 	public void renderAttachment(float f)
 	{
-		for(ModelRendererTurbo model : attachmentModel)
-			if(model != null)
-				model.render(f);
+		renderBatchCache.render(attachmentModel, f);
 	}
 
 	public void renderAttachmentAmmo(float f)
 	{
-		for(ModelRendererTurbo model : ammoModel)
-			if(model != null)
-				model.render(f);
+		renderBatchCache.render(ammoModel, f);
 	}
 
 	public void renderZDepthModel(float f)
 	{
-		for(ModelRendererTurbo model : zDepthModel)
-			if(model != null)
-				model.render(f);
+		renderBatchCache.render(zDepthModel, f);
 	}
 
 	public void flipAll()

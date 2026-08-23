@@ -49,6 +49,7 @@ public class RenderGun implements IItemRenderer {
     public static float actualCrouchProgress;
     public static float actualSpringProgress;
     private static TextureManager renderEngine;
+    private final ModelBiped firstPersonArmModel = new ModelBiped(0.0F);
     private float effectiveReloadAnimationProgress;
 
     public static Random rand = new Random();
@@ -1465,7 +1466,7 @@ public class RenderGun implements IItemRenderer {
 
     private void renderFirstPersonArm(EntityPlayer player, ModelGun model, GunType gunType, GunAnimations anim) {
         Minecraft mc = Minecraft.getMinecraft();
-        ModelBiped modelBipedMain = new ModelBiped(0.0F);
+        ModelBiped modelBipedMain = firstPersonArmModel;
         mc.renderEngine.bindTexture(mc.thePlayer.getLocationSkin());
 
         float f = 1.0F;
@@ -1540,7 +1541,7 @@ public class RenderGun implements IItemRenderer {
 
     private void renderAnimArm(EntityPlayer player, ModelGun model, GunType gunType, GunAnimations anim) {
         Minecraft mc = Minecraft.getMinecraft();
-        ModelBiped modelBipedMain = new ModelBiped(0.0F);
+        ModelBiped modelBipedMain = firstPersonArmModel;
         mc.renderEngine.bindTexture(mc.thePlayer.getLocationSkin());
         GL11.glPushMatrix();
         GL11.glScalef(1 / gunType.modelScale, 1 / gunType.modelScale, 1 / gunType.modelScale);

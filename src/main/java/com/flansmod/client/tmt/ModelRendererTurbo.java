@@ -36,6 +36,7 @@ public class ModelRendererTurbo extends ModelRenderer {
     private static float lightmapLastX;
     private static float lightmapLastY;
     private static boolean optifineBreak = false;
+    private static int renderBatchDepth;
     public final String boxName;
     public boolean glow = false;
     public boolean mirror;
@@ -53,11 +54,15 @@ public class ModelRendererTurbo extends ModelRenderer {
     private boolean compiled;
     private int displayList;
     private int[] displayListArray;
+    private TextureGroup[] compiledTextureGroups;
     private final Map<String, TransformGroup> transformGroup;
     private final Map<String, TextureGroup> textureGroup;
     private TransformGroup currentGroup;
     private TextureGroup currentTextureGroup;
     private String defaultTexture;
+    private ResourceLocation defaultTextureLocation;
+    private boolean batchGeometryChecked;
+    private boolean batchGeometryCompatible;
 
     public ModelRendererTurbo(ModelBase modelbase, String s) {
         super(modelbase, s);
@@ -1867,6 +1872,7 @@ public class ModelRendererTurbo extends ModelRenderer {
     public void clear() {
         vertices = new PositionTextureVertex[0];
         faces = new TexturedPolygon[0];
+        batchGeometryChecked = false;
         transformGroup.clear();
         transformGroup.put("0", new TransformGroupBone(new Bone(0, 0, 0, 0), 1D));
         currentGroup = transformGroup.get("0");
@@ -1885,6 +1891,7 @@ public class ModelRendererTurbo extends ModelRenderer {
     }
 
     public void copyTo(PositionTextureVertex[] verts, TexturedPolygon[] poly, boolean copyGroup) {
+        batchGeometryChecked = false;
         vertices = Arrays.copyOf(vertices, vertices.length + verts.length);
         faces = Arrays.copyOf(faces, faces.length + poly.length);
 
@@ -2020,6 +2027,7 @@ public class ModelRendererTurbo extends ModelRenderer {
      */
     public void setDefaultTexture(String s) {
         defaultTexture = s;
+        defaultTextureLocation = s.equals("") ? null : new ResourceLocation("", s);
     }
 
     /**
@@ -2033,80 +2041,327 @@ public class ModelRendererTurbo extends ModelRenderer {
     }
 
     /**
+     * Preserve shared alpha and blend state once for a group of model parts.
+     * Calls may be nested, but must stay on Minecraft's render thread.
+     */
+    public static void beginRenderBatch() {
+        if (renderBatchDepth == 0) {
+            GL11.glPushAttrib(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_ENABLE_BIT);
+            GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        }
+        renderBatchDepth++;
+    }
+
+    public static void renderAll(ModelRendererTurbo[] models, float worldScale) {
+        if (models == null || models.length == 0) {
+            return;
+        }
+        beginRenderBatch();
+        try {
+            for (ModelRendererTurbo model : models) {
+                if (model != null) {
+                    model.render(worldScale);
+                }
+            }
+        } finally {
+            endRenderBatch();
+        }
+    }
+
+    /**
+     * Flattens large, immutable part arrays into one driver-side geometry list.
+     * Dynamic or textured parts automatically retain the normal render path.
+     */
+    public static final class RenderBatchCache {
+        private static final int MIN_BATCH_PARTS = 16;
+        private final Map<ModelRendererTurbo[], CompiledRenderBatch> batches = new IdentityHashMap<>();
+
+        public void render(ModelRendererTurbo[] models, float worldScale) {
+            if (models == null || models.length == 0) {
+                return;
+            }
+            if (models.length < MIN_BATCH_PARTS) {
+                renderAll(models, worldScale);
+                return;
+            }
+
+            CompiledRenderBatch batch = batches.get(models);
+            if (batch != null && batch.matches(models, worldScale)) {
+                GL11.glCallList(batch.displayList);
+                return;
+            }
+            if (batch != null) {
+                GL11.glDeleteLists(batch.displayList, 1);
+                batches.remove(models);
+            }
+            if (!canCompileBatch(models)) {
+                renderAll(models, worldScale);
+                return;
+            }
+
+            int batchDisplayList = GLAllocation.generateDisplayLists(1);
+            GL11.glNewList(batchDisplayList, GL11.GL_COMPILE);
+            try {
+                renderBatchGeometry(models, worldScale);
+            } finally {
+                GL11.glEndList();
+            }
+
+            batch = new CompiledRenderBatch(batchDisplayList, models, worldScale);
+            batches.put(models, batch);
+            GL11.glCallList(batchDisplayList);
+        }
+
+        private static boolean canCompileBatch(ModelRendererTurbo[] models) {
+            for (ModelRendererTurbo model : models) {
+                if (model == null || !model.isBatchCompatible()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private static void renderBatchGeometry(ModelRendererTurbo[] models, float worldScale) {
+            beginRenderBatch();
+            try {
+                drawBatchPrimitive(models, worldScale, GL11.GL_QUADS);
+                drawBatchPrimitive(models, worldScale, GL11.GL_TRIANGLES);
+            } finally {
+                endRenderBatch();
+            }
+        }
+
+        private static void drawBatchPrimitive(ModelRendererTurbo[] models, float worldScale, int drawMode) {
+            TmtTessellator tessellator = TmtTessellator.instance;
+            tessellator.startDrawing(drawMode);
+            for (ModelRendererTurbo model : models) {
+                BatchTransform transform = new BatchTransform(model, worldScale);
+                for (TexturedPolygon polygon : model.currentTextureGroup.poly) {
+                    polygon.addToBatch(tessellator, drawMode, transform);
+                }
+            }
+            tessellator.draw();
+        }
+    }
+
+    private static final class CompiledRenderBatch {
+        private final int displayList;
+        private final ModelRendererTurbo[] models;
+        private final float[] transforms;
+        private final boolean[] legacyCompilers;
+        private final float worldScale;
+
+        private CompiledRenderBatch(int displayList, ModelRendererTurbo[] models, float worldScale) {
+            this.displayList = displayList;
+            this.models = models.clone();
+            this.transforms = new float[models.length * 6];
+            this.legacyCompilers = new boolean[models.length];
+            this.worldScale = worldScale;
+            for (int i = 0; i < models.length; i++) {
+                captureTransform(models[i], i);
+                legacyCompilers[i] = models[i].useLegacyCompiler;
+            }
+        }
+
+        private boolean matches(ModelRendererTurbo[] currentModels, float currentWorldScale) {
+            if (Float.floatToIntBits(worldScale) != Float.floatToIntBits(currentWorldScale)
+                    || models.length != currentModels.length) {
+                return false;
+            }
+            for (int i = 0; i < models.length; i++) {
+                ModelRendererTurbo model = currentModels[i];
+                if (models[i] != model || !model.isBatchCompatible()
+                        || legacyCompilers[i] != model.useLegacyCompiler
+                        || !transformMatches(model, i)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private void captureTransform(ModelRendererTurbo model, int index) {
+            int offset = index * 6;
+            transforms[offset] = model.rotationPointX;
+            transforms[offset + 1] = model.rotationPointY;
+            transforms[offset + 2] = model.rotationPointZ;
+            transforms[offset + 3] = model.rotateAngleX;
+            transforms[offset + 4] = model.rotateAngleY;
+            transforms[offset + 5] = model.rotateAngleZ;
+        }
+
+        private boolean transformMatches(ModelRendererTurbo model, int index) {
+            int offset = index * 6;
+            return Float.floatToIntBits(transforms[offset]) == Float.floatToIntBits(model.rotationPointX)
+                    && Float.floatToIntBits(transforms[offset + 1]) == Float.floatToIntBits(model.rotationPointY)
+                    && Float.floatToIntBits(transforms[offset + 2]) == Float.floatToIntBits(model.rotationPointZ)
+                    && Float.floatToIntBits(transforms[offset + 3]) == Float.floatToIntBits(model.rotateAngleX)
+                    && Float.floatToIntBits(transforms[offset + 4]) == Float.floatToIntBits(model.rotateAngleY)
+                    && Float.floatToIntBits(transforms[offset + 5]) == Float.floatToIntBits(model.rotateAngleZ);
+        }
+    }
+
+    private boolean isBatchCompatible() {
+        return showModel && !field_1402_i && !forcedRecompile && !glow
+                && (childModels == null || childModels.isEmpty())
+                && defaultTexture.equals("")
+                && textureGroup.size() == 1
+                && currentTextureGroup != null
+                && currentTextureGroup.texture.equals("")
+                && hasBatchCompatibleGeometry();
+    }
+
+    private boolean hasBatchCompatibleGeometry() {
+        if (batchGeometryChecked) {
+            return batchGeometryCompatible;
+        }
+        batchGeometryCompatible = true;
+        for (TexturedPolygon polygon : currentTextureGroup.poly) {
+            if (polygon == null || !polygon.isBatchCompatible()) {
+                batchGeometryCompatible = false;
+                break;
+            }
+        }
+        batchGeometryChecked = true;
+        return batchGeometryCompatible;
+    }
+
+    static final class BatchTransform {
+        private final float translateX;
+        private final float translateY;
+        private final float translateZ;
+        private final float sinX;
+        private final float cosX;
+        private final float sinY;
+        private final float cosY;
+        private final float sinZ;
+        private final float cosZ;
+        private final float worldScale;
+
+        private BatchTransform(ModelRendererTurbo model, float worldScale) {
+            this.translateX = model.rotationPointX * worldScale;
+            this.translateY = model.rotationPointY * worldScale;
+            this.translateZ = model.rotationPointZ * worldScale;
+            this.sinX = MathHelper.sin(model.rotateAngleX);
+            this.cosX = MathHelper.cos(model.rotateAngleX);
+            this.sinY = MathHelper.sin(model.rotateAngleY);
+            this.cosY = MathHelper.cos(model.rotateAngleY);
+            this.sinZ = MathHelper.sin(model.rotateAngleZ);
+            this.cosZ = MathHelper.cos(model.rotateAngleZ);
+            this.worldScale = worldScale;
+        }
+
+        void addVertex(TmtTessellator tessellator, PositionTextureVertex vertex) {
+            float x = (float) vertex.vector3D.xCoord * worldScale;
+            float y = (float) vertex.vector3D.yCoord * worldScale;
+            float z = (float) vertex.vector3D.zCoord * worldScale;
+
+            float rotatedY = y * cosX - z * sinX;
+            float rotatedZ = y * sinX + z * cosX;
+            float rotatedX = x * cosZ - rotatedY * sinZ;
+            rotatedY = x * sinZ + rotatedY * cosZ;
+            x = rotatedX * cosY + rotatedZ * sinY;
+            z = -rotatedX * sinY + rotatedZ * cosY;
+
+            tessellator.addVertexWithUVW(x + translateX, rotatedY + translateY, z + translateZ,
+                    vertex.texturePositionX, vertex.texturePositionY, vertex.texturePositionW);
+        }
+
+        void setNormal(TmtTessellator tessellator, float x, float y, float z) {
+            float rotatedY = y * cosX - z * sinX;
+            float rotatedZ = y * sinX + z * cosX;
+            float rotatedX = x * cosZ - rotatedY * sinZ;
+            rotatedY = x * sinZ + rotatedY * cosZ;
+            x = rotatedX * cosY + rotatedZ * sinY;
+            z = -rotatedX * sinY + rotatedZ * cosY;
+            tessellator.setNormal(x, rotatedY, z);
+        }
+    }
+
+    public static void endRenderBatch() {
+        if (renderBatchDepth <= 0) {
+            throw new IllegalStateException("Model render batch ended without a matching begin");
+        }
+        renderBatchDepth--;
+        if (renderBatchDepth == 0) {
+            GL11.glPopAttrib();
+        }
+    }
+
+    /**
      * Renders the shape
      *
      * @param worldScale     The scale of the shape
      * @param oldRotateOrder Whether to use the old rotate order (ZYX) instead of the new one (YZX)
      */
     public void render(float worldScale, boolean oldRotateOrder) {
+        if (field_1402_i || !showModel) {
+            return;
+        }
+        boolean ownsRenderBatch = renderBatchDepth == 0;
+        if (ownsRenderBatch) {
+            beginRenderBatch();
+        }
         GL11.glPushMatrix();
-        if (glow) {
-            glowOn();
-        }
-        GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
-        GL11.glEnable(GL11.GL_BLEND);
-        int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);
-        int dstBlend = GL11.glGetInteger(GL11.GL_BLEND_DST);
-        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-
-        if (field_1402_i) {
-            return;
-        }
-        if (!showModel) {
-            return;
-        }
-        if (!compiled || forcedRecompile) {
-            compileDisplayList(worldScale);
-        }
-        if (rotateAngleX != 0.0F || rotateAngleY != 0.0F || rotateAngleZ != 0.0F) {
-            GL11.glPushMatrix();
-            GL11.glTranslatef(rotationPointX * worldScale, rotationPointY * worldScale, rotationPointZ * worldScale);
-            if (!oldRotateOrder && rotateAngleY != 0.0F) {
-                GL11.glRotatef(rotateAngleY * 57.29578F, 0.0F, 1.0F, 0.0F);
+        boolean glowActive = false;
+        try {
+            if (glow) {
+                glowOn();
+                glowActive = true;
             }
-            if (rotateAngleZ != 0.0F) {
-                GL11.glRotatef((oldRotateOrder ? -1 : 1) * rotateAngleZ * 57.29578F, 0.0F, 0.0F, 1.0F);
+            if (!compiled || forcedRecompile) {
+                compileDisplayList(worldScale);
             }
-            if (oldRotateOrder && rotateAngleY != 0.0F) {
-                GL11.glRotatef(-rotateAngleY * 57.29578F, 0.0F, 1.0F, 0.0F);
-            }
-            if (rotateAngleX != 0.0F) {
-                GL11.glRotatef(rotateAngleX * 57.29578F, 1.0F, 0.0F, 0.0F);
-            }
-
-            callDisplayList();
-            if (childModels != null) {
-                for (Object childModel : childModels) {
-                    ((ModelRenderer) childModel).render(worldScale);
+            if (rotateAngleX != 0.0F || rotateAngleY != 0.0F || rotateAngleZ != 0.0F) {
+                GL11.glPushMatrix();
+                GL11.glTranslatef(rotationPointX * worldScale, rotationPointY * worldScale, rotationPointZ * worldScale);
+                if (!oldRotateOrder && rotateAngleY != 0.0F) {
+                    GL11.glRotatef(rotateAngleY * 57.29578F, 0.0F, 1.0F, 0.0F);
+                }
+                if (rotateAngleZ != 0.0F) {
+                    GL11.glRotatef((oldRotateOrder ? -1 : 1) * rotateAngleZ * 57.29578F, 0.0F, 0.0F, 1.0F);
+                }
+                if (oldRotateOrder && rotateAngleY != 0.0F) {
+                    GL11.glRotatef(-rotateAngleY * 57.29578F, 0.0F, 1.0F, 0.0F);
+                }
+                if (rotateAngleX != 0.0F) {
+                    GL11.glRotatef(rotateAngleX * 57.29578F, 1.0F, 0.0F, 0.0F);
                 }
 
+                callDisplayList();
+                if (childModels != null) {
+                    for (Object childModel : childModels) {
+                        ((ModelRenderer) childModel).render(worldScale);
+                    }
+                }
+                GL11.glPopMatrix();
+            } else if (rotationPointX != 0.0F || rotationPointY != 0.0F || rotationPointZ != 0.0F) {
+                GL11.glTranslatef(rotationPointX * worldScale, rotationPointY * worldScale, rotationPointZ * worldScale);
+                callDisplayList();
+                if (childModels != null) {
+                    for (Object childModel : childModels) {
+                        ((ModelRenderer) childModel).render(worldScale);
+                    }
+                }
+                GL11.glTranslatef(-rotationPointX * worldScale, -rotationPointY * worldScale, -rotationPointZ * worldScale);
+            } else {
+                callDisplayList();
+                if (childModels != null) {
+                    for (Object childModel : childModels) {
+                        ((ModelRenderer) childModel).render(worldScale);
+                    }
+                }
+            }
+        } finally {
+            if (glowActive) {
+                glowOff();
             }
             GL11.glPopMatrix();
-        } else if (rotationPointX != 0.0F || rotationPointY != 0.0F || rotationPointZ != 0.0F) {
-            GL11.glTranslatef(rotationPointX * worldScale, rotationPointY * worldScale, rotationPointZ * worldScale);
-            callDisplayList();
-            if (childModels != null) {
-                for (Object childModel : childModels) {
-                    ((ModelRenderer) childModel).render(worldScale);
-                }
-
-            }
-            GL11.glTranslatef(-rotationPointX * worldScale, -rotationPointY * worldScale, -rotationPointZ * worldScale);
-        } else {
-            callDisplayList();
-            if (childModels != null) {
-                for (Object childModel : childModels) {
-                    ((ModelRenderer) childModel).render(worldScale);
-                }
-
+            if (ownsRenderBatch) {
+                endRenderBatch();
             }
         }
-        if (glow) {
-            glowOff();
-        }
-        GL11.glBlendFunc(srcBlend, dstBlend);
-        GL11.glDisable(GL11.GL_BLEND);
-        GL11.glPopMatrix();
     }
 
     @Override
@@ -2168,15 +2423,12 @@ public class ModelRendererTurbo extends ModelRenderer {
         else {
             TextureManager renderEngine = RenderManager.instance.renderEngine;
 
-            Collection<TextureGroup> textures = textureGroup.values();
-
-            Iterator<TextureGroup> itr = textures.iterator();
-            for (int i = 0; itr.hasNext(); i++) {
-                TextureGroup curTexGroup = itr.next();
+            for (int i = 0; i < compiledTextureGroups.length; i++) {
+                TextureGroup curTexGroup = compiledTextureGroups[i];
                 curTexGroup.loadTexture();
                 GL11.glCallList(displayListArray[i]);
-                if (!defaultTexture.equals(""))
-                    renderEngine.bindTexture(new ResourceLocation("", defaultTexture));
+                if (defaultTextureLocation != null)
+                    renderEngine.bindTexture(defaultTextureLocation);
             }
         }
     }
@@ -2185,16 +2437,14 @@ public class ModelRendererTurbo extends ModelRenderer {
         if (useLegacyCompiler)
             compileLegacyDisplayList(worldScale);
         else {
-            Collection<TextureGroup> textures = textureGroup.values();
-
-            Iterator<TextureGroup> itr = textures.iterator();
-            displayListArray = new int[textureGroup.size()];
-            for (int i = 0; itr.hasNext(); i++) {
+            compiledTextureGroups = textureGroup.values().toArray(new TextureGroup[textureGroup.size()]);
+            displayListArray = new int[compiledTextureGroups.length];
+            for (int i = 0; i < compiledTextureGroups.length; i++) {
                 displayListArray[i] = GLAllocation.generateDisplayLists(1);
                 GL11.glNewList(displayListArray[i], GL11.GL_COMPILE);
                 TmtTessellator tessellator = TmtTessellator.instance;
 
-                TextureGroup usedGroup = itr.next();
+                TextureGroup usedGroup = compiledTextureGroups[i];
                 for (int j = 0; j < usedGroup.poly.size(); j++) {
                     usedGroup.poly.get(j).draw(tessellator, worldScale);
                 }

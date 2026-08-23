@@ -14,6 +14,7 @@ public class ModelGun extends ModelBase {
     private static float lightmapLastX;
     private static float lightmapLastY;
     private static boolean optifineBreak = false;
+    private final ModelRendererTurbo.RenderBatchCache renderBatchCache = new ModelRendererTurbo.RenderBatchCache();
     //These first 7 models are static with no animation
     public ModelRendererTurbo[] gunModel = new ModelRendererTurbo[0];
     public ModelRendererTurbo[] backpackModel = new ModelRendererTurbo[0]; //For flamethrowers and such like. Rendered on the player's back
@@ -493,9 +494,7 @@ public class ModelGun extends ModelBase {
      * For renderering models simply
      */
     protected void render(ModelRendererTurbo[] models, float f) {
-        for (ModelRendererTurbo model : models)
-            if (model != null)
-                model.render(f);
+        renderBatchCache.render(models, f);
     }
 
     /**
