@@ -173,6 +173,21 @@ public final class NightVisionGogglesEffect {
             "}\n";
 
     private static int shaderProgram = -1;
+    private static int sceneTextureUniform = -1;
+    private static int bloomTextureUniform = -1;
+    private static int resolutionUniform = -1;
+    private static int bloomResolutionUniform = -1;
+    private static int elapsedTimeUniform = -1;
+    private static int intensityUniform = -1;
+    private static int cameraPitchUniform = -1;
+    private static int tanHalfFovUniform = -1;
+    private static int skyExposureUniform = -1;
+    private static int daylightExposureUniform = -1;
+    private static int localLightExposureUniform = -1;
+    private static int chemLightExposureUniform = -1;
+    private static int flashlightExposureUniform = -1;
+    private static int whitePhosphorUniform = -1;
+    private static int renderPassUniform = -1;
     private static int captureTexture = -1;
     private static int bloomTexture = -1;
     private static int captureWidth = -1;
@@ -303,6 +318,7 @@ public final class NightVisionGogglesEffect {
             if (GL20.glGetProgrami(shaderProgram, GL20.GL_LINK_STATUS) == GL11.GL_FALSE) {
                 throw new IllegalStateException(GL20.glGetProgramInfoLog(shaderProgram, 4096));
             }
+            cacheUniformLocations();
             GL20.glDetachShader(shaderProgram, vertexShader);
             GL20.glDetachShader(shaderProgram, fragmentShader);
             GL20.glDeleteShader(vertexShader);
@@ -326,6 +342,24 @@ public final class NightVisionGogglesEffect {
             throw new IllegalStateException(log);
         }
         return shader;
+    }
+
+    private static void cacheUniformLocations() {
+        sceneTextureUniform = GL20.glGetUniformLocation(shaderProgram, "sceneTexture");
+        bloomTextureUniform = GL20.glGetUniformLocation(shaderProgram, "bloomTexture");
+        resolutionUniform = GL20.glGetUniformLocation(shaderProgram, "resolution");
+        bloomResolutionUniform = GL20.glGetUniformLocation(shaderProgram, "bloomResolution");
+        elapsedTimeUniform = GL20.glGetUniformLocation(shaderProgram, "elapsedTime");
+        intensityUniform = GL20.glGetUniformLocation(shaderProgram, "intensity");
+        cameraPitchUniform = GL20.glGetUniformLocation(shaderProgram, "cameraPitch");
+        tanHalfFovUniform = GL20.glGetUniformLocation(shaderProgram, "tanHalfFov");
+        skyExposureUniform = GL20.glGetUniformLocation(shaderProgram, "skyExposure");
+        daylightExposureUniform = GL20.glGetUniformLocation(shaderProgram, "daylightExposure");
+        localLightExposureUniform = GL20.glGetUniformLocation(shaderProgram, "localLightExposure");
+        chemLightExposureUniform = GL20.glGetUniformLocation(shaderProgram, "chemLightExposure");
+        flashlightExposureUniform = GL20.glGetUniformLocation(shaderProgram, "flashlightExposure");
+        whitePhosphorUniform = GL20.glGetUniformLocation(shaderProgram, "whitePhosphor");
+        renderPassUniform = GL20.glGetUniformLocation(shaderProgram, "renderPass");
     }
 
     private static void updateCaptureTexture(int width, int height) {
@@ -374,42 +408,42 @@ public final class NightVisionGogglesEffect {
 
     private static void useShader(Minecraft minecraft, float intensity, int renderPass) {
         GL20.glUseProgram(shaderProgram);
-        GL20.glUniform1i(GL20.glGetUniformLocation(shaderProgram, "sceneTexture"), 0);
-        GL20.glUniform1i(GL20.glGetUniformLocation(shaderProgram, "bloomTexture"), 1);
-        GL20.glUniform2f(GL20.glGetUniformLocation(shaderProgram, "resolution"),
+        GL20.glUniform1i(sceneTextureUniform, 0);
+        GL20.glUniform1i(bloomTextureUniform, 1);
+        GL20.glUniform2f(resolutionUniform,
                 minecraft.displayWidth, minecraft.displayHeight);
-        GL20.glUniform2f(GL20.glGetUniformLocation(shaderProgram, "bloomResolution"),
+        GL20.glUniform2f(bloomResolutionUniform,
                 Math.max(1, minecraft.displayWidth / BLOOM_DOWNSAMPLE),
                 Math.max(1, minecraft.displayHeight / BLOOM_DOWNSAMPLE));
-        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "elapsedTime"),
+        GL20.glUniform1f(elapsedTimeUniform,
                 (System.nanoTime() - START_TIME) / 1_000_000_000F);
-        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "intensity"), intensity);
+        GL20.glUniform1f(intensityUniform, intensity);
         float cameraPitch = minecraft.thePlayer == null ? 0F
                 : minecraft.thePlayer.rotationPitch * (float)Math.PI / 180F;
         float halfFov = minecraft.gameSettings.fovSetting * (float)Math.PI / 360F;
-        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "cameraPitch"), cameraPitch);
-        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "tanHalfFov"), (float)Math.tan(halfFov));
+        GL20.glUniform1f(cameraPitchUniform, cameraPitch);
+        GL20.glUniform1f(tanHalfFovUniform, (float)Math.tan(halfFov));
         float skyExposure = NightVisionGogglesBrightness.getSmoothedSkyExposure(minecraft);
         float daylightExposure = minecraft.theWorld == null ? 0F
                 : skyExposure * minecraft.theWorld.getSunBrightness(1F);
-        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "skyExposure"), skyExposure);
-        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "daylightExposure"), daylightExposure);
+        GL20.glUniform1f(skyExposureUniform, skyExposure);
+        GL20.glUniform1f(daylightExposureUniform, daylightExposure);
         // Only actual emitting blocks within two blocks create broad overload.
         // Propagated and synthetic muzzle-flash light no longer white out a room.
         float localLightExposure = NightVisionGogglesBrightness
                 .getSmoothedLocalLightExposure(minecraft);
-        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "localLightExposure"),
+        GL20.glUniform1f(localLightExposureUniform,
                 localLightExposure);
-        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "chemLightExposure"),
+        GL20.glUniform1f(chemLightExposureUniform,
                 NightVisionGogglesBrightness.getChemLightExposure(minecraft));
-        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "flashlightExposure"),
+        GL20.glUniform1f(flashlightExposureUniform,
                 NightVisionGogglesBrightness.getFlashlightExposure(minecraft));
         ItemStack goggles = minecraft.thePlayer == null ? null
                 : PlayerEquipmentInventory.getStack(minecraft.thePlayer,
                 PlayerEquipmentInventory.NIGHT_VISION_SLOT);
-        GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "whitePhosphor"),
+        GL20.glUniform1f(whitePhosphorUniform,
                 ItemNightVisionGoggles.isWhitePhosphor(goggles) ? 1F : 0F);
-        GL20.glUniform1i(GL20.glGetUniformLocation(shaderProgram, "renderPass"), renderPass);
+        GL20.glUniform1i(renderPassUniform, renderPass);
     }
 
     private static void drawFullscreenQuad(int width, int height) {

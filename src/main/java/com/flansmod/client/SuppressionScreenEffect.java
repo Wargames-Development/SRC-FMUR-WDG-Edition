@@ -92,6 +92,11 @@ public final class SuppressionScreenEffect {
     private static int nearMissTicks;
     private static float nearMissStrength;
     private static int shaderProgram = -1;
+    private static int sceneTextureUniform = -1;
+    private static int resolutionUniform = -1;
+    private static int elapsedTimeUniform = -1;
+    private static int suppressionUniform = -1;
+    private static int nearMissIntensityUniform = -1;
     private static int captureTexture = -1;
     private static int captureWidth = -1;
     private static int captureHeight = -1;
@@ -161,13 +166,13 @@ public final class SuppressionScreenEffect {
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, captureTexture);
 
             GL20.glUseProgram(shaderProgram);
-            GL20.glUniform1i(GL20.glGetUniformLocation(shaderProgram, "sceneTexture"), 0);
-            GL20.glUniform2f(GL20.glGetUniformLocation(shaderProgram, "resolution"),
+            GL20.glUniform1i(sceneTextureUniform, 0);
+            GL20.glUniform2f(resolutionUniform,
                     minecraft.displayWidth, minecraft.displayHeight);
-            GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "elapsedTime"),
+            GL20.glUniform1f(elapsedTimeUniform,
                     (System.nanoTime() - START_TIME) / 1_000_000_000F);
-            GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "suppression"), suppression);
-            GL20.glUniform1f(GL20.glGetUniformLocation(shaderProgram, "nearMissIntensity"), nearIntensity);
+            GL20.glUniform1f(suppressionUniform, suppression);
+            GL20.glUniform1f(nearMissIntensityUniform, nearIntensity);
             ScaledResolution scaled = new ScaledResolution(minecraft,
                     minecraft.displayWidth, minecraft.displayHeight);
             drawQuad(scaled.getScaledWidth(), scaled.getScaledHeight());
@@ -205,6 +210,7 @@ public final class SuppressionScreenEffect {
             if (GL20.glGetProgrami(shaderProgram, GL20.GL_LINK_STATUS) == GL11.GL_FALSE) {
                 throw new IllegalStateException(GL20.glGetProgramInfoLog(shaderProgram, 4096));
             }
+            cacheUniformLocations();
             GL20.glDetachShader(shaderProgram, vertexShader);
             GL20.glDetachShader(shaderProgram, fragmentShader);
             GL20.glDeleteShader(vertexShader);
@@ -228,6 +234,14 @@ public final class SuppressionScreenEffect {
             throw new IllegalStateException(log);
         }
         return shader;
+    }
+
+    private static void cacheUniformLocations() {
+        sceneTextureUniform = GL20.glGetUniformLocation(shaderProgram, "sceneTexture");
+        resolutionUniform = GL20.glGetUniformLocation(shaderProgram, "resolution");
+        elapsedTimeUniform = GL20.glGetUniformLocation(shaderProgram, "elapsedTime");
+        suppressionUniform = GL20.glGetUniformLocation(shaderProgram, "suppression");
+        nearMissIntensityUniform = GL20.glGetUniformLocation(shaderProgram, "nearMissIntensity");
     }
 
     private static void updateCaptureTexture(int width, int height) {

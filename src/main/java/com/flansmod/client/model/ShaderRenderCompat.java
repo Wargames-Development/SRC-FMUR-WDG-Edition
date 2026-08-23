@@ -12,9 +12,10 @@ import java.nio.IntBuffer;
  * G-buffer outputs that still need to describe the world behind them.
  */
 public final class ShaderRenderCompat {
+    private static IntBuffer savedDrawBuffers;
     private static IntBuffer primaryDrawBuffer;
-    private static Object cachedCapabilities;
-    private static int maxDrawBuffers;
+    private static int drawBufferCapacity;
+    private static int savedDrawBufferCount;
     private static boolean colorOnlyPassActive;
 
     private ShaderRenderCompat() {
@@ -26,43 +27,39 @@ public final class ShaderRenderCompat {
      * the draw-buffer mapping was changed and therefore needs restoring.
      */
     public static boolean beginPrimaryColorOnly() {
-        if (colorOnlyPassActive || !ensureDrawBufferSupport()) {
+        if (!GLContext.getCapabilities().OpenGL20 || colorOnlyPassActive) {
             return false;
         }
 
-        int firstDrawBuffer = GL11.glGetInteger(GL20.GL_DRAW_BUFFER0);
-        if (firstDrawBuffer == GL11.GL_NONE) {
+        int maxDrawBuffers = GL11.glGetInteger(GL20.GL_MAX_DRAW_BUFFERS);
+        if (maxDrawBuffers < 2) {
             return false;
         }
-        boolean hasAuxiliaryBuffer = GL11.glGetInteger(GL20.GL_DRAW_BUFFER1) != GL11.GL_NONE;
-        if (!hasAuxiliaryBuffer && GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) != 0) {
-            // Shader programs may legally use a sparse output mapping. Fixed-function
-            // rendering cannot produce those higher fragment outputs, so vanilla can
-            // stop after the inexpensive output-1 check.
-            for (int i = 2; i < maxDrawBuffers; i++) {
-                if (GL11.glGetInteger(GL20.GL_DRAW_BUFFER0 + i) != GL11.GL_NONE) {
-                    hasAuxiliaryBuffer = true;
-                    break;
-                }
+        ensureCapacity(maxDrawBuffers);
+
+        savedDrawBuffers.clear();
+        int firstDrawBuffer = GL11.GL_NONE;
+        boolean hasAuxiliaryBuffer = false;
+        for (int i = 0; i < maxDrawBuffers; i++) {
+            int drawBuffer = GL11.glGetInteger(GL20.GL_DRAW_BUFFER0 + i);
+            savedDrawBuffers.put(drawBuffer);
+            if (i == 0) {
+                firstDrawBuffer = drawBuffer;
+            } else if (drawBuffer != GL11.GL_NONE) {
+                hasAuxiliaryBuffer = true;
             }
         }
 
-        if (!hasAuxiliaryBuffer) {
+        if (firstDrawBuffer == GL11.GL_NONE || !hasAuxiliaryBuffer) {
+            savedDrawBuffers.clear();
             return false;
         }
+        savedDrawBufferCount = maxDrawBuffers;
 
-        // DRAW_BUFFERi is color-buffer state, so the attribute stack restores
-        // the complete shader-pack mapping without querying every active target.
-        GL11.glPushAttrib(GL11.GL_COLOR_BUFFER_BIT);
-        try {
-            primaryDrawBuffer.clear();
-            primaryDrawBuffer.put(firstDrawBuffer);
-            primaryDrawBuffer.flip();
-            GL20.glDrawBuffers(primaryDrawBuffer);
-        } catch (RuntimeException exception) {
-            GL11.glPopAttrib();
-            throw exception;
-        }
+        primaryDrawBuffer.clear();
+        primaryDrawBuffer.put(firstDrawBuffer);
+        primaryDrawBuffer.flip();
+        GL20.glDrawBuffers(primaryDrawBuffer);
         colorOnlyPassActive = true;
         return true;
     }
@@ -72,26 +69,20 @@ public final class ShaderRenderCompat {
             return;
         }
 
-        try {
-            GL11.glPopAttrib();
-        } finally {
-            colorOnlyPassActive = false;
-        }
+        savedDrawBuffers.position(0);
+        savedDrawBuffers.limit(savedDrawBufferCount);
+        GL20.glDrawBuffers(savedDrawBuffers);
+        savedDrawBuffers.clear();
+        colorOnlyPassActive = false;
     }
 
-    private static boolean ensureDrawBufferSupport() {
-        Object capabilities = GLContext.getCapabilities();
-        if (cachedCapabilities != capabilities) {
-            cachedCapabilities = capabilities;
-            colorOnlyPassActive = false;
-            if (!GLContext.getCapabilities().OpenGL20) {
-                maxDrawBuffers = 0;
-                primaryDrawBuffer = null;
-                return false;
-            }
-            maxDrawBuffers = GL11.glGetInteger(GL20.GL_MAX_DRAW_BUFFERS);
-            primaryDrawBuffer = maxDrawBuffers >= 2 ? BufferUtils.createIntBuffer(1) : null;
+    private static void ensureCapacity(int maxDrawBuffers) {
+        if (savedDrawBuffers != null && drawBufferCapacity >= maxDrawBuffers) {
+            return;
         }
-        return maxDrawBuffers >= 2;
+
+        drawBufferCapacity = maxDrawBuffers;
+        savedDrawBuffers = BufferUtils.createIntBuffer(drawBufferCapacity);
+        primaryDrawBuffer = BufferUtils.createIntBuffer(1);
     }
 }
