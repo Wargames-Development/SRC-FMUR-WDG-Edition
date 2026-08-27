@@ -949,10 +949,6 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 }
             }
 
-            if (closestEntity != null) {
-                closestEntity.getEntityData().setBoolean("LockOn", true);
-            }
-
             if (closestEntity != null && lockOnSoundDelay <= 0 && !player.worldObj.isRemote && player.getCurrentEquippedItem() != null) {
                 if (player.getCurrentEquippedItem().getItem() instanceof ItemGun) {
                     ItemGun itemGun;

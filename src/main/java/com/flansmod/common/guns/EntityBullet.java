@@ -1749,6 +1749,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                 }
             } else {
                 lockedOnTo.getEntityData().setBoolean("Tracking", true);
+                if (MCHeliUtil.isMCHeliAircraft(lockedOnTo)) {
+                    // MCHR consumes LockOn for its crew warning, so emit it from the
+                    // live missile rather than from a launcher sitting in inventory.
+                    lockedOnTo.getEntityData().setBoolean("LockOn", true);
+                }
             }
             if (this.ticksExisted > type.tickStartHoming) {
                 double dX = lockedOnTo.posX - posX;
