@@ -19,6 +19,7 @@ import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketTeamInfo;
 import com.flansmod.common.teams.ItemTeamArmour;
+import com.flansmod.common.teams.PlayerEquipmentInventory;
 import com.flansmod.common.types.InfoType;
 import com.flansmod.common.vector.Vector3f;
 import com.flansmod.common.vector.Vector3i;
@@ -39,6 +40,7 @@ import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.MouseHelper;
@@ -50,6 +52,7 @@ import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
+import net.minecraftforge.common.ForgeHooks;
 import net.minecraftforge.common.MinecraftForge;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.opengl.GL11;
@@ -244,7 +247,26 @@ public class TickHandlerClient {
 
     @SubscribeEvent
     public void eventHandler(MouseEvent event) {
-        EntityPlayer player = Minecraft.getMinecraft().thePlayer;
+        Minecraft minecraft = Minecraft.getMinecraft();
+        EntityPlayer player = minecraft.thePlayer;
+        if (player != null && minecraft.theWorld != null && minecraft.currentScreen == null
+                && player.capabilities.isCreativeMode && event.buttonstate
+                && event.button - 100 == minecraft.gameSettings.keyBindPickBlock.getKeyCode()
+                && player.inventoryContainer instanceof PlayerEquipmentInventory.EquipmentContainerPlayer) {
+            event.setCanceled(true);
+            if (minecraft.objectMouseOver != null
+                    && ForgeHooks.onPickBlock(minecraft.objectMouseOver, player, minecraft.theWorld)) {
+                // Forge derives this ID from container size and is two slots late when
+                // the equipment slots are appended, so resolve the real slot instead.
+                Slot selectedSlot = player.inventoryContainer.getSlotFromInventory(
+                        player.inventory, player.inventory.currentItem);
+                if (selectedSlot != null) {
+                    minecraft.playerController.sendSlotPacket(player.inventory.getCurrentItem(),
+                            selectedSlot.slotNumber);
+                }
+            }
+            return;
+        }
         if (player.getCurrentEquippedItem() != null && player.getCurrentEquippedItem().getItem() instanceof ItemGun) {
             if (((ItemGun) player.getCurrentEquippedItem().getItem()).type.oneHanded && Keyboard.isKeyDown(Minecraft.getMinecraft().gameSettings.keyBindSneak.getKeyCode()) && Math.abs(event.dwheel) > 0)
                 event.setCanceled(true);
