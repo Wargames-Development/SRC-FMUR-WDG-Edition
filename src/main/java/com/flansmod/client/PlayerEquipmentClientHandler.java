@@ -13,6 +13,7 @@ import net.minecraft.client.gui.inventory.GuiInventory;
 import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.renderer.entity.RenderPlayer;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.GuiOpenEvent;
@@ -43,21 +44,23 @@ public final class PlayerEquipmentClientHandler {
     }
 
     private void renderStack(RenderPlayerEvent.Specials.Post event, ItemStack stack) {
-        if (stack == null || (!(stack.getItem() instanceof ItemTeamArmour)
-                && !(stack.getItem() instanceof ItemNightVisionGoggles))) {
+        if (stack == null) {
             return;
         }
 
+        Item item = stack.getItem();
         ModelBiped model;
-        String texture;
-        if (stack.getItem() instanceof ItemTeamArmour) {
-            ItemTeamArmour armour = (ItemTeamArmour)stack.getItem();
+        ResourceLocation texture;
+        if (item instanceof ItemTeamArmour) {
+            ItemTeamArmour armour = (ItemTeamArmour)item;
             model = armour.getArmorModel(event.entityPlayer, stack, 0);
-            texture = armour.getArmorTexture(stack, event.entityPlayer, 0, null);
-        } else {
-            ItemNightVisionGoggles goggles = (ItemNightVisionGoggles)stack.getItem();
+            texture = armour.getArmorTextureLocation();
+        } else if (item instanceof ItemNightVisionGoggles) {
+            ItemNightVisionGoggles goggles = (ItemNightVisionGoggles)item;
             model = goggles.getArmorModel(event.entityPlayer, stack, 0);
-            texture = goggles.getArmorTexture(stack, event.entityPlayer, 0, null);
+            texture = goggles.getArmorTextureLocation();
+        } else {
+            return;
         }
         if (model == null || texture == null) {
             return;
@@ -78,7 +81,7 @@ public final class PlayerEquipmentClientHandler {
         model.isRiding = renderer.modelBipedMain.isRiding;
         model.isChild = renderer.modelBipedMain.isChild;
         net.minecraft.client.Minecraft.getMinecraft().getTextureManager()
-                .bindTexture(new ResourceLocation(texture));
+                .bindTexture(texture);
         GL11.glPushMatrix();
         GL11.glColor4f(1F, 1F, 1F, 1F);
         model.render(player, limbSwing, limbSwingAmount, player.ticksExisted + partial,

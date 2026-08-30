@@ -5,6 +5,7 @@ import com.flansmod.common.FlansMod;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.model.ModelBiped;
+import net.minecraft.client.renderer.GLAllocation;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.util.ResourceLocation;
@@ -24,6 +25,7 @@ public class ModelNightVisionGoggles extends ModelBiped {
 
     private final IModelCustom mountModel;
     private final IModelCustom flipModel;
+    private int displayListBase;
 
     public ModelNightVisionGoggles() {
         super(0F);
@@ -54,7 +56,8 @@ public class ModelNightVisionGoggles extends ModelBiped {
         GL11.glScalef(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
         GL11.glTranslatef(-PIVOT_X, -PIVOT_Y, -PIVOT_Z);
 
-        mountModel.renderAll();
+        ensureDisplayLists();
+        GL11.glCallList(displayListBase);
 
         float loweredProgress = NightVisionGogglesAnimation.getLoweredProgress(
                 (EntityLivingBase) entity, RenderGun.smoothing);
@@ -64,10 +67,29 @@ public class ModelNightVisionGoggles extends ModelBiped {
         GL11.glTranslatef(PIVOT_X, PIVOT_Y, PIVOT_Z);
         GL11.glRotatef(angle, 0F, 0F, 1F);
         GL11.glTranslatef(-PIVOT_X, -PIVOT_Y, -PIVOT_Z);
-        flipModel.renderAll();
+        GL11.glCallList(displayListBase + 1);
         GL11.glPopMatrix();
 
         GL11.glPopMatrix();
+    }
+
+    private void ensureDisplayLists() {
+        if (displayListBase != 0) {
+            return;
+        }
+        // Forge 1.7.10's OBJ renderer tessellates every face on every render call.
+        displayListBase = GLAllocation.generateDisplayLists(2);
+        compileDisplayList(displayListBase, mountModel);
+        compileDisplayList(displayListBase + 1, flipModel);
+    }
+
+    private static void compileDisplayList(int displayList, IModelCustom model) {
+        GL11.glNewList(displayList, GL11.GL_COMPILE);
+        try {
+            model.renderAll();
+        } finally {
+            GL11.glEndList();
+        }
     }
 
     private void applyHeadTransform(float scale) {

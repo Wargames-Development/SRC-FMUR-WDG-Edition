@@ -813,6 +813,10 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             PlayerData data = PlayerHandler.getPlayerData(player);
             if (data == null)
                 return;
+            if (!player.isEntityAlive()) {
+                data.stopShooting();
+                return;
+            }
 
             if (player.inventory.getCurrentItem() != itemstack) {
                 //If the player is no longer holding a gun, emulate a release of the shoot button
@@ -1237,6 +1241,11 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
 
     public ItemStack tryToShoot(ItemStack gunStack, GunType gunType, World world, EntityPlayerMP entityplayer, boolean left) {
         PlayerData data = PlayerHandler.getPlayerData(entityplayer);
+        if (data == null || !entityplayer.isEntityAlive()) {
+            if (data != null)
+                data.stopShooting();
+            return gunStack;
+        }
         sprinting = entityplayer.isSprinting();
         if (type.deployable || !type.usableByPlayers)
             return gunStack;
@@ -1347,6 +1356,10 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             }
             //A bullet stack was found, so try shooting with it
             else if (bulletStack != null && bulletStack.getItem() instanceof ItemShootable && ((sprinting && data.isScoped) || !sprinting || canActuallyHipFire) && entityplayer.ridingEntity == null) {
+                if (!entityplayer.isEntityAlive()) {
+                    data.stopShooting();
+                    return gunStack;
+                }
                 /* 奔跑不能射击 */
                 if (sprinting && !type.isCanShootWhileRunning)
                     return gunStack;

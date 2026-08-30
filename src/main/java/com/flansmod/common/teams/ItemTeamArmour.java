@@ -30,6 +30,7 @@ import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.ISpecialArmor;
 import net.minecraftforge.common.util.EnumHelper;
@@ -41,12 +42,17 @@ import java.util.UUID;
 public class ItemTeamArmour extends ItemArmor implements ISpecialArmor, IFlanItem {
 
     public ArmourType type;
+    private final String armourTexture;
+    private final ResourceLocation armourTextureLocation;
     protected static final UUID[] uuid = new UUID[]{UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()};
     public static ArmorMaterial armorMat = EnumHelper.addArmorMaterial("FLANSARMOR", 10, new int[]{1, 3, 2, 1}, FlansMod.armourEnchantability);
 
     public ItemTeamArmour(ArmourType t) {
         super(armorMat, 0, t.type);
         type = t;
+        armourTexture = "flansmod:armor/" + type.armourTextureName + "_"
+                + (type.type == 2 ? "2" : "1") + ".png";
+        armourTextureLocation = new ResourceLocation(armourTexture);
         type.item = this;
         setCreativeTab(FlansMod.tabFlanTeams);
         if (t.durability > 0) setMaxDamage(t.durability);
@@ -60,6 +66,8 @@ public class ItemTeamArmour extends ItemArmor implements ISpecialArmor, IFlanIte
 
     public ItemTeamArmour(ItemArmor.ArmorMaterial armorMaterial, int renderIndex, int armourType) {
         super(armorMaterial, renderIndex, armourType);
+        armourTexture = null;
+        armourTextureLocation = null;
     }
 
     @Override
@@ -106,7 +114,12 @@ public class ItemTeamArmour extends ItemArmor implements ISpecialArmor, IFlanIte
 
     @Override
     public String getArmorTexture(ItemStack itemstack, Entity entity, int slot, String s) {
-        return "flansmod:armor/" + type.armourTextureName + "_" + (type.type == 2 ? "2" : "1") + ".png";
+        return armourTexture;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public ResourceLocation getArmorTextureLocation() {
+        return armourTextureLocation;
     }
 
     @SuppressWarnings("unchecked")

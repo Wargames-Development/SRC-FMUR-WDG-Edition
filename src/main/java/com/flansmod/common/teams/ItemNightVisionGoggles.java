@@ -15,6 +15,7 @@ import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 
 import java.util.List;
@@ -46,12 +47,16 @@ public class ItemNightVisionGoggles extends ItemArmor {
     public static final long TOGGLE_COOLDOWN_TICKS = 40L;
 
     @SideOnly(Side.CLIENT)
-    private ModelBiped armorModel;
+    private static ModelBiped armorModel;
     private final PhosphorType phosphorType;
+    private final String armorTexture;
+    private final ResourceLocation armorTextureLocation;
 
     public ItemNightVisionGoggles(PhosphorType phosphorType) {
         super(ItemTeamArmour.armorMat, 0, 3);
         this.phosphorType = phosphorType;
+        armorTexture = FlansMod.MODID + ":" + phosphorType.modelTexturePath;
+        armorTextureLocation = new ResourceLocation(armorTexture);
         setUnlocalizedName(phosphorType.unlocalizedName);
         setTextureName(FlansMod.MODID + ":" + phosphorType.iconName);
         setCreativeTab(FlansMod.tabFlanTeams);
@@ -120,7 +125,12 @@ public class ItemNightVisionGoggles extends ItemArmor {
 
     @Override
     public String getArmorTexture(ItemStack stack, Entity entity, int slot, String layer) {
-        return FlansMod.MODID + ":" + phosphorType.modelTexturePath;
+        return armorTexture;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public ResourceLocation getArmorTextureLocation() {
+        return armorTextureLocation;
     }
 
     @Override

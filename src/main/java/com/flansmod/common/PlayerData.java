@@ -373,8 +373,19 @@ public class PlayerData {
 
 	public void playerKilled() {
 		mountingGun = null;
-		isShootingRight = isShootingLeft = false;
+		stopShooting();
 		snapshots = new PlayerSnapshot[FlansMod.numPlayerSnapshots];
+	}
+
+	/** Clear transient trigger state when a player can no longer fire. */
+	public void stopShooting() {
+		isShootingRight = isShootingLeft = false;
+		burstRoundsRemainingLeft = burstRoundsRemainingRight = 0;
+		minigunSpeed = 0F;
+		loopedSoundDelay = 0;
+		shouldPlayCooldownSound = shouldPlayWarmupSound = false;
+		hasShotAim = false;
+		hasShotContext = false;
 	}
 
 	public void selectOffHandWeapon(EntityPlayer player, int slot) {
