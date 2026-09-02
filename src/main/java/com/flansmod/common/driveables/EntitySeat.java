@@ -152,6 +152,11 @@ public class EntitySeat extends Entity implements IControllable, IEntityAddition
     @Override
     public void onUpdate() {
         super.onUpdate();
+
+        // Normal exit controls restore this flag themselves, but forced dismounts
+        // and seat removal bypass those controls.
+        if (!worldObj.isRemote && lastRiddenByEntity != null && lastRiddenByEntity != riddenByEntity)
+            restoreDriverVisibility(lastRiddenByEntity);
         //prevPosX = posX;
         //prevPosY = posY;
         //prevPosZ = posZ;
@@ -805,7 +810,18 @@ public class EntitySeat extends Entity implements IControllable, IEntityAddition
         // } else {
         // 	super.setDead();
         // }
+        if (!worldObj.isRemote) {
+            restoreDriverVisibility(riddenByEntity);
+            if (lastRiddenByEntity != riddenByEntity)
+                restoreDriverVisibility(lastRiddenByEntity);
+        }
         super.setDead();
+    }
+
+    private void restoreDriverVisibility(Entity rider) {
+        if (rider != null && driver && driveable != null && driveable.getDriveableType() != null
+                && driveable.getDriveableType().setPlayerInvisible)
+            rider.setInvisible(false);
     }
 
     /**

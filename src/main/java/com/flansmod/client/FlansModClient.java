@@ -1056,8 +1056,8 @@ public class FlansModClient extends FlansMod {
             PlayerScoreData rendering = teamInfo.getPlayerScoreData(event.entity.getCommandSenderName());
             PlayerScoreData thePlayer = teamInfo.getPlayerScoreData(minecraft.thePlayer.getCommandSenderName());
 
-            Team renderingTeam = rendering == null ? Team.spectators : rendering.team.team;
-            Team thePlayerTeam = thePlayer == null ? Team.spectators : thePlayer.team.team;
+            Team renderingTeam = rendering == null || rendering.team == null ? null : rendering.team.team;
+            Team thePlayerTeam = thePlayer == null || thePlayer.team == null ? null : thePlayer.team.team;
 
             //Do custom skin overrides
             //If we have no stored skin, try to get it
@@ -1069,11 +1069,12 @@ public class FlansModClient extends FlansMod {
                 ((AbstractClientPlayer) event.entityPlayer).func_152121_a(Type.SKIN, skin == null ? data.skin : skin);
             }
 
-            //Spectators see all
-            if (thePlayerTeam == Team.spectators)
+            //Spectators and teamless builders see all.
+            if (thePlayer == null || PacketTeamInfo.isSpectator(minecraft.thePlayer.getCommandSenderName()))
                 return;
-            //Nobody sees spectators
-            if (renderingTeam == Team.spectators) {
+            //Only explicitly synchronized spectators are hidden. A missing score entry can
+            //also mean that a player just spawned and the next team update has not arrived.
+            if (PacketTeamInfo.isSpectator(event.entity.getCommandSenderName())) {
                 event.setCanceled(true);
                 return;
             }

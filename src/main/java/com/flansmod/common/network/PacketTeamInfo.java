@@ -30,6 +30,7 @@ public class PacketTeamInfo extends PacketBase
 	public static boolean sortedByTeam;
 	public static int timeLeft;
 	public static int scoreLimit;
+	public static String[] spectators = new String[0];
 	
 	public static int numLines;
 	
@@ -55,12 +56,12 @@ public class PacketTeamInfo extends PacketBase
 	
 	public static PlayerScoreData getPlayerScoreData(String username)
 	{
-		if(FlansModClient.teamInfo.teamData == null)
+		if(FlansModClient.teamInfo == null || FlansModClient.teamInfo.teamData == null)
 			return null;
 		for(TeamData team : FlansModClient.teamInfo.teamData)
 		{
 			if(team == null || team.playerData == null)
-				return null;
+				continue;
 			for(PlayerScoreData player : team.playerData)
 			{
 				if(player != null && player.username != null && player.username.equals(username))
@@ -68,6 +69,18 @@ public class PacketTeamInfo extends PacketBase
 			}
 		}
 		return null;
+	}
+
+	public static boolean isSpectator(String username)
+	{
+		if(username == null || spectators == null)
+			return false;
+		for(String spectator : spectators)
+		{
+			if(username.equals(spectator))
+				return true;
+		}
+		return false;
 	}
 	
 	public PacketTeamInfo()
@@ -179,7 +192,10 @@ public class PacketTeamInfo extends PacketBase
 	        	
     		}
     	}
-    	
+		int spectatorCount = Team.spectators == null ? 0 : Team.spectators.members.size();
+		data.writeInt(spectatorCount);
+		for(int i = 0; i < spectatorCount; i++)
+			writeUTF(data, Team.spectators.members.get(i));
 
 	}
 
@@ -194,6 +210,7 @@ public class PacketTeamInfo extends PacketBase
 		gametype = readUTF(data);
 		if(gametype.equals("No Gametype"))
 		{
+			data.readInt();
 			numTeams = 0;
 			teamData = new TeamData[0];
 		}
@@ -210,8 +227,6 @@ public class PacketTeamInfo extends PacketBase
 				numLines = numTeams = data.readInt();
 				if(numTeams < 0 || numTeams > MAX_TEAMS)
 					throw new IllegalArgumentException("Invalid team count " + numTeams);
-				if(numTeams == 0)
-					return;
 				teamData = new TeamData[numTeams];
 				for(int i = 0; i < numTeams; i++)
 				{
@@ -263,6 +278,22 @@ public class PacketTeamInfo extends PacketBase
 					teamData[0].playerData[j].playerClass = PlayerClass.getClass(readUTF(data));
 				}
 			}
+		}
+
+		// Older peers do not append spectator membership. Treat those packets as
+		// having no confirmed spectators so an unknown player remains visible.
+		if(data.readableBytes() == 0)
+		{
+			spectators = new String[0];
+		}
+		else
+		{
+			int spectatorCount = data.readInt();
+			if(spectatorCount < 0 || spectatorCount > MAX_PLAYERS)
+				throw new IllegalArgumentException("Invalid spectator count " + spectatorCount);
+			spectators = new String[spectatorCount];
+			for(int i = 0; i < spectatorCount; i++)
+				spectators[i] = readUTF(data);
 		}
 
 	}

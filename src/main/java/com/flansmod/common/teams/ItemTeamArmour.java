@@ -186,8 +186,10 @@ public class ItemTeamArmour extends ItemArmor implements ISpecialArmor, IFlanIte
     public void onArmorTick(World world, EntityPlayer player, ItemStack itemStack) {
         if (type.nightVision && FlansMod.ticker % 25 == 0)
             player.addPotionEffect(new PotionEffect(Potion.nightVision.id, 250));
-        if (type.invisible && FlansMod.ticker % 25 == 0)
-            player.addPotionEffect(new PotionEffect(Potion.invisibility.id, 250));
+        // Keep armour-owned invisibility short-lived so removing or replacing the
+        // armour cannot leave the player invisible through a subsequent spawn.
+        if (type.invisible)
+            player.addPotionEffect(new PotionEffect(Potion.invisibility.id, 2));
         if (type.jumpModifier > 1.01F && FlansMod.ticker % 25 == 0)
             player.addPotionEffect(new PotionEffect(Potion.jump.id, 250, (int) ((type.jumpModifier - 1F) * 2F), true));
         if (type.negateFallDamage)

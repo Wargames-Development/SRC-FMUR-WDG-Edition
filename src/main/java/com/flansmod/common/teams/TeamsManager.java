@@ -765,6 +765,9 @@ public class TeamsManager {
             player.setGameType(net.minecraft.world.WorldSettings.GameType.ADVENTURE);
         resetInventory(player);
         currentRound.gametype.playerRespawned((EntityPlayerMP) player);
+		// Do not leave clients using a pre-spawn spectator or team snapshot until
+		// the normal two-second scoreboard broadcast.
+		FlansMod.getPacketHandler().sendToAll(new PacketTeamInfo());
     }
 
     private void setPlayersNextSpawnpoint(EntityPlayerMP player, ChunkCoordinates coords) {
@@ -846,8 +849,11 @@ public class TeamsManager {
         //The player picked the op / builder team
         if (teamName.equals("null")) {
             if (playerIsOp(player)) {
+				if (data.team != null)
+					data.team.removePlayer(player);
                 data.team = null;
                 data.builder = true;
+				FlansMod.getPacketHandler().sendToAll(new PacketTeamInfo());
                 return;
             } else teamName = "spectators";
         }
