@@ -1,0 +1,22 @@
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    def tapArmorToolClasses = root.file("${root.buildDir}/tmp/tap-armor-icons/classes")
+
+    def compileExtractor = root.task('compileTapArmorIconExtractor', type: JavaCompile) {
+        source = root.fileTree('tools/tap_armor_icons/java') { include '**/*.java' }
+        classpath = root.sourceSets.main.runtimeClasspath
+        destinationDir = tapArmorToolClasses
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+        options.encoding = 'UTF-8'
+    }
+
+    root.task('extractTapArmorGeometry', type: JavaExec,
+            dependsOn: [root.tasks.compileJava, compileExtractor]) {
+        classpath = root.files(tapArmorToolClasses) + root.sourceSets.main.runtimeClasspath \
+                + root.files('eclipse/Flan/TaP-Escalation')
+        main = 'TapArmorGeometryExtractor'
+        args root.file('eclipse/Flan/TaP-Escalation').absolutePath,
+                root.file("${root.buildDir}/tap-armor-icons/meshes").absolutePath
+    }
+}

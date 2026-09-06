@@ -24,9 +24,9 @@ import java.util.List;
 public class ItemNightVisionGoggles extends ItemArmor {
     public enum PhosphorType {
         GREEN_TAN(false, "gpnvg", "gpnvg", "armor/GPNVG_1.png"),
-        WHITE_TAN(true, "gpnvg_wp", "gpnvg", "armor/GPNVG_WP_1.png"),
+        WHITE_TAN(true, "gpnvg_wp", "gpnvg_wp", "armor/GPNVG_WP_1.png"),
         GREEN_BLACK(false, "gpnvg_black", "gpnvg_black", "armor/GPNVG_BLACK_1.png"),
-        WHITE_BLACK(true, "gpnvg_wp_black", "gpnvg_black", "armor/GPNVG_WP_BLACK_1.png"),
+        WHITE_BLACK(true, "gpnvg_wp_black", "gpnvg_wp_black", "armor/GPNVG_WP_BLACK_1.png"),
         PVS14_GREEN_TAN(false, false, "pvs14", "armor/PVS-14_1.png"),
         PVS14_WHITE_TAN(true, false, "pvs14_wp", "armor/PVS-14WP_1.png"),
         PVS14_AMBER_TAN(false, true, "pvs14_amber", "armor/PVS-14_AM_1.png"),
