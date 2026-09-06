@@ -6,6 +6,7 @@ import com.flansmod.common.guns.EntityCLOSMissile;
 import com.flansmod.common.guns.type.BulletType;
 import com.flansmod.common.guns.EntityBullet;
 import com.flansmod.common.guns.EntityShootable;
+import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.types.IFlanItem;
 import com.flansmod.common.types.IGunboxDescriptionable;
 import com.flansmod.common.types.InfoType;
@@ -19,9 +20,11 @@ import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.StatCollector;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -80,9 +83,7 @@ public class ItemBullet extends ItemShootable implements IFlanItem, IGunboxDescr
             if (!type.packName.isEmpty()) {
                 lines.add("\u00a7o" + type.packName);
             }
-            if (type.description != null) {
-                Collections.addAll(lines, type.description.split("_"));
-            }
+            addDescriptionLines(lines);
             //Reveal all the bullet stats when holding down the sneak key
             if (!GameSettings.isKeyDown(shift)) {
                 lines.add("Hold \u00a7b\u00a7o" + GameSettings.getKeyDisplayString(shift.getKeyCode())
@@ -168,11 +169,38 @@ public class ItemBullet extends ItemShootable implements IFlanItem, IGunboxDescr
             if (!type.packName.isEmpty()) {
                 lines.add(type.packName);
             }
-            if (type.description != null) {
-                Collections.addAll(lines, type.description.split("_"));
-            }
+            addDescriptionLines(lines);
         }
 
+    }
+
+    @SuppressWarnings("unchecked")
+    private void addDescriptionLines(List lines) {
+        if (type.roundsPerItem > 1) {
+            List<String> compatibleGuns = new ArrayList<>();
+            for (GunType gun : GunType.gunList) {
+                if (gun.shortName == null || !gun.ammo.contains(type)) {
+                    continue;
+                }
+                String localizationKey = "item." + gun.shortName + ".name";
+                String localizedName = StatCollector.translateToLocal(localizationKey);
+                String displayName = localizationKey.equals(localizedName) ? gun.name : localizedName;
+                if (displayName != null && !compatibleGuns.contains(displayName)) {
+                    compatibleGuns.add(displayName);
+                }
+            }
+            if (!compatibleGuns.isEmpty()) {
+                Collections.sort(compatibleGuns, String.CASE_INSENSITIVE_ORDER);
+                lines.add("\u00a79Compatible guns:");
+                for (String gunName : compatibleGuns) {
+                    lines.add("\u00a77- " + gunName);
+                }
+                return;
+            }
+        }
+        if (type.description != null) {
+            Collections.addAll(lines, type.description.split("_"));
+        }
     }
 
     //Can be overriden to allow new types of bullets to be created, for planes

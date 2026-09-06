@@ -243,9 +243,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         if (!type.packName.isEmpty()) {
             lines.add("\u00a7o" + type.packName);
         }
-        if (type.description != null) {
-            Collections.addAll(lines, type.description.split("_"));
-        }
+        addDescriptionLines(lines);
 
         if (FlansMod.showItemDescriptions) {
             // Reveal all the gun stats when holding down the sneak key
@@ -316,6 +314,36 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 if (empty)
                     lines.add("No attachments");
             }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void addDescriptionLines(List lines) {
+        if (type.description != null) {
+            for (String line : type.description.split("_")) {
+                if ("Uses:".equalsIgnoreCase(line.trim()))
+                    break;
+                lines.add(line);
+            }
+        }
+
+        if (type.ammo.isEmpty())
+            return;
+
+        List<String> ammoNames = new ArrayList<String>();
+        for (ShootableType ammo : type.ammo) {
+            String localizationKey = "item." + ammo.shortName + ".name";
+            String localizedName = StatCollector.translateToLocal(localizationKey);
+            String displayName = localizationKey.equals(localizedName) ? ammo.name : localizedName;
+            if (displayName != null && !ammoNames.contains(displayName))
+                ammoNames.add(displayName);
+        }
+
+        Collections.sort(ammoNames, String.CASE_INSENSITIVE_ORDER);
+        if (!ammoNames.isEmpty()) {
+            lines.add("\u00a79Compatible ammunition:");
+            for (String ammoName : ammoNames)
+                lines.add("\u00a77- " + ammoName);
         }
     }
 
