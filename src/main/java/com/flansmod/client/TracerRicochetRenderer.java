@@ -98,6 +98,7 @@ public final class TracerRicochetRenderer {
                 double tailY = y - ricochet.motionY / speed * length;
                 double tailZ = z - ricochet.motionZ / speed * length;
                 float life = 1F - ricochet.age / (float) ricochet.maxAge;
+                NightVisionGlow.add(x, y, z, 18F * life + 4F);
                 float glowRed = ricochet.greenTracer ? 0F : 1F;
                 float glowGreen = ricochet.greenTracer ? 1F : 0F;
 

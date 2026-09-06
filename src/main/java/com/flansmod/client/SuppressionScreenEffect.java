@@ -106,14 +106,10 @@ public final class SuppressionScreenEffect {
     }
 
     public static void triggerNearMiss(float strength) {
-        nearMissStrength = Math.max(nearMissStrength,
-                MathHelper.clamp_float(strength, 0F, 1F));
-        nearMissTicks = NEAR_MISS_DURATION_TICKS;
-        if (SOUND_RANDOM.nextInt(3) == 0) {
-            String sound = NEAR_MISS_SOUNDS[SOUND_RANDOM.nextInt(NEAR_MISS_SOUNDS.length)];
-            Minecraft.getMinecraft().getSoundHandler().playSound(
-                    PositionedSoundRecord.func_147673_a(FlansModResourceHandler.getSound(sound)));
-        }
+        // Near misses retain their audio cue without starting a screen filter.
+        String sound = NEAR_MISS_SOUNDS[SOUND_RANDOM.nextInt(NEAR_MISS_SOUNDS.length)];
+        Minecraft.getMinecraft().getSoundHandler().playSound(
+                PositionedSoundRecord.func_147673_a(FlansModResourceHandler.getSound(sound)));
     }
 
     public static void tick(Minecraft minecraft) {

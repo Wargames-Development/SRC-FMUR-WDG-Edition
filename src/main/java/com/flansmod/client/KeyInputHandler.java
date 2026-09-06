@@ -2,6 +2,7 @@ package com.flansmod.client;
 
 import com.flansmod.api.IControllable;
 import com.flansmod.client.gui.GuiModOptions;
+import com.flansmod.client.gui.GuiNightVisionSettings;
 import com.flansmod.client.gui.GuiSelectAmmo;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.eventhandlers.EnumBFMCKeyType;
@@ -41,6 +42,7 @@ public class KeyInputHandler {
     public static KeyBinding optionsKey = new KeyBinding("Mod Settings", Keyboard.KEY_SEMICOLON, "FMUR General");
     public static KeyBinding modelDebugKey = new KeyBinding("Toggle Model Debug Mode", Keyboard.KEY_I, "FMUR General");
     public static KeyBinding nightVisionGogglesKey = new KeyBinding("Raise / Lower Night Vision Goggles", Keyboard.KEY_N, "FMUR Equipment");
+    public static KeyBinding nightVisionSettingsKey = new KeyBinding("Night Vision Settings", Keyboard.KEY_NONE, "FMUR Equipment");
     //=============================================================================================================================================
 
     public static KeyBinding downKey = new KeyBinding("Dive", Keyboard.KEY_LCONTROL, "FMUR Vehicle");
@@ -116,6 +118,7 @@ public class KeyInputHandler {
         ClientRegistry.registerKeyBinding(coSightSwitchKey);
         ClientRegistry.registerKeyBinding(modelDebugKey);
         ClientRegistry.registerKeyBinding(nightVisionGogglesKey);
+        ClientRegistry.registerKeyBinding(nightVisionSettingsKey);
         //ClientRegistry.registerKeyBinding(stableSightKey);
         ClientRegistry.registerKeyBinding(menuKey);
         ClientRegistry.registerKeyBinding(f10Key);
@@ -130,6 +133,11 @@ public class KeyInputHandler {
 
         EntityPlayer player = mc.thePlayer; // 玩家
         Entity ridingEntity = player.ridingEntity; // 玩家正在骑乘的载具
+
+        if (nightVisionSettingsKey.isPressed()) {
+            mc.displayGuiScreen(new GuiNightVisionSettings());
+            return;
+        }
 
         if (nightVisionGogglesKey.isPressed()) {
             ItemStack goggles = PlayerEquipmentInventory.getStack(player,

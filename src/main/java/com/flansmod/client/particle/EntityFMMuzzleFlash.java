@@ -1,5 +1,7 @@
 package com.flansmod.client.particle;
 
+import com.flansmod.client.NightVisionGlow;
+
 import net.minecraft.client.particle.EffectRenderer;
 import net.minecraft.client.particle.EntityFX;
 import net.minecraft.client.particle.EntitySmokeFX;
@@ -202,6 +204,9 @@ public class EntityFMMuzzleFlash extends EntityFX {
                                float rotationX, float rotationXZ, float rotationZ,
                                float rotationYZ, float rotationXY) {
         tessellator.setBrightness(15728880);
+        NightVisionGlow.add(prevPosX + (posX - prevPosX) * partialTick - interpPosX,
+                prevPosY + (posY - prevPosY) * partialTick - interpPosY,
+                prevPosZ + (posZ - prevPosZ) * partialTick - interpPosZ, 32F);
         super.renderParticle(tessellator, partialTick, rotationX, rotationXZ,
                 rotationZ, rotationYZ, rotationXY);
     }

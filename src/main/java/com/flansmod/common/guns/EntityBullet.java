@@ -754,7 +754,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             fx.motionY += type.flakParticlesDiff * Math.abs(rand.nextGaussian());
             fx.multipleParticleScaleBy(scale);
             Minecraft.getMinecraft().effectRenderer.addEffect(fx);
-            FlansMod.proxy.spawnParticle("explode", raytraceResult.hitVec.xCoord, raytraceResult.hitVec.yCoord, raytraceResult.hitVec.zCoord, 0, 0, 0);
         }
     }
 
@@ -2304,7 +2303,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                 }
             }
             //Send flak packet
-            if (type.flak > 0)
+            // Ordinary rounds used cloud flak as a second white impact puff source.
+            // Keep explosive/projectile flak, but not small-arms impact clouds.
+            if (type.flak > 0 && !(isNearMissBallisticRound() && type.explosionRadius <= 0F))
                 FlansMod.getPacketHandler().sendToAllAround(new PacketFlak(posX, posY, posZ, type.flak, type.flakParticles), posX, posY, posZ, 200, dimension);
             // Drop item on hitting if bullet requires it
             if (type.dropItemOnHit != null) {

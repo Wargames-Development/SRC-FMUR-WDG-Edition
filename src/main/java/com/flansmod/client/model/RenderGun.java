@@ -2,6 +2,7 @@ package com.flansmod.client.model;
 
 import com.flansmod.client.FlansModClient;
 import com.flansmod.client.FlansModResourceHandler;
+import com.flansmod.client.NightVisionGlow;
 import com.flansmod.client.model.animation.gltf.GLTFAnimationController;
 import com.flansmod.client.model.animation.gltf.model.EnumAnimationPart;
 import com.flansmod.common.FlansMod;
@@ -926,7 +927,9 @@ public class RenderGun implements IItemRenderer {
                 switch (anim) {
                     case END_LOADED:
                     case BACK_LOADED: {
-                        if (empty)
+                        // The incoming round is a reload prop, even before server ammo sync.
+                        if (empty && !(animations.reloading
+                                && rtype == ItemRenderType.EQUIPPED_FIRST_PERSON))
                             shouldRender = false;
                         break;
                     }
@@ -1620,6 +1623,7 @@ public class RenderGun implements IItemRenderer {
      */
     private void renderMuzzleTracer(float flashScale, boolean greenTracer) {
         float length = 0.65F / Math.max(0.05F, Math.abs(flashScale));
+        NightVisionGlow.add(length * 0.5F, 0D, 0D, 24F);
         float glowRed = greenTracer ? 0F : 1F;
         float glowGreen = greenTracer ? 1F : 0F;
         float accentRed = greenTracer ? 0.22F : 1F;

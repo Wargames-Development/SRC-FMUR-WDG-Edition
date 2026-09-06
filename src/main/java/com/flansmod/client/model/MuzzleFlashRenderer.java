@@ -1,5 +1,7 @@
 package com.flansmod.client.model;
 
+import com.flansmod.client.NightVisionGlow;
+
 import com.flansmod.common.guns.type.BulletType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
@@ -56,6 +58,8 @@ public final class MuzzleFlashRenderer {
 
             // White-hot core, pale yellow middle, and a light gold outer cloud.
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+            // Every unsuppressed burst has luminous sparks, even without a fireball or tracer.
+            NightVisionGlow.add(nonSmokeUnit * 0.4F, 0D, 0D, 48F);
             if (showFireball) {
                 tessellator.startDrawingQuads();
                 tessellator.setBrightness(15728880);

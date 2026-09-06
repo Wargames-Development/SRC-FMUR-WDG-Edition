@@ -57,7 +57,8 @@ public final class FirstPersonNightVisionGogglesRenderer {
         GL11.glMatrixMode(GL11.GL_PROJECTION);
         GL11.glPushMatrix();
         GL11.glLoadIdentity();
-        Project.gluPerspective(minecraft.gameSettings.fovSetting,
+        // Helmet hardware has a fixed screen-space fit, independent of world FOV.
+        Project.gluPerspective(70F,
                 (float)minecraft.displayWidth / (float)minecraft.displayHeight,
                 0.05F, 10F);
 

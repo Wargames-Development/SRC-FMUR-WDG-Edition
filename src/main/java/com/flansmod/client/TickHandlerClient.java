@@ -1086,6 +1086,8 @@ public class TickHandlerClient {
 
     @SubscribeEvent
     public void renderWorldLast(RenderWorldLastEvent event) {
+        // The lightmap is ready. Restore normal gamma before GUI code can save options.
+        NightVisionGogglesBrightness.endFrame(Minecraft.getMinecraft());
         BulletHoleDecalRenderer.render(event);
         TracerRicochetRenderer.render(event);
     }
@@ -1095,6 +1097,7 @@ public class TickHandlerClient {
         switch (event.phase) {
             case START:
                 NightVisionGogglesBrightness.beginFrame(Minecraft.getMinecraft());
+                NightVisionGlow.beginFrame(Minecraft.getMinecraft());
                 RenderGun.smoothing = event.renderTickTime;
                 renderTickStart(Minecraft.getMinecraft(), event.renderTickTime);
                 applyShotScreenShake(Minecraft.getMinecraft());
@@ -1342,13 +1345,13 @@ public class TickHandlerClient {
         return measuredExposure;
     }
 
-    private void enforceGammaLimit(Minecraft minecraft) {
+    static void enforceGammaLimit(Minecraft minecraft) {
         float gamma = minecraft.gameSettings.gammaSetting;
         if (gamma >= 0F && gamma <= MAX_ALLOWED_GAMMA) {
             return;
         }
-        minecraft.gameSettings.gammaSetting = MathHelper.clamp_float(
-                gamma, 0F, MAX_ALLOWED_GAMMA);
+        minecraft.gameSettings.gammaSetting = Float.isNaN(gamma) ? 0F
+                : MathHelper.clamp_float(gamma, 0F, MAX_ALLOWED_GAMMA);
         minecraft.gameSettings.saveOptions();
     }
 
