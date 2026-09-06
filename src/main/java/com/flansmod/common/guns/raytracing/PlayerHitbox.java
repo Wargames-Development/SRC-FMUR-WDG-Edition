@@ -239,7 +239,17 @@ public class PlayerHitbox {
 
         switch (type) {
             case HEAD:
-                damageModifier *= bullet.type.shootHeadMultiplier;
+                float headMultiplier = bullet.type.shootHeadMultiplier;
+                if (bullet.firedFrom instanceof GunType) {
+                    GunType gun = (GunType) bullet.firedFrom;
+                    if (gun.playerHeadshotMultiplier > 0F)
+                        headMultiplier = gun.playerHeadshotMultiplier;
+                    ItemStack helmet = player.getCurrentArmor(3);
+                    if (helmet != null && helmet.getItem() instanceof ItemTeamArmour
+                            && "altyn".equalsIgnoreCase(((ItemTeamArmour) helmet.getItem()).type.shortName))
+                        headMultiplier *= gun.altynHeadshotMultiplier;
+                }
+                damageModifier *= headMultiplier;
                 //bullet.lastHitHeadshot = true;
                 break;
             case LEGS:

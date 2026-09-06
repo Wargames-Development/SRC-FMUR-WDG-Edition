@@ -340,6 +340,19 @@ public class FlansMod {
         GameRegistry.registerItem(nightVisionGogglesWhitePhosphorBlack,
                 "gpnvg_wp_black", MODID);
 
+        GameRegistry.registerItem(new ItemNightVisionGoggles(
+                ItemNightVisionGoggles.PhosphorType.PVS14_GREEN_TAN), "pvs14", MODID);
+        GameRegistry.registerItem(new ItemNightVisionGoggles(
+                ItemNightVisionGoggles.PhosphorType.PVS14_WHITE_TAN), "pvs14_wp", MODID);
+        GameRegistry.registerItem(new ItemNightVisionGoggles(
+                ItemNightVisionGoggles.PhosphorType.PVS14_AMBER_TAN), "pvs14_amber", MODID);
+        GameRegistry.registerItem(new ItemNightVisionGoggles(
+                ItemNightVisionGoggles.PhosphorType.PVS14_GREEN_BLACK), "pvs14_black", MODID);
+        GameRegistry.registerItem(new ItemNightVisionGoggles(
+                ItemNightVisionGoggles.PhosphorType.PVS14_WHITE_BLACK), "pvs14_wp_black", MODID);
+        GameRegistry.registerItem(new ItemNightVisionGoggles(
+                ItemNightVisionGoggles.PhosphorType.PVS14_AMBER_BLACK), "pvs14_amber_black", MODID);
+
         chemLightRed = new ItemChemLight(ItemChemLight.Color.RED);
         chemLightBlue = new ItemChemLight(ItemChemLight.Color.BLUE);
         chemLightGreen = new ItemChemLight(ItemChemLight.Color.GREEN);

@@ -28,3 +28,10 @@ aimtype.hold.name=Hold
 aimtype.toggle.name=Toggle
 firebutton.left.name=Left Click
 firebutton.right.name=Right Click
+
+item.pvs14.name=PVS-14 (GP) (Tan)
+item.pvs14_wp.name=PVS-14 (WP) (Tan)
+item.pvs14_amber.name=PVS-14 (Amber) (Tan)
+item.pvs14_black.name=PVS-14 (GP) (Black)
+item.pvs14_wp_black.name=PVS-14 (WP) (Black)
+item.pvs14_amber_black.name=PVS-14 (Amber) (Black)

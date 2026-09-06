@@ -15,7 +15,7 @@ import net.minecraftforge.client.model.IModelCustom;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.Project;
 
-/** Camera-space GPNVG flip assembly shown only while it is moving. */
+/** Camera-space night-vision flip assembly shown only while it is moving. */
 @SideOnly(Side.CLIENT)
 public final class FirstPersonNightVisionGogglesRenderer {
     private static final float PIVOT_X = 5.5F / 16F;
@@ -26,7 +26,8 @@ public final class FirstPersonNightVisionGogglesRenderer {
     // Keep the upper bridge clipped by the top of the viewport so the moving
     // assembly reads as attached to a helmet mount instead of floating.
     private static final float FIRST_PERSON_OFFSET_Y = -0.065F;
-    private static IModelCustom flipModel;
+    private static final IModelCustom[] FLIP_MODELS = new IModelCustom[2];
+    private static final boolean[] MODEL_UNAVAILABLE = new boolean[2];
 
     private FirstPersonNightVisionGogglesRenderer() {
     }
@@ -48,9 +49,19 @@ public final class FirstPersonNightVisionGogglesRenderer {
             return;
         }
 
-        if (flipModel == null) {
-            flipModel = AdvancedModelLoader.loadModel(new ResourceLocation(
-                    FlansMod.MODID, "models/gpnvg/GPNVG_Flip_runtime.obj"));
+        int modelIndex = ItemNightVisionGoggles.isSingleTube(gogglesStack) ? 1 : 0;
+        if (FLIP_MODELS[modelIndex] == null && !MODEL_UNAVAILABLE[modelIndex]) {
+            try {
+                FLIP_MODELS[modelIndex] = AdvancedModelLoader.loadModel(new ResourceLocation(
+                        FlansMod.MODID, goggles.getModelBasePath() + "_Flip_runtime.obj"));
+            } catch (RuntimeException exception) {
+                MODEL_UNAVAILABLE[modelIndex] = true;
+                FlansMod.logger.error("Could not load the night-vision flip model. "
+                        + "Skipping its first-person animation.", exception);
+            }
+        }
+        if (FLIP_MODELS[modelIndex] == null) {
+            return;
         }
 
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
@@ -90,8 +101,8 @@ public final class FirstPersonNightVisionGogglesRenderer {
             }
             GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL11.GL_TEXTURE_ENV_MODE, GL11.GL_MODULATE);
             GL11.glColor4f(modelBrightness, modelBrightness, modelBrightness, 1F);
-            minecraft.renderEngine.bindTexture(new ResourceLocation(
-                    FlansMod.MODID, goggles.getModelTexturePath()));
+            // Use the exact same variant texture as the third-person equipment model.
+            minecraft.renderEngine.bindTexture(goggles.getArmorTextureLocation());
 
             GL11.glTranslatef(0F, FIRST_PERSON_OFFSET_Y, 0F);
             // Camera space already uses +Y as up. The third-person armour
@@ -102,7 +113,7 @@ public final class FirstPersonNightVisionGogglesRenderer {
             GL11.glScalef(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
             GL11.glRotatef(RAISED_ANGLE * (1F - progress), 0F, 0F, 1F);
             GL11.glTranslatef(-PIVOT_X, -PIVOT_Y, -PIVOT_Z);
-            flipModel.renderAll();
+            FLIP_MODELS[modelIndex].renderAll();
         } finally {
             GL11.glPopMatrix();
             GL11.glMatrixMode(GL11.GL_PROJECTION);

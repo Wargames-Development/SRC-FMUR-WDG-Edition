@@ -20,15 +20,23 @@ import net.minecraft.world.World;
 
 import java.util.List;
 
-/** Self-contained GPNVG item for the dedicated night-vision equipment slot. */
+/** Shared night-vision item for the dedicated night-vision equipment slot. */
 public class ItemNightVisionGoggles extends ItemArmor {
     public enum PhosphorType {
         GREEN_TAN(false, "gpnvg", "gpnvg", "armor/GPNVG_1.png"),
         WHITE_TAN(true, "gpnvg_wp", "gpnvg", "armor/GPNVG_WP_1.png"),
         GREEN_BLACK(false, "gpnvg_black", "gpnvg_black", "armor/GPNVG_BLACK_1.png"),
-        WHITE_BLACK(true, "gpnvg_wp_black", "gpnvg_black", "armor/GPNVG_WP_BLACK_1.png");
+        WHITE_BLACK(true, "gpnvg_wp_black", "gpnvg_black", "armor/GPNVG_WP_BLACK_1.png"),
+        PVS14_GREEN_TAN(false, false, "pvs14", "armor/PVS-14_1.png"),
+        PVS14_WHITE_TAN(true, false, "pvs14_wp", "armor/PVS-14WP_1.png"),
+        PVS14_AMBER_TAN(false, true, "pvs14_amber", "armor/PVS-14_AM_1.png"),
+        PVS14_GREEN_BLACK(false, false, "pvs14_black", "armor/PVS-14BLACK_1.png"),
+        PVS14_WHITE_BLACK(true, false, "pvs14_wp_black", "armor/PVS-14WPBLACK_1.png"),
+        PVS14_AMBER_BLACK(false, true, "pvs14_amber_black", "armor/PVS-14AMBLACK_1.png");
 
         private final boolean whitePhosphor;
+        private final boolean amberPhosphor;
+        private final boolean singleTube;
         private final String unlocalizedName;
         private final String iconName;
         private final String modelTexturePath;
@@ -36,8 +44,20 @@ public class ItemNightVisionGoggles extends ItemArmor {
         PhosphorType(boolean whitePhosphor, String unlocalizedName,
                      String iconName, String modelTexturePath) {
             this.whitePhosphor = whitePhosphor;
+            this.amberPhosphor = false;
+            this.singleTube = false;
             this.unlocalizedName = unlocalizedName;
             this.iconName = iconName;
+            this.modelTexturePath = modelTexturePath;
+        }
+
+        PhosphorType(boolean whitePhosphor, boolean amberPhosphor,
+                     String unlocalizedName, String modelTexturePath) {
+            this.whitePhosphor = whitePhosphor;
+            this.amberPhosphor = amberPhosphor;
+            this.singleTube = true;
+            this.unlocalizedName = unlocalizedName;
+            this.iconName = unlocalizedName;
             this.modelTexturePath = modelTexturePath;
         }
     }
@@ -48,6 +68,10 @@ public class ItemNightVisionGoggles extends ItemArmor {
 
     @SideOnly(Side.CLIENT)
     private static ModelBiped armorModel;
+    @SideOnly(Side.CLIENT)
+    private static ModelBiped singleTubeArmorModel;
+    @SideOnly(Side.CLIENT)
+    private static boolean singleTubeArmorModelUnavailable;
     private final PhosphorType phosphorType;
     private final String armorTexture;
     private final ResourceLocation armorTextureLocation;
@@ -93,6 +117,20 @@ public class ItemNightVisionGoggles extends ItemArmor {
                 && ((ItemNightVisionGoggles)stack.getItem()).phosphorType.whitePhosphor;
     }
 
+    public static boolean isSingleTube(ItemStack stack) {
+        return stack != null && stack.getItem() instanceof ItemNightVisionGoggles
+                && ((ItemNightVisionGoggles)stack.getItem()).phosphorType.singleTube;
+    }
+
+    public static boolean isAmberPhosphor(ItemStack stack) {
+        return stack != null && stack.getItem() instanceof ItemNightVisionGoggles
+                && ((ItemNightVisionGoggles)stack.getItem()).phosphorType.amberPhosphor;
+    }
+
+    public String getModelBasePath() {
+        return phosphorType.singleTube ? "models/pvs14/PVS-14" : "models/gpnvg/GPNVG";
+    }
+
     public String getModelTexturePath() {
         return phosphorType.modelTexturePath;
     }
@@ -136,8 +174,20 @@ public class ItemNightVisionGoggles extends ItemArmor {
     @Override
     @SideOnly(Side.CLIENT)
     public ModelBiped getArmorModel(EntityLivingBase entity, ItemStack stack, int armorSlot) {
+        if (phosphorType.singleTube) {
+            if (singleTubeArmorModel == null && !singleTubeArmorModelUnavailable) {
+                try {
+                    singleTubeArmorModel = new ModelNightVisionGoggles(getModelBasePath());
+                } catch (RuntimeException exception) {
+                    singleTubeArmorModelUnavailable = true;
+                    FlansMod.logger.error("Could not load the PVS-14 equipment model. "
+                            + "Skipping its player rendering.", exception);
+                }
+            }
+            return singleTubeArmorModel;
+        }
         if (armorModel == null) {
-            armorModel = new ModelNightVisionGoggles();
+            armorModel = new ModelNightVisionGoggles(getModelBasePath());
         }
         return armorModel;
     }
@@ -153,8 +203,11 @@ public class ItemNightVisionGoggles extends ItemArmor {
     @Override
     @SideOnly(Side.CLIENT)
     public void addInformation(ItemStack stack, EntityPlayer player, List lines, boolean advanced) {
-        lines.add(EnumChatFormatting.DARK_GREEN + "Quad-tube night vision");
-        if (phosphorType.whitePhosphor) {
+        lines.add(EnumChatFormatting.DARK_GREEN
+                + (phosphorType.singleTube ? "Single-tube night vision" : "Quad-tube night vision"));
+        if (phosphorType.amberPhosphor) {
+            lines.add(EnumChatFormatting.GOLD + "Amber phosphor image intensifier");
+        } else if (phosphorType.whitePhosphor) {
             lines.add(EnumChatFormatting.AQUA + "WP: White phosphor image intensifier");
         } else {
             lines.add(EnumChatFormatting.GREEN + "GP: Green phosphor image intensifier");

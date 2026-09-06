@@ -28,11 +28,15 @@ public class ModelNightVisionGoggles extends ModelBiped {
     private int displayListBase;
 
     public ModelNightVisionGoggles() {
+        this("models/gpnvg/GPNVG");
+    }
+
+    public ModelNightVisionGoggles(String modelBasePath) {
         super(0F);
         mountModel = AdvancedModelLoader.loadModel(new ResourceLocation(
-                FlansMod.MODID, "models/gpnvg/GPNVG_Mount_runtime.obj"));
+                FlansMod.MODID, modelBasePath + "_Mount_runtime.obj"));
         flipModel = AdvancedModelLoader.loadModel(new ResourceLocation(
-                FlansMod.MODID, "models/gpnvg/GPNVG_Flip_runtime.obj"));
+                FlansMod.MODID, modelBasePath + "_Flip_runtime.obj"));
     }
 
     @Override

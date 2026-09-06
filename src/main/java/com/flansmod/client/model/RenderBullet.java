@@ -1,7 +1,6 @@
 package com.flansmod.client.model;
 
 import com.flansmod.client.FlansModResourceHandler;
-import com.flansmod.client.NightVisionGlow;
 import com.flansmod.common.guns.EntityBullet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.ModelBase;
@@ -161,9 +160,6 @@ public class RenderBullet extends Render
 		double tailX = -directionX * length;
 		double tailY = -directionY * length;
 		double tailZ = -directionZ * length;
-        NightVisionGlow.add(0D, 0D, 0D, 22F);
-        NightVisionGlow.add(tailX * 0.5D, tailY * 0.5D, tailZ * 0.5D, 18F);
-        NightVisionGlow.add(tailX, tailY, tailZ, 14F);
 		boolean greenTracer = bullet.type.greenTracer;
 		float glowRed = greenTracer ? 0F : 1F;
 		float glowGreen = greenTracer ? 1F : 0F;

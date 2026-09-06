@@ -131,6 +131,10 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * Damage inflicted by this gun. Multiplied by the bullet damage.
      */
     public float damage = 0;
+    /** Zero preserves the ammunition's head multiplier; positive values override it for players. */
+    public float playerHeadshotMultiplier = 0F;
+    /** Additional headshot multiplier against the TaP Altyn; opt-in per gun. */
+    public float altynHeadshotMultiplier = 1F;
     /**
      * The damage inflicted upon punching someone with this gun
      */
@@ -573,6 +577,15 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         try {
             if (split[0].equals("Damage"))
                 damage = Float.parseFloat(split[1]);
+            else if (split[0].equals("PlayerHeadshotMultiplier") || split[0].equals("AltynHeadshotMultiplier")) {
+                float multiplier = Float.parseFloat(split[1]);
+                if (Float.isNaN(multiplier) || Float.isInfinite(multiplier) || multiplier < 0F)
+                    throw new IllegalArgumentException("Invalid headshot multiplier: " + split[1]);
+                if (split[0].equals("PlayerHeadshotMultiplier"))
+                    playerHeadshotMultiplier = multiplier;
+                else
+                    altynHeadshotMultiplier = multiplier;
+            }
             else if (split[0].equals("MeleeDamage")) {
                 meleeDamage = Float.parseFloat(split[1]);
                 if (meleeDamage > 0F)
