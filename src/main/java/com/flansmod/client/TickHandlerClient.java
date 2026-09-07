@@ -330,7 +330,10 @@ public class TickHandlerClient {
             ThermalScopeEffect.render(mc, event.partialTicks);
             //Scopes and helmet overlays
             String overlayTexture = null;
-            if (FlansModClient.currentScope != null && FlansModClient.currentScope.hasZoomOverlay() && FMLClientHandler.instance().getClient().currentScreen == null && FlansModClient.zoomProgress > 0.9F) {
+            if (FlansModClient.currentScope != null && FlansModClient.currentScope.hasZoomOverlay()
+                    && !ThermalScopeEffect.usesModelThermalLens(FlansModClient.currentScope)
+                    && FMLClientHandler.instance().getClient().currentScreen == null
+                    && FlansModClient.zoomProgress > 0.9F) {
                 overlayTexture = FlansModClient.currentScope.getZoomOverlay();
             } else if (mc.thePlayer != null) {
                 ItemStack stack = mc.thePlayer.inventory.armorInventory[3];
@@ -340,7 +343,10 @@ public class TickHandlerClient {
             }
 
             String dotTexture = null;
-            if (FlansModClient.currentScope != null && FMLClientHandler.instance().getClient().currentScreen == null && FlansModClient.zoomProgress > 0.95F) {
+            if (FlansModClient.currentScope != null
+                    && !ThermalScopeEffect.usesModelThermalLens(FlansModClient.currentScope)
+                    && FMLClientHandler.instance().getClient().currentScreen == null
+                    && FlansModClient.zoomProgress > 0.95F) {
                 dotTexture = FlansModClient.currentScope.getDotOverlayTexture();
             }
 
@@ -1067,6 +1073,7 @@ public class TickHandlerClient {
         FirstPersonNightVisionGogglesRenderer.render(minecraft, event.partialTicks);
         float intensity = NightVisionGogglesEffect.getIntensity(minecraft, event.partialTicks);
         if (intensity > 0.001F && FlansModClient.currentScope != null
+                && !ThermalScopeEffect.usesModelThermalLens(FlansModClient.currentScope)
                 && minecraft.currentScreen == null && FlansModClient.zoomProgress > 0.95F) {
             ScaledResolution resolution = new ScaledResolution(minecraft,
                     minecraft.displayWidth, minecraft.displayHeight);

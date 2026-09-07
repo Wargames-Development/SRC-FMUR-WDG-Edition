@@ -2,6 +2,7 @@ package com.flansmod.client.model;
 
 import com.flansmod.client.FlansModClient;
 import com.flansmod.client.FlansModResourceHandler;
+import com.flansmod.client.ThermalScopeEffect;
 import com.flansmod.client.model.animation.gltf.GLTFAnimationController;
 import com.flansmod.client.model.animation.gltf.model.EnumAnimationPart;
 import com.flansmod.common.FlansMod;
@@ -200,7 +201,9 @@ public class RenderGun implements IItemRenderer {
                     IScope scope = gunType.getCurrentScope(item);
 
                     // 如果完全开镜，就停止渲染枪械
-                    if (FlansModClient.zoomProgress > 0.9F && scope.hasZoomOverlay() && !model.stillRenderGunWhenScopedOverlay) {
+                    if (FlansModClient.zoomProgress > 0.9F && scope.hasZoomOverlay()
+                            && !ThermalScopeEffect.usesModelThermalLens(scope)
+                            && !model.stillRenderGunWhenScopedOverlay) {
                         GL11.glPopMatrix();
                         return;
                     }

@@ -120,6 +120,8 @@ public class AttachmentType extends PaintableType implements IScope
 	public boolean hasNightVision = false;
 	/** If true, this scope renders the client-side white-hot thermal view. */
 	public boolean hasThermalVision = false;
+	/** Render the thermal feed on this attachment's model instead of over the screen. */
+	public boolean thermalOnModel = false;
 	
 	@SideOnly(Side.CLIENT)
 	/** Model. Only applicable when the attachment is added to 3D guns */
@@ -313,6 +315,8 @@ public class AttachmentType extends PaintableType implements IScope
 				hasNightVision = Boolean.parseBoolean(split[1].toLowerCase());
 			else if(split[0].equals("HasThermalVision"))
 				hasThermalVision = Boolean.parseBoolean(split[1].toLowerCase());
+			else if(split[0].equals("ThermalOnModel"))
+				thermalOnModel = Boolean.parseBoolean(split[1].toLowerCase());
 			else if(split[0].equals("IsDisableCancelAiming"))
 				isDisableCancelAiming = Boolean.parseBoolean(split[1].toLowerCase());
 			else if(split[0].equals("IsDetector"))
