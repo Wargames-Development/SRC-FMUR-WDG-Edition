@@ -32,14 +32,20 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.IItemRenderer;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
+import java.nio.FloatBuffer;
 import java.util.Random;
 
 import static com.flansmod.client.FlansModClient.zoomProgress;
 
 public class RenderGun implements IItemRenderer {
     private static final float ADS_SIGHT_SWAY_LIMIT_DEGREES = 0.1F;
+    /** Produces a lens diameter of roughly 34% of the display height at full ADS. */
+    private static final float PIP_TARGET_LENS_NDC_RADIUS = 0.34F;
+    private static final FloatBuffer MODELVIEW_BUFFER = BufferUtils.createFloatBuffer(16);
+    private static final FloatBuffer PROJECTION_BUFFER = BufferUtils.createFloatBuffer(16);
     private static final ResourceLocation RED_TRACER_TEXTURE =
             new ResourceLocation("flansmod", "particle/FMTracerRed.png");
     private static final ResourceLocation GREEN_TRACER_TEXTURE =
@@ -202,7 +208,7 @@ public class RenderGun implements IItemRenderer {
 
                     // 如果完全开镜，就停止渲染枪械
                     if (FlansModClient.zoomProgress > 0.9F && scope.hasZoomOverlay()
-                            && !ThermalScopeEffect.usesModelThermalLens(scope)
+                            && !ThermalScopeEffect.usesModelScopeLens(scope)
                             && !model.stillRenderGunWhenScopedOverlay) {
                         GL11.glPopMatrix();
                         return;
@@ -222,7 +228,8 @@ public class RenderGun implements IItemRenderer {
                     if (FlansModClient.currentScope == null) {
                         mouseOffsetX *= 5.0F;
                         mouseOffsetY *= 5.0F;
-                    } else if (FlansModClient.currentScope.getDotOverlayTexture() != null) {
+                    } else if (ThermalScopeEffect.usesModelScopeLens(FlansModClient.currentScope)
+                            || FlansModClient.currentScope.getDotOverlayTexture() != null) {
                         // Keep the optic housing around the screen-centred overlay reticle.
                         mouseOffsetX = MathHelper.clamp_float(mouseOffsetX,
                                 -ADS_SIGHT_SWAY_LIMIT_DEGREES, ADS_SIGHT_SWAY_LIMIT_DEGREES);
@@ -560,6 +567,13 @@ public class RenderGun implements IItemRenderer {
             }
         }
 
+        if (rtype == ItemRenderType.EQUIPPED_FIRST_PERSON) {
+            // Recalculate from the matrix after recoil. Otherwise automatic fire can
+            // pull the rear lens behind its housing until the recoil animation settles.
+            alignPictureInPictureScope(gunType, model,
+                    gunType.getCurrentScope(item), actualZoomProgress);
+        }
+
         effectiveReloadAnimationProgress = animations.lastReloadAnimationProgress + (animations.reloadAnimationProgress - animations.lastReloadAnimationProgress) * smoothing;
 
         ItemStack[] bulletStacks = new ItemStack[gunType.getNumAmmoItemsInGun(item)];
@@ -618,6 +632,8 @@ public class RenderGun implements IItemRenderer {
             // Render any default attachments
             if (scopeAttachment == null && !model.scopeIsOnSlide && (!model.scopeIsOnBreakAction || !model.defaultScopeIsOnBreakAction))
                 model.renderDefaultScope(f);
+			if (scopeAttachment == null && rtype == ItemRenderType.EQUIPPED_FIRST_PERSON)
+				renderPictureInPictureLens(gunType, f);
             if (barrelAttachment == null)
                 model.renderDefaultBarrel(f);
             if (stockAttachment == null)
@@ -1410,10 +1426,182 @@ public class RenderGun implements IItemRenderer {
                 model.renderAttachment(f);
                 renderZDepthModel(model, f, type);
             }
+
+			if (type == ItemRenderType.EQUIPPED_FIRST_PERSON) {
+				renderPictureInPictureLens(attachment, f);
+			}
         }
 
         renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(paintjob));
     }
+
+	private void renderPictureInPictureLens(AttachmentType attachment, float scale) {
+		if (!attachment.pictureInPicture || attachment.thermalOnModel
+				|| !ThermalScopeEffect.isModelLensActive()) {
+			return;
+		}
+		renderPictureInPictureLens(attachment.pictureInPictureX, attachment.pictureInPictureY,
+				attachment.pictureInPictureZ, attachment.pictureInPictureRadius, scale);
+	}
+
+	private void alignPictureInPictureScope(GunType gunType, ModelGun model,
+			IScope scope, float zoom) {
+		if (!ThermalScopeEffect.usesModelScopeLens(scope) || zoom <= 0.7F) {
+			return;
+		}
+
+		float lensX;
+		float lensY;
+		float lensZ;
+		float lensRadius;
+		// Build the rear-lens position in gun render coordinates. Including the gun's
+		// attachment point here automatically accounts for rails and risers.
+		if (scope instanceof AttachmentType) {
+			AttachmentType attachment = (AttachmentType)scope;
+			if (!attachment.pictureInPicture || attachment.model == null
+					|| model.scopeAttachPoint == null) {
+				return;
+			}
+
+			float alignmentX = 0F;
+			float alignmentY = 0F;
+			float alignmentZ = 0F;
+			if (model.gunOffset != 0F || attachment.model.renderOffset != 0F
+					|| attachment.model.coSightRenderOffset != 0F) {
+				alignmentX = (model.gunOffsetX + attachment.model.renderOffsetX) * zoom / 16F;
+				alignmentY = (-attachment.model.renderOffset + model.gunOffset) * zoom / 16F;
+				if (FlansMod.coSight) {
+					alignmentY -= attachment.model.coSightRenderOffset * zoom / 16F;
+				}
+				alignmentZ = model.gunOffsetZ * zoom / 16F;
+			}
+
+			float attachmentScale = attachment.modelScale / 16F;
+			lensX = alignmentX + model.scopeAttachPoint.x * gunType.modelScale
+					+ attachment.pictureInPictureX * attachmentScale;
+			lensY = alignmentY + model.scopeAttachPoint.y * gunType.modelScale
+					+ attachment.pictureInPictureY * attachmentScale;
+			lensZ = alignmentZ + model.scopeAttachPoint.z * gunType.modelScale
+					+ attachment.pictureInPictureZ * attachmentScale;
+			lensRadius = attachment.pictureInPictureRadius * attachmentScale;
+		} else if (scope instanceof GunType) {
+			GunType scopedGun = (GunType)scope;
+			if (!scopedGun.pictureInPicture) {
+				return;
+			}
+			float gunScale = gunType.modelScale / 16F;
+			lensX = scopedGun.pictureInPictureX * gunScale;
+			lensY = scopedGun.pictureInPictureY * gunScale;
+			lensZ = scopedGun.pictureInPictureZ * gunScale;
+			lensRadius = scopedGun.pictureInPictureRadius * gunScale;
+		} else {
+			return;
+		}
+
+		if (lensRadius <= 0F) {
+			return;
+		}
+
+		MODELVIEW_BUFFER.clear();
+		PROJECTION_BUFFER.clear();
+		GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, MODELVIEW_BUFFER);
+		GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX, PROJECTION_BUFFER);
+
+		float m0 = MODELVIEW_BUFFER.get(0);
+		float m1 = MODELVIEW_BUFFER.get(1);
+		float m2 = MODELVIEW_BUFFER.get(2);
+		float m4 = MODELVIEW_BUFFER.get(4);
+		float m5 = MODELVIEW_BUFFER.get(5);
+		float m6 = MODELVIEW_BUFFER.get(6);
+		float m8 = MODELVIEW_BUFFER.get(8);
+		float m9 = MODELVIEW_BUFFER.get(9);
+		float m10 = MODELVIEW_BUFFER.get(10);
+
+		float eyeX = m0 * lensX + m4 * lensY + m8 * lensZ + MODELVIEW_BUFFER.get(12);
+		float eyeY = m1 * lensX + m5 * lensY + m9 * lensZ + MODELVIEW_BUFFER.get(13);
+		float eyeZ = m2 * lensX + m6 * lensY + m10 * lensZ + MODELVIEW_BUFFER.get(14);
+		float yRadius = lensRadius * (float)Math.sqrt(m4 * m4 + m5 * m5 + m6 * m6);
+		float zRadius = lensRadius * (float)Math.sqrt(m8 * m8 + m9 * m9 + m10 * m10);
+		float eyeRadius = (yRadius + zRadius) * 0.5F;
+		// Perspective size is projectionScale * radius / distance. Pick the distance
+		// from the physical lens radius so differently scaled optics appear consistent.
+		float targetEyeZ = -Math.max(0.052F,
+				Math.abs(PROJECTION_BUFFER.get(5)) * eyeRadius / PIP_TARGET_LENS_NDC_RADIUS);
+
+		float determinant = m0 * (m5 * m10 - m9 * m6)
+				- m4 * (m1 * m10 - m9 * m2)
+				+ m8 * (m1 * m6 - m5 * m2);
+		if (Math.abs(determinant) < 0.000001F) {
+			return;
+		}
+
+		float dx = -eyeX;
+		float dy = -eyeY;
+		float dz = targetEyeZ - eyeZ;
+		float inverse = 1F / determinant;
+		// OpenGL post-multiplies local translations, so transform the desired
+		// eye-space correction through the inverse model-view linear component.
+		float localX = ((m5 * m10 - m9 * m6) * dx
+				+ (m8 * m6 - m4 * m10) * dy
+				+ (m4 * m9 - m8 * m5) * dz) * inverse;
+		float localY = ((m9 * m2 - m1 * m10) * dx
+				+ (m0 * m10 - m8 * m2) * dy
+				+ (m8 * m1 - m0 * m9) * dz) * inverse;
+		float localZ = ((m1 * m6 - m5 * m2) * dx
+				+ (m4 * m2 - m0 * m6) * dy
+				+ (m0 * m5 - m4 * m1) * dz) * inverse;
+
+		float progress = MathHelper.clamp_float((zoom - 0.7F) / 0.3F, 0F, 1F);
+		progress = progress * progress * (3F - 2F * progress);
+		GL11.glTranslatef(localX * progress, localY * progress, localZ * progress);
+	}
+
+	private void renderPictureInPictureLens(GunType gunType, float scale) {
+		if (!gunType.pictureInPicture || !ThermalScopeEffect.isModelLensActive()) {
+			return;
+		}
+		renderPictureInPictureLens(gunType.pictureInPictureX, gunType.pictureInPictureY,
+				gunType.pictureInPictureZ, gunType.pictureInPictureRadius, scale);
+	}
+
+	private void renderPictureInPictureLens(float lensX, float lensY, float lensZ,
+			float lensRadius, float scale) {
+
+		int lensTexture = ThermalScopeEffect.getModelLensTexture();
+		if (lensTexture < 0) {
+			return;
+		}
+
+		GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+		try {
+			GL11.glDisable(GL11.GL_LIGHTING);
+			GL11.glDisable(GL11.GL_CULL_FACE);
+			GL11.glEnable(GL11.GL_TEXTURE_2D);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, lensTexture);
+			GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
+			GL11.glPolygonOffset(-2F, -2F);
+			GL11.glColor4f(1F, 1F, 1F, 1F);
+
+			float x = lensX * scale;
+			float centerY = lensY * scale;
+			float centerZ = lensZ * scale;
+			float radius = lensRadius * scale;
+			GL11.glBegin(GL11.GL_TRIANGLE_FAN);
+			GL11.glTexCoord2f(0.5F, 0.5F);
+			GL11.glVertex3f(x, centerY, centerZ);
+			for (int index = 0; index <= 32; index++) {
+				double angle = Math.PI * 2D * index / 32D;
+				float horizontal = (float)Math.cos(angle);
+				float vertical = (float)Math.sin(angle);
+				GL11.glTexCoord2f(0.5F + horizontal * 0.5F, 0.5F + vertical * 0.5F);
+				GL11.glVertex3f(x, centerY + vertical * radius,
+						centerZ + horizontal * radius);
+			}
+			GL11.glEnd();
+		} finally {
+			GL11.glPopAttrib();
+		}
+	}
 
     private void renderZDepthModel(ModelAttachment model, float f, ItemRenderType type) {
         if (model.zDepthModel == null || model.zDepthModel.length == 0) {

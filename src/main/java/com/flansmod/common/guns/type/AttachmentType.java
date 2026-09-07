@@ -122,6 +122,17 @@ public class AttachmentType extends PaintableType implements IScope
 	public boolean hasThermalVision = false;
 	/** Render the thermal feed on this attachment's model instead of over the screen. */
 	public boolean thermalOnModel = false;
+	/** Render a magnified colour view on a circular lens in the attachment model. */
+	public boolean pictureInPicture = false;
+	/** Rear lens centre and radius in the attachment model's post-flip pixel coordinates. */
+	public float pictureInPictureX;
+	public float pictureInPictureY;
+	public float pictureInPictureZ;
+	public float pictureInPictureRadius;
+	/** Transparent reticle texture composited over this attachment's PIP feed. */
+	public String pictureInPictureReticle;
+	/** Optional scale multiplier for small PIP reticle artwork. */
+	public float pictureInPictureReticleScale = 1F;
 	
 	@SideOnly(Side.CLIENT)
 	/** Model. Only applicable when the attachment is added to 3D guns */
@@ -317,6 +328,18 @@ public class AttachmentType extends PaintableType implements IScope
 				hasThermalVision = Boolean.parseBoolean(split[1].toLowerCase());
 			else if(split[0].equals("ThermalOnModel"))
 				thermalOnModel = Boolean.parseBoolean(split[1].toLowerCase());
+			else if(split[0].equals("PictureInPicture"))
+			{
+				pictureInPicture = true;
+				pictureInPictureX = Float.parseFloat(split[1]);
+				pictureInPictureY = Float.parseFloat(split[2]);
+				pictureInPictureZ = Float.parseFloat(split[3]);
+				pictureInPictureRadius = Float.parseFloat(split[4]);
+			}
+			else if(split[0].equals("PictureInPictureReticle"))
+				pictureInPictureReticle = split[1];
+			else if(split[0].equals("PictureInPictureReticleScale"))
+				pictureInPictureReticleScale = Float.parseFloat(split[1]);
 			else if(split[0].equals("IsDisableCancelAiming"))
 				isDisableCancelAiming = Boolean.parseBoolean(split[1].toLowerCase());
 			else if(split[0].equals("IsDetector"))

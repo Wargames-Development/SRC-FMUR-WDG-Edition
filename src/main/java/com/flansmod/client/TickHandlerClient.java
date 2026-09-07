@@ -331,7 +331,7 @@ public class TickHandlerClient {
             //Scopes and helmet overlays
             String overlayTexture = null;
             if (FlansModClient.currentScope != null && FlansModClient.currentScope.hasZoomOverlay()
-                    && !ThermalScopeEffect.usesModelThermalLens(FlansModClient.currentScope)
+                    && !ThermalScopeEffect.usesModelScopeLens(FlansModClient.currentScope)
                     && FMLClientHandler.instance().getClient().currentScreen == null
                     && FlansModClient.zoomProgress > 0.9F) {
                 overlayTexture = FlansModClient.currentScope.getZoomOverlay();
@@ -344,7 +344,7 @@ public class TickHandlerClient {
 
             String dotTexture = null;
             if (FlansModClient.currentScope != null
-                    && !ThermalScopeEffect.usesModelThermalLens(FlansModClient.currentScope)
+                    && !ThermalScopeEffect.usesModelScopeLens(FlansModClient.currentScope)
                     && FMLClientHandler.instance().getClient().currentScreen == null
                     && FlansModClient.zoomProgress > 0.95F) {
                 dotTexture = FlansModClient.currentScope.getDotOverlayTexture();
@@ -1073,7 +1073,7 @@ public class TickHandlerClient {
         FirstPersonNightVisionGogglesRenderer.render(minecraft, event.partialTicks);
         float intensity = NightVisionGogglesEffect.getIntensity(minecraft, event.partialTicks);
         if (intensity > 0.001F && FlansModClient.currentScope != null
-                && !ThermalScopeEffect.usesModelThermalLens(FlansModClient.currentScope)
+                && !ThermalScopeEffect.usesModelScopeLens(FlansModClient.currentScope)
                 && minecraft.currentScreen == null && FlansModClient.zoomProgress > 0.95F) {
             ScaledResolution resolution = new ScaledResolution(minecraft,
                     minecraft.displayWidth, minecraft.displayHeight);
@@ -1096,6 +1096,10 @@ public class TickHandlerClient {
 
     @SubscribeEvent
     public void renderWorldLast(RenderWorldLastEvent event) {
+        if (ThermalScopeEffect.isRenderingScopedWorld()) {
+            ThermalScopeEffect.captureHeatMask(event.partialTicks);
+            return;
+        }
         NightVisionBlockLightMask.capture(event.partialTicks);
         ThermalScopeEffect.captureHeatMask(event.partialTicks);
         // The lightmap is ready. Restore normal gamma before GUI code can save options.

@@ -775,8 +775,8 @@ public class FlansModClient extends FlansMod {
         //if (Math.abs(zoomProgress - lastZoomProgress) > 0.0001F) {
         float actualZoomProgress = lastZoomProgress + (zoomProgress - lastZoomProgress) * smoothing;
         float botchedZoomProgress = zoomProgress > 0.92F ? 1F : 0F;
-        boolean physicalThermalLens = ThermalScopeEffect.usesModelThermalLens(currentScope);
-        double zoomLevel = physicalThermalLens ? 1.0D
+        boolean physicalScopeLens = ThermalScopeEffect.usesModelScopeLens(currentScope);
+        double zoomLevel = physicalScopeLens ? 1.0D
                 : botchedZoomProgress * lastZoomLevel + (1 - botchedZoomProgress);
         float FOVZoomLevel = actualZoomProgress * lastFOVZoomLevel + (1 - actualZoomProgress);
         if (Math.abs(zoomLevel - 1F) < 0.01F)

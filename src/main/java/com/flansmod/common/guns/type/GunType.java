@@ -407,6 +407,17 @@ public class GunType extends PaintableType implements IScope, IMarkable {
     public boolean allowNightVision = false;
     /** Gives this gun's built-in scope the client-side FLIR display. */
     public boolean hasThermalVision = false;
+    /** Render a magnified view on the built-in scope lens. */
+    public boolean pictureInPicture = false;
+    /** Built-in scope rear lens centre and radius in post-flip model pixels. */
+    public float pictureInPictureX;
+    public float pictureInPictureY;
+    public float pictureInPictureZ;
+    public float pictureInPictureRadius;
+    /** Transparent reticle texture composited over the built-in scope PIP feed. */
+    public String pictureInPictureReticle;
+    /** Optional scale multiplier for small PIP reticle artwork. */
+    public float pictureInPictureReticleScale = 1F;
     @SideOnly(Side.CLIENT)
     public ModelGun model;
     public float modelScale = 1F;
@@ -798,6 +809,16 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 allowNightVision = Boolean.parseBoolean(split[1]);
             } else if (split[0].equals("HasThermalVision")) {
                 hasThermalVision = Boolean.parseBoolean(split[1]);
+            } else if (split[0].equals("PictureInPicture")) {
+                pictureInPicture = true;
+                pictureInPictureX = Float.parseFloat(split[1]);
+                pictureInPictureY = Float.parseFloat(split[2]);
+                pictureInPictureZ = Float.parseFloat(split[3]);
+                pictureInPictureRadius = Float.parseFloat(split[4]);
+            } else if (split[0].equals("PictureInPictureReticle")) {
+                pictureInPictureReticle = split[1];
+            } else if (split[0].equals("PictureInPictureReticleScale")) {
+                pictureInPictureReticleScale = Float.parseFloat(split[1]);
             } else if (split[0].equals("ZoomLevel")) {
                 zoomLevel = Float.parseFloat(split[1]);
                 if (zoomLevel > 1F)
