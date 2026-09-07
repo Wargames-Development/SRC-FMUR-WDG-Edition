@@ -25,6 +25,7 @@ import com.flansmod.common.vector.Vector3f;
 import com.flansmod.common.vector.Vector3i;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
@@ -326,6 +327,7 @@ public class TickHandlerClient {
 
         //TODO
         if (!event.isCancelable() && event.type == ElementType.HELMET) {
+            ThermalScopeEffect.render(mc, event.partialTicks);
             //Scopes and helmet overlays
             String overlayTexture = null;
             if (FlansModClient.currentScope != null && FlansModClient.currentScope.hasZoomOverlay() && FMLClientHandler.instance().getClient().currentScreen == null && FlansModClient.zoomProgress > 0.9F) {
@@ -368,6 +370,7 @@ public class TickHandlerClient {
                 GL11.glEnable(3008 /* GL_ALPHA_TEST */);
                 GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
             }
+            ThermalScopeEffect.renderStatus(mc);
 
             //TVM
             if (FlansModClient.enabledCameraFollowBullet && FlansModClient.isBulletTrackingActive) {
@@ -1055,9 +1058,9 @@ public class TickHandlerClient {
         tessellator.draw();
     }
 
-    @SubscribeEvent
-    public void renderNightVisionBeforeHud(RenderGameOverlayEvent.Pre event) {
-        if (event.type != ElementType.ALL || Minecraft.getMinecraft().gameSettings.hideGUI) {
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void renderNightVisionAfterScope(RenderGameOverlayEvent.Post event) {
+        if (event.type != ElementType.HELMET || Minecraft.getMinecraft().gameSettings.hideGUI) {
             return;
         }
         Minecraft minecraft = Minecraft.getMinecraft();
@@ -1087,6 +1090,7 @@ public class TickHandlerClient {
     @SubscribeEvent
     public void renderWorldLast(RenderWorldLastEvent event) {
         NightVisionBlockLightMask.capture(event.partialTicks);
+        ThermalScopeEffect.captureHeatMask(event.partialTicks);
         // The lightmap is ready. Restore normal gamma before GUI code can save options.
         NightVisionGogglesBrightness.endFrame(Minecraft.getMinecraft());
         BulletHoleDecalRenderer.render(event);

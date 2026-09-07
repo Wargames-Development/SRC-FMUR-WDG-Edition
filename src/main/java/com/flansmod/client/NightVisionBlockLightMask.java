@@ -4,8 +4,11 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.shader.Framebuffer;
+import net.minecraft.entity.EntityLivingBase;
 import org.lwjgl.opengl.EXTFramebufferObject;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
@@ -13,7 +16,7 @@ import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GLContext;
 
-/** Block-only reference for NVG bloom; particles and entities are never replayed. */
+/** Non-emissive world reference for NVG bloom; projectiles and particles are never replayed. */
 @SideOnly(Side.CLIENT)
 public final class NightVisionBlockLightMask {
     private static Framebuffer blocks;
@@ -101,6 +104,9 @@ public final class NightVisionBlockLightMask {
             OpenGlHelper.glBlendFunc(770, 771, 1, 0);
             GL11.glDepthMask(false);
             mc.renderGlobal.sortAndRender(mc.renderViewEntity, 1, partialTicks);
+            GL11.glDepthMask(true);
+            GL11.glDisable(GL11.GL_BLEND);
+            renderLivingEntities(mc, partialTicks);
             valid = true;
         } finally {
             mc.gameSettings.advancedOpengl = advancedOpenGl;
@@ -109,6 +115,24 @@ public final class NightVisionBlockLightMask {
             GL11.glPopMatrix();
             GL20.glUseProgram(previousProgram);
             GL11.glPopAttrib();
+        }
+    }
+
+    private static void renderLivingEntities(Minecraft mc, float partialTicks) {
+        RenderHelper.enableStandardItemLighting();
+        try {
+            for (Object object : mc.theWorld.loadedEntityList) {
+                if (!(object instanceof EntityLivingBase)) {
+                    continue;
+                }
+                EntityLivingBase entity = (EntityLivingBase)object;
+                if (entity == mc.renderViewEntity && mc.gameSettings.thirdPersonView == 0) {
+                    continue;
+                }
+                RenderManager.instance.renderEntitySimple(entity, partialTicks);
+            }
+        } finally {
+            RenderHelper.disableStandardItemLighting();
         }
     }
 }

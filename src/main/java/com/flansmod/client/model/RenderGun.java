@@ -591,7 +591,8 @@ public class RenderGun implements IItemRenderer {
         // This allows you to offset your gun with a sight attached to properly align
         // the aiming reticle
         // Can be adjusted per scope and per gun
-        if (scopeAttachment != null && (model.gunOffset != 0.0F || scopeAttachment.model.renderOffset != 0.0F || scopeAttachment.model.coSightRenderOffset != 0.0F))
+        if (scopeAttachment != null && scopeAttachment.model != null
+                && (model.gunOffset != 0.0F || scopeAttachment.model.renderOffset != 0.0F || scopeAttachment.model.coSightRenderOffset != 0.0F))
             if (FlansMod.coSight) {
                 GL11.glTranslatef(
                         (model.gunOffsetX + scopeAttachment.model.renderOffsetX) * actualZoomProgress / 16.0F,
@@ -815,12 +816,6 @@ public class RenderGun implements IItemRenderer {
                         model.renderAttachmentGrip(f);
                     if (gadgetAttachment != null && model.gadgetIsOnPump)
                         model.renderAttachmentGadget(f);
-                    if (FlansModClient.shotState != -1 && -(1 - Math.abs(animations.lastPumped + (animations.pumped - animations.lastPumped) * smoothing)) * model.pumpHandleDistance != -0.0) {
-                        FlansModClient.shotState = -1;
-                        if (gunType.actionSound != null) {
-                            Minecraft.getMinecraft().getSoundHandler().playSound(PositionedSoundRecord.func_147673_a(FlansModResourceHandler.getSound(gunType.actionSound)));
-                        }
-                    }
                 }
                 GL11.glPopMatrix();
             }
@@ -843,6 +838,13 @@ public class RenderGun implements IItemRenderer {
                         model.renderAttachmentGadget(f);
                 }
                 GL11.glPopMatrix();
+            }
+
+            if (animations.actionSoundPending) {
+                animations.actionSoundPending = false;
+                if (gunType.actionSound != null) {
+                    Minecraft.getMinecraft().getSoundHandler().playSound(PositionedSoundRecord.func_147673_a(FlansModResourceHandler.getSound(gunType.actionSound)));
+                }
             }
 
             // Render the charge handle

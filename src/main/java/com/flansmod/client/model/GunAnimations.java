@@ -47,6 +47,7 @@ public class GunAnimations {
      * Delayed Reload Animations : Doing the delayed animation
      */
     public boolean pumping = false;
+    public boolean actionSoundPending = false;
     /**
      * Charge handle variables
      */
@@ -140,7 +141,7 @@ public class GunAnimations {
                 //Pump it!
                 pumping = true;
                 lastPumped = pumped = -1F;
-                FlansModClient.shotState = 1;
+                actionSoundPending = true;
             }
 
         }
@@ -283,7 +284,7 @@ public class GunAnimations {
         casingStage = 0;
 
         if (pumpDelay == 0) {
-            FlansModClient.shotState = 1;
+            actionSoundPending = true;
         }
     }
 

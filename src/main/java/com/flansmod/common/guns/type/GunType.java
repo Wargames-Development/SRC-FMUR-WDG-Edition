@@ -395,6 +395,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * The zoom level of the default scope
      */
     public float zoomLevel = 1.0F;
+    /** Optional second magnification selected with the scope zoom key. */
+    public float zoomLevel2 = -1.0F;
     /**
      * The FOV zoom level of the default scope
      */
@@ -403,6 +405,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * Gives night vision while scoped if true
      */
     public boolean allowNightVision = false;
+    /** Gives this gun's built-in scope the client-side FLIR display. */
+    public boolean hasThermalVision = false;
     @SideOnly(Side.CLIENT)
     public ModelGun model;
     public float modelScale = 1F;
@@ -792,10 +796,14 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 else defaultScopeTexture = split[1];
             } else if (split[0].equals("AllowNightVision")) {
                 allowNightVision = Boolean.parseBoolean(split[1]);
+            } else if (split[0].equals("HasThermalVision")) {
+                hasThermalVision = Boolean.parseBoolean(split[1]);
             } else if (split[0].equals("ZoomLevel")) {
                 zoomLevel = Float.parseFloat(split[1]);
                 if (zoomLevel > 1F)
                     secondaryFunction = EnumSecondaryFunction.ZOOM;
+            } else if (split[0].equals("FOVZoomLevel2") || split[0].equals("ZoomLevel2")) {
+                zoomLevel2 = Float.parseFloat(split[1]);
             } else if (split[0].equals("FOVZoomLevel")) {
                 FOVFactor = Float.parseFloat(split[1]);
                 if (FOVFactor > 1F)
@@ -1533,6 +1541,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
 
     @Override
     public float getZoomFactor() {
+        if (FlansMod.switchedFOV && zoomLevel2 != -1.0F)
+            return zoomLevel2;
         return zoomLevel;
     }
 

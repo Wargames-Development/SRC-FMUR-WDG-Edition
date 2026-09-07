@@ -118,6 +118,8 @@ public class AttachmentType extends PaintableType implements IScope
 	public boolean hasScopeOverlay = false;
 	/** If true, then this scope will active night vision potion effect*/
 	public boolean hasNightVision = false;
+	/** If true, this scope renders the client-side white-hot thermal view. */
+	public boolean hasThermalVision = false;
 	
 	@SideOnly(Side.CLIENT)
 	/** Model. Only applicable when the attachment is added to 3D guns */
@@ -309,6 +311,8 @@ public class AttachmentType extends PaintableType implements IScope
 			}
 			else if(split[0].equals("HasNightVision"))
 				hasNightVision = Boolean.parseBoolean(split[1].toLowerCase());
+			else if(split[0].equals("HasThermalVision"))
+				hasThermalVision = Boolean.parseBoolean(split[1].toLowerCase());
 			else if(split[0].equals("IsDisableCancelAiming"))
 				isDisableCancelAiming = Boolean.parseBoolean(split[1].toLowerCase());
 			else if(split[0].equals("IsDetector"))

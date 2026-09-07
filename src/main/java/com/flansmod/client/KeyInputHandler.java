@@ -65,6 +65,7 @@ public class KeyInputHandler {
     public static KeyBinding secondaryKey = new KeyBinding("Switch Underbarrel Weapon", Keyboard.KEY_T, "FMUR Guns");
     public static KeyBinding lightSwitchKey = new KeyBinding("Toggle Flashlight/Laser", Keyboard.KEY_T, "FMUR Guns");
     public static KeyBinding zoomSwitchKey = new KeyBinding("Switch Scope Magnification", Keyboard.KEY_Z, "FMUR Guns");
+    public static KeyBinding thermalScopeKey = new KeyBinding("Toggle FLIR Mode", Keyboard.KEY_H, "FMUR Guns");
     public static KeyBinding coSightSwitchKey = new KeyBinding("Toggle Co-Sight", Keyboard.KEY_C, "FMUR Guns");
     public static KeyBinding missileUpKey = new KeyBinding("Missile Aim Up", Keyboard.KEY_UP, "FMUR Guns");
     public static KeyBinding missileDownKey = new KeyBinding("Missile Aim Down", Keyboard.KEY_DOWN, "FMUR Guns");
@@ -115,6 +116,7 @@ public class KeyInputHandler {
         ClientRegistry.registerKeyBinding(secondaryKey);
         ClientRegistry.registerKeyBinding(lightSwitchKey);
         ClientRegistry.registerKeyBinding(zoomSwitchKey);
+        ClientRegistry.registerKeyBinding(thermalScopeKey);
         ClientRegistry.registerKeyBinding(coSightSwitchKey);
         ClientRegistry.registerKeyBinding(modelDebugKey);
         ClientRegistry.registerKeyBinding(nightVisionGogglesKey);
@@ -218,6 +220,9 @@ public class KeyInputHandler {
         }
         if (zoomSwitchKey.isPressed()) {
             FlansMod.switchedFOV = !FlansMod.switchedFOV;
+        }
+        if (thermalScopeKey.isPressed() && ThermalScopeEffect.isThermalScopeActive(mc)) {
+            ThermalScopeEffect.toggleFlir();
         }
         if (coSightSwitchKey.isPressed()) {
             FlansMod.coSight = !FlansMod.coSight;

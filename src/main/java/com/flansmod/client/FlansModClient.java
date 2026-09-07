@@ -117,8 +117,6 @@ public class FlansModClient extends FlansMod {
     public static float antiRecoilYaw;
 
     public static int lastBulletReload = 0;
-    public static int shotState = -1;
-
     //Scope variables
     /**
      * 防止Toggle开镜模式下长按重复开镜动作问题，设置一段时间后自动收镜/开镜
