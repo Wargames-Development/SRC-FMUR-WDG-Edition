@@ -738,10 +738,13 @@ public class FlansModClient extends FlansMod {
 
         float progress = Math.max(0F, Math.min(1F, zoomProgress));
         double effectiveMagnification = 1D + (scopeMagnification - 1D) * progress;
+        double effectiveSensitivityMultiplier = 1D
+                + (FlansMod.scopeSensitivityMultiplier - 1D) * progress;
 
         // Vanilla 1.7.10 converts the sensitivity setting to mouse gain with
         // (sensitivity * 0.6 + 0.2)^3. Invert that curve so a scope that is N
-        // times magnified gets exactly 1/N of the normal angular movement.
+        // times magnified gets exactly 1/N of the normal angular movement,
+        // then apply the player's scoped sensitivity multiplier to that gain.
         // This avoids the coarse minimum step produced by dividing the raw
         // sensitivity value directly, especially on high-power sniper scopes.
         double baseGain = gamingMouseSensitivity * 0.6D + 0.2D;
@@ -750,7 +753,8 @@ public class FlansModClient extends FlansMod {
             return;
         }
 
-        double scopedGain = baseGain / Math.cbrt(effectiveMagnification);
+        double scopedGain = baseGain * Math.cbrt(effectiveSensitivityMultiplier
+                / effectiveMagnification);
         float adjustedSensitivity = (float) ((scopedGain - 0.2D) / 0.6D);
         minecraft.gameSettings.mouseSensitivity = adjustedSensitivity;
         MouseSenNedToChange = gamingMouseSensitivity - adjustedSensitivity;
