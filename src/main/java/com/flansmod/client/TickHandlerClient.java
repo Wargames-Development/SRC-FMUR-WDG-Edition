@@ -303,6 +303,13 @@ public class TickHandlerClient {
     @SubscribeEvent
     public void eventHandler(RenderGameOverlayEvent event) {
         Minecraft mc = Minecraft.getMinecraft();
+        if (event.type == ElementType.CROSSHAIRS && mc.thePlayer != null
+                && mc.thePlayer.getHeldItem() != null
+                && mc.thePlayer.getHeldItem().getItem() instanceof ItemGun
+                && NightVisionGogglesEffect.getIntensity(mc, event.partialTicks) > 0.001F) {
+            event.setCanceled(true);
+            return;
+        }
         //If main config is set to false, blanket disable crosshairs (client synced)
         if (!FlansMod.crosshairEnable && event.type == ElementType.CROSSHAIRS && mc.thePlayer != null && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemGun) {
             event.setCanceled(true);
@@ -492,66 +499,10 @@ public class TickHandlerClient {
                     }
 
                     //腰射准心
-                    else if (FlansModClient.zoomProgress < 0.3F) {
+                    else if (FlansModClient.zoomProgress < 0.3F
+                            && NightVisionGogglesEffect.getIntensity(mc, event.partialTicks) <= 0.001F) {
                         if (enableDefaultCrossHair && !gun.type.hideCrosshair) {
-
-                            FlansModClient.minecraft.entityRenderer.setupOverlayRendering();
-                            GL11.glEnable(3042 /* GL_BLEND */);
-                            GL11.glDisable(2929 /* GL_DEPTH_TEST */);
-                            GL11.glDepthMask(false);
-                            GL11.glBlendFunc(770, 771);
-                            GL11.glColor4f(crosshairR, crosshairG, crosshairB, crosshairA);
-                            GL11.glDisable(3008 /* GL_ALPHA_TEST */);
-
-                            double w = 10;
-                            double h = 10;
-
-                            //霰弹枪圆准心
-                            if (gun.type.useCircleCrosshair) {
-                                mc.renderEngine.bindTexture(circleCross);
-                                double radius = (gun.currentSpread > 30 ? 30 : gun.currentSpread) * 2;
-                                if (!mc.thePlayer.onGround) radius *= 1.5F * FlansModClient.springProgress;
-
-                                w += radius;
-                                h += radius;
-                                double x = (i - w) / 2D;
-                                double y = (j - h) / 2D;
-
-                                tessellator.startDrawingQuads();
-                                tessellator.addVertexWithUV(x, y + h, -90D, 0.0D, 1.0D);
-                                tessellator.addVertexWithUV(x + w, y + h, -90D, 1.0D, 1.0D);
-                                tessellator.addVertexWithUV(x + w, y, -90D, 1.0D, 0.0D);
-                                tessellator.addVertexWithUV(x, y, -90D, 0.0D, 0.0D);
-                                tessellator.draw();
-                            } else {
-                                mc.renderEngine.bindTexture(genericCross);
-                                double radius = (gun.currentSpread > 40 ? 40 : gun.currentSpread) * 2;
-                                radius *= 1.0F - FlansModClient.zoomProgress;
-                                if (!mc.thePlayer.onGround) {
-                                    radius *= 2F * FlansModClient.springProgress;
-                                }
-
-                                double[] x = new double[]{0.0, 0.0, -radius - 5.0D, radius + 5.0D};
-                                double[] y = new double[]{-radius - 5.0D, radius + 5.0D, 0.0, 0.0};
-                                double[] uv = new double[]{0.5D, 0.5D, 0.0, 0.0};
-                                double x1 = (i - w) / 2D;
-                                double x2 = (i + w) / 2D;
-                                double y1 = (j - h) / 2D;
-                                double y2 = (j + h) / 2D;
-
-                                for (int n = 0; n < 4; n++) {
-                                    tessellator.startDrawingQuads();
-                                    tessellator.addVertexWithUV(x1 + x[n], y2 + y[n], -90D, 0.0, 0.5 + uv[n]);
-                                    tessellator.addVertexWithUV(x2 + x[n], y2 + y[n], -90D, 0.5, 0.5 + uv[n]);
-                                    tessellator.addVertexWithUV(x2 + x[n], y1 + y[n], -90D, 0.5, uv[n]);
-                                    tessellator.addVertexWithUV(x1 + x[n], y1 + y[n], -90D, 0.0, uv[n]);
-                                    tessellator.draw();
-                                }
-                            }
-                            GL11.glDepthMask(true);
-                            GL11.glEnable(2929 /* GL_DEPTH_TEST */);
-                            GL11.glEnable(3008);
-                            GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+                            renderHipFireCrosshair(mc, gun, i, j);
                         }
                     }
                 }
@@ -1064,6 +1015,87 @@ public class TickHandlerClient {
         tessellator.draw();
     }
 
+    private static void renderHipFireCrosshair(Minecraft minecraft, ItemGun gun,
+                                                int screenWidth, int screenHeight) {
+        minecraft.entityRenderer.setupOverlayRendering();
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        GL11.glDepthMask(false);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glColor4f(crosshairR, crosshairG, crosshairB, crosshairA);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
+
+        Tessellator tessellator = Tessellator.instance;
+        double width = 10D;
+        double height = 10D;
+        if (gun.type.useCircleCrosshair) {
+            minecraft.renderEngine.bindTexture(circleCross);
+            double radius = Math.min(gun.currentSpread, 30F) * 2D;
+            if (!minecraft.thePlayer.onGround) {
+                radius *= 1.5F * FlansModClient.springProgress;
+            }
+            width += radius;
+            height += radius;
+            double x = (screenWidth - width) / 2D;
+            double y = (screenHeight - height) / 2D;
+            tessellator.startDrawingQuads();
+            tessellator.addVertexWithUV(x, y + height, -90D, 0D, 1D);
+            tessellator.addVertexWithUV(x + width, y + height, -90D, 1D, 1D);
+            tessellator.addVertexWithUV(x + width, y, -90D, 1D, 0D);
+            tessellator.addVertexWithUV(x, y, -90D, 0D, 0D);
+            tessellator.draw();
+        } else {
+            minecraft.renderEngine.bindTexture(genericCross);
+            double radius = Math.min(gun.currentSpread, 40F) * 2D;
+            radius *= 1F - FlansModClient.zoomProgress;
+            if (!minecraft.thePlayer.onGround) {
+                radius *= 2F * FlansModClient.springProgress;
+            }
+
+            double[] xOffset = new double[]{0D, 0D, -radius - 5D, radius + 5D};
+            double[] yOffset = new double[]{-radius - 5D, radius + 5D, 0D, 0D};
+            double[] uvOffset = new double[]{0.5D, 0.5D, 0D, 0D};
+            double x1 = (screenWidth - width) / 2D;
+            double x2 = (screenWidth + width) / 2D;
+            double y1 = (screenHeight - height) / 2D;
+            double y2 = (screenHeight + height) / 2D;
+            for (int n = 0; n < 4; n++) {
+                tessellator.startDrawingQuads();
+                tessellator.addVertexWithUV(x1 + xOffset[n], y2 + yOffset[n], -90D,
+                        0D, 0.5D + uvOffset[n]);
+                tessellator.addVertexWithUV(x2 + xOffset[n], y2 + yOffset[n], -90D,
+                        0.5D, 0.5D + uvOffset[n]);
+                tessellator.addVertexWithUV(x2 + xOffset[n], y1 + yOffset[n], -90D,
+                        0.5D, uvOffset[n]);
+                tessellator.addVertexWithUV(x1 + xOffset[n], y1 + yOffset[n], -90D,
+                        0D, uvOffset[n]);
+                tessellator.draw();
+            }
+        }
+
+        GL11.glDepthMask(true);
+        GL11.glEnable(GL11.GL_DEPTH_TEST);
+        GL11.glEnable(GL11.GL_ALPHA_TEST);
+        GL11.glColor4f(1F, 1F, 1F, 1F);
+    }
+
+    private static void renderHipFireCrosshairAfterNightVision(Minecraft minecraft,
+                                                                int screenWidth,
+                                                                int screenHeight) {
+        if (minecraft.thePlayer == null || minecraft.thePlayer.ridingEntity != null
+                || minecraft.thePlayer.isSprinting() || FlansModClient.zoomProgress >= 0.3F) {
+            return;
+        }
+        ItemStack heldItem = minecraft.thePlayer.getCurrentEquippedItem();
+        if (heldItem == null || !(heldItem.getItem() instanceof ItemGun)) {
+            return;
+        }
+        ItemGun gun = (ItemGun)heldItem.getItem();
+        if (enableDefaultCrossHair && !gun.type.hideCrosshair) {
+            renderHipFireCrosshair(minecraft, gun, screenWidth, screenHeight);
+        }
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void renderNightVisionAfterScope(RenderGameOverlayEvent.Post event) {
         if (event.type != ElementType.HELMET || Minecraft.getMinecraft().gameSettings.hideGUI) {
@@ -1072,17 +1104,21 @@ public class TickHandlerClient {
         Minecraft minecraft = Minecraft.getMinecraft();
         FirstPersonNightVisionGogglesRenderer.render(minecraft, event.partialTicks);
         float intensity = NightVisionGogglesEffect.getIntensity(minecraft, event.partialTicks);
-        if (intensity > 0.001F && FlansModClient.currentScope != null
-                && !ThermalScopeEffect.usesModelScopeLens(FlansModClient.currentScope)
-                && minecraft.currentScreen == null && FlansModClient.zoomProgress > 0.95F) {
-            ScaledResolution resolution = new ScaledResolution(minecraft,
-                    minecraft.displayWidth, minecraft.displayHeight);
-            renderScopeReticle(minecraft, resolution.getScaledWidth(),
-                    resolution.getScaledHeight(),
-                    FlansModClient.currentScope.getDotOverlayTexture());
-        }
         NightVisionGogglesEffect.renderBeforeHud(minecraft, intensity);
         NightVisionGogglesEffect.renderAfterHud(minecraft, intensity);
+        if (intensity > 0.001F) {
+            ScaledResolution resolution = new ScaledResolution(minecraft,
+                    minecraft.displayWidth, minecraft.displayHeight);
+            if (FlansModClient.currentScope != null
+                    && !ThermalScopeEffect.usesModelScopeLens(FlansModClient.currentScope)
+                    && minecraft.currentScreen == null && FlansModClient.zoomProgress > 0.95F) {
+                renderScopeReticle(minecraft, resolution.getScaledWidth(),
+                        resolution.getScaledHeight(),
+                        FlansModClient.currentScope.getDotOverlayTexture());
+            }
+            renderHipFireCrosshairAfterNightVision(minecraft,
+                    resolution.getScaledWidth(), resolution.getScaledHeight());
+        }
         AltynHelmetOverlay.render(minecraft);
     }
 

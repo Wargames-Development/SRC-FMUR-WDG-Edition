@@ -39,6 +39,7 @@ public final class NightVisionGogglesEffect {
             "uniform float blackLevel;\n" +
             "uniform sampler2D blockLightMask;\n" +
             "uniform float blockLightMaskValid;\n" +
+            "uniform float modelScopeActive;\n" +
             "uniform float whitePhosphor;\n" +
             "uniform float amberPhosphor;\n" +
             "uniform float singleTube;\n" +
@@ -69,6 +70,9 @@ public final class NightVisionGogglesEffect {
             "    vec3 difference = abs(source - block.rgb);\n" +
             "    float changed = step(0.025, max(difference.r, max(difference.g, difference.b)));\n" +
             "    float allowed = 1.0 - blockLightMaskValid * step(0.001, block.a) * (1.0 - changed);\n" +
+            "    vec2 scopePoint = coordinate - vec2(0.5);\n" +
+            "    scopePoint.x *= resolution.x / max(resolution.y, 1.0);\n" +
+            "    allowed *= 1.0 - modelScopeActive * (1.0 - step(0.36, length(scopePoint)));\n" +
             "    return max(brightSource, max(saturatedRed, saturatedGreen) * 0.72) * allowed;\n" +
             "}\n" +
             "float horizontalBloom(vec2 uv, vec2 pixel) {\n" +
@@ -161,6 +165,7 @@ public final class NightVisionGogglesEffect {
     private static int blackLevelUniform = -1;
     private static int blockLightMaskUniform = -1;
     private static int blockLightMaskValidUniform = -1;
+    private static int modelScopeActiveUniform = -1;
     private static int whitePhosphorUniform = -1;
     private static int amberPhosphorUniform = -1;
     private static int singleTubeUniform = -1;
@@ -341,6 +346,7 @@ public final class NightVisionGogglesEffect {
         blackLevelUniform = GL20.glGetUniformLocation(shaderProgram, "blackLevel");
         blockLightMaskUniform = GL20.glGetUniformLocation(shaderProgram, "blockLightMask");
         blockLightMaskValidUniform = GL20.glGetUniformLocation(shaderProgram, "blockLightMaskValid");
+        modelScopeActiveUniform = GL20.glGetUniformLocation(shaderProgram, "modelScopeActive");
         whitePhosphorUniform = GL20.glGetUniformLocation(shaderProgram, "whitePhosphor");
         amberPhosphorUniform = GL20.glGetUniformLocation(shaderProgram, "amberPhosphor");
         singleTubeUniform = GL20.glGetUniformLocation(shaderProgram, "singleTube");
@@ -407,6 +413,9 @@ public final class NightVisionGogglesEffect {
                 0.45F * (float)Math.sqrt(NightVisionGogglesBrightness.getGamma() / 12F));
         GL20.glUniform1i(blockLightMaskUniform, 2);
         GL20.glUniform1f(blockLightMaskValidUniform, NightVisionBlockLightMask.isValid() ? 1F : 0F);
+        GL20.glUniform1f(modelScopeActiveUniform,
+                ThermalScopeEffect.usesModelScopeLens(FlansModClient.currentScope)
+                        && FlansModClient.zoomProgress > 0.9F ? 1F : 0F);
         ItemStack goggles = minecraft.thePlayer == null ? null
                 : PlayerEquipmentInventory.getStack(minecraft.thePlayer,
                 PlayerEquipmentInventory.NIGHT_VISION_SLOT);
