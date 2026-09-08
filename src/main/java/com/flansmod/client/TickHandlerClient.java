@@ -1136,7 +1136,6 @@ public class TickHandlerClient {
             ThermalScopeEffect.captureHeatMask(event.partialTicks);
             return;
         }
-        NightVisionBlockLightMask.capture(event.partialTicks);
         ThermalScopeEffect.captureHeatMask(event.partialTicks);
         // The lightmap is ready. Restore normal gamma before GUI code can save options.
         NightVisionGogglesBrightness.endFrame(Minecraft.getMinecraft());
@@ -1149,7 +1148,6 @@ public class TickHandlerClient {
         switch (event.phase) {
             case START:
                 NightVisionGogglesBrightness.beginFrame(Minecraft.getMinecraft());
-                NightVisionBlockLightMask.beginFrame();
                 RenderGun.smoothing = event.renderTickTime;
                 renderTickStart(Minecraft.getMinecraft(), event.renderTickTime);
                 applyShotScreenShake(Minecraft.getMinecraft());

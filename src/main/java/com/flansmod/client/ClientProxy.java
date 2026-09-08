@@ -521,7 +521,7 @@ public class ClientProxy extends CommonProxy {
             if (entityfx != null) {
                 return entityfx;
             } else {
-                double d9 = 160.0D;
+                double d9 = isLongRangeEnvironmentalParticle(p_72726_1_) ? 1024.0D : 160.0D;
 
                 if (d6 * d6 + d7 * d7 + d8 * d8 > d9 * d9) {
                     return null;
@@ -698,6 +698,15 @@ public class ClientProxy extends CommonProxy {
         } else {
             return null;
         }
+    }
+
+    private static boolean isLongRangeEnvironmentalParticle(String name) {
+        return name.equals("flansmod.oilfire")
+                || name.equals("flansmod.burningwreckage")
+                || name.equals("flansmod.buildingfire")
+                || name.equals("flansmod.electricalsparks")
+                || name.equals("flansmod.signalsmoke")
+                || name.equals("flansmod.explosionremnant");
     }
 
     public float getMouseSensitivity() {

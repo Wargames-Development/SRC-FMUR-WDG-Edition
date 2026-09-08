@@ -17,7 +17,7 @@ import org.lwjgl.opengl.GLContext;
 
 import java.nio.ByteBuffer;
 
-/** Original image-based NVG bloom, excluding visible light-emitting block surfaces. */
+/** Client NVG tint and gain without brightness-derived bloom or whiteout. */
 @SideOnly(Side.CLIENT)
 public final class NightVisionGogglesEffect {
     private static final String VERTEX_SHADER =
@@ -31,15 +31,10 @@ public final class NightVisionGogglesEffect {
     private static final String FRAGMENT_SHADER =
             "#version 120\n" +
             "uniform sampler2D sceneTexture;\n" +
-            "uniform sampler2D bloomTexture;\n" +
             "uniform vec2 resolution;\n" +
-            "uniform vec2 bloomResolution;\n" +
             "uniform float elapsedTime;\n" +
             "uniform float intensity;\n" +
             "uniform float blackLevel;\n" +
-            "uniform sampler2D blockLightMask;\n" +
-            "uniform float blockLightMaskValid;\n" +
-            "uniform float modelScopeActive;\n" +
             "uniform float whitePhosphor;\n" +
             "uniform float amberPhosphor;\n" +
             "uniform float singleTube;\n" +
@@ -55,48 +50,6 @@ public final class NightVisionGogglesEffect {
             "    coordinate = fract(coordinate * 0.1031);\n" +
             "    coordinate += dot(coordinate, coordinate.yzx + 33.33);\n" +
             "    return fract((coordinate.x + coordinate.y) * coordinate.z);\n" +
-            "}\n" +
-            "float sourceMask(vec2 coordinate) {\n" +
-            "    vec3 source = texture2D(sceneTexture, coordinate).rgb;\n" +
-            "    float warmEmission = max(0.0, source.r - source.b) * 0.55;\n" +
-            "    float brightSource = smoothstep(0.78, 0.96, luminance(source) + warmEmission);\n" +
-            "    float redDominance = source.r - max(source.g, source.b);\n" +
-            "    float saturatedRed = smoothstep(0.55, 0.85, source.r)\n" +
-            "            * smoothstep(0.35, 0.75, redDominance);\n" +
-            "    float greenDominance = source.g - max(source.r, source.b);\n" +
-            "    float saturatedGreen = smoothstep(0.55, 0.85, source.g)\n" +
-            "            * smoothstep(0.35, 0.75, greenDominance);\n" +
-            "    vec4 block = texture2D(blockLightMask, coordinate);\n" +
-            "    vec3 difference = abs(source - block.rgb);\n" +
-            "    float changed = step(0.025, max(difference.r, max(difference.g, difference.b)));\n" +
-            "    float allowed = 1.0 - blockLightMaskValid * step(0.001, block.a) * (1.0 - changed);\n" +
-            "    vec2 scopePoint = coordinate - vec2(0.5);\n" +
-            "    scopePoint.x *= resolution.x / max(resolution.y, 1.0);\n" +
-            "    allowed *= 1.0 - modelScopeActive * (1.0 - step(0.36, length(scopePoint)));\n" +
-            "    return max(brightSource, max(saturatedRed, saturatedGreen) * 0.72) * allowed;\n" +
-            "}\n" +
-            "float horizontalBloom(vec2 uv, vec2 pixel) {\n" +
-            "    float bloom = 0.0;\n" +
-            "    float weightSum = 0.0;\n" +
-            "    for (int offset = -16; offset <= 16; ++offset) {\n" +
-            "        float distance = float(offset);\n" +
-            "        float weight = exp(-(distance * distance) / 98.0);\n" +
-            "        bloom += sourceMask(uv + vec2(pixel.x * distance * 4.0, 0.0)) * weight;\n" +
-            "        weightSum += weight;\n" +
-            "    }\n" +
-            "    return bloom / weightSum;\n" +
-            "}\n" +
-            "float verticalBloom(vec2 uv) {\n" +
-            "    float bloom = 0.0;\n" +
-            "    float weightSum = 0.0;\n" +
-            "    vec2 bloomPixel = 1.0 / bloomResolution;\n" +
-            "    for (int offset = -16; offset <= 16; ++offset) {\n" +
-            "        float distance = float(offset);\n" +
-            "        float weight = exp(-(distance * distance) / 98.0);\n" +
-            "        bloom += texture2D(bloomTexture, uv + vec2(0.0, bloomPixel.y * distance)).r * weight;\n" +
-            "        weightSum += weight;\n" +
-            "    }\n" +
-            "    return bloom / weightSum;\n" +
             "}\n" +
             "float tubeDistance(vec2 uv, float aspect) {\n" +
             "    vec2 point = uv - vec2(0.5);\n" +
@@ -117,20 +70,10 @@ public final class NightVisionGogglesEffect {
             "        gl_FragColor = vec4(0.0, 0.0, 0.0, (1.0 - field) * intensity);\n" +
             "        return;\n" +
             "    }\n" +
-            "    vec2 pixel = 1.0 / resolution;\n" +
-            "    if (renderPass == 2) {\n" +
-            "        float bloom = horizontalBloom(uv, pixel);\n" +
-            "        gl_FragColor = vec4(bloom, bloom, bloom, 1.0);\n" +
-            "        return;\n" +
-            "    }\n" +
             "    vec3 scene = texture2D(sceneTexture, uv).rgb;\n" +
             "    float light = luminance(scene);\n" +
-            "    float bloom = verticalBloom(uv);\n" +
             "    float intensified = pow(clamp(light, 0.0, 1.0), 0.65);\n" +
             "    intensified = blackLevel + (1.0 - blackLevel) * intensified;\n" +
-            "    float directOverload = sourceMask(uv);\n" +
-            "    float bloomBlast = clamp(bloom * 7.2, 0.0, 1.0);\n" +
-            "    intensified += directOverload * 0.70 + bloomBlast * 1.45;\n" +
             "    float whiteProfile = clamp(whitePhosphor, 0.0, 1.0);\n" +
             "    float whiteContrast = smoothstep(0.035, 0.90, intensified);\n" +
             "    intensified = mix(intensified, whiteContrast, whiteProfile * 0.42);\n" +
@@ -147,36 +90,23 @@ public final class NightVisionGogglesEffect {
             "    vec3 phosphorColor = mix(vec3(0.13, 0.57, 0.245), vec3(0.56, 0.76, 0.86), whiteProfile);\n" +
             "    phosphorColor = mix(phosphorColor, vec3(1.0, 0.58, 0.12), amberPhosphor);\n" +
             "    vec3 phosphor = intensified * phosphorColor;\n" +
-            "    float whiteout = clamp(directOverload * 0.65 + bloom * 8.0, 0.0, 1.0);\n" +
-            "    vec3 overloadColor = mix(vec3(0.78, 1.0, 0.80), vec3(0.86, 0.96, 1.0), whiteProfile);\n" +
-            "    overloadColor = mix(overloadColor, vec3(1.0, 0.90, 0.62), amberPhosphor);\n" +
-            "    phosphor = mix(phosphor, overloadColor, whiteout);\n" +
             "    phosphor *= lensFalloff;\n" +
             "    gl_FragColor = vec4(mix(scene, clamp(phosphor, 0.0, 1.0), intensity), 1.0);\n" +
             "}\n";
 
     private static int shaderProgram = -1;
     private static int sceneTextureUniform = -1;
-    private static int bloomTextureUniform = -1;
     private static int resolutionUniform = -1;
-    private static int bloomResolutionUniform = -1;
     private static int elapsedTimeUniform = -1;
     private static int intensityUniform = -1;
     private static int blackLevelUniform = -1;
-    private static int blockLightMaskUniform = -1;
-    private static int blockLightMaskValidUniform = -1;
-    private static int modelScopeActiveUniform = -1;
     private static int whitePhosphorUniform = -1;
     private static int amberPhosphorUniform = -1;
     private static int singleTubeUniform = -1;
     private static int renderPassUniform = -1;
     private static int captureTexture = -1;
-    private static int bloomTexture = -1;
     private static int captureWidth = -1;
     private static int captureHeight = -1;
-    private static int bloomWidth = -1;
-    private static int bloomHeight = -1;
-    private static final int BLOOM_DOWNSAMPLE = 4;
     private static boolean shaderUnavailable;
     private static final long START_TIME = System.nanoTime();
 
@@ -208,7 +138,6 @@ public final class NightVisionGogglesEffect {
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         try {
             updateCaptureTexture(minecraft.displayWidth, minecraft.displayHeight);
-            NightVisionBlockLightMask.bind();
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, captureTexture);
             GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0,
@@ -225,27 +154,6 @@ public final class NightVisionGogglesEffect {
 
             ScaledResolution scaled = new ScaledResolution(minecraft,
                     minecraft.displayWidth, minecraft.displayHeight);
-            int targetBloomWidth = Math.max(1, minecraft.displayWidth / BLOOM_DOWNSAMPLE);
-            int targetBloomHeight = Math.max(1, minecraft.displayHeight / BLOOM_DOWNSAMPLE);
-
-            // Downsample while extracting and horizontally spreading bright sources.
-            // The dense low-resolution blur produces one smooth glow instead of visible
-            // square copies of distant blocks.
-            GL11.glViewport(0, 0, targetBloomWidth, targetBloomHeight);
-            useShader(minecraft, intensity, 2);
-            drawFullscreenQuad(scaled.getScaledWidth(), scaled.getScaledHeight());
-            GL20.glUseProgram(0);
-
-            // Capture that intermediate result for the vertical blur/final pass.
-            GL13.glActiveTexture(GL13.GL_TEXTURE1);
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, bloomTexture);
-            GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0,
-                    0, 0, targetBloomWidth, targetBloomHeight);
-            GL13.glActiveTexture(GL13.GL_TEXTURE0);
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, captureTexture);
-
-            minecraft.entityRenderer.setupOverlayRendering();
-            GL11.glViewport(0, 0, minecraft.displayWidth, minecraft.displayHeight);
             useShader(minecraft, intensity, 0);
             drawFullscreenQuad(scaled.getScaledWidth(), scaled.getScaledHeight());
             GL20.glUseProgram(0);
@@ -338,15 +246,10 @@ public final class NightVisionGogglesEffect {
 
     private static void cacheUniformLocations() {
         sceneTextureUniform = GL20.glGetUniformLocation(shaderProgram, "sceneTexture");
-        bloomTextureUniform = GL20.glGetUniformLocation(shaderProgram, "bloomTexture");
         resolutionUniform = GL20.glGetUniformLocation(shaderProgram, "resolution");
-        bloomResolutionUniform = GL20.glGetUniformLocation(shaderProgram, "bloomResolution");
         elapsedTimeUniform = GL20.glGetUniformLocation(shaderProgram, "elapsedTime");
         intensityUniform = GL20.glGetUniformLocation(shaderProgram, "intensity");
         blackLevelUniform = GL20.glGetUniformLocation(shaderProgram, "blackLevel");
-        blockLightMaskUniform = GL20.glGetUniformLocation(shaderProgram, "blockLightMask");
-        blockLightMaskValidUniform = GL20.glGetUniformLocation(shaderProgram, "blockLightMaskValid");
-        modelScopeActiveUniform = GL20.glGetUniformLocation(shaderProgram, "modelScopeActive");
         whitePhosphorUniform = GL20.glGetUniformLocation(shaderProgram, "whitePhosphor");
         amberPhosphorUniform = GL20.glGetUniformLocation(shaderProgram, "amberPhosphor");
         singleTubeUniform = GL20.glGetUniformLocation(shaderProgram, "singleTube");
@@ -354,13 +257,8 @@ public final class NightVisionGogglesEffect {
     }
 
     private static void updateCaptureTexture(int width, int height) {
-        int targetBloomWidth = Math.max(1, width / BLOOM_DOWNSAMPLE);
-        int targetBloomHeight = Math.max(1, height / BLOOM_DOWNSAMPLE);
         if (captureTexture < 0) {
             captureTexture = GL11.glGenTextures();
-        }
-        if (bloomTexture < 0) {
-            bloomTexture = GL11.glGenTextures();
         }
         GL11.glBindTexture(GL11.GL_TEXTURE_2D, captureTexture);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
@@ -372,50 +270,19 @@ public final class NightVisionGogglesEffect {
             captureHeight = height;
             GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, width, height,
                     0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
-
-            GL13.glActiveTexture(GL13.GL_TEXTURE1);
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, bloomTexture);
-            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
         }
-        if (bloomWidth != targetBloomWidth || bloomHeight != targetBloomHeight) {
-            bloomWidth = targetBloomWidth;
-            bloomHeight = targetBloomHeight;
-            GL13.glActiveTexture(GL13.GL_TEXTURE1);
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, bloomTexture);
-            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
-            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
-            GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
-            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8,
-                    targetBloomWidth, targetBloomHeight, 0,
-                    GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
-        }
-        GL13.glActiveTexture(GL13.GL_TEXTURE0);
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, captureTexture);
     }
 
     private static void useShader(Minecraft minecraft, float intensity, int renderPass) {
         GL20.glUseProgram(shaderProgram);
         GL20.glUniform1i(sceneTextureUniform, 0);
-        GL20.glUniform1i(bloomTextureUniform, 1);
         GL20.glUniform2f(resolutionUniform,
                 minecraft.displayWidth, minecraft.displayHeight);
-        GL20.glUniform2f(bloomResolutionUniform,
-                Math.max(1, minecraft.displayWidth / BLOOM_DOWNSAMPLE),
-                Math.max(1, minecraft.displayHeight / BLOOM_DOWNSAMPLE));
         GL20.glUniform1f(elapsedTimeUniform,
                 (System.nanoTime() - START_TIME) / 1_000_000_000F);
         GL20.glUniform1f(intensityUniform, intensity);
         GL20.glUniform1f(blackLevelUniform,
                 0.45F * (float)Math.sqrt(NightVisionGogglesBrightness.getGamma() / 12F));
-        GL20.glUniform1i(blockLightMaskUniform, 2);
-        GL20.glUniform1f(blockLightMaskValidUniform, NightVisionBlockLightMask.isValid() ? 1F : 0F);
-        GL20.glUniform1f(modelScopeActiveUniform,
-                ThermalScopeEffect.usesModelScopeLens(FlansModClient.currentScope)
-                        && FlansModClient.zoomProgress > 0.9F ? 1F : 0F);
         ItemStack goggles = minecraft.thePlayer == null ? null
                 : PlayerEquipmentInventory.getStack(minecraft.thePlayer,
                 PlayerEquipmentInventory.NIGHT_VISION_SLOT);
