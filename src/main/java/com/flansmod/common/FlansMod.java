@@ -196,6 +196,7 @@ public class FlansMod {
     //Items and creative tabs
     public static BlockFlansWorkbench workbench;
     public static BlockAmbientWarSound ambientWarSound;
+    public static BlockCinematicEmitter oilFire;
     public static BlockPaintjobTable paintjobTable;
     public static BlockSpawner spawner;
     public static ItemOpStick opStick;
@@ -435,6 +436,21 @@ public class FlansMod {
             proxy.loadFlanAssets();
             contentManager.createItems();
         }
+
+        oilFire = new BlockCinematicEmitter();
+        GameRegistry.registerBlock(oilFire, "oilFire");
+        GameRegistry.registerTileEntity(com.flansmod.common.tileentity.TileEntityCinematicEmitter.class,
+                MODID + ":cinematicEmitter");
+        GameRegistry.registerBlock(new BlockCinematicEmitter("burningWreckage", "netherrack",
+                "flansmod.burningwreckage", 3), "burningWreckage");
+        GameRegistry.registerBlock(new BlockCinematicEmitter("buildingFire", "brick",
+                "flansmod.buildingfire", 4), "buildingFire");
+        GameRegistry.registerBlock(new BlockCinematicEmitter("electricalSparks", "iron_block",
+                "flansmod.electricalsparks", 10), "electricalSparks");
+        GameRegistry.registerBlock(new BlockCinematicEmitter("signalSmoke", "redstone_block",
+                "flansmod.signalsmoke", 2), "signalSmoke");
+        GameRegistry.registerBlock(new BlockCinematicEmitter("explosionRemnant", "obsidian",
+                "flansmod.explosionremnant", 3), "explosionRemnant");
 
         if (gunItems.size() >= 1) {
             MinecraftForge.EVENT_BUS.register(gunItems.get(0));
