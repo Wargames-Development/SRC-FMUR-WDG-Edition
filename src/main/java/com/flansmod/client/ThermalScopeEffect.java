@@ -11,8 +11,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.EntityRenderer;
 import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.RenderGlobal;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.settings.GameSettings;
@@ -184,7 +186,14 @@ public final class ThermalScopeEffect {
 				mc.gameSettings.advancedOpengl = false;
 				mc.renderGlobal.sortAndRender(mc.renderViewEntity, 0, partialTicks);
 
+				heatFramebuffer.bindFramebuffer(true);
+				GL20.glUseProgram(0);
+				GL11.glEnable(GL11.GL_DEPTH_TEST);
+				GL11.glDepthFunc(GL11.GL_LEQUAL);
+				GL11.glDepthMask(true);
+				GL11.glDisable(GL11.GL_BLEND);
 				GL11.glColorMask(false, false, false, true);
+				GL11.glColor4f(1F, 1F, 1F, 1F);
 				RenderHelper.enableStandardItemLighting();
 				try {
 					for (Object object : mc.theWorld.loadedEntityList) {
@@ -228,12 +237,30 @@ public final class ThermalScopeEffect {
         if (magnification <= 1F) {
             return;
         }
-
         int previousFramebuffer = GL11.glGetInteger(EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
+        int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         ensureScopedSceneFramebuffer(mc);
         Double previousZoom = ObfuscationReflectionHelper.getPrivateValue(
                 EntityRenderer.class, mc.entityRenderer,
                 "cameraZoom", "af", "field_78503_V");
+        Framebuffer previousMainFramebuffer = ObfuscationReflectionHelper.getPrivateValue(
+                Minecraft.class, mc, "framebufferMc", "field_147124_at");
+        WorldRenderer[] worldRenderers = ObfuscationReflectionHelper.getPrivateValue(
+                RenderGlobal.class, mc.renderGlobal,
+                "worldRenderers", "field_72765_l");
+        byte[] previousRendererVisibility = captureRendererVisibility(worldRenderers);
+        Integer previousFrustumCheckOffset = ObfuscationReflectionHelper.getPrivateValue(
+                RenderGlobal.class, mc.renderGlobal,
+                "frustumCheckOffset", "field_72757_g");
+        boolean previousHideGui = mc.gameSettings.hideGUI;
+        boolean previousAdvancedOpenGl = mc.gameSettings.advancedOpengl;
+        ScopeRenderCompatibility.RenderState compatibilityState =
+                ScopeRenderCompatibility.beginSecondaryRender();
+        if (!compatibilityState.isSecondaryRenderAllowed()) {
+            ScopeRenderCompatibility.endSecondaryRender(compatibilityState);
+            scopedSceneCaptured = false;
+            return;
+        }
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         GL11.glMatrixMode(GL11.GL_PROJECTION);
         GL11.glPushMatrix();
@@ -241,6 +268,10 @@ public final class ThermalScopeEffect {
         GL11.glPushMatrix();
         try {
             renderingScopedWorld = true;
+            mc.gameSettings.hideGUI = true;
+            mc.gameSettings.advancedOpengl = false;
+            ObfuscationReflectionHelper.setPrivateValue(Minecraft.class, mc,
+                    scopedSceneFramebuffer, "framebufferMc", "field_147124_at");
             ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class,
                     mc.entityRenderer, (double)magnification,
                     "cameraZoom", "af", "field_78503_V");
@@ -250,16 +281,58 @@ public final class ThermalScopeEffect {
                     System.nanoTime() + 16666666L);
         } finally {
             renderingScopedWorld = false;
+            mc.gameSettings.hideGUI = previousHideGui;
+            mc.gameSettings.advancedOpengl = previousAdvancedOpenGl;
+            ObfuscationReflectionHelper.setPrivateValue(Minecraft.class, mc,
+                    previousMainFramebuffer, "framebufferMc", "field_147124_at");
             ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class,
                     mc.entityRenderer, previousZoom == null ? 1D : previousZoom,
                     "cameraZoom", "af", "field_78503_V");
+            restoreRendererVisibility(worldRenderers, previousRendererVisibility);
+            if (previousFrustumCheckOffset != null) {
+                ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
+                        mc.renderGlobal, previousFrustumCheckOffset,
+                        "frustumCheckOffset", "field_72757_g");
+            }
             OpenGlHelper.func_153171_g(OpenGlHelper.field_153198_e, previousFramebuffer);
+            GL20.glUseProgram(previousProgram);
             GL11.glMatrixMode(GL11.GL_MODELVIEW);
             GL11.glPopMatrix();
             GL11.glMatrixMode(GL11.GL_PROJECTION);
             GL11.glPopMatrix();
             GL11.glMatrixMode(GL11.GL_MODELVIEW);
             GL11.glPopAttrib();
+            ScopeRenderCompatibility.endSecondaryRender(compatibilityState);
+        }
+    }
+
+    private static byte[] captureRendererVisibility(WorldRenderer[] renderers) {
+        if (renderers == null) {
+            return null;
+        }
+        byte[] visibility = new byte[renderers.length];
+        for (int i = 0; i < renderers.length; i++) {
+            if (renderers[i] != null) {
+                visibility[i] = (byte)((renderers[i].isInFrustum ? 1 : 0)
+                        | (renderers[i].isVisible ? 2 : 0)
+                        | (renderers[i].isWaitingOnOcclusionQuery ? 4 : 0));
+            }
+        }
+        return visibility;
+    }
+
+    private static void restoreRendererVisibility(WorldRenderer[] renderers,
+                                                   byte[] visibility) {
+        if (renderers == null || visibility == null) {
+            return;
+        }
+        int count = Math.min(renderers.length, visibility.length);
+        for (int i = 0; i < count; i++) {
+            if (renderers[i] != null) {
+                renderers[i].isInFrustum = (visibility[i] & 1) != 0;
+                renderers[i].isVisible = (visibility[i] & 2) != 0;
+                renderers[i].isWaitingOnOcclusionQuery = (visibility[i] & 4) != 0;
+            }
         }
     }
 
