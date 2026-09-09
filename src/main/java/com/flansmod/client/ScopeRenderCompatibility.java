@@ -2,6 +2,7 @@ package com.flansmod.client;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
+import net.minecraft.client.Minecraft;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -28,30 +29,56 @@ final class ScopeRenderCompatibility {
     private static Object renderingState;
     private static Method renderingStateGetProjectionBuffer;
     private static Method renderingStateGetModelViewBuffer;
+    private static Method renderingStateGetProjectionMatrix;
+    private static Method renderingStateGetModelViewMatrix;
     private static Method renderingStateGetFov;
     private static Method renderingStateSetProjectionMatrix;
     private static Method renderingStateSetModelViewMatrix;
     private static Method renderingStateSetFov;
-    private static Field angelicaDhPresentField;
+    private static Method angelicaSetProjectionMatrix;
+    private static Method angelicaSetModelViewMatrix;
+    private static Object systemFrameCounter;
+    private static Object systemTimer;
+    private static Field systemFrameCounterCountField;
+    private static Field systemTimerFrameTimeCounterField;
+    private static Field systemTimerLastFrameTimeField;
+    private static Field systemTimerLastStartTimeField;
+
+    private static boolean celeritasChecked;
+    private static Method celeritasGetInstanceOrNull;
+    private static Field celeritasCurrentViewportField;
+    private static Field celeritasLastCameraStateField;
+    private static Field celeritasRenderSectionManagerField;
+    private static Field celeritasRenderListManagerField;
+    private static Field celeritasRenderListsField;
+    private static Field celeritasRebuildListsField;
+    private static Field celeritasOcclusionFutureField;
+    private static Field celeritasNeedsUpdateField;
+    private static Field celeritasLastUpdatedFrameField;
+    private static Field celeritasPendingUpdatedFrameField;
 
     private static boolean distantHorizonsChecked;
-    private static Field distantHorizonsRenderingEntry;
-    private static Method configEntryGet;
-    private static Method configEntryHasVersionOverride;
-    private static Method configEntrySetVersionOverride;
-
+    private static Field distantHorizonsModelViewField;
+    private static Field distantHorizonsProjectionField;
+    private static Object distantHorizonsRenderState;
+    private static Field distantHorizonsRenderStateModelViewField;
+    private static Field distantHorizonsRenderStateProjectionField;
+    private static Field distantHorizonsRenderStateLevelField;
     private ScopeRenderCompatibility() {
     }
 
     /**
-     * Prevent a nested scope camera from re-entering the active shader pipeline
-     * or drawing Distant Horizons' LOD pass a second time. Both integrations are
-     * reflection-only and leave the normal camera's configuration untouched.
+     * Prevent a nested scope camera from re-entering the active shader pipeline.
+     * Distant Horizons remains enabled so its LOD terrain can render into the
+     * scope framebuffer through the temporary fixed-function pipeline.
      */
     static RenderState beginSecondaryRender() {
         RenderState state = new RenderState();
-        suspendDistantHorizons(state);
-        if (!isShaderPackInUse()) {
+        boolean shaderPackInUse = isShaderPackInUse();
+        captureSystemTime(state);
+        captureDistantHorizonsState(state);
+        captureCeleritasState(state);
+        if (!shaderPackInUse) {
             return state;
         }
 
@@ -78,7 +105,6 @@ final class ScopeRenderCompatibility {
             state.renderingFov = ((Float)renderingStateGetFov.invoke(
                     renderingState)).floatValue();
             state.irisIsolated = true;
-            isolateAngelicaDistantHorizons(state);
             state.fixedPipeline = fixedPipelineConstructor.newInstance();
 
             pipelines.put(dimension, state.fixedPipeline);
@@ -99,7 +125,9 @@ final class ScopeRenderCompatibility {
             return;
         }
         restoreIris(state);
-        restoreDistantHorizons(state);
+        restoreSystemTime(state);
+        restoreDistantHorizonsState(state);
+        restoreCeleritasState(state);
     }
 
     private static boolean isShaderPackInUse() {
@@ -138,9 +166,12 @@ final class ScopeRenderCompatibility {
             Class<?> angelicaRenderingState = Class.forName(
                     "com.gtnewhorizons.angelica.rendering.RenderingState",
                     false, loader);
-            Class<?> angelicaDhCompat = Class.forName(
-                    "net.coderbot.iris.compat.dh.DHCompat", false, loader);
-
+            Class<?> angelicaGlStateManager = Class.forName(
+                    "com.gtnewhorizons.angelica.glsm.GLStateManager",
+                    false, loader);
+            Class<?> matrix4fc = Class.forName("org.joml.Matrix4fc", false, loader);
+            Class<?> systemTimeUniforms = Class.forName(
+                    "net.coderbot.iris.uniforms.SystemTimeUniforms", false, loader);
             irisGetInstance = irisApi.getMethod("getInstance");
             irisShaderPackInUse = irisApi.getMethod("isShaderPackInUse");
             irisGetPipelineManager = iris.getMethod("getPipelineManager");
@@ -165,6 +196,10 @@ final class ScopeRenderCompatibility {
                     "getProjectionBuffer");
             renderingStateGetModelViewBuffer = angelicaRenderingState.getMethod(
                     "getModelViewBuffer");
+            renderingStateGetProjectionMatrix = angelicaRenderingState.getMethod(
+                    "getProjectionMatrix");
+            renderingStateGetModelViewMatrix = angelicaRenderingState.getMethod(
+                    "getModelViewMatrix");
             renderingStateGetFov = angelicaRenderingState.getMethod("getFov");
             renderingStateSetProjectionMatrix = angelicaRenderingState.getMethod(
                     "setProjectionMatrix", FloatBuffer.class);
@@ -172,8 +207,20 @@ final class ScopeRenderCompatibility {
                     "setModelViewMatrix", FloatBuffer.class);
             renderingStateSetFov = angelicaRenderingState.getMethod(
                     "setFov", Float.TYPE);
-            angelicaDhPresentField = getAccessibleField(
-                    angelicaDhCompat, "dhPresent");
+            angelicaSetProjectionMatrix = angelicaGlStateManager.getMethod(
+                    "setProjectionMatrix", matrix4fc);
+            angelicaSetModelViewMatrix = angelicaGlStateManager.getMethod(
+                    "setModelViewMatrix", matrix4fc);
+            systemFrameCounter = systemTimeUniforms.getField("COUNTER").get(null);
+            systemTimer = systemTimeUniforms.getField("TIMER").get(null);
+            systemFrameCounterCountField = getAccessibleField(
+                    systemFrameCounter.getClass(), "count");
+            systemTimerFrameTimeCounterField = getAccessibleField(
+                    systemTimer.getClass(), "frameTimeCounter");
+            systemTimerLastFrameTimeField = getAccessibleField(
+                    systemTimer.getClass(), "lastFrameTime");
+            systemTimerLastStartTimeField = getAccessibleField(
+                    systemTimer.getClass(), "lastStartTime");
         } catch (ReflectiveOperationException ignored) {
             clearIrisReflection();
         } catch (LinkageError ignored) {
@@ -195,11 +242,20 @@ final class ScopeRenderCompatibility {
         renderingState = null;
         renderingStateGetProjectionBuffer = null;
         renderingStateGetModelViewBuffer = null;
+        renderingStateGetProjectionMatrix = null;
+        renderingStateGetModelViewMatrix = null;
         renderingStateGetFov = null;
         renderingStateSetProjectionMatrix = null;
         renderingStateSetModelViewMatrix = null;
         renderingStateSetFov = null;
-        angelicaDhPresentField = null;
+        angelicaSetProjectionMatrix = null;
+        angelicaSetModelViewMatrix = null;
+        systemFrameCounter = null;
+        systemTimer = null;
+        systemFrameCounterCountField = null;
+        systemTimerFrameTimeCounterField = null;
+        systemTimerLastFrameTimeField = null;
+        systemTimerLastStartTimeField = null;
     }
 
     private static Field getAccessibleField(Class<?> owner, String name)
@@ -230,28 +286,298 @@ final class ScopeRenderCompatibility {
         } finally {
             restoreBlockRenderingSettings(state);
             restoreRenderingState(state);
-            restoreAngelicaDistantHorizons(state);
             state.irisIsolated = false;
         }
     }
 
-    private static void isolateAngelicaDistantHorizons(RenderState state)
-            throws IllegalAccessException {
-        state.angelicaDhPresent = angelicaDhPresentField.getBoolean(null);
-        angelicaDhPresentField.setBoolean(null, false);
-        state.angelicaDhIsolated = true;
-    }
-
-    private static void restoreAngelicaDistantHorizons(RenderState state) {
-        if (!state.angelicaDhIsolated || angelicaDhPresentField == null) {
+    private static void captureSystemTime(RenderState state) {
+        if (systemFrameCounter == null || systemTimer == null) {
             return;
         }
         try {
-            angelicaDhPresentField.setBoolean(null, state.angelicaDhPresent);
+            state.systemFrameCounterCount =
+                    systemFrameCounterCountField.getInt(systemFrameCounter);
+            state.systemTimerFrameTimeCounter =
+                    systemTimerFrameTimeCounterField.getFloat(systemTimer);
+            state.systemTimerLastFrameTime =
+                    systemTimerLastFrameTimeField.getFloat(systemTimer);
+            state.systemTimerLastStartTime =
+                    systemTimerLastStartTimeField.get(systemTimer);
+            state.systemTimeCaptured = true;
         } catch (IllegalAccessException ignored) {
-            // The bridge will detect DH again after Angelica reloads its pipeline.
+            state.systemTimeCaptured = false;
+        }
+    }
+
+    private static void restoreSystemTime(RenderState state) {
+        if (!state.systemTimeCaptured || systemFrameCounter == null
+                || systemTimer == null) {
+            return;
+        }
+        try {
+            systemFrameCounterCountField.setInt(
+                    systemFrameCounter, state.systemFrameCounterCount);
+            systemTimerFrameTimeCounterField.setFloat(
+                    systemTimer, state.systemTimerFrameTimeCounter);
+            systemTimerLastFrameTimeField.setFloat(
+                    systemTimer, state.systemTimerLastFrameTime);
+            systemTimerLastStartTimeField.set(
+                    systemTimer, state.systemTimerLastStartTime);
+        } catch (IllegalAccessException ignored) {
+            // Angelica will advance these values normally on the next main frame.
         } finally {
-            state.angelicaDhIsolated = false;
+            state.systemTimeCaptured = false;
+        }
+    }
+
+    private static void captureDistantHorizonsState(RenderState state) {
+        initialiseDistantHorizonsReflection();
+        if (distantHorizonsModelViewField == null
+                || distantHorizonsProjectionField == null) {
+            return;
+        }
+        try {
+            state.distantHorizonsModelView =
+                    distantHorizonsModelViewField.get(null);
+            state.distantHorizonsProjection =
+                    distantHorizonsProjectionField.get(null);
+            state.distantHorizonsRenderStateModelView =
+                    distantHorizonsRenderStateModelViewField.get(
+                            distantHorizonsRenderState);
+            state.distantHorizonsRenderStateProjection =
+                    distantHorizonsRenderStateProjectionField.get(
+                            distantHorizonsRenderState);
+            state.distantHorizonsRenderStateLevel =
+                    distantHorizonsRenderStateLevelField.get(
+                            distantHorizonsRenderState);
+            state.distantHorizonsStateCaptured = true;
+        } catch (IllegalAccessException ignored) {
+            state.distantHorizonsStateCaptured = false;
+        }
+    }
+
+    private static void initialiseDistantHorizonsReflection() {
+        if (distantHorizonsChecked) {
+            return;
+        }
+        distantHorizonsChecked = true;
+        try {
+            ClassLoader loader = ScopeRenderCompatibility.class.getClassLoader();
+            Class<?> renderHelper = Class.forName(
+                    "com.seibel.distanthorizons.RenderHelper", false, loader);
+            Class<?> clientApi = Class.forName(
+                    "com.seibel.distanthorizons.core.api.internal.ClientApi",
+                    false, loader);
+            distantHorizonsModelViewField = getAccessibleField(
+                    renderHelper, "modelViewMatrix");
+            distantHorizonsProjectionField = getAccessibleField(
+                    renderHelper, "projectionMatrix");
+            distantHorizonsRenderState = clientApi.getField("RENDER_STATE").get(null);
+            Class<?> renderStateClass = distantHorizonsRenderState.getClass();
+            distantHorizonsRenderStateModelViewField = getAccessibleField(
+                    renderStateClass, "mcModelViewMatrix");
+            distantHorizonsRenderStateProjectionField = getAccessibleField(
+                    renderStateClass, "mcProjectionMatrix");
+            distantHorizonsRenderStateLevelField = getAccessibleField(
+                    renderStateClass, "clientLevelWrapper");
+        } catch (ReflectiveOperationException ignored) {
+            clearDistantHorizonsReflection();
+        } catch (LinkageError ignored) {
+            clearDistantHorizonsReflection();
+        }
+    }
+
+    private static void clearDistantHorizonsReflection() {
+        distantHorizonsModelViewField = null;
+        distantHorizonsProjectionField = null;
+        distantHorizonsRenderState = null;
+        distantHorizonsRenderStateModelViewField = null;
+        distantHorizonsRenderStateProjectionField = null;
+        distantHorizonsRenderStateLevelField = null;
+    }
+
+    private static void restoreDistantHorizonsState(RenderState state) {
+        if (!state.distantHorizonsStateCaptured
+                || distantHorizonsModelViewField == null) {
+            return;
+        }
+        try {
+            distantHorizonsModelViewField.set(
+                    null, state.distantHorizonsModelView);
+            distantHorizonsProjectionField.set(
+                    null, state.distantHorizonsProjection);
+            distantHorizonsRenderStateModelViewField.set(
+                    distantHorizonsRenderState,
+                    state.distantHorizonsRenderStateModelView);
+            distantHorizonsRenderStateProjectionField.set(
+                    distantHorizonsRenderState,
+                    state.distantHorizonsRenderStateProjection);
+            distantHorizonsRenderStateLevelField.set(
+                    distantHorizonsRenderState,
+                    state.distantHorizonsRenderStateLevel);
+        } catch (IllegalAccessException ignored) {
+            // Distant Horizons refreshes this state on the next normal world pass.
+        } finally {
+            state.distantHorizonsStateCaptured = false;
+        }
+    }
+
+    private static void captureCeleritasState(RenderState state) {
+        initialiseCeleritasReflection();
+        if (celeritasGetInstanceOrNull == null) {
+            return;
+        }
+        try {
+            Object renderer = celeritasGetInstanceOrNull.invoke(null);
+            if (renderer == null) {
+                return;
+            }
+            Object sectionManager = celeritasRenderSectionManagerField.get(renderer);
+            if (sectionManager == null) {
+                return;
+            }
+            Object listManager = celeritasRenderListManagerField.get(sectionManager);
+            if (listManager == null) {
+                return;
+            }
+
+            state.celeritasRenderer = renderer;
+            state.celeritasListManager = listManager;
+            state.celeritasCurrentViewport = celeritasCurrentViewportField.get(renderer);
+            state.celeritasLastCameraState = celeritasLastCameraStateField.get(renderer);
+            state.celeritasRenderLists = celeritasRenderListsField.get(listManager);
+            state.celeritasRebuildLists = celeritasRebuildListsField.get(listManager);
+            state.celeritasOcclusionFuture = celeritasOcclusionFutureField.get(listManager);
+            state.celeritasNeedsUpdate = celeritasNeedsUpdateField.getBoolean(listManager);
+            state.celeritasLastUpdatedFrame =
+                    celeritasLastUpdatedFrameField.getInt(listManager);
+            state.celeritasPendingUpdatedFrame =
+                    celeritasPendingUpdatedFrameField.getInt(listManager);
+            state.celeritasStateCaptured = true;
+            // The scope can reuse the main camera's wider visible-section list.
+            // Do not let a pending terrain update rebuild that shared list with
+            // the optic's narrow frustum; the main pass receives the dirty flag
+            // again when its state is restored below.
+            celeritasNeedsUpdateField.setBoolean(listManager, false);
+
+            Object renderGlobal = Minecraft.getMinecraft().renderGlobal;
+            if (renderGlobal != null) {
+                try {
+                    state.celeritasFrameField = getAccessibleField(
+                            renderGlobal.getClass(), "celeritas$frame");
+                    state.celeritasLastFovField = getAccessibleField(
+                            renderGlobal.getClass(), "celeritas$lastFov");
+                    state.celeritasRenderGlobal = renderGlobal;
+                    state.celeritasFrame =
+                            state.celeritasFrameField.getInt(renderGlobal);
+                    state.celeritasLastFov =
+                            state.celeritasLastFovField.getFloat(renderGlobal);
+                } catch (ReflectiveOperationException ignored) {
+                    state.celeritasRenderGlobal = null;
+                }
+            }
+        } catch (ReflectiveOperationException ignored) {
+            state.celeritasStateCaptured = false;
+        } catch (LinkageError ignored) {
+            state.celeritasStateCaptured = false;
+        }
+    }
+
+    private static void initialiseCeleritasReflection() {
+        if (celeritasChecked) {
+            return;
+        }
+        celeritasChecked = true;
+        try {
+            ClassLoader loader = ScopeRenderCompatibility.class.getClassLoader();
+            Class<?> rendererClass = Class.forName(
+                    "com.gtnewhorizons.angelica.rendering.celeritas.CeleritasWorldRenderer",
+                    false, loader);
+            Class<?> simpleRendererClass = Class.forName(
+                    "org.embeddedt.embeddium.impl.render.terrain.SimpleWorldRenderer",
+                    false, loader);
+            Class<?> sectionManagerClass = Class.forName(
+                    "org.embeddedt.embeddium.impl.render.chunk.RenderSectionManager",
+                    false, loader);
+            Class<?> listManagerClass = Class.forName(
+                    "org.embeddedt.embeddium.impl.render.chunk.lists.RenderListManager",
+                    false, loader);
+            celeritasGetInstanceOrNull = rendererClass.getMethod("getInstanceOrNull");
+            celeritasCurrentViewportField = getAccessibleField(
+                    simpleRendererClass, "currentViewport");
+            celeritasLastCameraStateField = getAccessibleField(
+                    simpleRendererClass, "lastCameraState");
+            celeritasRenderSectionManagerField = getAccessibleField(
+                    simpleRendererClass, "renderSectionManager");
+            celeritasRenderListManagerField = getAccessibleField(
+                    sectionManagerClass, "renderListManager");
+            celeritasRenderListsField = getAccessibleField(
+                    listManagerClass, "renderLists");
+            celeritasRebuildListsField = getAccessibleField(
+                    listManagerClass, "rebuildLists");
+            celeritasOcclusionFutureField = getAccessibleField(
+                    listManagerClass, "currentOcclusionFuture");
+            celeritasNeedsUpdateField = getAccessibleField(
+                    listManagerClass, "needsUpdate");
+            celeritasLastUpdatedFrameField = getAccessibleField(
+                    listManagerClass, "lastUpdatedFrame");
+            celeritasPendingUpdatedFrameField = getAccessibleField(
+                    listManagerClass, "pendingLastUpdatedFrame");
+        } catch (ReflectiveOperationException ignored) {
+            clearCeleritasReflection();
+        } catch (LinkageError ignored) {
+            clearCeleritasReflection();
+        }
+    }
+
+    private static void clearCeleritasReflection() {
+        celeritasGetInstanceOrNull = null;
+        celeritasCurrentViewportField = null;
+        celeritasLastCameraStateField = null;
+        celeritasRenderSectionManagerField = null;
+        celeritasRenderListManagerField = null;
+        celeritasRenderListsField = null;
+        celeritasRebuildListsField = null;
+        celeritasOcclusionFutureField = null;
+        celeritasNeedsUpdateField = null;
+        celeritasLastUpdatedFrameField = null;
+        celeritasPendingUpdatedFrameField = null;
+    }
+
+    private static void restoreCeleritasState(RenderState state) {
+        if (!state.celeritasStateCaptured || state.celeritasRenderer == null
+                || state.celeritasListManager == null) {
+            return;
+        }
+        try {
+            celeritasCurrentViewportField.set(
+                    state.celeritasRenderer, state.celeritasCurrentViewport);
+            celeritasLastCameraStateField.set(
+                    state.celeritasRenderer, state.celeritasLastCameraState);
+            celeritasRenderListsField.set(
+                    state.celeritasListManager, state.celeritasRenderLists);
+            celeritasRebuildListsField.set(
+                    state.celeritasListManager, state.celeritasRebuildLists);
+            celeritasOcclusionFutureField.set(
+                    state.celeritasListManager, state.celeritasOcclusionFuture);
+            celeritasNeedsUpdateField.setBoolean(
+                    state.celeritasListManager, state.celeritasNeedsUpdate);
+            celeritasLastUpdatedFrameField.setInt(
+                    state.celeritasListManager, state.celeritasLastUpdatedFrame);
+            celeritasPendingUpdatedFrameField.setInt(
+                    state.celeritasListManager, state.celeritasPendingUpdatedFrame);
+            if (state.celeritasRenderGlobal != null
+                    && state.celeritasFrameField != null
+                    && state.celeritasLastFovField != null) {
+                state.celeritasFrameField.setInt(
+                        state.celeritasRenderGlobal, state.celeritasFrame);
+                state.celeritasLastFovField.setFloat(
+                        state.celeritasRenderGlobal, state.celeritasLastFov);
+            }
+        } catch (IllegalAccessException ignored) {
+            // Celeritas rebuilds this state during the next main camera pass.
+        } finally {
+            state.celeritasStateCaptured = false;
         }
     }
 
@@ -276,6 +602,13 @@ final class ScopeRenderCompatibility {
             renderingStateSetModelViewMatrix.invoke(state.renderingState,
                     createDirectMatrixBuffer(state.renderingModelView));
             renderingStateSetFov.invoke(state.renderingState, state.renderingFov);
+            // Raw LWJGL matrix pops restore the driver but bypass Angelica's
+            // matrix cache. Celeritas builds its next chunk frustum from that
+            // cache, so leaving the scope projection there culls the main view.
+            angelicaSetProjectionMatrix.invoke(null,
+                    renderingStateGetProjectionMatrix.invoke(state.renderingState));
+            angelicaSetModelViewMatrix.invoke(null,
+                    renderingStateGetModelViewMatrix.invoke(state.renderingState));
         } catch (ReflectiveOperationException ignored) {
             // Angelica refreshes these values from the main camera next frame.
         }
@@ -316,71 +649,6 @@ final class ScopeRenderCompatibility {
         }
     }
 
-    private static void suspendDistantHorizons(RenderState state) {
-        initialiseDistantHorizonsReflection();
-        if (distantHorizonsRenderingEntry == null) {
-            return;
-        }
-        try {
-            Object entry = distantHorizonsRenderingEntry.get(null);
-            Object previous = configEntryGet.invoke(entry);
-            state.distantHorizonsHadOverride = Boolean.TRUE.equals(
-                    configEntryHasVersionOverride.invoke(entry));
-            configEntrySetVersionOverride.invoke(entry, Boolean.FALSE);
-            state.distantHorizonsEntry = entry;
-            state.distantHorizonsPreviousValue = previous;
-            state.distantHorizonsSuspended = true;
-        } catch (ReflectiveOperationException ignored) {
-            state.distantHorizonsSuspended = false;
-        } catch (LinkageError ignored) {
-            state.distantHorizonsSuspended = false;
-        }
-    }
-
-    private static void initialiseDistantHorizonsReflection() {
-        if (distantHorizonsChecked) {
-            return;
-        }
-        distantHorizonsChecked = true;
-        try {
-            ClassLoader loader = ScopeRenderCompatibility.class.getClassLoader();
-            Class<?> clientConfig = Class.forName(
-                    "com.seibel.distanthorizons.core.config.Config$Client", false, loader);
-            distantHorizonsRenderingEntry = clientConfig.getField("quickEnableRendering");
-            Class<?> entryType = distantHorizonsRenderingEntry.getType();
-            configEntryGet = entryType.getMethod("get");
-            configEntryHasVersionOverride = entryType.getMethod(
-                    "mcVersionOverridePresent");
-            configEntrySetVersionOverride = entryType.getMethod(
-                    "setMcVersionOverrideValue", Object.class);
-        } catch (ReflectiveOperationException ignored) {
-            clearDistantHorizonsReflection();
-        } catch (LinkageError ignored) {
-            clearDistantHorizonsReflection();
-        }
-    }
-
-    private static void clearDistantHorizonsReflection() {
-        distantHorizonsRenderingEntry = null;
-        configEntryGet = null;
-        configEntryHasVersionOverride = null;
-        configEntrySetVersionOverride = null;
-    }
-
-    private static void restoreDistantHorizons(RenderState state) {
-        if (!state.distantHorizonsSuspended) {
-            return;
-        }
-        try {
-            configEntrySetVersionOverride.invoke(state.distantHorizonsEntry,
-                    state.distantHorizonsHadOverride
-                            ? state.distantHorizonsPreviousValue : null);
-        } catch (ReflectiveOperationException ignored) {
-            // DH reloads this value from its own config if its entry becomes invalid.
-        } finally {
-            state.distantHorizonsSuspended = false;
-        }
-    }
 
     static final class RenderState {
         private boolean secondaryRenderAllowed = true;
@@ -398,13 +666,33 @@ final class ScopeRenderCompatibility {
         private float[] renderingProjection;
         private float[] renderingModelView;
         private float renderingFov;
-        private boolean angelicaDhIsolated;
-        private boolean angelicaDhPresent;
-        private boolean distantHorizonsSuspended;
-        private boolean distantHorizonsHadOverride;
-        private Object distantHorizonsEntry;
-        private Object distantHorizonsPreviousValue;
-
+        private boolean systemTimeCaptured;
+        private int systemFrameCounterCount;
+        private float systemTimerFrameTimeCounter;
+        private float systemTimerLastFrameTime;
+        private Object systemTimerLastStartTime;
+        private boolean distantHorizonsStateCaptured;
+        private Object distantHorizonsModelView;
+        private Object distantHorizonsProjection;
+        private Object distantHorizonsRenderStateModelView;
+        private Object distantHorizonsRenderStateProjection;
+        private Object distantHorizonsRenderStateLevel;
+        private boolean celeritasStateCaptured;
+        private Object celeritasRenderer;
+        private Object celeritasListManager;
+        private Object celeritasCurrentViewport;
+        private Object celeritasLastCameraState;
+        private Object celeritasRenderLists;
+        private Object celeritasRebuildLists;
+        private Object celeritasOcclusionFuture;
+        private boolean celeritasNeedsUpdate;
+        private int celeritasLastUpdatedFrame;
+        private int celeritasPendingUpdatedFrame;
+        private Object celeritasRenderGlobal;
+        private Field celeritasFrameField;
+        private Field celeritasLastFovField;
+        private int celeritasFrame;
+        private float celeritasLastFov;
         boolean isSecondaryRenderAllowed() {
             return secondaryRenderAllowed;
         }

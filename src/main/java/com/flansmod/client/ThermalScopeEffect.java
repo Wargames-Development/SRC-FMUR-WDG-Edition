@@ -16,12 +16,12 @@ import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.WorldRenderer;
 import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import org.lwjgl.opengl.EXTFramebufferObject;
+import org.lwjgl.opengl.EXTFramebufferBlit;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
 import org.lwjgl.opengl.GL13;
@@ -29,6 +29,8 @@ import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GLContext;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Client-only white-hot display for thermal scope attachments. */
 @SideOnly(Side.CLIENT)
@@ -157,6 +159,7 @@ public final class ThermalScopeEffect {
         int previousFramebuffer = GL11.glGetInteger(EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
         int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         boolean advancedOpenGl = mc.gameSettings.advancedOpengl;
+        ScopeRenderCompatibility.RenderState compatibilityState = null;
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
         GL11.glPushMatrix();
@@ -172,25 +175,25 @@ public final class ThermalScopeEffect {
             GL20.glUseProgram(0);
             heatFramebuffer.bindFramebuffer(true);
             GL11.glClearColor(0F, 0F, 0F, 0F);
-            GL11.glClearDepth(1D);
-            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+			GL11.glClearDepth(1D);
+			GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
 			if (hasThermalVision()) {
-				GL11.glEnable(GL11.GL_DEPTH_TEST);
-				GL11.glDepthFunc(GL11.GL_LEQUAL);
-				GL11.glDepthMask(true);
-				GL11.glColorMask(false, false, false, false);
-				GL11.glEnable(GL11.GL_ALPHA_TEST);
-				GL11.glEnable(GL11.GL_CULL_FACE);
-				GL11.glEnable(GL11.GL_TEXTURE_2D);
-				mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
-				mc.gameSettings.advancedOpengl = false;
-				mc.renderGlobal.sortAndRender(mc.renderViewEntity, 0, partialTicks);
-
+				// Angelica shares the Minecraft framebuffer's depth attachment. Copying
+				// that completed scene depth keeps thermal entities occluded without a
+				// second terrain pass, which would also invoke Distant Horizons again.
+				if (!copySceneDepth(previousFramebuffer, heatFramebuffer,
+						mc.displayWidth, mc.displayHeight)) {
+					return;
+				}
+				compatibilityState = ScopeRenderCompatibility.beginSecondaryRender();
+				if (!compatibilityState.isSecondaryRenderAllowed()) {
+					return;
+				}
 				heatFramebuffer.bindFramebuffer(true);
 				GL20.glUseProgram(0);
 				GL11.glEnable(GL11.GL_DEPTH_TEST);
 				GL11.glDepthFunc(GL11.GL_LEQUAL);
-				GL11.glDepthMask(true);
+				GL11.glDepthMask(false);
 				GL11.glDisable(GL11.GL_BLEND);
 				GL11.glColorMask(false, false, false, true);
 				GL11.glColor4f(1F, 1F, 1F, 1F);
@@ -212,6 +215,7 @@ public final class ThermalScopeEffect {
             }
             heatMaskValid = true;
         } finally {
+            ScopeRenderCompatibility.endSecondaryRender(compatibilityState);
             mc.gameSettings.advancedOpengl = advancedOpenGl;
             GL11.glColorMask(true, true, true, true);
             OpenGlHelper.func_153171_g(OpenGlHelper.field_153198_e, previousFramebuffer);
@@ -245,19 +249,14 @@ public final class ThermalScopeEffect {
                 "cameraZoom", "af", "field_78503_V");
         Framebuffer previousMainFramebuffer = ObfuscationReflectionHelper.getPrivateValue(
                 Minecraft.class, mc, "framebufferMc", "field_147124_at");
-        WorldRenderer[] worldRenderers = ObfuscationReflectionHelper.getPrivateValue(
-                RenderGlobal.class, mc.renderGlobal,
-                "worldRenderers", "field_72765_l");
-        byte[] previousRendererVisibility = captureRendererVisibility(worldRenderers);
-        Integer previousFrustumCheckOffset = ObfuscationReflectionHelper.getPrivateValue(
-                RenderGlobal.class, mc.renderGlobal,
-                "frustumCheckOffset", "field_72757_g");
+        RenderGlobalState renderGlobalState = captureRenderGlobalState(mc.renderGlobal);
         boolean previousHideGui = mc.gameSettings.hideGUI;
         boolean previousAdvancedOpenGl = mc.gameSettings.advancedOpengl;
         ScopeRenderCompatibility.RenderState compatibilityState =
                 ScopeRenderCompatibility.beginSecondaryRender();
         if (!compatibilityState.isSecondaryRenderAllowed()) {
             ScopeRenderCompatibility.endSecondaryRender(compatibilityState);
+            OpenGlHelper.func_153171_g(OpenGlHelper.field_153198_e, previousFramebuffer);
             scopedSceneCaptured = false;
             return;
         }
@@ -277,8 +276,11 @@ public final class ThermalScopeEffect {
                     "cameraZoom", "af", "field_78503_V");
             scopedSceneFramebuffer.bindFramebuffer(true);
             GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-            mc.entityRenderer.renderWorld(partialTicks,
-                    System.nanoTime() + 16666666L);
+            // The normal camera already spent this frame's chunk-build budget. A
+            // second narrow-FOV pass must only draw completed renderers; otherwise
+            // it consumes the update queue on chunks inside the lens and starves
+            // terrain outside the scope.
+            mc.entityRenderer.renderWorld(partialTicks, 0L);
         } finally {
             renderingScopedWorld = false;
             mc.gameSettings.hideGUI = previousHideGui;
@@ -288,12 +290,7 @@ public final class ThermalScopeEffect {
             ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class,
                     mc.entityRenderer, previousZoom == null ? 1D : previousZoom,
                     "cameraZoom", "af", "field_78503_V");
-            restoreRendererVisibility(worldRenderers, previousRendererVisibility);
-            if (previousFrustumCheckOffset != null) {
-                ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
-                        mc.renderGlobal, previousFrustumCheckOffset,
-                        "frustumCheckOffset", "field_72757_g");
-            }
+            restoreRenderGlobalState(mc.renderGlobal, renderGlobalState);
             OpenGlHelper.func_153171_g(OpenGlHelper.field_153198_e, previousFramebuffer);
             GL20.glUseProgram(previousProgram);
             GL11.glMatrixMode(GL11.GL_MODELVIEW);
@@ -303,6 +300,111 @@ public final class ThermalScopeEffect {
             GL11.glMatrixMode(GL11.GL_MODELVIEW);
             GL11.glPopAttrib();
             ScopeRenderCompatibility.endSecondaryRender(compatibilityState);
+            OpenGlHelper.func_153171_g(OpenGlHelper.field_153198_e, previousFramebuffer);
+        }
+    }
+
+    private static boolean copySceneDepth(int sourceFramebuffer,
+                                          Framebuffer targetFramebuffer,
+                                          int width, int height) {
+        if (!GLContext.getCapabilities().GL_EXT_framebuffer_blit) {
+            return false;
+        }
+        EXTFramebufferObject.glBindFramebufferEXT(
+                EXTFramebufferBlit.GL_READ_FRAMEBUFFER_EXT, sourceFramebuffer);
+        EXTFramebufferObject.glBindFramebufferEXT(
+                EXTFramebufferBlit.GL_DRAW_FRAMEBUFFER_EXT,
+                targetFramebuffer.framebufferObject);
+        EXTFramebufferBlit.glBlitFramebufferEXT(
+                0, 0, width, height,
+                0, 0, width, height,
+                GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+        targetFramebuffer.bindFramebuffer(true);
+        return true;
+    }
+
+    private static RenderGlobalState captureRenderGlobalState(RenderGlobal renderGlobal) {
+        RenderGlobalState state = new RenderGlobalState();
+        state.worldRenderers = ObfuscationReflectionHelper.getPrivateValue(
+                RenderGlobal.class, renderGlobal,
+                "worldRenderers", "field_72765_l");
+        state.rendererVisibility = captureRendererVisibility(state.worldRenderers);
+        state.sortedWorldRenderers = ObfuscationReflectionHelper.getPrivateValue(
+                RenderGlobal.class, renderGlobal,
+                "sortedWorldRenderers", "field_72768_k");
+        if (state.sortedWorldRenderers != null) {
+            state.sortedWorldRendererOrder = state.sortedWorldRenderers.clone();
+        }
+        state.worldRenderersToUpdate = ObfuscationReflectionHelper.getPrivateValue(
+                RenderGlobal.class, renderGlobal,
+                "worldRenderersToUpdate", "field_72767_j");
+        if (state.worldRenderersToUpdate != null) {
+            state.worldRenderersToUpdateContents =
+                    new ArrayList<Object>(state.worldRenderersToUpdate);
+        }
+        state.worldRenderersCheckIndex = ObfuscationReflectionHelper.getPrivateValue(
+                RenderGlobal.class, renderGlobal,
+                "worldRenderersCheckIndex", "field_72752_Q");
+        state.prevSortX = ObfuscationReflectionHelper.getPrivateValue(
+                RenderGlobal.class, renderGlobal, "prevSortX", "field_72758_d");
+        state.prevSortY = ObfuscationReflectionHelper.getPrivateValue(
+                RenderGlobal.class, renderGlobal, "prevSortY", "field_72759_e");
+        state.prevSortZ = ObfuscationReflectionHelper.getPrivateValue(
+                RenderGlobal.class, renderGlobal, "prevSortZ", "field_72756_f");
+        state.frustumCheckOffset = ObfuscationReflectionHelper.getPrivateValue(
+                RenderGlobal.class, renderGlobal,
+                "frustumCheckOffset", "field_72757_g");
+        return state;
+    }
+
+    private static void restoreRenderGlobalState(RenderGlobal renderGlobal,
+                                                 RenderGlobalState state) {
+        if (state == null) {
+            return;
+        }
+        restoreRendererVisibility(state.worldRenderers, state.rendererVisibility);
+        if (state.sortedWorldRenderers != null
+                && state.sortedWorldRendererOrder != null) {
+            System.arraycopy(state.sortedWorldRendererOrder, 0,
+                    state.sortedWorldRenderers, 0,
+                    Math.min(state.sortedWorldRendererOrder.length,
+                            state.sortedWorldRenderers.length));
+            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
+                    renderGlobal, state.sortedWorldRenderers,
+                    "sortedWorldRenderers", "field_72768_k");
+        }
+        if (state.worldRenderersToUpdate != null
+                && state.worldRenderersToUpdateContents != null) {
+            state.worldRenderersToUpdate.clear();
+            state.worldRenderersToUpdate.addAll(state.worldRenderersToUpdateContents);
+            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
+                    renderGlobal, state.worldRenderersToUpdate,
+                    "worldRenderersToUpdate", "field_72767_j");
+        }
+        if (state.worldRenderersCheckIndex != null) {
+            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
+                    renderGlobal, state.worldRenderersCheckIndex,
+                    "worldRenderersCheckIndex", "field_72752_Q");
+        }
+        if (state.prevSortX != null) {
+            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
+                    renderGlobal, state.prevSortX,
+                    "prevSortX", "field_72758_d");
+        }
+        if (state.prevSortY != null) {
+            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
+                    renderGlobal, state.prevSortY,
+                    "prevSortY", "field_72759_e");
+        }
+        if (state.prevSortZ != null) {
+            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
+                    renderGlobal, state.prevSortZ,
+                    "prevSortZ", "field_72756_f");
+        }
+        if (state.frustumCheckOffset != null) {
+            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
+                    renderGlobal, state.frustumCheckOffset,
+                    "frustumCheckOffset", "field_72757_g");
         }
     }
 
@@ -334,6 +436,20 @@ public final class ThermalScopeEffect {
                 renderers[i].isWaitingOnOcclusionQuery = (visibility[i] & 4) != 0;
             }
         }
+    }
+
+    private static final class RenderGlobalState {
+        private WorldRenderer[] worldRenderers;
+        private byte[] rendererVisibility;
+        private WorldRenderer[] sortedWorldRenderers;
+        private WorldRenderer[] sortedWorldRendererOrder;
+        private List<Object> worldRenderersToUpdate;
+        private List<Object> worldRenderersToUpdateContents;
+        private Integer worldRenderersCheckIndex;
+        private Double prevSortX;
+        private Double prevSortY;
+        private Double prevSortZ;
+        private Integer frustumCheckOffset;
     }
 
     public static void render(Minecraft mc, float partialTicks) {
