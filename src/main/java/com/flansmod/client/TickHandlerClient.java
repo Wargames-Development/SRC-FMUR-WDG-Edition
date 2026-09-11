@@ -85,11 +85,12 @@ public class TickHandlerClient {
     private static final Random SCREEN_SHAKE_RANDOM = new Random();
     private static final long SHOT_SHAKE_DURATION_NANOS = 110000000L;
     private static final long EXPLOSION_SHAKE_DURATION_NANOS = SHOT_SHAKE_DURATION_NANOS * 2L;
-    private static final float EXPLOSION_SHAKE_DEGREES_PER_SIZE = 0.4F;
-    private static final float EXPLOSION_SHAKE_MAX_DEGREES = 30F;
-    private static final float SMALL_EXPLOSION_SHAKE_RANGE = 15F;
-    private static final float MCHELI_EXPLOSION_SHAKE_CHANCE = 0.5F;
-    private static final float MCHELI_EXPLOSION_SHAKE_MAX_DEGREES = 50F;
+    private static final float EXPLOSION_SHAKE_DEGREES_PER_SIZE = 0.35F;
+    private static final float EXPLOSION_SHAKE_MAX_DEGREES = 10F;
+    private static final float EXPLOSION_SHAKE_RANGE_BASE = 12F;
+    private static final float EXPLOSION_SHAKE_RANGE_SCALE = 4F;
+    private static final double EXPLOSION_SHAKE_RANGE_POWER = 0.75D;
+    private static final float MCHELI_EXPLOSION_SHAKE_MAX_DEGREES = 12F;
     private static final float VANILLA_EXPLOSION_TINNITUS_RANGE = 10F;
     private static long shotShakeStartNanos = Long.MIN_VALUE;
     private static long shotShakeDurationNanos = SHOT_SHAKE_DURATION_NANOS;
@@ -174,12 +175,11 @@ public class TickHandlerClient {
     public static void triggerMCHeliExplosionScreenShake(double x, double y, double z,
                                                          float explosionSize) {
         EntityPlayer player = Minecraft.getMinecraft().thePlayer;
-        if (player != null && player.ridingEntity == null
-                && SCREEN_SHAKE_RANDOM.nextFloat() < MCHELI_EXPLOSION_SHAKE_CHANCE) {
+        if (player != null && player.ridingEntity == null) {
             float distance = (float)Math.sqrt(player.getDistanceSq(x, y, z));
-            float maxDegrees = getMCHeliExplosionShakeMaxDegrees(explosionSize);
-            triggerExplosionScreenShake(maxDegrees * Math.max(0F,
-                    1F - distance / PacketParticle.EXPLOSION_EFFECT_RANGE));
+            triggerExplosionScreenShake(getExplosionScreenShakeDegreesFromAmplitude(
+                    distance, getMCHeliExplosionShakeMaxDegrees(explosionSize),
+                    getExplosionScreenShakeRange(explosionSize)));
         }
     }
 
@@ -196,8 +196,13 @@ public class TickHandlerClient {
     }
 
     private static float getExplosionScreenShakeRange(float explosionSize) {
-        return explosionSize <= 4F
-                ? SMALL_EXPLOSION_SHAKE_RANGE : PacketParticle.EXPLOSION_EFFECT_RANGE;
+        if (explosionSize <= 0F || Float.isNaN(explosionSize) || Float.isInfinite(explosionSize)) {
+            return 0F;
+        }
+        // Larger blasts carry farther, but sub-linearly so ordinary explosive rounds stay local.
+        return Math.min(PacketParticle.EXPLOSION_EFFECT_RANGE,
+                EXPLOSION_SHAKE_RANGE_BASE + EXPLOSION_SHAKE_RANGE_SCALE
+                        * (float)Math.pow(explosionSize, EXPLOSION_SHAKE_RANGE_POWER));
     }
 
     private static float getExplosionScreenShakeDegrees(float distance, float explosionSize,
@@ -205,10 +210,22 @@ public class TickHandlerClient {
         if (explosionSize <= 0F || Float.isNaN(explosionSize) || Float.isInfinite(explosionSize)) {
             return 0F;
         }
-        float sizeAmplitude = Math.min(EXPLOSION_SHAKE_MAX_DEGREES,
-                explosionSize * EXPLOSION_SHAKE_DEGREES_PER_SIZE);
-        float distanceFalloff = Math.max(0F, 1F - distance / range);
-        return sizeAmplitude * distanceFalloff;
+        return getExplosionScreenShakeDegreesFromAmplitude(distance,
+                Math.min(EXPLOSION_SHAKE_MAX_DEGREES,
+                        explosionSize * EXPLOSION_SHAKE_DEGREES_PER_SIZE), range);
+    }
+
+    private static float getExplosionScreenShakeDegreesFromAmplitude(float distance, float maxDegrees,
+                                                                      float range) {
+        if (maxDegrees <= 0F || range <= 0F || distance >= range
+                || Float.isNaN(distance) || Float.isInfinite(distance)) {
+            return 0F;
+        }
+        float normalizedDistance = Math.max(0F, Math.min(1F, distance / range));
+        float distanceFalloff = 1F - normalizedDistance;
+        // Concussive effects fall away much faster than a linear interpolation with distance.
+        distanceFalloff *= distanceFalloff;
+        return maxDegrees * distanceFalloff;
     }
 
     private static float getMCHeliExplosionShakeMaxDegrees(float explosionSize) {
@@ -216,19 +233,19 @@ public class TickHandlerClient {
             return 0F;
         }
         if (explosionSize <= 3F) {
-            // MCHeli 20 mm and 30 mm HE rounds use sizes 1 through 3.
-            return explosionSize * 0.2F;
+            // MCHeli 20 mm and 30 mm HE rounds: always shake nearby, but only very subtly.
+            return explosionSize * 0.12F;
         }
         if (explosionSize <= 5F) {
-            // MCHeli 120 mm HE uses size 5 and should remain a strong impulse.
-            return 0.6F + (explosionSize - 3F) * 4.7F;
+            // MCHeli 120 mm HE (size 5) remains clearly noticeable without a violent camera snap.
+            return 0.36F + (explosionSize - 3F) * 1.07F;
         }
         if (explosionSize <= 20F) {
-            return 10F + (explosionSize - 5F) * 0.5F;
+            return 2.5F + (explosionSize - 5F) * 0.25F;
         }
-        // FAB-3000 (size 75) reaches 45 degrees; extreme pack values cap at 50.
+        // Large bombs stay imposing, but cap well below the old 50-degree camera impulse.
         return Math.min(MCHELI_EXPLOSION_SHAKE_MAX_DEGREES,
-                17.5F + (explosionSize - 20F) * 0.5F);
+                6.25F + (explosionSize - 20F) * 0.1F);
     }
 
     private static void triggerScreenShake(float degrees, long durationNanos) {
