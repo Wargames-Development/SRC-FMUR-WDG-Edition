@@ -1168,6 +1168,7 @@ public class TickHandlerClient {
                 RenderGun.smoothing = event.renderTickTime;
                 renderTickStart(Minecraft.getMinecraft(), event.renderTickTime);
                 applyShotScreenShake(Minecraft.getMinecraft());
+                ThermalScopeEffect.prepareModelLensFrame(Minecraft.getMinecraft(), event.renderTickTime);
                 break;
             case END:
                 try {

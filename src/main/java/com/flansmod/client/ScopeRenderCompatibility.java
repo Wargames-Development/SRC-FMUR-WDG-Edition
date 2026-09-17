@@ -20,6 +20,7 @@ final class ScopeRenderCompatibility {
     private static Method irisShaderPackInUse;
     private static Method irisGetPipelineManager;
     private static Method irisGetCurrentDimensionName;
+    private static Method irisGetCloudSetting;
     private static Constructor<?> fixedPipelineConstructor;
     private static Field pipelineField;
     private static Field pipelinesPerDimensionField;
@@ -50,12 +51,7 @@ final class ScopeRenderCompatibility {
     private static Field celeritasLastCameraStateField;
     private static Field celeritasRenderSectionManagerField;
     private static Field celeritasRenderListManagerField;
-    private static Field celeritasRenderListsField;
-    private static Field celeritasRebuildListsField;
-    private static Field celeritasOcclusionFutureField;
     private static Field celeritasNeedsUpdateField;
-    private static Field celeritasLastUpdatedFrameField;
-    private static Field celeritasPendingUpdatedFrameField;
 
     private static boolean distantHorizonsChecked;
     private static Field distantHorizonsModelViewField;
@@ -64,6 +60,10 @@ final class ScopeRenderCompatibility {
     private static Field distantHorizonsRenderStateModelViewField;
     private static Field distantHorizonsRenderStateProjectionField;
     private static Field distantHorizonsRenderStateLevelField;
+    private static Object distantHorizonsClientApi;
+    private static Field distantHorizonsShadersEnabledField;
+    private static Object distantHorizonsRenderProxy;
+    private static Field distantHorizonsDeferTransparentField;
     private ScopeRenderCompatibility() {
     }
 
@@ -75,6 +75,7 @@ final class ScopeRenderCompatibility {
     static RenderState beginSecondaryRender() {
         RenderState state = new RenderState();
         boolean shaderPackInUse = isShaderPackInUse();
+        captureRenderingState(state);
         captureSystemTime(state);
         captureDistantHorizonsState(state);
         captureCeleritasState(state);
@@ -92,24 +93,25 @@ final class ScopeRenderCompatibility {
             state.irisManager = manager;
             state.irisDimension = dimension;
             state.irisPipeline = pipelineField.get(manager);
+            state.disableClouds = "OFF".equals(String.valueOf(
+                    irisGetCloudSetting.invoke(state.irisPipeline)));
             state.irisLastPreparedDimension = lastPreparedDimensionField.get(manager);
             state.irisHadDimensionPipeline = pipelines.containsKey(dimension);
             state.irisDimensionPipeline = pipelines.get(dimension);
             state.blockRenderingSettings = blockRenderingSettings;
             state.blockRenderingSettingValues = captureBlockRenderingSettings();
-            state.renderingState = renderingState;
-            state.renderingProjection = captureRenderingMatrix(
-                    renderingStateGetProjectionBuffer);
-            state.renderingModelView = captureRenderingMatrix(
-                    renderingStateGetModelViewBuffer);
-            state.renderingFov = ((Float)renderingStateGetFov.invoke(
-                    renderingState)).floatValue();
             state.irisIsolated = true;
             state.fixedPipeline = fixedPipelineConstructor.newInstance();
 
             pipelines.put(dimension, state.fixedPipeline);
             pipelineField.set(manager, state.fixedPipeline);
             lastPreparedDimensionField.set(manager, dimension);
+            if (state.distantHorizonsStateCaptured) {
+                // This is a temporary camera, not a user shader toggle. DH would
+                // otherwise clear its terrain cache on both sides of every scope pass.
+                distantHorizonsShadersEnabledField.setBoolean(distantHorizonsClientApi, false);
+                distantHorizonsDeferTransparentField.setBoolean(distantHorizonsRenderProxy, false);
+            }
         } catch (ReflectiveOperationException ignored) {
             restoreIris(state);
             state.secondaryRenderAllowed = false;
@@ -125,6 +127,7 @@ final class ScopeRenderCompatibility {
             return;
         }
         restoreIris(state);
+        restoreRenderingState(state);
         restoreSystemTime(state);
         restoreDistantHorizonsState(state);
         restoreCeleritasState(state);
@@ -176,6 +179,9 @@ final class ScopeRenderCompatibility {
             irisShaderPackInUse = irisApi.getMethod("isShaderPackInUse");
             irisGetPipelineManager = iris.getMethod("getPipelineManager");
             irisGetCurrentDimensionName = iris.getMethod("getCurrentDimensionName");
+            irisGetCloudSetting = Class.forName(
+                    "net.coderbot.iris.pipeline.WorldRenderingPipeline", false, loader)
+                    .getMethod("getCloudSetting");
             fixedPipelineConstructor = fixedPipeline.getConstructor();
             pipelineField = getAccessibleField(pipelineManager, "pipeline");
             pipelinesPerDimensionField = getAccessibleField(
@@ -233,6 +239,7 @@ final class ScopeRenderCompatibility {
         irisShaderPackInUse = null;
         irisGetPipelineManager = null;
         irisGetCurrentDimensionName = null;
+        irisGetCloudSetting = null;
         fixedPipelineConstructor = null;
         pipelineField = null;
         pipelinesPerDimensionField = null;
@@ -285,7 +292,6 @@ final class ScopeRenderCompatibility {
             // Angelica can recover its configured pipeline on its next frame.
         } finally {
             restoreBlockRenderingSettings(state);
-            restoreRenderingState(state);
             state.irisIsolated = false;
         }
     }
@@ -350,6 +356,10 @@ final class ScopeRenderCompatibility {
             state.distantHorizonsRenderStateLevel =
                     distantHorizonsRenderStateLevelField.get(
                             distantHorizonsRenderState);
+            state.distantHorizonsShadersEnabled =
+                    distantHorizonsShadersEnabledField.getBoolean(distantHorizonsClientApi);
+            state.distantHorizonsDeferTransparent =
+                    distantHorizonsDeferTransparentField.getBoolean(distantHorizonsRenderProxy);
             state.distantHorizonsStateCaptured = true;
         } catch (IllegalAccessException ignored) {
             state.distantHorizonsStateCaptured = false;
@@ -368,6 +378,14 @@ final class ScopeRenderCompatibility {
             Class<?> clientApi = Class.forName(
                     "com.seibel.distanthorizons.core.api.internal.ClientApi",
                     false, loader);
+            distantHorizonsClientApi = clientApi.getField("INSTANCE").get(null);
+            distantHorizonsShadersEnabledField = getAccessibleField(
+                    clientApi, "irisShadersEnabledLastFrame");
+            Class<?> renderProxy = Class.forName(
+                    "com.seibel.distanthorizons.core.render.DhApiRenderProxy", false, loader);
+            distantHorizonsRenderProxy = renderProxy.getField("INSTANCE").get(null);
+            distantHorizonsDeferTransparentField = getAccessibleField(
+                    renderProxy, "deferTransparentRendering");
             distantHorizonsModelViewField = getAccessibleField(
                     renderHelper, "modelViewMatrix");
             distantHorizonsProjectionField = getAccessibleField(
@@ -394,6 +412,10 @@ final class ScopeRenderCompatibility {
         distantHorizonsRenderStateModelViewField = null;
         distantHorizonsRenderStateProjectionField = null;
         distantHorizonsRenderStateLevelField = null;
+        distantHorizonsClientApi = null;
+        distantHorizonsShadersEnabledField = null;
+        distantHorizonsRenderProxy = null;
+        distantHorizonsDeferTransparentField = null;
     }
 
     private static void restoreDistantHorizonsState(RenderState state) {
@@ -402,6 +424,10 @@ final class ScopeRenderCompatibility {
             return;
         }
         try {
+            distantHorizonsShadersEnabledField.setBoolean(
+                    distantHorizonsClientApi, state.distantHorizonsShadersEnabled);
+            distantHorizonsDeferTransparentField.setBoolean(
+                    distantHorizonsRenderProxy, state.distantHorizonsDeferTransparent);
             distantHorizonsModelViewField.set(
                     null, state.distantHorizonsModelView);
             distantHorizonsProjectionField.set(
@@ -445,19 +471,10 @@ final class ScopeRenderCompatibility {
             state.celeritasListManager = listManager;
             state.celeritasCurrentViewport = celeritasCurrentViewportField.get(renderer);
             state.celeritasLastCameraState = celeritasLastCameraStateField.get(renderer);
-            state.celeritasRenderLists = celeritasRenderListsField.get(listManager);
-            state.celeritasRebuildLists = celeritasRebuildListsField.get(listManager);
-            state.celeritasOcclusionFuture = celeritasOcclusionFutureField.get(listManager);
             state.celeritasNeedsUpdate = celeritasNeedsUpdateField.getBoolean(listManager);
-            state.celeritasLastUpdatedFrame =
-                    celeritasLastUpdatedFrameField.getInt(listManager);
-            state.celeritasPendingUpdatedFrame =
-                    celeritasPendingUpdatedFrameField.getInt(listManager);
             state.celeritasStateCaptured = true;
-            // The scope can reuse the main camera's wider visible-section list.
-            // Do not let a pending terrain update rebuild that shared list with
-            // the optic's narrow frustum; the main pass receives the dirty flag
-            // again when its state is restored below.
+            // Avoid an unnecessary scope rebuild, but let Celeritas own any
+            // searches it joins or submits while setting up the second camera.
             celeritasNeedsUpdateField.setBoolean(listManager, false);
 
             Object renderGlobal = Minecraft.getMinecraft().renderGlobal;
@@ -511,18 +528,8 @@ final class ScopeRenderCompatibility {
                     simpleRendererClass, "renderSectionManager");
             celeritasRenderListManagerField = getAccessibleField(
                     sectionManagerClass, "renderListManager");
-            celeritasRenderListsField = getAccessibleField(
-                    listManagerClass, "renderLists");
-            celeritasRebuildListsField = getAccessibleField(
-                    listManagerClass, "rebuildLists");
-            celeritasOcclusionFutureField = getAccessibleField(
-                    listManagerClass, "currentOcclusionFuture");
             celeritasNeedsUpdateField = getAccessibleField(
                     listManagerClass, "needsUpdate");
-            celeritasLastUpdatedFrameField = getAccessibleField(
-                    listManagerClass, "lastUpdatedFrame");
-            celeritasPendingUpdatedFrameField = getAccessibleField(
-                    listManagerClass, "pendingLastUpdatedFrame");
         } catch (ReflectiveOperationException ignored) {
             clearCeleritasReflection();
         } catch (LinkageError ignored) {
@@ -536,12 +543,7 @@ final class ScopeRenderCompatibility {
         celeritasLastCameraStateField = null;
         celeritasRenderSectionManagerField = null;
         celeritasRenderListManagerField = null;
-        celeritasRenderListsField = null;
-        celeritasRebuildListsField = null;
-        celeritasOcclusionFutureField = null;
         celeritasNeedsUpdateField = null;
-        celeritasLastUpdatedFrameField = null;
-        celeritasPendingUpdatedFrameField = null;
     }
 
     private static void restoreCeleritasState(RenderState state) {
@@ -550,22 +552,21 @@ final class ScopeRenderCompatibility {
             return;
         }
         try {
+            boolean terrainCameraChanged = celeritasCurrentViewportField.get(
+                    state.celeritasRenderer) != state.celeritasCurrentViewport;
             celeritasCurrentViewportField.set(
                     state.celeritasRenderer, state.celeritasCurrentViewport);
             celeritasLastCameraStateField.set(
                     state.celeritasRenderer, state.celeritasLastCameraState);
-            celeritasRenderListsField.set(
-                    state.celeritasListManager, state.celeritasRenderLists);
-            celeritasRebuildListsField.set(
-                    state.celeritasListManager, state.celeritasRebuildLists);
-            celeritasOcclusionFutureField.set(
-                    state.celeritasListManager, state.celeritasOcclusionFuture);
+            // A nested terrain pass can consume a search and decrement the
+            // SectionGraph's in-flight count. Restoring its old future makes the
+            // next pass join it twice ("No search in flight"). Keep the future,
+            // lists, visibility snapshots and frame stamps owned by Celeritas.
+            // Refresh the main view if the scope changed the terrain camera.
             celeritasNeedsUpdateField.setBoolean(
-                    state.celeritasListManager, state.celeritasNeedsUpdate);
-            celeritasLastUpdatedFrameField.setInt(
-                    state.celeritasListManager, state.celeritasLastUpdatedFrame);
-            celeritasPendingUpdatedFrameField.setInt(
-                    state.celeritasListManager, state.celeritasPendingUpdatedFrame);
+                    state.celeritasListManager, state.celeritasNeedsUpdate
+                            || terrainCameraChanged
+                            || celeritasNeedsUpdateField.getBoolean(state.celeritasListManager));
             if (state.celeritasRenderGlobal != null
                     && state.celeritasFrameField != null
                     && state.celeritasLastFovField != null) {
@@ -589,6 +590,20 @@ final class ScopeRenderCompatibility {
         float[] values = new float[16];
         copy.get(values);
         return values;
+    }
+
+    private static void captureRenderingState(RenderState state) {
+        if (renderingState == null) {
+            return;
+        }
+        try {
+            state.renderingState = renderingState;
+            state.renderingProjection = captureRenderingMatrix(renderingStateGetProjectionBuffer);
+            state.renderingModelView = captureRenderingMatrix(renderingStateGetModelViewBuffer);
+            state.renderingFov = ((Float)renderingStateGetFov.invoke(renderingState)).floatValue();
+        } catch (ReflectiveOperationException ignored) {
+            state.renderingState = null;
+        }
     }
 
     private static void restoreRenderingState(RenderState state) {
@@ -652,6 +667,7 @@ final class ScopeRenderCompatibility {
 
     static final class RenderState {
         private boolean secondaryRenderAllowed = true;
+        private boolean disableClouds;
         private boolean irisIsolated;
         private Object irisManager;
         private Object irisPipeline;
@@ -672,6 +688,8 @@ final class ScopeRenderCompatibility {
         private float systemTimerLastFrameTime;
         private Object systemTimerLastStartTime;
         private boolean distantHorizonsStateCaptured;
+        private boolean distantHorizonsShadersEnabled;
+        private boolean distantHorizonsDeferTransparent;
         private Object distantHorizonsModelView;
         private Object distantHorizonsProjection;
         private Object distantHorizonsRenderStateModelView;
@@ -682,12 +700,7 @@ final class ScopeRenderCompatibility {
         private Object celeritasListManager;
         private Object celeritasCurrentViewport;
         private Object celeritasLastCameraState;
-        private Object celeritasRenderLists;
-        private Object celeritasRebuildLists;
-        private Object celeritasOcclusionFuture;
         private boolean celeritasNeedsUpdate;
-        private int celeritasLastUpdatedFrame;
-        private int celeritasPendingUpdatedFrame;
         private Object celeritasRenderGlobal;
         private Field celeritasFrameField;
         private Field celeritasLastFovField;
@@ -695,6 +708,10 @@ final class ScopeRenderCompatibility {
         private float celeritasLastFov;
         boolean isSecondaryRenderAllowed() {
             return secondaryRenderAllowed;
+        }
+
+        boolean shouldDisableClouds() {
+            return disableClouds;
         }
     }
 }

@@ -142,8 +142,27 @@ public final class ThermalScopeEffect {
     private ThermalScopeEffect() {
     }
 
+    public static void prepareModelLensFrame(Minecraft mc, float partialTicks) {
+        modelLensValid = false;
+        if (!isActive(mc) || !isModelLensDisplay() || mc.theWorld == null
+                || mc.renderViewEntity == null || !GLContext.getCapabilities().OpenGL20
+                || !OpenGlHelper.isFramebufferEnabled()) {
+            return;
+        }
+        heatMaskValid = false;
+        sceneCaptured = false;
+        scopedSceneCaptured = false;
+        // DH and shader pipelines share intermediate textures between cameras.
+        // Finish the lens before the main pass starts using those textures.
+        renderScopedWorld(mc, partialTicks);
+        renderCapturedScene(mc, partialTicks);
+    }
+
     public static void captureHeatMask(float partialTicks) {
         boolean nestedScopedCapture = renderingScopedWorld;
+        if (!nestedScopedCapture && isModelLensDisplay()) {
+            return;
+        }
         heatMaskValid = false;
         sceneCaptured = false;
         if (!nestedScopedCapture) {
@@ -164,8 +183,8 @@ public final class ThermalScopeEffect {
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
         GL11.glPushMatrix();
         try {
-            ensureSceneTexture(mc.displayWidth, mc.displayHeight);
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
+            ensureSceneTexture(mc.displayWidth, mc.displayHeight);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, sceneTexture);
             GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0,
                     0, 0, mc.displayWidth, mc.displayHeight);
@@ -225,9 +244,7 @@ public final class ThermalScopeEffect {
             GL11.glPopAttrib();
         }
 
-        if (!nestedScopedCapture && isModelLensDisplay()) {
-            renderScopedWorld(mc, partialTicks);
-        } else if (nestedScopedCapture) {
+        if (nestedScopedCapture) {
             scopedSceneCaptured = sceneCaptured && heatMaskValid;
         }
     }
@@ -238,12 +255,8 @@ public final class ThermalScopeEffect {
      */
     private static void renderScopedWorld(Minecraft mc, float partialTicks) {
         float magnification = getModelMagnification();
-        if (magnification <= 1F) {
-            return;
-        }
         int previousFramebuffer = GL11.glGetInteger(EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
         int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
-        ensureScopedSceneFramebuffer(mc);
         Double previousZoom = ObfuscationReflectionHelper.getPrivateValue(
                 EntityRenderer.class, mc.entityRenderer,
                 "cameraZoom", "af", "field_78503_V");
@@ -252,6 +265,7 @@ public final class ThermalScopeEffect {
         RenderGlobalState renderGlobalState = captureRenderGlobalState(mc.renderGlobal);
         boolean previousHideGui = mc.gameSettings.hideGUI;
         boolean previousAdvancedOpenGl = mc.gameSettings.advancedOpengl;
+        boolean previousClouds = mc.gameSettings.clouds;
         ScopeRenderCompatibility.RenderState compatibilityState =
                 ScopeRenderCompatibility.beginSecondaryRender();
         if (!compatibilityState.isSecondaryRenderAllowed()) {
@@ -266,9 +280,14 @@ public final class ThermalScopeEffect {
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
         GL11.glPushMatrix();
         try {
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);
+            ensureScopedSceneFramebuffer(mc);
             renderingScopedWorld = true;
             mc.gameSettings.hideGUI = true;
             mc.gameSettings.advancedOpengl = false;
+            if (compatibilityState.shouldDisableClouds()) {
+                mc.gameSettings.clouds = false;
+            }
             ObfuscationReflectionHelper.setPrivateValue(Minecraft.class, mc,
                     scopedSceneFramebuffer, "framebufferMc", "field_147124_at");
             ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class,
@@ -276,15 +295,13 @@ public final class ThermalScopeEffect {
                     "cameraZoom", "af", "field_78503_V");
             scopedSceneFramebuffer.bindFramebuffer(true);
             GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-            // The normal camera already spent this frame's chunk-build budget. A
-            // second narrow-FOV pass must only draw completed renderers; otherwise
-            // it consumes the update queue on chunks inside the lens and starves
-            // terrain outside the scope.
+            // Leave the vanilla chunk-build budget for the main camera.
             mc.entityRenderer.renderWorld(partialTicks, 0L);
         } finally {
             renderingScopedWorld = false;
             mc.gameSettings.hideGUI = previousHideGui;
             mc.gameSettings.advancedOpengl = previousAdvancedOpenGl;
+            mc.gameSettings.clouds = previousClouds;
             ObfuscationReflectionHelper.setPrivateValue(Minecraft.class, mc,
                     previousMainFramebuffer, "framebufferMc", "field_147124_at");
             ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class,
@@ -453,6 +470,12 @@ public final class ThermalScopeEffect {
     }
 
     public static void render(Minecraft mc, float partialTicks) {
+        if (!isModelLensDisplay()) {
+            renderCapturedScene(mc, partialTicks);
+        }
+    }
+
+    private static void renderCapturedScene(Minecraft mc, float partialTicks) {
         if (!isActive(mc) || !sceneCaptured || !heatMaskValid || !ensureShader()) {
             return;
         }
@@ -462,10 +485,10 @@ public final class ThermalScopeEffect {
         int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         boolean modelMatricesPushed = false;
         try {
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);
             if (modelDisplay) {
                 ensureModelLensFramebuffer();
             }
-            GL13.glActiveTexture(GL13.GL_TEXTURE0);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, sceneTexture);
             GL13.glActiveTexture(GL13.GL_TEXTURE1);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, heatFramebuffer.framebufferTexture);
