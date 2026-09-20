@@ -22,6 +22,7 @@ import cpw.mods.fml.relauncher.Side;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.model.ModelBiped;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderBlocks;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.texture.TextureManager;
@@ -34,6 +35,7 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.IItemRenderer;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
 
 import java.nio.FloatBuffer;
 import java.util.Random;
@@ -42,8 +44,8 @@ import static com.flansmod.client.FlansModClient.zoomProgress;
 
 public class RenderGun implements IItemRenderer {
     private static final float ADS_SIGHT_SWAY_LIMIT_DEGREES = 0.1F;
-    /** Produces a lens diameter of roughly 34% of the display height at full ADS. */
-    private static final float PIP_TARGET_LENS_NDC_RADIUS = 0.34F;
+    /** Produces a lens diameter of roughly 48% of the display height at full ADS. */
+    private static final float PIP_TARGET_LENS_NDC_RADIUS = 0.48F;
     private static final FloatBuffer MODELVIEW_BUFFER = BufferUtils.createFloatBuffer(16);
     private static final FloatBuffer PROJECTION_BUFFER = BufferUtils.createFloatBuffer(16);
     private static final ResourceLocation RED_TRACER_TEXTURE =
@@ -1567,15 +1569,31 @@ public class RenderGun implements IItemRenderer {
 	private void renderPictureInPictureLens(float lensX, float lensY, float lensZ,
 			float lensRadius, float scale) {
 
+		// Shader color PiP is composited after the main shader pipeline. Drawing the
+		// already tone-mapped scope image here would process/darken it a second time.
+		if (ThermalScopeEffect.usesPostCompositeModelLens()) {
+			return;
+		}
+
 		int lensTexture = ThermalScopeEffect.getModelLensTexture();
 		if (lensTexture < 0) {
 			return;
 		}
 
+		int previousActiveTexture = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+		OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
+		int previousTexture0 = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+		float previousBrightnessX = OpenGlHelper.lastBrightnessX;
+		float previousBrightnessY = OpenGlHelper.lastBrightnessY;
+
 		GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
 		try {
 			GL11.glDisable(GL11.GL_LIGHTING);
 			GL11.glDisable(GL11.GL_CULL_FACE);
+			GL11.glDisable(GL11.GL_BLEND);
+			OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit,
+					240F, 240F);
+			OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
 			GL11.glEnable(GL11.GL_TEXTURE_2D);
 			GL11.glBindTexture(GL11.GL_TEXTURE_2D, lensTexture);
 			GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
@@ -1600,6 +1618,11 @@ public class RenderGun implements IItemRenderer {
 			GL11.glEnd();
 		} finally {
 			GL11.glPopAttrib();
+			OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit,
+					previousBrightnessX, previousBrightnessY);
+			OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
+			GL11.glBindTexture(GL11.GL_TEXTURE_2D, previousTexture0);
+			OpenGlHelper.setActiveTexture(previousActiveTexture);
 		}
 	}
 

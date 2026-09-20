@@ -1176,6 +1176,11 @@ public class TickHandlerClient {
                     restoreShotScreenShake(minecraft);
                     renderTickEnd(minecraft, event.renderTickTime);
                     renderEquipmentEffectsWithHiddenHud(minecraft, event.renderTickTime);
+                    // Normal-color PiP runs after the primary camera so its second
+                    // camera cannot feed narrow-scope culling into this frame.
+                    ThermalScopeEffect.prepareColorPictureInPictureFrame(
+                            minecraft, event.renderTickTime);
+                    ThermalScopeEffect.renderPostCompositeModelLens(minecraft);
                 } finally {
                     NightVisionGogglesBrightness.endFrame(Minecraft.getMinecraft());
                 }
