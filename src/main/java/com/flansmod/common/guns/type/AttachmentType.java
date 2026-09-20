@@ -104,11 +104,15 @@ public class AttachmentType extends PaintableType implements IScope
 	public int numSecAmmoItems = 1;
 
 	//Scope variables (These variables only come into play for scope attachments)
-	/** The zoomLevel of this scope */
+	/** Legacy split zoom level. Prefer Magnification for new scopes. */
 	public float zoomLevel = 1F;
-	/** The FOV zoom level of this scope */
+	/** Legacy split FOV zoom level. Prefer Magnification for new scopes. */
 	public float FOVZoomLevel = 1F;
-	/** 变焦视镜的放大倍率 */
+	/** Explicit optical magnification. A value <= 0 keeps legacy zoom behavior. */
+	public float magnification = -1.0F;
+	/** Optional second optical magnification selected with the scope zoom key. */
+	public float magnification2 = -1.0F;
+	/** Legacy second zoom level selected with the scope zoom key. */
 	public float ZoomLevel_2 = -1.0F;
 	/** 组合镜的放大倍率 */
 	public float coSightFOVZoomLevel = -1.0F;
@@ -307,6 +311,10 @@ public class AttachmentType extends PaintableType implements IScope
 			else if(split[0].equals("MovementSpeedMultiplier"))
 				moveSpeedMultiplier = Float.parseFloat(split[1]);
 			//Scope Variables
+			else if(split[0].equals("Magnification"))
+				magnification = Float.parseFloat(split[1]);
+			else if(split[0].equals("Magnification2"))
+				magnification2 = Float.parseFloat(split[1]);
 			else if(split[0].equals("ZoomLevel"))
 				zoomLevel = Float.parseFloat(split[1]);
 			else if(split[0].equals("FOVZoomLevel"))
@@ -381,6 +389,11 @@ public class AttachmentType extends PaintableType implements IScope
 	@Override
 	public float getZoomFactor() 
 	{
+		if (magnification > 0F) {
+			if (FlansMod.switchedFOV && magnification2 > 0F)
+				return magnification2;
+			return magnification;
+		}
 		if (FlansMod.switchedFOV && ZoomLevel_2 != -1.0F)
 			return this.ZoomLevel_2;
 		return zoomLevel;
@@ -410,6 +423,10 @@ public class AttachmentType extends PaintableType implements IScope
 
 	@Override
 	public float getFOVFactor() {
+		// Magnification is the complete optical zoom for the new scope format.
+		// Keep the surrounding first-person view at 1x for model PiP scopes.
+		if (magnification > 0F)
+			return 1F;
 		if (FlansMod.coSight && coSightFOVZoomLevel != -1.0F)
 			return this.coSightFOVZoomLevel;
 		return this.FOVZoomLevel;

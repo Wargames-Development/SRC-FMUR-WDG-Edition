@@ -1,0 +1,196 @@
+diff --git a/src/main/java/com/flansmod/client/FlansModClient.java b/src/main/java/com/flansmod/client/FlansModClient.java
+index 5746dbd..c597e05 100644
+--- a/src/main/java/com/flansmod/client/FlansModClient.java
++++ b/src/main/java/com/flansmod/client/FlansModClient.java
+@@ -604,7 +604,7 @@ public class FlansModClient extends FlansMod {
+             if (gunType.getCameraShakeModifier(itemstackInHand) > 0
+                     && currentScope != null
+                     && currentScope.getZoomOverlay() != null
+-                    && currentScope.getZoomFactor() + currentScope.getFOVFactor() > 4) {
++                    && currentScope.getZoomFactor() * currentScope.getFOVFactor() >= 4F) {
+                 double speed = (1.0 + minecraft.thePlayer.motionZ + minecraft.thePlayer.motionX) * stableSightProgress;
+                 double amplitude = speed * 0.01 * gunType.getCameraShakeModifier(itemstackInHand);
+                 minecraft.thePlayer.rotationYaw +=
+diff --git a/src/main/java/com/flansmod/client/ThermalScopeEffect.java b/src/main/java/com/flansmod/client/ThermalScopeEffect.java
+index baee7eb..e10fe1c 100644
+--- a/src/main/java/com/flansmod/client/ThermalScopeEffect.java
++++ b/src/main/java/com/flansmod/client/ThermalScopeEffect.java
+@@ -37,6 +37,9 @@ import java.util.List;
+ /** Client-only white-hot display for thermal scope attachments. */
+ @SideOnly(Side.CLIENT)
+ public final class ThermalScopeEffect {
++    /** Full-ADS physical PiP lens diameter as a fraction of display height. */
++    public static final float MODEL_SCOPE_LENS_DIAMETER_FRACTION = 0.48F;
++
+     private static final String VERTEX_SHADER =
+             "#version 120\n" +
+             "varying vec2 textureCoordinate;\n" +
+@@ -382,7 +385,7 @@ public final class ThermalScopeEffect {
+     private static void renderScopedWorld(Minecraft mc, float partialTicks) {
+         boolean modelLensDisplay = isModelLensDisplay();
+         boolean shaderPackInUse = ScopeRenderCompatibility.isShaderPackInUse();
+-        float magnification = getModelMagnification();
++        float magnification = getSecondaryCameraMagnification();
+         int previousFramebuffer = GL11.glGetInteger(
+                 EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
+         int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+@@ -1020,6 +1023,32 @@ public final class ThermalScopeEffect {
+                 * FlansModClient.currentScope.getFOVFactor());
+     }
+ 
++    private static float getSecondaryCameraMagnification() {
++        float desiredMagnification = getModelMagnification();
++        if (!usesExplicitMagnification()) {
++            return desiredMagnification;
++        }
++
++        // The secondary camera fills the display before being reduced into the
++        // physical lens. Compensate for that reduction so `Magnification 4` is
++        // visually 4x relative to the 1x world surrounding the optic.
++        float lensDiameterFraction = MODEL_SCOPE_LENS_DIAMETER_FRACTION;
++        if (ScopeRenderCompatibility.isShaderPackInUse()) {
++            lensDiameterFraction = hasThermalVision()
++                    ? POST_COMPOSITE_THERMAL_RADIUS_FRACTION * 2F
++                    : lensDiameterFraction * POST_COMPOSITE_LENS_INSET;
++        }
++        return desiredMagnification / Math.max(0.1F, lensDiameterFraction);
++    }
++
++    private static boolean usesExplicitMagnification() {
++        if (FlansModClient.currentScope instanceof AttachmentType) {
++            return ((AttachmentType)FlansModClient.currentScope).magnification > 0F;
++        }
++        return FlansModClient.currentScope instanceof GunType
++                && ((GunType)FlansModClient.currentScope).magnification > 0F;
++    }
++
+     private static boolean isColorPictureInPictureDisplay() {
+         if (hasThermalVision()) {
+             return false;
+diff --git a/src/main/java/com/flansmod/client/model/RenderGun.java b/src/main/java/com/flansmod/client/model/RenderGun.java
+index c61f258..5c958ad 100644
+--- a/src/main/java/com/flansmod/client/model/RenderGun.java
++++ b/src/main/java/com/flansmod/client/model/RenderGun.java
+@@ -44,8 +44,9 @@ import static com.flansmod.client.FlansModClient.zoomProgress;
+ 
+ public class RenderGun implements IItemRenderer {
+     private static final float ADS_SIGHT_SWAY_LIMIT_DEGREES = 0.1F;
+-    /** Produces a lens diameter of roughly 48% of the display height at full ADS. */
+-    private static final float PIP_TARGET_LENS_NDC_RADIUS = 0.48F;
++    /** Produces the configured PiP lens diameter at full ADS. */
++    private static final float PIP_TARGET_LENS_NDC_RADIUS =
++            ThermalScopeEffect.MODEL_SCOPE_LENS_DIAMETER_FRACTION;
+     /**
+      * The stock first-person projection clips geometry very close to the camera.
+      * PiP alignment deliberately brings the rear lens close enough that bulky
+diff --git a/src/main/java/com/flansmod/common/guns/type/AttachmentType.java b/src/main/java/com/flansmod/common/guns/type/AttachmentType.java
+index 4c3f831..f1477f5 100644
+--- a/src/main/java/com/flansmod/common/guns/type/AttachmentType.java
++++ b/src/main/java/com/flansmod/common/guns/type/AttachmentType.java
+@@ -104,11 +104,15 @@ public class AttachmentType extends PaintableType implements IScope
+ 	public int numSecAmmoItems = 1;
+ 
+ 	//Scope variables (These variables only come into play for scope attachments)
+-	/** The zoomLevel of this scope */
++	/** Legacy split zoom level. Prefer Magnification for new scopes. */
+ 	public float zoomLevel = 1F;
+-	/** The FOV zoom level of this scope */
++	/** Legacy split FOV zoom level. Prefer Magnification for new scopes. */
+ 	public float FOVZoomLevel = 1F;
+-	/** 变焦视镜的放大倍率 */
++	/** Explicit optical magnification. A value <= 0 keeps legacy zoom behavior. */
++	public float magnification = -1.0F;
++	/** Optional second optical magnification selected with the scope zoom key. */
++	public float magnification2 = -1.0F;
++	/** Legacy second zoom level selected with the scope zoom key. */
+ 	public float ZoomLevel_2 = -1.0F;
+ 	/** 组合镜的放大倍率 */
+ 	public float coSightFOVZoomLevel = -1.0F;
+@@ -307,6 +311,10 @@ public class AttachmentType extends PaintableType implements IScope
+ 			else if(split[0].equals("MovementSpeedMultiplier"))
+ 				moveSpeedMultiplier = Float.parseFloat(split[1]);
+ 			//Scope Variables
++			else if(split[0].equals("Magnification"))
++				magnification = Float.parseFloat(split[1]);
++			else if(split[0].equals("Magnification2"))
++				magnification2 = Float.parseFloat(split[1]);
+ 			else if(split[0].equals("ZoomLevel"))
+ 				zoomLevel = Float.parseFloat(split[1]);
+ 			else if(split[0].equals("FOVZoomLevel"))
+@@ -381,6 +389,11 @@ public class AttachmentType extends PaintableType implements IScope
+ 	@Override
+ 	public float getZoomFactor() 
+ 	{
++		if (magnification > 0F) {
++			if (FlansMod.switchedFOV && magnification2 > 0F)
++				return magnification2;
++			return magnification;
++		}
+ 		if (FlansMod.switchedFOV && ZoomLevel_2 != -1.0F)
+ 			return this.ZoomLevel_2;
+ 		return zoomLevel;
+@@ -410,6 +423,10 @@ public class AttachmentType extends PaintableType implements IScope
+ 
+ 	@Override
+ 	public float getFOVFactor() {
++		// Magnification is the complete optical zoom for the new scope format.
++		// Keep the surrounding first-person view at 1x for model PiP scopes.
++		if (magnification > 0F)
++			return 1F;
+ 		if (FlansMod.coSight && coSightFOVZoomLevel != -1.0F)
+ 			return this.coSightFOVZoomLevel;
+ 		return this.FOVZoomLevel;
+diff --git a/src/main/java/com/flansmod/common/guns/type/GunType.java b/src/main/java/com/flansmod/common/guns/type/GunType.java
+index 7d3a7dc..9904800 100644
+--- a/src/main/java/com/flansmod/common/guns/type/GunType.java
++++ b/src/main/java/com/flansmod/common/guns/type/GunType.java
+@@ -395,8 +395,12 @@ public class GunType extends PaintableType implements IScope, IMarkable {
+      * The zoom level of the default scope
+      */
+     public float zoomLevel = 1.0F;
+-    /** Optional second magnification selected with the scope zoom key. */
++    /** Optional legacy second zoom level selected with the scope zoom key. */
+     public float zoomLevel2 = -1.0F;
++    /** Explicit optical magnification. A value <= 0 keeps legacy zoom behavior. */
++    public float magnification = -1.0F;
++    /** Optional second optical magnification selected with the scope zoom key. */
++    public float magnification2 = -1.0F;
+     /**
+      * The FOV zoom level of the default scope
+      */
+@@ -819,6 +823,12 @@ public class GunType extends PaintableType implements IScope, IMarkable {
+                 pictureInPictureReticle = split[1];
+             } else if (split[0].equals("PictureInPictureReticleScale")) {
+                 pictureInPictureReticleScale = Float.parseFloat(split[1]);
++            } else if (split[0].equals("Magnification")) {
++                magnification = Float.parseFloat(split[1]);
++                if (magnification > 1F)
++                    secondaryFunction = EnumSecondaryFunction.ZOOM;
++            } else if (split[0].equals("Magnification2")) {
++                magnification2 = Float.parseFloat(split[1]);
+             } else if (split[0].equals("ZoomLevel")) {
+                 zoomLevel = Float.parseFloat(split[1]);
+                 if (zoomLevel > 1F)
+@@ -1562,6 +1572,11 @@ public class GunType extends PaintableType implements IScope, IMarkable {
+ 
+     @Override
+     public float getZoomFactor() {
++        if (magnification > 0F) {
++            if (FlansMod.switchedFOV && magnification2 > 0F)
++                return magnification2;
++            return magnification;
++        }
+         if (FlansMod.switchedFOV && zoomLevel2 != -1.0F)
+             return zoomLevel2;
+         return zoomLevel;
+@@ -1591,7 +1606,9 @@ public class GunType extends PaintableType implements IScope, IMarkable {
+ 
+     @Override
+     public float getFOVFactor() {
+-        return FOVFactor;
++        // Magnification is the complete optical zoom for the new scope format.
++        // Built-in model PiP scopes therefore leave the peripheral view at 1x.
++        return magnification > 0F ? 1F : FOVFactor;
+     }
+ 
+     /**

@@ -37,6 +37,9 @@ import java.util.List;
 /** Client-only white-hot display for thermal scope attachments. */
 @SideOnly(Side.CLIENT)
 public final class ThermalScopeEffect {
+    /** Full-ADS physical PiP lens diameter as a fraction of display height. */
+    public static final float MODEL_SCOPE_LENS_DIAMETER_FRACTION = 0.48F;
+
     private static final String VERTEX_SHADER =
             "#version 120\n" +
             "varying vec2 textureCoordinate;\n" +
@@ -382,7 +385,7 @@ public final class ThermalScopeEffect {
     private static void renderScopedWorld(Minecraft mc, float partialTicks) {
         boolean modelLensDisplay = isModelLensDisplay();
         boolean shaderPackInUse = ScopeRenderCompatibility.isShaderPackInUse();
-        float magnification = getModelMagnification();
+        float magnification = getSecondaryCameraMagnification();
         int previousFramebuffer = GL11.glGetInteger(
                 EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
         int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
@@ -1018,6 +1021,32 @@ public final class ThermalScopeEffect {
         return FlansModClient.currentScope == null ? 1F
                 : Math.max(1F, FlansModClient.lastZoomLevel
                 * FlansModClient.currentScope.getFOVFactor());
+    }
+
+    private static float getSecondaryCameraMagnification() {
+        float desiredMagnification = getModelMagnification();
+        if (!usesExplicitMagnification()) {
+            return desiredMagnification;
+        }
+
+        // The secondary camera fills the display before being reduced into the
+        // physical lens. Compensate for that reduction so `Magnification 4` is
+        // visually 4x relative to the 1x world surrounding the optic.
+        float lensDiameterFraction = MODEL_SCOPE_LENS_DIAMETER_FRACTION;
+        if (ScopeRenderCompatibility.isShaderPackInUse()) {
+            lensDiameterFraction = hasThermalVision()
+                    ? POST_COMPOSITE_THERMAL_RADIUS_FRACTION * 2F
+                    : lensDiameterFraction * POST_COMPOSITE_LENS_INSET;
+        }
+        return desiredMagnification / Math.max(0.1F, lensDiameterFraction);
+    }
+
+    private static boolean usesExplicitMagnification() {
+        if (FlansModClient.currentScope instanceof AttachmentType) {
+            return ((AttachmentType)FlansModClient.currentScope).magnification > 0F;
+        }
+        return FlansModClient.currentScope instanceof GunType
+                && ((GunType)FlansModClient.currentScope).magnification > 0F;
     }
 
     private static boolean isColorPictureInPictureDisplay() {

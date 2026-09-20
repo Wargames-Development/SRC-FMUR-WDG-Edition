@@ -44,8 +44,15 @@ import static com.flansmod.client.FlansModClient.zoomProgress;
 
 public class RenderGun implements IItemRenderer {
     private static final float ADS_SIGHT_SWAY_LIMIT_DEGREES = 0.1F;
-    /** Produces a lens diameter of roughly 48% of the display height at full ADS. */
-    private static final float PIP_TARGET_LENS_NDC_RADIUS = 0.48F;
+    /** Produces the configured PiP lens diameter at full ADS. */
+    private static final float PIP_TARGET_LENS_NDC_RADIUS =
+            ThermalScopeEffect.MODEL_SCOPE_LENS_DIAMETER_FRACTION;
+    /**
+     * The stock first-person projection clips geometry very close to the camera.
+     * PiP alignment deliberately brings the rear lens close enough that bulky
+     * housings can cross that plane, especially with Angelica's hand projection.
+     */
+    private static final float ADS_SCOPE_NEAR_PLANE = 0.01F;
     private static final FloatBuffer MODELVIEW_BUFFER = BufferUtils.createFloatBuffer(16);
     private static final FloatBuffer PROJECTION_BUFFER = BufferUtils.createFloatBuffer(16);
     private static final ResourceLocation RED_TRACER_TEXTURE =
@@ -517,6 +524,13 @@ public class RenderGun implements IItemRenderer {
         ItemStack slideItemStack = gunType.getSlideItemStack(item);
         ItemStack pumpItemStack = gunType.getPumpItemStack(item);
         ItemStack accessoryItemStack = gunType.getAccessoryItemStack(item);
+
+        // Keep close-up model optics from intersecting the first-person near plane.
+        // This is projection-only: the authored ADS transform and PiP alignment stay
+        // unchanged, so scope size/centering and shader post-compositing do not move.
+        boolean scopeProjectionAdjusted = beginFirstPersonScopeProjection(
+                rtype, gunType.getCurrentScope(item));
+        try {
 
         //枪械后坐力
         {
@@ -1261,6 +1275,77 @@ public class RenderGun implements IItemRenderer {
         renderAttachments(item, gunType, f, model, animations, reloadRotate, rtype);
         // Release
         GL11.glPopMatrix();
+        } finally {
+            endFirstPersonScopeProjection(scopeProjectionAdjusted);
+        }
+    }
+
+    /**
+     * Lower only the near plane used while drawing a retained first-person scope
+     * model. The world has already rendered, and the projection is restored before
+     * returning, so this cannot alter terrain/DH culling or the main shader camera.
+     *
+     * Both model PiP scopes and model + dot-overlay sights need this. The latter do
+     * not participate in ThermalScopeEffect's PiP path, but can clip for the same
+     * reason when their rear housing sits close to the eye.
+     */
+    private boolean beginFirstPersonScopeProjection(ItemRenderType renderType, IScope scope) {
+        if (renderType != ItemRenderType.EQUIPPED_FIRST_PERSON || scope == null
+                || zoomProgress <= 0.7F
+                || (!ThermalScopeEffect.usesModelScopeLens(scope)
+                && scope.getDotOverlayTexture() == null)) {
+            return false;
+        }
+
+        int previousMatrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        GL11.glPushMatrix();
+
+        PROJECTION_BUFFER.clear();
+        GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX, PROJECTION_BUFFER);
+
+        float m10 = PROJECTION_BUFFER.get(10);
+        float m11 = PROJECTION_BUFFER.get(11);
+        float m14 = PROJECTION_BUFFER.get(14);
+        float m15 = PROJECTION_BUFFER.get(15);
+
+        // Standard OpenGL perspective matrix. Leave unusual/orthographic projections
+        // untouched rather than guessing at shader-pack-specific matrix layouts.
+        if (Math.abs(m11 + 1F) < 0.01F && Math.abs(m15) < 0.01F
+                && Math.abs(m10 - 1F) > 0.00001F) {
+            float currentNear = m14 / (m10 - 1F);
+            if (currentNear > ADS_SCOPE_NEAR_PLANE) {
+                if (Math.abs(m10 + 1F) < 0.00001F) {
+                    // Infinite-far projection: m10 == -1 and m14 == -2 * near.
+                    PROJECTION_BUFFER.put(14, -2F * ADS_SCOPE_NEAR_PLANE);
+                } else {
+                    float farPlane = m14 / (m10 + 1F);
+                    if (farPlane > ADS_SCOPE_NEAR_PLANE) {
+                        float denominator = farPlane - ADS_SCOPE_NEAR_PLANE;
+                        PROJECTION_BUFFER.put(10,
+                                -(farPlane + ADS_SCOPE_NEAR_PLANE) / denominator);
+                        PROJECTION_BUFFER.put(14,
+                                -(2F * farPlane * ADS_SCOPE_NEAR_PLANE) / denominator);
+                    }
+                }
+                PROJECTION_BUFFER.position(0);
+                PROJECTION_BUFFER.limit(16);
+                GL11.glLoadMatrix(PROJECTION_BUFFER);
+            }
+        }
+
+        GL11.glMatrixMode(previousMatrixMode);
+        return true;
+    }
+
+    private void endFirstPersonScopeProjection(boolean adjusted) {
+        if (!adjusted) {
+            return;
+        }
+        int previousMatrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        GL11.glPopMatrix();
+        GL11.glMatrixMode(previousMatrixMode);
     }
 
     private void renderAttachments(ItemStack item, GunType gunType, float f, ModelGun model, GunAnimations animations, float reloadRotate, ItemRenderType rtype) {

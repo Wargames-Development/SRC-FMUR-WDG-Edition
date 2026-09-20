@@ -395,8 +395,12 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * The zoom level of the default scope
      */
     public float zoomLevel = 1.0F;
-    /** Optional second magnification selected with the scope zoom key. */
+    /** Optional legacy second zoom level selected with the scope zoom key. */
     public float zoomLevel2 = -1.0F;
+    /** Explicit optical magnification. A value <= 0 keeps legacy zoom behavior. */
+    public float magnification = -1.0F;
+    /** Optional second optical magnification selected with the scope zoom key. */
+    public float magnification2 = -1.0F;
     /**
      * The FOV zoom level of the default scope
      */
@@ -819,6 +823,12 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 pictureInPictureReticle = split[1];
             } else if (split[0].equals("PictureInPictureReticleScale")) {
                 pictureInPictureReticleScale = Float.parseFloat(split[1]);
+            } else if (split[0].equals("Magnification")) {
+                magnification = Float.parseFloat(split[1]);
+                if (magnification > 1F)
+                    secondaryFunction = EnumSecondaryFunction.ZOOM;
+            } else if (split[0].equals("Magnification2")) {
+                magnification2 = Float.parseFloat(split[1]);
             } else if (split[0].equals("ZoomLevel")) {
                 zoomLevel = Float.parseFloat(split[1]);
                 if (zoomLevel > 1F)
@@ -1562,6 +1572,11 @@ public class GunType extends PaintableType implements IScope, IMarkable {
 
     @Override
     public float getZoomFactor() {
+        if (magnification > 0F) {
+            if (FlansMod.switchedFOV && magnification2 > 0F)
+                return magnification2;
+            return magnification;
+        }
         if (FlansMod.switchedFOV && zoomLevel2 != -1.0F)
             return zoomLevel2;
         return zoomLevel;
@@ -1591,7 +1606,9 @@ public class GunType extends PaintableType implements IScope, IMarkable {
 
     @Override
     public float getFOVFactor() {
-        return FOVFactor;
+        // Magnification is the complete optical zoom for the new scope format.
+        // Built-in model PiP scopes therefore leave the peripheral view at 1x.
+        return magnification > 0F ? 1F : FOVFactor;
     }
 
     /**

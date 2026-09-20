@@ -604,7 +604,7 @@ public class FlansModClient extends FlansMod {
             if (gunType.getCameraShakeModifier(itemstackInHand) > 0
                     && currentScope != null
                     && currentScope.getZoomOverlay() != null
-                    && currentScope.getZoomFactor() + currentScope.getFOVFactor() > 4) {
+                    && currentScope.getZoomFactor() * currentScope.getFOVFactor() >= 4F) {
                 double speed = (1.0 + minecraft.thePlayer.motionZ + minecraft.thePlayer.motionX) * stableSightProgress;
                 double amplitude = speed * 0.01 * gunType.getCameraShakeModifier(itemstackInHand);
                 minecraft.thePlayer.rotationYaw +=
