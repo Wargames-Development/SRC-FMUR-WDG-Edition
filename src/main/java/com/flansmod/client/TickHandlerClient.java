@@ -1171,18 +1171,23 @@ public class TickHandlerClient {
                 ThermalScopeEffect.prepareModelLensFrame(Minecraft.getMinecraft(), event.renderTickTime);
                 break;
             case END:
+                Minecraft minecraft = Minecraft.getMinecraft();
                 try {
-                    Minecraft minecraft = Minecraft.getMinecraft();
-                    restoreShotScreenShake(minecraft);
                     renderTickEnd(minecraft, event.renderTickTime);
                     renderEquipmentEffectsWithHiddenHud(minecraft, event.renderTickTime);
-                    // Normal-color PiP runs after the primary camera so its second
-                    // camera cannot feed narrow-scope culling into this frame.
+                    // Keep the exact camera pose used by the primary world render through
+                    // the PiP pass. Restoring recoil shake before PiP makes Celeritas see a
+                    // different yaw/pitch and schedule a second terrain visibility update
+                    // on shot frames.
                     ThermalScopeEffect.prepareColorPictureInPictureFrame(
                             minecraft, event.renderTickTime);
+                    restoreShotScreenShake(minecraft);
                     ThermalScopeEffect.renderPostCompositeModelLens(minecraft);
                 } finally {
-                    NightVisionGogglesBrightness.endFrame(Minecraft.getMinecraft());
+                    // A failed/aborted PiP pass must never leave its temporary recoil
+                    // contribution on the real player camera.
+                    restoreShotScreenShake(minecraft);
+                    NightVisionGogglesBrightness.endFrame(minecraft);
                 }
                 break;
         }

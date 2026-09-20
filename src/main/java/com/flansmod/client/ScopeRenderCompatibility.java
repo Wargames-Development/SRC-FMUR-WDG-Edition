@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,10 +75,17 @@ final class ScopeRenderCompatibility {
     private static Field celeritasShadowPassRanThisFrameField;
     private static Field celeritasNeedsUpdateField;
     private static Method celeritasFinishAllGraphUpdates;
+    private static Method celeritasIsTerrainRenderComplete;
+    private static Method celeritasRebuildListsIsEmpty;
     private static Field celeritasRenderListsField;
     private static Field celeritasRebuildListsField;
     private static Field celeritasLastUpdatedFrameField;
     private static Field celeritasVisibilitySnapshotField;
+    private static Field celeritasBuildResultsField;
+    private static Field celeritasAsyncSubmittedTasksField;
+    private static Field celeritasSectionsRequestingUpdateField;
+    private static Field celeritasLastCameraPositionField;
+    private static Field celeritasCameraPositionField;
 
     private static boolean distantHorizonsChecked;
     private static Field distantHorizonsModelViewField;
@@ -186,6 +194,71 @@ final class ScopeRenderCompatibility {
         restoreSystemTime(state);
         restoreDistantHorizonsState(state);
         restoreCeleritasState(state);
+    }
+
+    /**
+     * A second camera is safe only while Celeritas has no primary-camera terrain
+     * work waiting to be scheduled, built, uploaded, or published. Rendering while
+     * those queues are active lets the nested pass consume work that the next real
+     * camera frame expects, which can expose empty sections for a single frame.
+     */
+    static boolean shouldDeferColorPictureInPictureRender() {
+        initialiseCeleritasReflection();
+        if (celeritasGetInstanceOrNull == null) {
+            return false;
+        }
+        try {
+            Object renderer = celeritasGetInstanceOrNull.invoke(null);
+            if (renderer == null) {
+                return false;
+            }
+            Object sectionManager = celeritasRenderSectionManagerField.get(renderer);
+            if (sectionManager == null) {
+                return false;
+            }
+            Object listManager = celeritasRenderListManagerField.get(sectionManager);
+
+            if (celeritasIsTerrainRenderComplete != null
+                    && !Boolean.TRUE.equals(
+                            celeritasIsTerrainRenderComplete.invoke(renderer))) {
+                return true;
+            }
+            if (hasPendingCollection(celeritasBuildResultsField, sectionManager)
+                    || hasPendingCollection(celeritasAsyncSubmittedTasksField, sectionManager)
+                    || hasPendingCollection(
+                            celeritasSectionsRequestingUpdateField, sectionManager)) {
+                return true;
+            }
+            if (listManager != null && hasPendingRebuilds(listManager)) {
+                return true;
+            }
+        } catch (ReflectiveOperationException ignored) {
+            // Compatibility probing must fail open; the existing snapshot/restore
+            // path remains the fallback on older Celeritas revisions.
+        } catch (LinkageError ignored) {
+            // Optional compatibility only.
+        }
+        return false;
+    }
+
+    private static boolean hasPendingCollection(Field field, Object owner)
+            throws IllegalAccessException {
+        if (field == null || owner == null) {
+            return false;
+        }
+        Object value = field.get(owner);
+        return value instanceof Collection && !((Collection<?>)value).isEmpty();
+    }
+
+    private static boolean hasPendingRebuilds(Object listManager)
+            throws ReflectiveOperationException {
+        if (listManager == null || celeritasRebuildListsField == null
+                || celeritasRebuildListsIsEmpty == null) {
+            return false;
+        }
+        Object rebuildLists = celeritasRebuildListsField.get(listManager);
+        return rebuildLists != null && !Boolean.TRUE.equals(
+                celeritasRebuildListsIsEmpty.invoke(rebuildLists));
     }
 
     static boolean isShaderPackInUse() {
@@ -813,6 +886,14 @@ final class ScopeRenderCompatibility {
             state.celeritasListManager = listManager;
             state.celeritasCurrentViewport = celeritasCurrentViewportField.get(renderer);
             state.celeritasLastCameraState = celeritasLastCameraStateField.get(renderer);
+            if (celeritasLastCameraPositionField != null) {
+                state.celeritasLastCameraPosition =
+                        celeritasLastCameraPositionField.get(sectionManager);
+            }
+            if (celeritasCameraPositionField != null) {
+                state.celeritasCameraPosition =
+                        celeritasCameraPositionField.get(sectionManager);
+            }
             state.celeritasNeedsUpdate = celeritasNeedsUpdateField.getBoolean(listManager);
             state.celeritasReusePrimaryTerrain = reusePrimaryTerrain;
             if (reusePrimaryTerrain) {
@@ -908,6 +989,38 @@ final class ScopeRenderCompatibility {
                 celeritasFinishAllGraphUpdates = null;
             }
             try {
+                celeritasIsTerrainRenderComplete =
+                        simpleRendererClass.getMethod("isTerrainRenderComplete");
+            } catch (NoSuchMethodException ignored) {
+                celeritasIsTerrainRenderComplete = null;
+            }
+            try {
+                Class<?> rebuildListsClass = Class.forName(
+                        "org.embeddedt.embeddium.impl.render.chunk.lists.ChunkRebuildLists",
+                        false, loader);
+                celeritasRebuildListsIsEmpty = rebuildListsClass.getMethod("isEmpty");
+            } catch (ReflectiveOperationException ignored) {
+                celeritasRebuildListsIsEmpty = null;
+            }
+            try {
+                celeritasBuildResultsField =
+                        getAccessibleField(sectionManagerClass, "buildResults");
+                celeritasAsyncSubmittedTasksField =
+                        getAccessibleField(sectionManagerClass, "asyncSubmittedTasks");
+                celeritasSectionsRequestingUpdateField =
+                        getAccessibleField(sectionManagerClass, "sectionsRequestingUpdate");
+                celeritasLastCameraPositionField =
+                        getAccessibleField(sectionManagerClass, "lastCameraPosition");
+                celeritasCameraPositionField =
+                        getAccessibleField(sectionManagerClass, "cameraPosition");
+            } catch (ReflectiveOperationException ignored) {
+                celeritasBuildResultsField = null;
+                celeritasAsyncSubmittedTasksField = null;
+                celeritasSectionsRequestingUpdateField = null;
+                celeritasLastCameraPositionField = null;
+                celeritasCameraPositionField = null;
+            }
+            try {
                 celeritasRenderListsField =
                         getAccessibleField(listManagerClass, "renderLists");
                 celeritasRebuildListsField =
@@ -939,10 +1052,17 @@ final class ScopeRenderCompatibility {
         celeritasShadowPassRanThisFrameField = null;
         celeritasNeedsUpdateField = null;
         celeritasFinishAllGraphUpdates = null;
+        celeritasIsTerrainRenderComplete = null;
+        celeritasRebuildListsIsEmpty = null;
         celeritasRenderListsField = null;
         celeritasRebuildListsField = null;
         celeritasLastUpdatedFrameField = null;
         celeritasVisibilitySnapshotField = null;
+        celeritasBuildResultsField = null;
+        celeritasAsyncSubmittedTasksField = null;
+        celeritasSectionsRequestingUpdateField = null;
+        celeritasLastCameraPositionField = null;
+        celeritasCameraPositionField = null;
     }
 
     private static void restoreCeleritasState(RenderState state) {
@@ -982,6 +1102,16 @@ final class ScopeRenderCompatibility {
                 celeritasShadowPassRanThisFrameField.setBoolean(
                         state.celeritasSectionManager,
                         state.celeritasShadowPassRanThisFrame);
+            }
+            if (celeritasLastCameraPositionField != null) {
+                celeritasLastCameraPositionField.set(
+                        state.celeritasSectionManager,
+                        state.celeritasLastCameraPosition);
+            }
+            if (celeritasCameraPositionField != null) {
+                celeritasCameraPositionField.set(
+                        state.celeritasSectionManager,
+                        state.celeritasCameraPosition);
             }
 
             celeritasCurrentViewportField.set(
@@ -1189,6 +1319,8 @@ final class ScopeRenderCompatibility {
         private Object celeritasListManager;
         private Object celeritasCurrentViewport;
         private Object celeritasLastCameraState;
+        private Object celeritasLastCameraPosition;
+        private Object celeritasCameraPosition;
         private boolean celeritasNeedsUpdate;
         private CeleritasListState celeritasTerrainLists;
         private CeleritasListState celeritasShadowLists;

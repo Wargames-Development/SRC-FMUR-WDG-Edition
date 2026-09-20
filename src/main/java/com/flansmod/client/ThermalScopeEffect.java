@@ -203,6 +203,16 @@ public final class ThermalScopeEffect {
             return;
         }
 
+        // A nested world render must not drain/publish chunk rebuild work belonging
+        // to the primary camera. Reuse the last known-good lens for this frame and
+        // retry next frame once Celeritas is quiescent. This is especially important
+        // for muzzle-flash/dynamic-light rebuilds triggered while firing.
+        if (modelLensValid
+                && ScopeRenderCompatibility.shouldDeferColorPictureInPictureRender()) {
+            colorPictureInPictureFrame--;
+            return;
+        }
+
         heatMaskValid = false;
         sceneCaptured = false;
         scopedSceneCaptured = false;
