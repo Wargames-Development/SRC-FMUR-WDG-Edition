@@ -20,6 +20,7 @@ import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.EXTFramebufferObject;
 import org.lwjgl.opengl.EXTFramebufferBlit;
 import org.lwjgl.opengl.GL11;
@@ -29,6 +30,7 @@ import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GLContext;
 
 import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -112,8 +114,11 @@ public final class ThermalScopeEffect {
             "}\n";
 
     private static final int MODEL_LENS_SIZE = 1024;
-    /** Full-ADS PiP lens diameter is about 48% of the display height. */
-    private static final float POST_COMPOSITE_LENS_RADIUS_FRACTION = 0.24F;
+    private static final int POST_COMPOSITE_LENS_SEGMENTS = 32;
+    /** Keep the post-composite image just inside the physical model aperture. */
+    private static final float POST_COMPOSITE_LENS_INSET = 0.97F;
+    /** Thermal-only fallback for models that draw their own lens geometry. */
+    private static final float POST_COMPOSITE_THERMAL_RADIUS_FRACTION = 0.23F;
     private static Framebuffer heatFramebuffer;
     private static Framebuffer modelLensFramebuffer;
     private static Framebuffer scopedSceneFramebuffer;
@@ -141,6 +146,18 @@ public final class ThermalScopeEffect {
     private static boolean shaderUnavailable;
     private static boolean colorPictureInPictureActiveLastFrame;
     private static int colorPictureInPictureFrame;
+    private static boolean thermalPictureInPictureActiveLastFrame;
+    private static int thermalPictureInPictureFrame;
+    private static boolean scopedHeatDepthPrepared;
+    private static final FloatBuffer scopedHeatProjection = BufferUtils.createFloatBuffer(16);
+    private static final FloatBuffer scopedHeatModelView = BufferUtils.createFloatBuffer(16);
+    private static final FloatBuffer postCompositeLensProjection = BufferUtils.createFloatBuffer(16);
+    private static final FloatBuffer postCompositeLensModelView = BufferUtils.createFloatBuffer(16);
+    private static final float[] postCompositeLensNdcX =
+            new float[POST_COMPOSITE_LENS_SEGMENTS + 2];
+    private static final float[] postCompositeLensNdcY =
+            new float[POST_COMPOSITE_LENS_SEGMENTS + 2];
+    private static boolean postCompositeLensGeometryValid;
     private static boolean flirEnabled = true;
     private static final long START_TIME = System.nanoTime();
 
@@ -148,23 +165,48 @@ public final class ThermalScopeEffect {
     }
 
     public static void prepareModelLensFrame(Minecraft mc, float partialTicks) {
-        // Color PiP is deliberately prepared after the normal world render. Running
-        // its second camera here (RenderTick START) lets that camera's culling state
-        // leak into the primary camera when the player moves. Thermal model lenses
-        // retain their existing start-of-frame capture path.
+        // Thermal model scopes use the same post-primary second-camera boundary as
+        // normal color PiP. Rendering this camera at RenderTick START lets its narrow
+        // frustum consume/publish terrain visibility before the real camera renders.
         if (isColorPictureInPictureDisplay()) {
+            thermalPictureInPictureActiveLastFrame = false;
+            thermalPictureInPictureFrame = 0;
             return;
         }
 
-        modelLensValid = false;
         if (!isActive(mc) || !isModelLensDisplay() || mc.theWorld == null
                 || mc.renderViewEntity == null || !GLContext.getCapabilities().OpenGL20
                 || !OpenGlHelper.isFramebufferEnabled()) {
+            modelLensValid = false;
+            thermalPictureInPictureActiveLastFrame = false;
+            thermalPictureInPictureFrame = 0;
             return;
         }
+
+        boolean sourceSizeChanged = sceneWidth != mc.displayWidth
+                || sceneHeight != mc.displayHeight;
+        boolean renderThisFrame = !thermalPictureInPictureActiveLastFrame
+                || !modelLensValid || sourceSizeChanged
+                || (thermalPictureInPictureFrame & 1) == 0;
+        thermalPictureInPictureActiveLastFrame = true;
+        thermalPictureInPictureFrame++;
+        if (!renderThisFrame) {
+            return;
+        }
+
+        // Hold the last good thermal frame while the primary camera has chunk work
+        // in flight. The thermal pass must not steal a build/upload just because its
+        // second camera happens to run after a muzzle flash or camera movement.
+        if (modelLensValid
+                && ScopeRenderCompatibility.shouldDeferColorPictureInPictureRender()) {
+            thermalPictureInPictureFrame--;
+            return;
+        }
+
         heatMaskValid = false;
         sceneCaptured = false;
         scopedSceneCaptured = false;
+        scopedHeatDepthPrepared = false;
         renderScopedWorld(mc, partialTicks);
         renderCapturedScene(mc, partialTicks);
     }
@@ -236,6 +278,13 @@ public final class ThermalScopeEffect {
                 capturePrimaryScene(mc);
                 renderCapturedScene(mc, partialTicks);
             }
+            return;
+        }
+        if (nestedScopedCapture && isModelLensDisplay() && hasThermalVision()) {
+            // The scoped depth/matrices are valid here, but Iris composite/final has
+            // not run yet. Preserve only what the heat mask needs; capture the final
+            // scoped color image after renderWorld() completes.
+            prepareScopedHeatDepth(mc);
             return;
         }
         if (!nestedScopedCapture && isModelLensDisplay()) {
@@ -331,9 +380,8 @@ public final class ThermalScopeEffect {
      * normal view cannot reveal distant detail, regardless of lens texture size.
      */
     private static void renderScopedWorld(Minecraft mc, float partialTicks) {
-        boolean colorPictureInPicture = isColorPictureInPictureDisplay();
-        boolean shaderAwareColor = colorPictureInPicture
-                && ScopeRenderCompatibility.isShaderPackInUse();
+        boolean modelLensDisplay = isModelLensDisplay();
+        boolean shaderPackInUse = ScopeRenderCompatibility.isShaderPackInUse();
         float magnification = getModelMagnification();
         int previousFramebuffer = GL11.glGetInteger(
                 EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
@@ -347,7 +395,7 @@ public final class ThermalScopeEffect {
         boolean previousHideGui = mc.gameSettings.hideGUI;
         boolean previousAdvancedOpenGl = mc.gameSettings.advancedOpengl;
         boolean previousClouds = mc.gameSettings.clouds;
-        ScopeRenderCompatibility.RenderState compatibilityState = colorPictureInPicture
+        ScopeRenderCompatibility.RenderState compatibilityState = modelLensDisplay
                 ? ScopeRenderCompatibility.beginShaderAwareSecondaryRender()
                 : ScopeRenderCompatibility.beginSecondaryRender();
         if (!compatibilityState.isSecondaryRenderAllowed()) {
@@ -358,10 +406,10 @@ public final class ThermalScopeEffect {
         }
 
         // Angelica/Iris owns targets tied to Minecraft's real framebuffer, so a
-        // shader-aware color PiP must render there. Because color PiP now runs at
+        // shader-aware model scope must render there. Because model PiP runs at
         // RenderTick END, preserve the completed primary frame and put it back after
-        // the scope camera is captured. Vanilla color PiP can use an isolated FBO.
-        boolean renderIntoMainFramebuffer = shaderAwareColor;
+        // the scope camera is captured. Vanilla PiP can use an isolated FBO.
+        boolean renderIntoMainFramebuffer = modelLensDisplay && shaderPackInUse;
         boolean primaryFrameSaved = false;
         if (renderIntoMainFramebuffer) {
             primaryFrameSaved = capturePrimaryFramebuffer(previousMainFramebuffer,
@@ -404,12 +452,17 @@ public final class ThermalScopeEffect {
             // The normal camera has already received this frame's chunk-build budget.
             mc.entityRenderer.renderWorld(partialTicks, 0L);
 
-            if (colorPictureInPicture) {
+            if (modelLensDisplay) {
                 Framebuffer completedScene = renderIntoMainFramebuffer
                         ? previousMainFramebuffer : scopedSceneFramebuffer;
                 sceneCaptured = captureFramebufferScene(completedScene,
                         mc.displayWidth, mc.displayHeight);
-                scopedSceneCaptured = sceneCaptured;
+                if (hasThermalVision()) {
+                    renderScopedHeatEntities(mc, partialTicks);
+                    scopedSceneCaptured = sceneCaptured && heatMaskValid;
+                } else {
+                    scopedSceneCaptured = sceneCaptured;
+                }
             }
         } finally {
             renderingScopedWorld = false;
@@ -582,23 +635,135 @@ public final class ThermalScopeEffect {
         }
     }
 
+    private static void prepareScopedHeatDepth(Minecraft mc) {
+        scopedHeatDepthPrepared = false;
+        if (mc == null || mc.theWorld == null || mc.renderViewEntity == null
+                || !OpenGlHelper.isFramebufferEnabled()
+                || !GLContext.getCapabilities().GL_EXT_framebuffer_blit) {
+            return;
+        }
+
+        int sourceFramebuffer = GL11.glGetInteger(
+                EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
+        GL11.glPushAttrib(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT
+                | GL11.GL_VIEWPORT_BIT);
+        try {
+            scopedHeatProjection.clear();
+            scopedHeatModelView.clear();
+            GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX, scopedHeatProjection);
+            GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, scopedHeatModelView);
+            scopedHeatProjection.rewind();
+            scopedHeatModelView.rewind();
+
+            ensureHeatFramebuffer(mc);
+            heatFramebuffer.bindFramebuffer(true);
+            GL11.glClearColor(0F, 0F, 0F, 0F);
+            GL11.glClearDepth(1D);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+            scopedHeatDepthPrepared = copySceneDepth(sourceFramebuffer, heatFramebuffer,
+                    mc.displayWidth, mc.displayHeight);
+        } finally {
+            OpenGlHelper.func_153171_g(OpenGlHelper.field_153198_e, sourceFramebuffer);
+            GL11.glPopAttrib();
+        }
+    }
+
+    private static void renderScopedHeatEntities(Minecraft mc, float partialTicks) {
+        heatMaskValid = false;
+        if (!scopedHeatDepthPrepared || heatFramebuffer == null) {
+            return;
+        }
+
+        int previousFramebuffer = GL11.glGetInteger(
+                EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
+        int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+        int previousMatrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        GL11.glPushMatrix();
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        GL11.glPushMatrix();
+        try {
+            heatFramebuffer.bindFramebuffer(true);
+            GL20.glUseProgram(0);
+
+            GL11.glMatrixMode(GL11.GL_PROJECTION);
+            scopedHeatProjection.rewind();
+            GL11.glLoadMatrix(scopedHeatProjection);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            scopedHeatModelView.rewind();
+            GL11.glLoadMatrix(scopedHeatModelView);
+
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glDepthFunc(GL11.GL_LEQUAL);
+            GL11.glDepthMask(false);
+            GL11.glDisable(GL11.GL_BLEND);
+            GL11.glColorMask(false, false, false, true);
+            GL11.glColor4f(1F, 1F, 1F, 1F);
+            RenderHelper.enableStandardItemLighting();
+            try {
+                for (Object object : mc.theWorld.loadedEntityList) {
+                    if (!(object instanceof EntityLivingBase)
+                            && !(object instanceof EntityDriveable)) {
+                        continue;
+                    }
+                    Entity entity = (Entity)object;
+                    if (entity == mc.renderViewEntity
+                            && mc.gameSettings.thirdPersonView == 0) {
+                        continue;
+                    }
+                    RenderManager.instance.renderEntitySimple(entity, partialTicks);
+                }
+            } finally {
+                RenderHelper.disableStandardItemLighting();
+            }
+            heatMaskValid = true;
+        } finally {
+            scopedHeatDepthPrepared = false;
+            GL11.glColorMask(true, true, true, true);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            GL11.glPopMatrix();
+            GL11.glMatrixMode(GL11.GL_PROJECTION);
+            GL11.glPopMatrix();
+            GL11.glMatrixMode(previousMatrixMode);
+            GL20.glUseProgram(previousProgram);
+            GL11.glPopAttrib();
+            OpenGlHelper.func_153171_g(OpenGlHelper.field_153198_e, previousFramebuffer);
+        }
+    }
+
     private static boolean copySceneDepth(int sourceFramebuffer,
                                           Framebuffer targetFramebuffer,
                                           int width, int height) {
         if (!GLContext.getCapabilities().GL_EXT_framebuffer_blit) {
             return false;
         }
-        EXTFramebufferObject.glBindFramebufferEXT(
-                EXTFramebufferBlit.GL_READ_FRAMEBUFFER_EXT, sourceFramebuffer);
-        EXTFramebufferObject.glBindFramebufferEXT(
-                EXTFramebufferBlit.GL_DRAW_FRAMEBUFFER_EXT,
-                targetFramebuffer.framebufferObject);
-        EXTFramebufferBlit.glBlitFramebufferEXT(
-                0, 0, width, height,
-                0, 0, width, height,
-                GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
-        targetFramebuffer.bindFramebuffer(true);
-        return true;
+
+        int previousReadFramebuffer = GL11.glGetInteger(
+                EXTFramebufferBlit.GL_READ_FRAMEBUFFER_BINDING_EXT);
+        int previousDrawFramebuffer = GL11.glGetInteger(
+                EXTFramebufferBlit.GL_DRAW_FRAMEBUFFER_BINDING_EXT);
+        int previousReadBuffer = GL11.glGetInteger(GL11.GL_READ_BUFFER);
+        int previousDrawBuffer = GL11.glGetInteger(GL11.GL_DRAW_BUFFER);
+        try {
+            EXTFramebufferObject.glBindFramebufferEXT(
+                    EXTFramebufferBlit.GL_READ_FRAMEBUFFER_EXT, sourceFramebuffer);
+            EXTFramebufferObject.glBindFramebufferEXT(
+                    EXTFramebufferBlit.GL_DRAW_FRAMEBUFFER_EXT,
+                    targetFramebuffer.framebufferObject);
+            EXTFramebufferBlit.glBlitFramebufferEXT(
+                    0, 0, width, height,
+                    0, 0, width, height,
+                    GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
+            return true;
+        } finally {
+            EXTFramebufferObject.glBindFramebufferEXT(
+                    EXTFramebufferBlit.GL_READ_FRAMEBUFFER_EXT, previousReadFramebuffer);
+            GL11.glReadBuffer(previousReadBuffer);
+            EXTFramebufferObject.glBindFramebufferEXT(
+                    EXTFramebufferBlit.GL_DRAW_FRAMEBUFFER_EXT, previousDrawFramebuffer);
+            GL11.glDrawBuffer(previousDrawBuffer);
+        }
     }
 
     private static RenderGlobalState captureRenderGlobalState(RenderGlobal renderGlobal) {
@@ -891,16 +1056,119 @@ public final class ThermalScopeEffect {
     /**
      * A shader pack has already tone-mapped the secondary camera image. Feeding that
      * image back through the hand/world shader pass darkens it a second time, so
-     * shader color PiP is composited after the primary shader pipeline completes.
+     * shader PiP (color or thermal) is composited after the primary shader pipeline.
      */
     public static boolean usesPostCompositeModelLens() {
-        return isModelLensActive() && isColorPictureInPictureDisplay()
+        return isModelLensActive() && hasPictureInPictureLensGeometry()
                 && modelLensValid && ScopeRenderCompatibility.isShaderPackInUse();
+    }
+
+    /**
+     * Capture the exact projected aperture used by the first-person model. Shader
+     * PiP is drawn after the shader pipeline, so it cannot use depth to clip against
+     * the scope housing. Reusing the model-space aperture prevents the late pass
+     * from painting over narrow optic rims while the ADS alignment is still moving.
+     */
+    public static void capturePostCompositeModelLensGeometry(float lensX, float lensY,
+            float lensZ, float lensRadius, float scale) {
+        if (!isModelLensActive() || !ScopeRenderCompatibility.isShaderPackInUse()
+                || lensRadius <= 0F) {
+            postCompositeLensGeometryValid = false;
+            return;
+        }
+
+        postCompositeLensModelView.clear();
+        postCompositeLensProjection.clear();
+        GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, postCompositeLensModelView);
+        GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX, postCompositeLensProjection);
+
+        float x = lensX * scale;
+        float centerY = lensY * scale;
+        float centerZ = lensZ * scale;
+        float radius = lensRadius * scale * POST_COMPOSITE_LENS_INSET;
+        if (!projectPostCompositeLensVertex(x, centerY, centerZ, 0)) {
+            postCompositeLensGeometryValid = false;
+            return;
+        }
+
+        for (int index = 0; index <= POST_COMPOSITE_LENS_SEGMENTS; index++) {
+            double angle = Math.PI * 2D * index / POST_COMPOSITE_LENS_SEGMENTS;
+            float horizontal = (float)Math.cos(angle);
+            float vertical = (float)Math.sin(angle);
+            if (!projectPostCompositeLensVertex(x, centerY + vertical * radius,
+                    centerZ + horizontal * radius, index + 1)) {
+                postCompositeLensGeometryValid = false;
+                return;
+            }
+        }
+        postCompositeLensGeometryValid = true;
+    }
+
+    private static boolean projectPostCompositeLensVertex(float x, float y, float z,
+            int index) {
+        float eyeX = postCompositeLensModelView.get(0) * x
+                + postCompositeLensModelView.get(4) * y
+                + postCompositeLensModelView.get(8) * z
+                + postCompositeLensModelView.get(12);
+        float eyeY = postCompositeLensModelView.get(1) * x
+                + postCompositeLensModelView.get(5) * y
+                + postCompositeLensModelView.get(9) * z
+                + postCompositeLensModelView.get(13);
+        float eyeZ = postCompositeLensModelView.get(2) * x
+                + postCompositeLensModelView.get(6) * y
+                + postCompositeLensModelView.get(10) * z
+                + postCompositeLensModelView.get(14);
+        float eyeW = postCompositeLensModelView.get(3) * x
+                + postCompositeLensModelView.get(7) * y
+                + postCompositeLensModelView.get(11) * z
+                + postCompositeLensModelView.get(15);
+
+        float clipX = postCompositeLensProjection.get(0) * eyeX
+                + postCompositeLensProjection.get(4) * eyeY
+                + postCompositeLensProjection.get(8) * eyeZ
+                + postCompositeLensProjection.get(12) * eyeW;
+        float clipY = postCompositeLensProjection.get(1) * eyeX
+                + postCompositeLensProjection.get(5) * eyeY
+                + postCompositeLensProjection.get(9) * eyeZ
+                + postCompositeLensProjection.get(13) * eyeW;
+        float clipW = postCompositeLensProjection.get(3) * eyeX
+                + postCompositeLensProjection.get(7) * eyeY
+                + postCompositeLensProjection.get(11) * eyeZ
+                + postCompositeLensProjection.get(15) * eyeW;
+        if (clipW <= 0.00001F) {
+            return false;
+        }
+
+        float ndcX = clipX / clipW;
+        float ndcY = clipY / clipW;
+        if (Float.isNaN(ndcX) || Float.isInfinite(ndcX)
+                || Float.isNaN(ndcY) || Float.isInfinite(ndcY)) {
+            return false;
+        }
+        postCompositeLensNdcX[index] = ndcX;
+        postCompositeLensNdcY[index] = ndcY;
+        return true;
+    }
+
+    private static boolean hasPictureInPictureLensGeometry() {
+        if (FlansModClient.currentScope instanceof AttachmentType) {
+            return ((AttachmentType)FlansModClient.currentScope).pictureInPicture;
+        }
+        return FlansModClient.currentScope instanceof GunType
+                && ((GunType)FlansModClient.currentScope).pictureInPicture;
     }
 
     public static void renderPostCompositeModelLens(Minecraft mc) {
         if (!usesPostCompositeModelLens() || mc.currentScreen != null
                 || modelLensFramebuffer == null) {
+            return;
+        }
+
+        // Color PiP must follow the physical model aperture captured during the
+        // first-person gun render. Thermal models render their own lens geometry and
+        // retain the established centered fallback.
+        boolean useProjectedGeometry = postCompositeLensGeometryValid && !hasThermalVision();
+        if (!useProjectedGeometry && !hasThermalVision()) {
             return;
         }
 
@@ -916,9 +1184,6 @@ public final class ThermalScopeEffect {
                 mc, mc.displayWidth, mc.displayHeight);
         int width = scaled.getScaledWidth();
         int height = scaled.getScaledHeight();
-        float centerX = width * 0.5F;
-        float centerY = height * 0.5F;
-        float radius = height * POST_COMPOSITE_LENS_RADIUS_FRACTION;
 
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         pushOrthoProjection(width, height);
@@ -939,18 +1204,36 @@ public final class ThermalScopeEffect {
 
             GL11.glBegin(GL11.GL_TRIANGLE_FAN);
             GL11.glTexCoord2f(0.5F, 0.5F);
-            GL11.glVertex3f(centerX, centerY, -90F);
-            for (int index = 0; index <= 64; index++) {
-                double angle = Math.PI * 2D * index / 64D;
-                float horizontal = (float)Math.cos(angle);
-                float vertical = (float)Math.sin(angle);
-                GL11.glTexCoord2f(0.5F + horizontal * 0.5F,
-                        0.5F + vertical * 0.5F);
-                GL11.glVertex3f(centerX + horizontal * radius,
-                        centerY - vertical * radius, -90F);
+            if (useProjectedGeometry) {
+                GL11.glVertex3f(toOverlayX(postCompositeLensNdcX[0], width),
+                        toOverlayY(postCompositeLensNdcY[0], height), -90F);
+                for (int index = 0; index <= POST_COMPOSITE_LENS_SEGMENTS; index++) {
+                    double angle = Math.PI * 2D * index / POST_COMPOSITE_LENS_SEGMENTS;
+                    float horizontal = (float)Math.cos(angle);
+                    float vertical = (float)Math.sin(angle);
+                    GL11.glTexCoord2f(0.5F + horizontal * 0.5F,
+                            0.5F + vertical * 0.5F);
+                    GL11.glVertex3f(toOverlayX(postCompositeLensNdcX[index + 1], width),
+                            toOverlayY(postCompositeLensNdcY[index + 1], height), -90F);
+                }
+            } else {
+                float centerX = width * 0.5F;
+                float centerY = height * 0.5F;
+                float radius = height * POST_COMPOSITE_THERMAL_RADIUS_FRACTION;
+                GL11.glVertex3f(centerX, centerY, -90F);
+                for (int index = 0; index <= 64; index++) {
+                    double angle = Math.PI * 2D * index / 64D;
+                    float horizontal = (float)Math.cos(angle);
+                    float vertical = (float)Math.sin(angle);
+                    GL11.glTexCoord2f(0.5F + horizontal * 0.5F,
+                            0.5F + vertical * 0.5F);
+                    GL11.glVertex3f(centerX + horizontal * radius,
+                            centerY - vertical * radius, -90F);
+                }
             }
             GL11.glEnd();
         } finally {
+            postCompositeLensGeometryValid = false;
             popOrthoProjection();
             GL20.glUseProgram(previousProgram);
             GL11.glPopAttrib();
@@ -961,6 +1244,14 @@ public final class ThermalScopeEffect {
             GL13.glActiveTexture(previousActiveTexture);
             GL11.glMatrixMode(previousMatrixMode);
         }
+    }
+
+    private static float toOverlayX(float ndcX, int width) {
+        return (ndcX * 0.5F + 0.5F) * width;
+    }
+
+    private static float toOverlayY(float ndcY, int height) {
+        return (0.5F - ndcY * 0.5F) * height;
     }
 
     public static boolean isFlirEnabled() {

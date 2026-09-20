@@ -1168,7 +1168,6 @@ public class TickHandlerClient {
                 RenderGun.smoothing = event.renderTickTime;
                 renderTickStart(Minecraft.getMinecraft(), event.renderTickTime);
                 applyShotScreenShake(Minecraft.getMinecraft());
-                ThermalScopeEffect.prepareModelLensFrame(Minecraft.getMinecraft(), event.renderTickTime);
                 break;
             case END:
                 Minecraft minecraft = Minecraft.getMinecraft();
@@ -1179,6 +1178,8 @@ public class TickHandlerClient {
                     // the PiP pass. Restoring recoil shake before PiP makes Celeritas see a
                     // different yaw/pitch and schedule a second terrain visibility update
                     // on shot frames.
+                    ThermalScopeEffect.prepareModelLensFrame(
+                            minecraft, event.renderTickTime);
                     ThermalScopeEffect.prepareColorPictureInPictureFrame(
                             minecraft, event.renderTickTime);
                     restoreShotScreenShake(minecraft);

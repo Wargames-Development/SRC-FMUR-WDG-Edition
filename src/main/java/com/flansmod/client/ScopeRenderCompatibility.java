@@ -60,6 +60,24 @@ final class ScopeRenderCompatibility {
     private static Method renderTargetsGetMethod;
     private static Method renderTargetGetMainTextureMethod;
     private static Method renderTargetGetAltTextureMethod;
+
+    // The nested shader camera must not consume or publish the primary camera's
+    // shadow-cache bookkeeping. Shadow textures are reusable because PiP keeps the
+    // same camera position; only the projection is narrower.
+    private static Field shaderPipelineShadowRendererField;
+    private static Field shaderPipelineShadowRenderTargetsField;
+    private static Field shadowTargetsFlippedField;
+    private static Field shadowTargetsFullClearRequiredField;
+    private static Field shadowTargetsTranslucentDepthDirtyField;
+    private static Field shadowTargetsTerrainSnapshotValidField;
+    private static Field shadowRendererPreSubmitActiveField;
+    private static Field shadowRendererLastRelayNanosField;
+    private static Field shadowRendererLastGraphShadowAngleField;
+    private static Field shadowRendererRelayShadowAngleField;
+    private static Field shadowRendererPreSubmittedShadowAngleField;
+    private static Field shadowRendererActiveShadowAngleField;
+    private static Field shadowRendererTerrainRelaidField;
+
     private static final Map<Integer, TemporalTextureBackup> shaderTemporalBackups =
             new HashMap<Integer, TemporalTextureBackup>();
     private static Object shaderTemporalBackupPipeline;
@@ -110,6 +128,7 @@ final class ScopeRenderCompatibility {
     static RenderState beginShaderAwareSecondaryRender() {
         RenderState state = captureSecondaryState(true);
         prepareShaderTemporalIsolation(state);
+        prepareShaderShadowIsolation(state);
         return state;
     }
 
@@ -187,6 +206,7 @@ final class ScopeRenderCompatibility {
         if (state == null) {
             return;
         }
+        restoreShaderShadowIsolation(state);
         restoreShaderTemporalIsolation(state);
         restoreIris(state);
         restoreBlockRenderingSettings(state);
@@ -386,6 +406,50 @@ final class ScopeRenderCompatibility {
             } catch (LinkageError ignored) {
                 clearShaderTemporalReflection();
             }
+
+            // Shadow state is a separate optional layer. Keep it independent from
+            // temporal-history isolation so one Angelica revision mismatch cannot
+            // disable the other compatibility path.
+            try {
+                Class<?> deferredPipeline = Class.forName(
+                        "net.coderbot.iris.pipeline.DeferredWorldRenderingPipeline",
+                        false, loader);
+                Class<?> shadowTargets = Class.forName(
+                        "net.coderbot.iris.shadows.ShadowRenderTargets",
+                        false, loader);
+                Class<?> shadowRenderer = Class.forName(
+                        "net.coderbot.iris.pipeline.ShadowRenderer",
+                        false, loader);
+                shaderPipelineShadowRendererField = getAccessibleField(
+                        deferredPipeline, "shadowRenderer");
+                shaderPipelineShadowRenderTargetsField = getAccessibleField(
+                        deferredPipeline, "shadowRenderTargets");
+                shadowTargetsFlippedField = getAccessibleField(shadowTargets, "flipped");
+                shadowTargetsFullClearRequiredField = getAccessibleField(
+                        shadowTargets, "fullClearRequired");
+                shadowTargetsTranslucentDepthDirtyField = getAccessibleField(
+                        shadowTargets, "translucentDepthDirty");
+                shadowTargetsTerrainSnapshotValidField = getAccessibleField(
+                        shadowTargets, "terrainSnapshotValid");
+                shadowRendererPreSubmitActiveField = getAccessibleField(
+                        shadowRenderer, "preSubmitActive");
+                shadowRendererLastRelayNanosField = getAccessibleField(
+                        shadowRenderer, "lastRelayNanos");
+                shadowRendererLastGraphShadowAngleField = getAccessibleField(
+                        shadowRenderer, "lastGraphShadowAngle");
+                shadowRendererRelayShadowAngleField = getAccessibleField(
+                        shadowRenderer, "relayShadowAngle");
+                shadowRendererPreSubmittedShadowAngleField = getAccessibleField(
+                        shadowRenderer, "preSubmittedShadowAngle");
+                shadowRendererActiveShadowAngleField = getAccessibleField(
+                        shadowRenderer, "activeShadowAngle");
+                shadowRendererTerrainRelaidField = getAccessibleField(
+                        shadowRenderer, "SHADOW_TERRAIN_RELAID");
+            } catch (ReflectiveOperationException ignored) {
+                clearShaderShadowReflection();
+            } catch (LinkageError ignored) {
+                clearShaderShadowReflection();
+            }
         } catch (ReflectiveOperationException ignored) {
             clearIrisReflection();
         } catch (LinkageError ignored) {
@@ -423,6 +487,7 @@ final class ScopeRenderCompatibility {
         systemTimerLastFrameTimeField = null;
         systemTimerLastStartTimeField = null;
         clearShaderTemporalReflection();
+        clearShaderShadowReflection();
     }
 
     private static void clearShaderTemporalReflection() {
@@ -435,11 +500,162 @@ final class ScopeRenderCompatibility {
         renderTargetGetAltTextureMethod = null;
     }
 
+    private static void clearShaderShadowReflection() {
+        shaderPipelineShadowRendererField = null;
+        shaderPipelineShadowRenderTargetsField = null;
+        shadowTargetsFlippedField = null;
+        shadowTargetsFullClearRequiredField = null;
+        shadowTargetsTranslucentDepthDirtyField = null;
+        shadowTargetsTerrainSnapshotValidField = null;
+        shadowRendererPreSubmitActiveField = null;
+        shadowRendererLastRelayNanosField = null;
+        shadowRendererLastGraphShadowAngleField = null;
+        shadowRendererRelayShadowAngleField = null;
+        shadowRendererPreSubmittedShadowAngleField = null;
+        shadowRendererActiveShadowAngleField = null;
+        shadowRendererTerrainRelaidField = null;
+    }
+
     private static Field getAccessibleField(Class<?> owner, String name)
             throws NoSuchFieldException {
         Field field = owner.getDeclaredField(name);
         field.setAccessible(true);
         return field;
+    }
+
+    /**
+     * Keep the PiP camera from consuming the main camera's deferred shadow-graph
+     * work. The scope has the same world-space camera position, so reusing the
+     * primary terrain-shadow cache is correct and avoids a second narrow-FOV shadow
+     * graph becoming visible on the following frame.
+     */
+    private static void prepareShaderShadowIsolation(RenderState state) {
+        if (state == null || shaderPipelineShadowRendererField == null
+                || shaderPipelineShadowRenderTargetsField == null
+                || shadowTargetsFlippedField == null
+                || shadowTargetsFullClearRequiredField == null
+                || shadowTargetsTranslucentDepthDirtyField == null
+                || shadowTargetsTerrainSnapshotValidField == null
+                || shadowRendererPreSubmitActiveField == null
+                || shadowRendererLastRelayNanosField == null
+                || shadowRendererLastGraphShadowAngleField == null
+                || shadowRendererRelayShadowAngleField == null
+                || shadowRendererPreSubmittedShadowAngleField == null
+                || shadowRendererActiveShadowAngleField == null
+                || shadowRendererTerrainRelaidField == null) {
+            return;
+        }
+        try {
+            Object manager = irisGetPipelineManager.invoke(null);
+            Object pipeline = pipelineField.get(manager);
+            if (pipeline == null) {
+                return;
+            }
+
+            Object shadowRenderer = shaderPipelineShadowRendererField.get(pipeline);
+            Object shadowTargets = shaderPipelineShadowRenderTargetsField.get(pipeline);
+            if (shadowRenderer == null || shadowTargets == null) {
+                return;
+            }
+
+            state.shaderShadowRenderer = shadowRenderer;
+            state.shaderShadowTargets = shadowTargets;
+
+            boolean[] flipped = (boolean[])shadowTargetsFlippedField.get(shadowTargets);
+            state.shaderShadowFlipped = flipped == null ? null : flipped.clone();
+            state.shaderShadowFullClearRequired =
+                    shadowTargetsFullClearRequiredField.getBoolean(shadowTargets);
+            state.shaderShadowTranslucentDepthDirty =
+                    shadowTargetsTranslucentDepthDirtyField.getBoolean(shadowTargets);
+            state.shaderShadowTerrainSnapshotValid =
+                    shadowTargetsTerrainSnapshotValidField.getBoolean(shadowTargets);
+
+            state.shaderShadowPreSubmitActive =
+                    shadowRendererPreSubmitActiveField.getBoolean(shadowRenderer);
+            state.shaderShadowLastRelayNanos =
+                    shadowRendererLastRelayNanosField.getLong(shadowRenderer);
+            state.shaderShadowLastGraphShadowAngle =
+                    shadowRendererLastGraphShadowAngleField.getFloat(shadowRenderer);
+            state.shaderShadowRelayShadowAngle =
+                    shadowRendererRelayShadowAngleField.getFloat(shadowRenderer);
+            state.shaderShadowPreSubmittedShadowAngle =
+                    shadowRendererPreSubmittedShadowAngleField.getFloat(shadowRenderer);
+            state.shaderShadowActiveShadowAngle =
+                    shadowRendererActiveShadowAngleField.getFloat(null);
+            state.shaderShadowTerrainRelaid =
+                    shadowRendererTerrainRelaidField.getBoolean(null);
+            state.shaderShadowIsolationRelayNanos = System.nanoTime();
+            state.shaderShadowStateCaptured = true;
+
+            // A pre-submit belongs to the completed primary camera. Do not let the
+            // nested scope pass consume it. Also suppress the periodic shadow-cache
+            // relay timer for only this nested render. The saved timer is restored
+            // afterwards, so the next real frame still refreshes on Angelica's
+            // normal cadence.
+            shadowRendererPreSubmitActiveField.setBoolean(shadowRenderer, false);
+            shadowRendererLastRelayNanosField.setLong(
+                    shadowRenderer, state.shaderShadowIsolationRelayNanos);
+        } catch (ReflectiveOperationException ignored) {
+            restoreShaderShadowIsolation(state);
+        } catch (IllegalArgumentException ignored) {
+            restoreShaderShadowIsolation(state);
+        }
+    }
+
+    private static void restoreShaderShadowIsolation(RenderState state) {
+        if (state == null || !state.shaderShadowStateCaptured
+                || state.shaderShadowRenderer == null
+                || state.shaderShadowTargets == null) {
+            return;
+        }
+        try {
+            // captureTerrainSnapshot() updates lastRelayNanos. Comparing against the
+            // temporary timestamp distinguishes a real PiP terrain relay from the
+            // SHADOW_TERRAIN_RELAID value left behind by the primary camera.
+            boolean scopeRelayedTerrain =
+                    shadowRendererLastRelayNanosField.getLong(state.shaderShadowRenderer)
+                            != state.shaderShadowIsolationRelayNanos;
+
+            boolean[] flipped =
+                    (boolean[])shadowTargetsFlippedField.get(state.shaderShadowTargets);
+            if (flipped != null && state.shaderShadowFlipped != null) {
+                System.arraycopy(state.shaderShadowFlipped, 0, flipped, 0,
+                        Math.min(flipped.length, state.shaderShadowFlipped.length));
+            }
+            shadowTargetsFullClearRequiredField.setBoolean(
+                    state.shaderShadowTargets, state.shaderShadowFullClearRequired);
+            shadowTargetsTranslucentDepthDirtyField.setBoolean(
+                    state.shaderShadowTargets, state.shaderShadowTranslucentDepthDirty);
+
+            // Normally the scope reuses the primary terrain-shadow cache. If a pack
+            // forces a relay anyway, that relay may have overwritten the cache using
+            // the narrower scope projection. Mark it invalid rather than letting the
+            // next main-camera frame consume that secondary-camera snapshot.
+            shadowTargetsTerrainSnapshotValidField.setBoolean(
+                    state.shaderShadowTargets,
+                    state.shaderShadowTerrainSnapshotValid && !scopeRelayedTerrain);
+
+            shadowRendererPreSubmitActiveField.setBoolean(
+                    state.shaderShadowRenderer, state.shaderShadowPreSubmitActive);
+            shadowRendererLastRelayNanosField.setLong(
+                    state.shaderShadowRenderer, state.shaderShadowLastRelayNanos);
+            shadowRendererLastGraphShadowAngleField.setFloat(
+                    state.shaderShadowRenderer, state.shaderShadowLastGraphShadowAngle);
+            shadowRendererRelayShadowAngleField.setFloat(
+                    state.shaderShadowRenderer, state.shaderShadowRelayShadowAngle);
+            shadowRendererPreSubmittedShadowAngleField.setFloat(
+                    state.shaderShadowRenderer, state.shaderShadowPreSubmittedShadowAngle);
+            shadowRendererActiveShadowAngleField.setFloat(
+                    null, state.shaderShadowActiveShadowAngle);
+            shadowRendererTerrainRelaidField.setBoolean(
+                    null, state.shaderShadowTerrainRelaid);
+        } catch (ReflectiveOperationException ignored) {
+            // The next primary shader pass will reconstruct shadow state normally.
+        } catch (IllegalArgumentException ignored) {
+            // Optional compatibility only.
+        } finally {
+            state.shaderShadowStateCaptured = false;
+        }
     }
 
     /**
@@ -903,6 +1119,13 @@ final class ScopeRenderCompatibility {
                             celeritasShadowRenderListManagerField.get(sectionManager);
                     state.celeritasShadowLists =
                             captureCeleritasListState(shadowListManager);
+                    if (shadowListManager != null && isShaderPackInUse()) {
+                        // A pending primary shadow search belongs to the main camera.
+                        // Keep it queued for the next real frame rather than letting
+                        // the nested shader PiP pass consume/publish it. Do not touch
+                        // this state for the already-stable non-shader path.
+                        celeritasNeedsUpdateField.setBoolean(shadowListManager, false);
+                    }
                 }
                 if (celeritasShadowPassRanThisFrameField != null) {
                     state.celeritasShadowPassRanThisFrame =
@@ -1300,6 +1523,21 @@ final class ScopeRenderCompatibility {
         private float systemTimerFrameTimeCounter;
         private float systemTimerLastFrameTime;
         private Object systemTimerLastStartTime;
+        private boolean shaderShadowStateCaptured;
+        private Object shaderShadowRenderer;
+        private Object shaderShadowTargets;
+        private boolean[] shaderShadowFlipped;
+        private boolean shaderShadowFullClearRequired;
+        private boolean shaderShadowTranslucentDepthDirty;
+        private boolean shaderShadowTerrainSnapshotValid;
+        private boolean shaderShadowPreSubmitActive;
+        private long shaderShadowLastRelayNanos;
+        private long shaderShadowIsolationRelayNanos;
+        private float shaderShadowLastGraphShadowAngle;
+        private float shaderShadowRelayShadowAngle;
+        private float shaderShadowPreSubmittedShadowAngle;
+        private float shaderShadowActiveShadowAngle;
+        private boolean shaderShadowTerrainRelaid;
         private boolean shaderTemporalStateCaptured;
         private Object shaderTemporalParity;
         private boolean shaderTemporalParityOdd;
