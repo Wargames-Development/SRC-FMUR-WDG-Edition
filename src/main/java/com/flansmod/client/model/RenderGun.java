@@ -16,6 +16,7 @@ import com.flansmod.common.guns.item.ItemShootable;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.BulletType;
 import com.flansmod.common.guns.type.GunType;
+import com.flansmod.common.guns.type.ShootableType;
 import com.flansmod.common.paintjob.Paintjob;
 import com.flansmod.common.vector.Vector3f;
 import cpw.mods.fml.relauncher.Side;
@@ -711,7 +712,7 @@ public class RenderGun implements IItemRenderer {
                     BulletType tracerAmmo = loadedAmmo != null && loadedAmmo.tracer
                             ? loadedAmmo : null;
                     if (model.muzzleFlashPoint != null && tracerAmmo != null) {
-                        renderMuzzleTracer(model.flashScale, tracerAmmo.greenTracer);
+                        renderMuzzleTracer(model.flashScale, tracerAmmo);
                         renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(
                                 gunType.getPaintjob(item.getItemDamage())));
                     }
@@ -1541,6 +1542,7 @@ public class RenderGun implements IItemRenderer {
 		float lensY;
 		float lensZ;
 		float lensRadius;
+		boolean preserveLensDepth = false;
 		// Build the rear-lens position in gun render coordinates. Including the gun's
 		// attachment point here automatically accounts for rails and risers.
 		if (scope instanceof AttachmentType) {
@@ -1581,6 +1583,10 @@ public class RenderGun implements IItemRenderer {
 			lensY = scopedGun.pictureInPictureY * gunScale;
 			lensZ = scopedGun.pictureInPictureZ * gunScale;
 			lensRadius = scopedGun.pictureInPictureRadius * gunScale;
+			// Integral optics need screen-space centering, but their model-specific ADS
+			// offsets already establish a usable distance. Preserve that depth so a
+			// small lens does not pull the entire weapon into the camera.
+			preserveLensDepth = !scopedGun.pictureInPictureAutoDepth;
 		} else {
 			return;
 		}
@@ -1612,7 +1618,7 @@ public class RenderGun implements IItemRenderer {
 		float eyeRadius = (yRadius + zRadius) * 0.5F;
 		// Perspective size is projectionScale * radius / distance. Pick the distance
 		// from the physical lens radius so differently scaled optics appear consistent.
-		float targetEyeZ = -Math.max(0.052F,
+		float targetEyeZ = preserveLensDepth ? eyeZ : -Math.max(0.052F,
 				Math.abs(PROJECTION_BUFFER.get(5)) * eyeRadius / PIP_TARGET_LENS_NDC_RADIUS);
 
 		float determinant = m0 * (m5 * m10 - m9 * m6)
@@ -1925,8 +1931,10 @@ public class RenderGun implements IItemRenderer {
      * Bridges the visible muzzle to the synchronized entity tracer without
      * predicting a separate projectile path.
      */
-    private void renderMuzzleTracer(float flashScale, boolean greenTracer) {
-        float length = 0.65F / Math.max(0.05F, Math.abs(flashScale));
+    private void renderMuzzleTracer(float flashScale, BulletType tracerAmmo) {
+        boolean greenTracer = tracerAmmo.greenTracer;
+        float tracerScale = tracerAmmo.tracerScale;
+        float length = 0.65F * tracerScale / Math.max(0.05F, Math.abs(flashScale));
         float glowRed = greenTracer ? 0F : 1F;
         float glowGreen = greenTracer ? 1F : 0F;
         float accentRed = greenTracer ? 0.22F : 1F;
@@ -1948,10 +1956,10 @@ public class RenderGun implements IItemRenderer {
             GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
             renderEngine.bindTexture(greenTracer ? GREEN_TRACER_TEXTURE : RED_TRACER_TEXTURE);
 
-            drawMuzzleTracerLine(length, 9F, glowRed, glowGreen, 0F, 0.12F);
-            drawMuzzleTracerLine(length, 5F,
+            drawMuzzleTracerLine(length, 9F * tracerScale, glowRed, glowGreen, 0F, 0.12F);
+            drawMuzzleTracerLine(length, 5F * tracerScale,
                     greenTracer ? 0.03F : 1F, greenTracer ? 1F : 0.03F, 0F, 0.30F);
-            drawMuzzleTracerLine(length, 2F, accentRed, coreGreen, 0.08F, 0.95F);
+            drawMuzzleTracerLine(length, 2F * tracerScale, accentRed, coreGreen, 0.08F, 0.95F);
         } finally {
             GL11.glPopAttrib();
             GL11.glColor4f(1F, 1F, 1F, 1F);
@@ -1966,6 +1974,11 @@ public class RenderGun implements IItemRenderer {
                     && ammoStack.getItemDamage() < ammoStack.getMaxDamage()) {
                 BulletType bulletType = ((ItemBullet)ammoStack.getItem()).type;
                 return bulletType;
+            }
+        }
+        for (ShootableType ammoType : gunType.ammo) {
+            if (ammoType instanceof BulletType && ((BulletType)ammoType).internalProjectile) {
+                return (BulletType)ammoType;
             }
         }
         return null;

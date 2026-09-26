@@ -32,6 +32,7 @@ import cpw.mods.fml.relauncher.Side;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiGameOver;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.ScaledResolution;
@@ -261,6 +262,36 @@ public class TickHandlerClient {
 
     public static void triggerShotScreenShake(float degrees) {
         triggerScreenShake(degrees);
+    }
+
+    private static void renderHeatBar(Minecraft mc, ItemStack gunStack, GunType gunType,
+                                      int screenWidth, int screenHeight) {
+        int width = 54;
+        int left = screenWidth / 2 - width / 2;
+        int top = screenHeight / 2 + 13;
+        float heatRatio = MathHelper.clamp_float(ItemGun.getHeat(gunStack) / gunType.maxHeat, 0F, 1F);
+        int lockoutTicks = ItemGun.getOverheatTicks(gunStack);
+        float displayRatio = lockoutTicks > 0
+                ? MathHelper.clamp_float(lockoutTicks / (float) gunType.overheatLockoutTicks, 0F, 1F)
+                : heatRatio;
+        int filled = Math.round((width - 2) * displayRatio);
+        int fade = Math.round(220F * heatRatio);
+        int color = lockoutTicks > 0 ? 0xA0FF3030
+                : 0xA0000000 | 0x00FF0000 | ((255 - fade) << 8) | (255 - fade);
+
+        Gui.drawRect(left, top, left + width, top + 4, 0x60000000);
+        Gui.drawRect(left + 1, top + 1, left + 1 + filled, top + 3, color);
+
+        if (lockoutTicks > 0) {
+            if (!ItemGun.hasActiveCoolingAttempted(gunStack)) {
+                int timingMarker = left + width / 2;
+                Gui.drawRect(timingMarker, top - 1, timingMarker + 1, top + 5, 0xE0FFFFFF);
+            }
+            String label = String.format("OVERHEATED %.1fs", lockoutTicks / 20F);
+            mc.fontRenderer.drawStringWithShadow(label,
+                    screenWidth / 2 - mc.fontRenderer.getStringWidth(label) / 2,
+                    top + 6, 0xC0FF5555);
+        }
     }
 
     @SubscribeEvent
@@ -559,6 +590,15 @@ public class TickHandlerClient {
 
         }
 
+        if (!event.isCancelable() && event.type == ElementType.HOTBAR && mc.thePlayer != null) {
+            ItemStack heldStack = mc.thePlayer.inventory.getCurrentItem();
+            if (heldStack != null && heldStack.getItem() instanceof ItemGun) {
+                GunType heldGunType = ((ItemGun) heldStack.getItem()).type;
+                if (heldGunType.useHeatSystem)
+                    renderHeatBar(mc, heldStack, heldGunType, i, j);
+            }
+        }
+
         //弹药
         if (!event.isCancelable() && event.type == ElementType.HOTBAR && FlansMod.bulletGuiEnable) {
             //Player ammo overlay
@@ -568,7 +608,7 @@ public class TickHandlerClient {
                     ItemGun gunItem = (ItemGun) stack.getItem();
                     GunType gunType = gunItem.type;
                     int x = 40;
-                    for (int n = 0; n < gunType.getNumAmmoItemsInGun(stack); n++) {
+                    for (int n = 0; !gunType.useHeatSystem && n < gunType.getNumAmmoItemsInGun(stack); n++) {
                         ItemStack bulletStack = ((ItemGun) stack.getItem()).getBulletItemStack(stack, n);
                         if (bulletStack != null && bulletStack.getItem() != null && bulletStack.getItemDamage() < bulletStack.getMaxDamage()) {
                             RenderHelper.enableGUIStandardItemLighting();

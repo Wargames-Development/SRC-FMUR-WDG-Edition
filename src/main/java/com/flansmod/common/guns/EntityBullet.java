@@ -1492,10 +1492,14 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
                     if (!worldObj.isRemote && mat != Material.air && mat != Material.glass) {
                         double[] normal = getHitNormal(raytraceResult.sideHit);
-                        FlansMod.getPacketHandler().sendToAllAround(new PacketParticle("flansmod.bullethole",
+                        FlansMod.getPacketHandler().sendToAllAround(new PacketParticle(type.internalProjectile
+                                        ? "flansmod.blasterscorch" : "flansmod.bullethole",
                                         hitVec.xCoord, hitVec.yCoord, hitVec.zCoord,
                                         normal[0], normal[1], normal[2], 1.0F),
                                 hitVec.xCoord, hitVec.yCoord, hitVec.zCoord, 64F, dimension);
+                        if (type.internalProjectile) {
+                            spawnBlasterImpactSparks(hitVec.xCoord, hitVec.yCoord, hitVec.zCoord, normal);
+                        }
                     }
 
                     if (penetrationBlockCount < type.penetratingBlockMaxNum) {
@@ -2225,6 +2229,15 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     @SideOnly(Side.CLIENT)
     private void spawnHitParticles(double x, double y, double z) {
         FlansMod.proxy.spawnParticle("explode", x, y, z, 0, 0, 0);
+    }
+
+    private void spawnBlasterImpactSparks(double x, double y, double z, double[] normal) {
+        for (int i = 0; i < 7; i++) {
+            FlansMod.getPacketHandler().sendToAllAround(new PacketParticle("flansmod.electricalsparks",
+                            x + normal[0] * 0.03D, y + normal[1] * 0.03D, z + normal[2] * 0.03D,
+                            0D, 0D, 0D, 1.0F),
+                    x, y, z, 64F, dimension);
+        }
     }
 
     public DamageSource getBulletDamage(boolean headshot) {

@@ -802,7 +802,8 @@ public class FlansMod {
                         if (infoType.shortName != null) {
                             switch (type) {
                                 case bullet:
-                                    bulletItems.add(ItemCompat.setUnlocalizedName(new ItemBullet((BulletType) infoType), infoType.shortName));
+                                    if (!((BulletType) infoType).internalProjectile)
+                                        bulletItems.add(ItemCompat.setUnlocalizedName(new ItemBullet((BulletType) infoType), infoType.shortName));
                                     break;
                                 case attachment:
                                     attachmentItems.add(ItemCompat.setUnlocalizedName(new ItemAttachment((AttachmentType) infoType), infoType.shortName));

@@ -154,6 +154,11 @@ public class PlayerData {
 		if (shootTimeLeft > 0)
 			shootTimeLeft--;
 
+		if (!player.worldObj.isRemote) {
+			for (ItemStack inventoryStack : player.inventory.mainInventory)
+				ItemGun.tickHeat(inventoryStack, player);
+		}
+
 		ItemStack rightGun = player.getCurrentEquippedItem();
 		ItemStack leftGun = null;
 		boolean offHandActive = rightGun != null

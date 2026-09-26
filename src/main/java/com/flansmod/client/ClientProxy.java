@@ -489,6 +489,11 @@ public class ClientProxy extends CommonProxy {
                 BulletHoleDecalRenderer.addBulletHole(p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
                 return null;
             }
+            if (p_72726_1_.equals("flansmod.blasterscorch")) {
+                BulletHoleDecalRenderer.addBulletHole(p_72726_2_, p_72726_4_, p_72726_6_,
+                        p_72726_8_, p_72726_10_, p_72726_12_, true);
+                return null;
+            }
             if (p_72726_1_.equals("flansmod.tracerricochet")
                     || p_72726_1_.equals("flansmod.greentracerricochet")) {
                 TracerRicochetRenderer.addRicochet(p_72726_2_, p_72726_4_, p_72726_6_,

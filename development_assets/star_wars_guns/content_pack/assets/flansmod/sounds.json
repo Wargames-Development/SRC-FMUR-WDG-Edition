@@ -1,0 +1,9 @@
+{
+  "starwars_t21": { "category": "player", "sounds": ["flansmod:starwars_t21"] },
+  "starwars_a280": { "category": "player", "sounds": ["flansmod:starwars_a280"] },
+  "starwars_dc15a": { "category": "player", "sounds": ["flansmod:starwars_dc15a"] },
+  "starwars_dc15s": { "category": "player", "sounds": ["flansmod:starwars_dc15s"] },
+  "starwars_e11": { "category": "player", "sounds": ["flansmod:starwars_e11"] },
+  "starwars_overheat": { "category": "player", "sounds": ["flansmod:starwars_overheat"] },
+  "starwars_cooleddown": { "category": "player", "sounds": ["flansmod:starwars_cooleddown"] }
+}

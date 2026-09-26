@@ -1,0 +1,20 @@
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    def toolClasses = root.file("${root.buildDir}/tmp/star-wars-gun-icons/classes")
+
+    def compileExtractor = root.task('compileStarWarsGunIconExtractor', type: JavaCompile) {
+        source = root.fileTree('tools/star_wars_gun_icons/java') { include '**/*.java' }
+        classpath = root.sourceSets.main.runtimeClasspath
+        destinationDir = toolClasses
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+        options.encoding = 'UTF-8'
+    }
+
+    root.task('extractStarWarsGunGeometry', type: JavaExec,
+            dependsOn: [root.tasks.compileJava, compileExtractor]) {
+        classpath = root.files(toolClasses) + root.sourceSets.main.runtimeClasspath
+        main = 'StarWarsGunGeometryExtractor'
+        args root.file("${root.buildDir}/star-wars-gun-icons/meshes").absolutePath
+    }
+}

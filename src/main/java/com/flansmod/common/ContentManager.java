@@ -138,7 +138,8 @@ public class ContentManager {
                         if (infoType.shortName != null) {
                             switch (type) {
                                 case bullet:
-                                    FlansMod.bulletItems.add(ItemCompat.setUnlocalizedName(new ItemBullet((BulletType) infoType), infoType.shortName));
+                                    if (!((BulletType) infoType).internalProjectile)
+                                        FlansMod.bulletItems.add(ItemCompat.setUnlocalizedName(new ItemBullet((BulletType) infoType), infoType.shortName));
                                     break;
                                 case attachment:
                                     FlansMod.attachmentItems.add(ItemCompat.setUnlocalizedName(new ItemAttachment((AttachmentType) infoType), infoType.shortName));

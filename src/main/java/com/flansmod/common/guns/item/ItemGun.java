@@ -78,6 +78,9 @@ import static com.flansmod.client.FlansModClient.*;
 public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptionable, ILockable {
 
     private static final ExecutorService threadPool = Executors.newFixedThreadPool(2);
+    private static final String HEAT_TAG = "FlansHeat";
+    private static final String OVERHEAT_TICKS_TAG = "FlansOverheatTicks";
+    private static final String ACTIVE_COOLING_ATTEMPTED_TAG = "FlansActiveCoolingAttempted";
     public static boolean crouching = false;
     public static boolean sprinting = false;
     public static boolean shooting = false;
@@ -680,8 +683,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         boolean canActuallyHipFire = (gunType.hipFireWhileSprinting != 2) && !(gunType.hipFireWhileSprinting == 0 && FlansMod.disableSprintHipFireByDefault);
         if (FlansModClient.shootTime(left) <= 0 && ((sprinting && isScoped) || !sprinting || canActuallyHipFire) && !(player.ridingEntity instanceof EntitySeat)) {
 //			boolean onLastBullet = false;
-            boolean hasAmmo = false;
-            for (int i = 0; i < gunType.getNumAmmoItemsInGun(stack); i++) {
+            boolean hasAmmo = gunType.useHeatSystem && getOverheatTicks(stack) <= 0;
+            for (int i = 0; !gunType.useHeatSystem && i < gunType.getNumAmmoItemsInGun(stack); i++) {
                 ItemStack bulletStack = getBulletItemStack(stack, i);
                 if (bulletStack != null && bulletStack.getItem() != null && bulletStack.getItemDamage() < bulletStack.getMaxDamage()) {
 //					if(bulletStack.getMaxDamage() - bulletStack.getItemDamage() == 1 && gunType.model.slideLockOnEmpty)
@@ -1277,13 +1280,17 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         sprinting = entityplayer.isSprinting();
         if (type.deployable || !type.usableByPlayers)
             return gunStack;
+        if (gunType.useHeatSystem && getOverheatTicks(gunStack) > 0)
+            return gunStack;
 
         //Shoot delay ticker is at (or below) 0. Try and shoot the next bullet
         if (((left && data.shootTimeLeft <= 0) || (!left && data.shootTimeRight <= 0)) && !data.isReloading(gunStack)) {
             //Go through the bullet stacks in the gun and see if any of them are not null
             int bulletID = 0;
             ItemStack bulletStack = null;
-            for (; bulletID < gunType.getNumAmmoItemsInGun(gunStack); bulletID++) {
+            ShootableType heatProjectile = gunType.useHeatSystem && !gunType.ammo.isEmpty()
+                    && gunType.ammo.get(0) instanceof BulletType ? gunType.ammo.get(0) : null;
+            for (; !gunType.useHeatSystem && bulletID < gunType.getNumAmmoItemsInGun(gunStack); bulletID++) {
                 ItemStack checkingStack = getBulletItemStack(gunStack, bulletID);
                 if (checkingStack != null && checkingStack.getItem() != null && checkingStack.getItemDamage() < checkingStack.getMaxDamage()) {
                     bulletStack = checkingStack;
@@ -1293,7 +1300,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             boolean canActuallyHipFire = (gunType.hipFireWhileSprinting != 2) && !(gunType.hipFireWhileSprinting == 0 && FlansMod.disableSprintHipFireByDefault);
             //If no bullet stack was found, reload
 
-            if (bulletStack == null && FlansMod.reloadOnRightClick) {
+            if (bulletStack == null && heatProjectile == null && FlansMod.reloadOnRightClick) {
                 int maxAmmo = type.getNumAmmoItemsInGun(gunStack);
                 boolean singlesReload = maxAmmo > 1;
                 int reloadCount;
@@ -1383,7 +1390,9 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
 
             }
             //A bullet stack was found, so try shooting with it
-            else if (bulletStack != null && bulletStack.getItem() instanceof ItemShootable && ((sprinting && data.isScoped) || !sprinting || canActuallyHipFire) && entityplayer.ridingEntity == null) {
+            else if ((heatProjectile != null || (bulletStack != null && bulletStack.getItem() instanceof ItemShootable))
+                    && ((sprinting && data.isScoped) || !sprinting || canActuallyHipFire)
+                    && entityplayer.ridingEntity == null) {
                 if (!entityplayer.isEntityAlive()) {
                     data.stopShooting();
                     return gunStack;
@@ -1396,14 +1405,20 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 MinecraftForge.EVENT_BUS.post(gunFireEvent);
                 if (gunFireEvent.isCanceled()) return gunStack;
 
-                shoot(gunStack, gunType, world, bulletStack, entityplayer, left);
+                ShootableType projectile = heatProjectile != null ? heatProjectile
+                        : ((ItemShootable) bulletStack.getItem()).type;
+                shoot(gunStack, gunType, world, projectile, bulletStack, entityplayer, left);
                 canClick = true;
 
-                //Damage the bullet item
-                bulletStack.setItemDamage(bulletStack.getItemDamage() + 1);
+                if (gunType.useHeatSystem) {
+                    addHeat(gunStack, gunType, entityplayer);
+                } else {
+                    //Damage the bullet item
+                    bulletStack.setItemDamage(bulletStack.getItemDamage() + 1);
 
-                //Update the stack in the gun
-                setBulletItemStack(gunStack, bulletStack, bulletID);
+                    //Update the stack in the gun
+                    setBulletItemStack(gunStack, bulletStack, bulletID);
+                }
 
                 if (gunType.consumeGunUponUse)
                     return null;
@@ -1429,6 +1444,89 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         return gunStack;
     }
 
+    public static float getHeat(ItemStack gunStack) {
+        return gunStack != null && gunStack.hasTagCompound()
+                ? Math.max(0F, gunStack.getTagCompound().getFloat(HEAT_TAG)) : 0F;
+    }
+
+    public static int getOverheatTicks(ItemStack gunStack) {
+        return gunStack != null && gunStack.hasTagCompound()
+                ? Math.max(0, gunStack.getTagCompound().getInteger(OVERHEAT_TICKS_TAG)) : 0;
+    }
+
+    public static boolean hasActiveCoolingAttempted(ItemStack gunStack) {
+        return gunStack != null && gunStack.hasTagCompound()
+                && gunStack.getTagCompound().getBoolean(ACTIVE_COOLING_ATTEMPTED_TAG);
+    }
+
+    private static void addHeat(ItemStack gunStack, GunType gunType, EntityPlayer player) {
+        if (!gunStack.hasTagCompound())
+            gunStack.setTagCompound(new NBTTagCompound());
+        NBTTagCompound tags = gunStack.getTagCompound();
+        float previousHeat = getHeat(gunStack);
+        float heat = Math.min(gunType.maxHeat, getHeat(gunStack) + gunType.heatPerShot);
+        tags.setFloat(HEAT_TAG, heat);
+        if (previousHeat < gunType.maxHeat && heat >= gunType.maxHeat) {
+            tags.setInteger(OVERHEAT_TICKS_TAG, gunType.overheatLockoutTicks);
+            tags.setBoolean(ACTIVE_COOLING_ATTEMPTED_TAG, false);
+            playHeatSound(player, gunType.overheatSound, gunType);
+        }
+    }
+
+    /** Server-side cooling for an inventory stack. */
+    public static void tickHeat(ItemStack gunStack, EntityPlayer player) {
+        if (gunStack == null || !(gunStack.getItem() instanceof ItemGun))
+            return;
+        GunType gunType = ((ItemGun) gunStack.getItem()).type;
+        if (!gunType.useHeatSystem || !gunStack.hasTagCompound())
+            return;
+
+        NBTTagCompound tags = gunStack.getTagCompound();
+        int overheatTicks = getOverheatTicks(gunStack);
+        if (overheatTicks > 0) {
+            overheatTicks--;
+            tags.setInteger(OVERHEAT_TICKS_TAG, overheatTicks);
+            if (overheatTicks == 0)
+                finishCooldown(gunStack, gunType, player);
+        } else {
+            float cooledHeat = Math.max(0F, getHeat(gunStack) - gunType.heatCooldownPerTick);
+            tags.setFloat(HEAT_TAG, cooledHeat);
+        }
+    }
+
+    /** Server-authoritative active cooling window used by the reload key. */
+    public static boolean tryEarlyCooldown(ItemStack gunStack, GunType gunType, EntityPlayer player) {
+        if (gunStack == null || gunType == null || !gunType.useHeatSystem)
+            return false;
+        int overheatTicks = getOverheatTicks(gunStack);
+        int targetTick = gunType.overheatLockoutTicks / 2;
+        int successWindow = Math.max(2, gunType.overheatLockoutTicks / 20);
+        if (overheatTicks <= 0 || hasActiveCoolingAttempted(gunStack))
+            return false;
+        gunStack.getTagCompound().setBoolean(ACTIVE_COOLING_ATTEMPTED_TAG, true);
+        if (Math.abs(overheatTicks - targetTick) > successWindow)
+            return false;
+        finishCooldown(gunStack, gunType, player);
+        return true;
+    }
+
+    private static void finishCooldown(ItemStack gunStack, GunType gunType, EntityPlayer player) {
+        if (!gunStack.hasTagCompound())
+            gunStack.setTagCompound(new NBTTagCompound());
+        gunStack.getTagCompound().setInteger(OVERHEAT_TICKS_TAG, 0);
+        gunStack.getTagCompound().setFloat(HEAT_TAG, 0F);
+        gunStack.getTagCompound().setBoolean(ACTIVE_COOLING_ATTEMPTED_TAG, false);
+        playHeatSound(player, gunType.cooledDownSound, gunType);
+    }
+
+    private static void playHeatSound(EntityPlayer player, String sound, GunType gunType) {
+        if (player == null || player.worldObj.isRemote || sound == null || sound.isEmpty())
+            return;
+        PacketPlaySound.sendSoundPacket(player.posX, player.posY, player.posZ,
+                gunType.gunSoundRange, player.dimension, sound, false, false,
+                gunType.blasterSoundVolume);
+    }
+
     /**
      * Reload方法简化版 , 简化传参
      */
@@ -1442,7 +1540,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
      * authoritative inventory exchange is deferred until the reload completes.
      */
     public boolean canReload(ItemStack gunStack, GunType gunType, IInventory inventory, boolean forceReload) {
-        if (gunStack == null || gunType.deployable || gunType.ammo.isEmpty()
+        if (gunStack == null || gunType.useHeatSystem || gunType.deployable || gunType.ammo.isEmpty()
                 || forceReload && !gunType.canForceReload)
             return false;
 
@@ -1470,6 +1568,9 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
      * Reload方法 , 换弹逻辑所在 , 检查枪支的弹药槽，寻找可用的弹药并装填到枪支中 , 若返回 true 则换弹成功 反之失败
      */
     public boolean reload(ItemStack gunStack, GunType gunType, World world, Entity entity, IInventory inventory, boolean creative, boolean forceReload, boolean combineAmmoOnReload, boolean ammoToUpperInventory) {
+
+        if (gunType.useHeatSystem)
+            return false;
 
         GunReloadEvent gunReloadEvent = new GunReloadEvent(entity, gunStack);
         MinecraftForge.EVENT_BUS.post(gunReloadEvent);
@@ -1549,10 +1650,10 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
     /**
      * Method for shooting to avoid repeated code
      */
-    private void shoot(ItemStack stack, GunType gunType, World world, ItemStack bulletStack, EntityPlayer entityPlayer, boolean left) {
+    private void shoot(ItemStack stack, GunType gunType, World world, ShootableType bullet,
+            ItemStack bulletStack, EntityPlayer entityPlayer, boolean left) {
         //flash(entityplayer);
 
-        ShootableType bullet = ((ItemShootable) bulletStack.getItem()).type;
         boolean lastBullet = false;
         ItemStack[] bulletStacks = new ItemStack[type.getNumAmmoItemsInGun(stack)];
         for (int i = 0; i < type.getNumAmmoItemsInGun(stack); i++) {
@@ -1561,8 +1662,18 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 lastBullet = true;
         }
 
-        // Play a sound if the previous sound has finished
-        if (soundDelay <= 0 && gunType.shootSound != null) {
+        PlayerData shooterData = PlayerHandler.getPlayerData(entityPlayer);
+        boolean shouldPlayBurstSound = true;
+        if (gunType.burstSoundOnce && gunType.getFireMode(stack) == EnumFireMode.BURST
+                && shooterData != null) {
+            int roundsRemaining = left ? shooterData.burstRoundsRemainingLeft
+                    : shooterData.burstRoundsRemainingRight;
+            shouldPlayBurstSound = roundsRemaining >= gunType.getNumBurstRounds(stack);
+        }
+
+        // Play a sound if the previous sound has finished. Some burst recordings
+        // already contain every shot and should only start with the first projectile.
+        if (shouldPlayBurstSound && soundDelay <= 0 && gunType.shootSound != null) {
             AttachmentType barrel = gunType.getBarrel(stack);
             AttachmentType grip = gunType.getGrip(stack);
 
@@ -1580,7 +1691,10 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 soundToPlay = gunType.shootSound;
 
             if (soundToPlay != null)
-                PacketPlaySound.sendSoundPacket(entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ, type.gunSoundRange, entityPlayer.dimension, soundToPlay, gunType.distortSound, shouldSilence);
+                PacketPlaySound.sendSoundPacket(entityPlayer.posX, entityPlayer.posY, entityPlayer.posZ,
+                        type.gunSoundRange, entityPlayer.dimension, soundToPlay,
+                        gunType.distortSound, shouldSilence,
+                        gunType.useHeatSystem ? gunType.blasterSoundVolume : -1F);
             soundDelay = gunType.shootSoundLength;
             PacketPlaySound.sendDistantGunSound(entityPlayer.posX, entityPlayer.posY,
                     entityPlayer.posZ, entityPlayer.dimension, gunType, bullet, silenced);
@@ -1597,10 +1711,13 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         FlansMod.packetHandler.sendToAllAround(muzzlePacket, entityPlayer.posX, entityPlayer.posY,
                 entityPlayer.posZ, 160, entityPlayer.dimension);
 
-        if (!world.isRemote && bulletStack.getItem() instanceof ItemShootable) {
+        if (!world.isRemote && (bullet instanceof BulletType
+                || (bulletStack != null && bulletStack.getItem() instanceof ItemShootable))) {
             // Spawn the bullet entities
-            ItemShootable itemShootable = (ItemShootable) bulletStack.getItem();
-            ShootableType shootableType = itemShootable.type;
+            ItemShootable itemShootable = bulletStack != null
+                    && bulletStack.getItem() instanceof ItemShootable
+                    ? (ItemShootable) bulletStack.getItem() : null;
+            ShootableType shootableType = bullet;
             int numBullets = -1;
             float spread = -1.0F;
 
@@ -1650,14 +1767,24 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     shooterVelocityZ = playerData.snapshots[0].pos.z - playerData.snapshots[1].pos.z;
                 }
                 for (int k = 0; k < numBullets; k++) {
-                    EntityShootable shootableEntity = itemShootable.getEntity(
-                            world,
-                            entityPlayer,
-                            gunType.getDamage(stack),
-                            gunType.getBulletSpeed(stack, bulletStack),
-                            numBullets > 1,
-                            bulletStack.getItemDamage(),
-                            gunType, spread, type.isDuckBill() ? spread * 2.0F : spread);
+                    EntityShootable shootableEntity;
+                    if (itemShootable != null) {
+                        shootableEntity = itemShootable.getEntity(
+                                world,
+                                entityPlayer,
+                                gunType.getDamage(stack),
+                                gunType.getBulletSpeed(stack, bulletStack),
+                                numBullets > 1,
+                                bulletStack.getItemDamage(),
+                                gunType, spread, type.isDuckBill() ? spread * 2.0F : spread);
+                    } else {
+                        BulletType bulletType = (BulletType) shootableType;
+                        shootableEntity = new EntityBullet(world, entityPlayer,
+                                gunType.getDamage(stack), bulletType,
+                                gunType.getBulletSpeed(stack) * bulletType.speedMultiplier,
+                                numBullets > 1, gunType, spread,
+                                type.isDuckBill() ? spread * 2.0F : spread);
+                    }
                     if (shootableType instanceof BulletType) {
                         shootableEntity.motionX += shooterVelocityX;
                         shootableEntity.motionZ += shooterVelocityZ;

@@ -17,10 +17,15 @@ public class BulletHoleDecalRenderer {
     private static final List<BulletHoleDecal> DECALS = new ArrayList<BulletHoleDecal>();
 
     public static void addBulletHole(double x, double y, double z, double nx, double ny, double nz) {
+        addBulletHole(x, y, z, nx, ny, nz, false);
+    }
+
+    public static void addBulletHole(double x, double y, double z, double nx, double ny, double nz,
+            boolean blasterScorch) {
         if (DECALS.size() >= MAX_DECALS) {
             DECALS.remove(0);
         }
-        DECALS.add(new BulletHoleDecal(x, y, z, nx, ny, nz));
+        DECALS.add(new BulletHoleDecal(x, y, z, nx, ny, nz, blasterScorch));
     }
 
     public static void tick() {
@@ -68,7 +73,13 @@ public class BulletHoleDecalRenderer {
 
             tessellator.startDrawing(GL11.GL_TRIANGLE_FAN);
             tessellator.setBrightness(15728880);
-            tessellator.setColorRGBA_F(0.018F, 0.016F, 0.014F, alpha);
+            if (decal.blasterScorch) {
+                float heatGlow = Math.max(0F, 1F - decal.age / 18F);
+                tessellator.setColorRGBA_F(0.03F + heatGlow * 0.72F,
+                        0.012F + heatGlow * 0.08F, 0.006F, alpha);
+            } else {
+                tessellator.setColorRGBA_F(0.018F, 0.016F, 0.014F, alpha);
+            }
             decal.addVertex(tessellator, x, y, z, 0F, 0F);
             for (int i = 0; i <= POINT_COUNT; i++) {
                 int point = i % POINT_COUNT;
@@ -93,17 +104,20 @@ public class BulletHoleDecalRenderer {
         private final double z;
         private final float rotation;
         private final float scale;
+        private final boolean blasterScorch;
         private final float[] radius = new float[POINT_COUNT];
         private int age;
 
-        private BulletHoleDecal(double x, double y, double z, double nx, double ny, double nz) {
+        private BulletHoleDecal(double x, double y, double z, double nx, double ny, double nz,
+                boolean blasterScorch) {
             face = getFace(nx, ny, nz);
             double offset = 0.010D;
             this.x = x + nx * offset;
             this.y = y + ny * offset;
             this.z = z + nz * offset;
             rotation = (float) (Math.random() * Math.PI * 2D);
-            scale = 0.048F + (float) Math.random() * 0.018F;
+            scale = (0.048F + (float) Math.random() * 0.018F) * (blasterScorch ? 1.45F : 1F);
+            this.blasterScorch = blasterScorch;
             for (int i = 0; i < POINT_COUNT; i++) {
                 radius[i] = 0.55F + (float) Math.random() * 0.62F;
             }

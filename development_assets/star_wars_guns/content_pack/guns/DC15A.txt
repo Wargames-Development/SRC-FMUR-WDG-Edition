@@ -1,0 +1,46 @@
+Name DC-15A Blaster Rifle
+ShortName starWarsDC15A
+Icon StarWars/DC15A
+Description Star Wars blaster model by invalidsyntax
+Colour 255 255 255
+
+Ammo starWarsBlasterBolt
+UseHeatSystem True
+MaxHeat 180
+HeatPerShot 7.5
+HeatCooldownPerTick 0.8
+HeatSpreadPenalty 0.75
+HeatRecoilPenalty 0.4
+OverheatLockoutTicks 100
+OverheatSound starwars_overheat
+CooledDownSound starwars_cooleddown
+BlasterSoundVolume 30
+CanForceReload False
+AllowRearm False
+Damage 16
+RoundsPerMin 720
+Mode FullAuto
+BulletSpeed 40
+Accuracy 0.3
+AimingSpreadConstant 0.35
+Recoil 1.5
+RandomRecoilRange 0.35
+DecreaseRecoil 1.0
+RandomRecoilYawRange 0.35
+DecreaseRecoilYaw 1.0
+ShootSound starwars_dc15a
+GunSoundRange 80
+EmptyClickSound emptyclick
+CanShootUnderwater False
+Deployable False
+OneHanded False
+ShowMuzzleFlashParticle True
+
+Model BFMCpack.DC15A
+ModelScale 1.15
+Texture StarWars/DC15A
+UseLeftArmGLTFAnimation True
+
+
+AllowAllAttachments False
+CanAIUse true

@@ -30,6 +30,7 @@ public final class MuzzleFlashRenderer {
                 * BASE_556_SIZE * getCaliberScale(loadedAmmo) * downwardOnlyVariation;
         float nonSmokeUnit = unit * NON_SMOKE_SIZE_MULTIPLIER;
         float phase = remainingTicks >= 2 ? 0F : 1F;
+        boolean blaster = loadedAmmo != null && loadedAmmo.internalProjectile;
         double rotationRadians = Math.toRadians(rotationDegrees);
         Random random = new Random(0x4D555A5AL + pattern * 0x9E3779B9L);
         int flameParticleCount = 14 + random.nextInt(9);
@@ -72,8 +73,12 @@ public final class MuzzleFlashRenderer {
                     float size = (core ? 0.36F + random.nextFloat() * 0.18F
                             : 0.32F + random.nextFloat() * 0.24F) * nonSmokeUnit;
                     float red = 1F;
-                    float green = core ? 1F : (middle ? 0.92F : 0.79F);
-                    float blue = core ? 0.86F : (middle ? 0.46F : 0.22F);
+                    float green = blaster
+                            ? (core ? 0.92F : (middle ? 0.25F : 0.03F))
+                            : (core ? 1F : (middle ? 0.92F : 0.79F));
+                    float blue = blaster
+                            ? (core ? 0.92F : (middle ? 0.18F : 0.02F))
+                            : (core ? 0.86F : (middle ? 0.46F : 0.22F));
                     float alpha = core ? 0.96F : (middle ? 0.84F : 0.68F);
                     addCrossedParticle(tessellator, axial, y, z, size,
                             red, green, blue, alpha, PUFF_TEXTURE_INDEX);
@@ -93,34 +98,37 @@ public final class MuzzleFlashRenderer {
                 float end = start + (0.46F + random.nextFloat() * 0.72F) * nonSmokeUnit;
                 float width = (0.028F + random.nextFloat() * 0.022F) * nonSmokeUnit;
                 addSpark(tessellator, start, end, y, z, width,
-                        1F, 0.94F, 0.52F, 0.9F);
+                        1F, blaster ? 0.18F : 0.94F,
+                        blaster ? 0.12F : 0.52F, 0.9F);
             }
             tessellator.draw();
 
-            // Semi-transparent smoke remains attached to the two-frame fireball.
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            tessellator.startDrawingQuads();
-            tessellator.setBrightness(ambientBrightness);
-            for (int direction = 0; direction < 4; direction++) {
-                double directionAngle = rotationRadians + direction * Math.PI / 2D;
-                float directionY = (float)Math.cos(directionAngle);
-                float directionZ = (float)Math.sin(directionAngle);
-                float perpendicularY = -directionZ;
-                float perpendicularZ = directionY;
-                int smokeCount = 1 + random.nextInt(3);
-                for (int i = 0; i < smokeCount; i++) {
-                    float distance = (0.16F + phase * 0.25F + i * 0.08F) * unit;
-                    float jitter = (random.nextFloat() - 0.5F) * 0.08F * unit;
-                    float y = directionY * distance + perpendicularY * jitter;
-                    float z = directionZ * distance + perpendicularZ * jitter;
-                    float x = (0.08F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
-                    float size = (0.34F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
-                    addCrossedParticle(tessellator, x, y, z, size,
-                            0.68F, 0.66F, 0.60F, phase == 0F ? 0.16F : 0.095F,
-                            PUFF_TEXTURE_INDEX);
+            // Energy bolts produce a clean flash rather than firearm smoke.
+            if (!blaster) {
+                GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+                tessellator.startDrawingQuads();
+                tessellator.setBrightness(ambientBrightness);
+                for (int direction = 0; direction < 4; direction++) {
+                    double directionAngle = rotationRadians + direction * Math.PI / 2D;
+                    float directionY = (float)Math.cos(directionAngle);
+                    float directionZ = (float)Math.sin(directionAngle);
+                    float perpendicularY = -directionZ;
+                    float perpendicularZ = directionY;
+                    int smokeCount = 1 + random.nextInt(3);
+                    for (int i = 0; i < smokeCount; i++) {
+                        float distance = (0.16F + phase * 0.25F + i * 0.08F) * unit;
+                        float jitter = (random.nextFloat() - 0.5F) * 0.08F * unit;
+                        float y = directionY * distance + perpendicularY * jitter;
+                        float z = directionZ * distance + perpendicularZ * jitter;
+                        float x = (0.08F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
+                        float size = (0.34F + phase * 0.14F + random.nextFloat() * 0.12F) * unit;
+                        addCrossedParticle(tessellator, x, y, z, size,
+                                0.68F, 0.66F, 0.60F, phase == 0F ? 0.16F : 0.095F,
+                                PUFF_TEXTURE_INDEX);
+                    }
                 }
+                tessellator.draw();
             }
-            tessellator.draw();
         } finally {
             GL11.glPopAttrib();
             ShaderRenderCompat.endPrimaryColorOnly(primaryColorOnly);
@@ -130,6 +138,9 @@ public final class MuzzleFlashRenderer {
 
     /** Cartridge-energy tiers relative to a 5.56x45mm muzzle flash. */
     private static float getCaliberScale(BulletType ammo) {
+        if (ammo != null && ammo.internalProjectile) {
+            return 1.6F;
+        }
         if (ammo == null || ammo.shortName == null) {
             return 1F;
         }

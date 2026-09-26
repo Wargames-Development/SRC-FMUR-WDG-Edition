@@ -38,8 +38,12 @@ public class BulletType extends ShootableType {
     public static List<BulletType> bullets = new ArrayList<>();
     /** Enables the dedicated tracer renderer for this ammunition type. */
     public boolean tracer = false;
+    /** Projectile definition used by code only; no inventory item is registered. */
+    public boolean internalProjectile = false;
     /** Uses the green tracer palette. Existing tracer definitions default to red. */
     public boolean greenTracer = false;
+    /** Visual-only multiplier for tracer length, width, and head size. */
+    public float tracerScale = 1F;
     //新增:是否显示炮弹弹着点
     public boolean printExplodePoint = false;
     //新增:子弹命中时掉落物品(用于米粉战车
@@ -302,8 +306,14 @@ public class BulletType extends ShootableType {
                 case "Tracer":
                     tracer = Boolean.parseBoolean(split[1]);
                     break;
+                case "InternalProjectile":
+                    internalProjectile = Boolean.parseBoolean(split[1]);
+                    break;
                 case "TracerColor":
                     greenTracer = "Green".equalsIgnoreCase(split[1]);
+                    break;
+                case "TracerScale":
+                    tracerScale = Math.max(0.1F, Math.min(4F, Float.parseFloat(split[1])));
                     break;
                 case "canLoadChunkWithBullet":
                     canLoadChunkWithBullet = Boolean.parseBoolean(split[1]);

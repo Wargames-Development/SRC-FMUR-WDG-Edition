@@ -1,0 +1,50 @@
+Name E-11 Blaster Rifle
+ShortName starWarsE11
+Icon StarWars/E11
+Description Star Wars blaster model by invalidsyntax
+Colour 255 255 255
+
+Ammo starWarsBlasterBolt
+UseHeatSystem True
+MaxHeat 200
+HeatPerShot 10
+HeatCooldownPerTick 0.9
+HeatSpreadPenalty 0.75
+HeatRecoilPenalty 0.4
+OverheatLockoutTicks 100
+OverheatSound starwars_overheat
+CooledDownSound starwars_cooleddown
+BlasterSoundVolume 30
+CanForceReload False
+AllowRearm False
+Damage 21
+RoundsPerMin 620
+Mode FullAuto SemiAuto
+BulletSpeed 40
+Accuracy 0.6
+AimingSpreadConstant 0.35
+Recoil 1.2
+RandomRecoilRange 0.35
+DecreaseRecoil 1.0
+RandomRecoilYawRange 0.35
+DecreaseRecoilYaw 1.0
+ShootSound starwars_e11
+GunSoundRange 80
+EmptyClickSound emptyclick
+CanShootUnderwater False
+Deployable False
+OneHanded False
+ShowMuzzleFlashParticle True
+
+Model BFMCpack.E11
+ModelScale 0.3
+Texture StarWars/E11
+UseLeftArmGLTFAnimation True
+PictureInPicture -2.71 18.2 0.0 1.1
+PictureInPictureAutoDepth True
+PictureInPictureReticle PIP/StarWarsReticle
+PictureInPictureReticleScale 1.0
+Magnification 1.5
+
+AllowAllAttachments False
+CanAIUse true

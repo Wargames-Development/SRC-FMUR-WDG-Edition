@@ -170,6 +170,10 @@ public class PacketReload extends PacketBase {
 
         if (data != null && gunStack != null && gunStack.getItem() instanceof ItemGun) { // 如果data不为空 gunstack不为空 且 gunstack确实为枪械
             GunType type = ((ItemGun) gunStack.getItem()).type; // 获取枪械类型
+            if (type.useHeatSystem) {
+                ItemGun.tryEarlyCooldown(gunStack, type, playerEntity);
+                return;
+            }
             //检查枪械是否为空仓
             if (data.isReloading(gunStack) || data.hasReloadInHand(left))
                 return;

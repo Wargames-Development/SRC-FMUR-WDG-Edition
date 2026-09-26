@@ -1,0 +1,46 @@
+Name DC-15S Blaster Carbine
+ShortName starWarsDC15S
+Icon StarWars/DC15SCarbine
+Description Star Wars blaster model by invalidsyntax
+Colour 255 255 255
+
+Ammo starWarsBlasterBolt
+UseHeatSystem True
+MaxHeat 200
+HeatPerShot 15.5
+HeatCooldownPerTick 0.9
+HeatSpreadPenalty 0.75
+HeatRecoilPenalty 0.4
+OverheatLockoutTicks 100
+OverheatSound starwars_overheat
+CooledDownSound starwars_cooleddown
+BlasterSoundVolume 30
+CanForceReload False
+AllowRearm False
+Damage 31
+RoundsPerMin 420
+Mode FullAuto SemiAuto
+BulletSpeed 40
+Accuracy 0.55
+AimingSpreadConstant 0.35
+Recoil 1.0
+RandomRecoilRange 0.35
+DecreaseRecoil 1.0
+RandomRecoilYawRange 0.35
+DecreaseRecoilYaw 1.0
+ShootSound starwars_dc15s
+GunSoundRange 80
+EmptyClickSound emptyclick
+CanShootUnderwater False
+Deployable False
+OneHanded False
+ShowMuzzleFlashParticle True
+
+Model BFMCpack.DC15SCarbine
+ModelScale 1.25
+Texture StarWars/DC15SCarbine
+UseLeftArmGLTFAnimation True
+
+
+AllowAllAttachments False
+CanAIUse true

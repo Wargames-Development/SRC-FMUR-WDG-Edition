@@ -134,7 +134,8 @@ public class RenderBullet extends Render
 		double directionX = bullet.motionX / speed;
 		double directionY = bullet.motionY / speed;
 		double directionZ = bullet.motionZ / speed;
-		double length = Math.max(0.45D, Math.min(3.25D, speed * 1.35D));
+		float tracerScale = bullet.type.tracerScale;
+		double length = Math.max(0.45D, Math.min(3.25D, speed * 1.35D)) * tracerScale;
 		Minecraft minecraft = Minecraft.getMinecraft();
 		float nightVisionBrightness = minecraft.thePlayer != null
 				&& minecraft.thePlayer.isPotionActive(Potion.nightVision)
@@ -185,20 +186,20 @@ public class RenderBullet extends Render
 
 			if(length > 0.05D)
 			{
-				drawTracerLine(tailX, tailY, tailZ, 11F,
+				drawTracerLine(tailX, tailY, tailZ, 11F * tracerScale,
 						glowRed, glowGreen, 0F, scaledAlpha(0.10F, nightVisionBrightness));
-				drawTracerLine(tailX, tailY, tailZ, 6F,
+				drawTracerLine(tailX, tailY, tailZ, 6F * tracerScale,
 						greenTracer ? 0.015F : 1F, greenTracer ? 1F : 0.015F, 0F,
 						scaledAlpha(0.24F, nightVisionBrightness));
-				drawTracerLine(tailX, tailY, tailZ, 2.25F,
+				drawTracerLine(tailX, tailY, tailZ, 2.25F * tracerScale,
 						accentRed, coreGreen, 0.01F, 1F);
 			}
 
 			GL11.glEnable(GL11.GL_POINT_SMOOTH);
 			GL11.glHint(GL11.GL_POINT_SMOOTH_HINT, GL11.GL_NICEST);
-			drawTracerPoint(9F, glowRed, glowGreen, 0F,
+			drawTracerPoint(9F * tracerScale, glowRed, glowGreen, 0F,
 					scaledAlpha(0.16F, nightVisionBrightness));
-			drawTracerPoint(3.5F, accentRed, coreGreen, 0.01F, 1F);
+			drawTracerPoint(3.5F * tracerScale, accentRed, coreGreen, 0.01F, 1F);
 		}
 		finally
 		{

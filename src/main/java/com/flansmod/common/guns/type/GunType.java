@@ -99,6 +99,21 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * Whether the player can receive ammo for this gun from an ammo mag
      */
     public boolean allowRearm = true;
+    /** Opt-in energy weapon behavior. Heat replaces magazines and conventional reloads. */
+    public boolean useHeatSystem = false;
+    public float maxHeat = 100F;
+    public float heatPerShot = 10F;
+    public float heatCooldownPerTick = 1F;
+    /** Maximum additional spread at full heat. Applied quadratically as the gun heats up. */
+    public float heatSpreadPenalty = 0F;
+    /** Maximum additional recoil at full heat. Applied quadratically as the gun heats up. */
+    public float heatRecoilPenalty = 0F;
+    public int overheatLockoutTicks = 100;
+    public String overheatSound;
+    public String cooledDownSound;
+    public float blasterSoundVolume = -1F;
+    /** Play the firing audio on the first shot only when one sound already contains the full burst. */
+    public boolean burstSoundOnce = false;
 
     //Projectile Mechanic Variables
     /**
@@ -418,6 +433,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
     public float pictureInPictureY;
     public float pictureInPictureZ;
     public float pictureInPictureRadius;
+    /** Move a built-in PiP optic toward the camera to the standard lens size. */
+    public boolean pictureInPictureAutoDepth = false;
     /** Transparent reticle texture composited over the built-in scope PIP feed. */
     public String pictureInPictureReticle;
     /** Optional scale multiplier for small PIP reticle artwork. */
@@ -625,6 +642,32 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 canForceReload = Boolean.parseBoolean(split[1].toLowerCase());
             else if (split[0].equals("AllowRearm"))
                 allowRearm = Boolean.parseBoolean(split[1].toLowerCase());
+            else if (split[0].equals("UseHeatSystem"))
+                useHeatSystem = Boolean.parseBoolean(split[1]);
+            else if (split[0].equals("MaxHeat"))
+                maxHeat = Math.max(1F, Float.parseFloat(split[1]));
+            else if (split[0].equals("HeatPerShot"))
+                heatPerShot = Math.max(0F, Float.parseFloat(split[1]));
+            else if (split[0].equals("HeatCooldownPerTick"))
+                heatCooldownPerTick = Math.max(0F, Float.parseFloat(split[1]));
+            else if (split[0].equals("HeatSpreadPenalty"))
+                heatSpreadPenalty = Math.max(0F, Float.parseFloat(split[1]));
+            else if (split[0].equals("HeatRecoilPenalty"))
+                heatRecoilPenalty = Math.max(0F, Float.parseFloat(split[1]));
+            else if (split[0].equals("OverheatLockoutTicks"))
+                overheatLockoutTicks = Math.max(1, Integer.parseInt(split[1]));
+            else if (split[0].equals("OverheatSound")) {
+                overheatSound = split[1];
+                FlansMod.proxy.loadSound(contentPack, "guns", split[1]);
+            }
+            else if (split[0].equals("CooledDownSound")) {
+                cooledDownSound = split[1];
+                FlansMod.proxy.loadSound(contentPack, "guns", split[1]);
+            }
+            else if (split[0].equals("BlasterSoundVolume"))
+                blasterSoundVolume = Math.max(0.05F, Float.parseFloat(split[1]));
+            else if (split[0].equals("BurstSoundOnce"))
+                burstSoundOnce = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("ReloadTime"))
                 reloadTime = Integer.parseInt(split[1]);
             else if (split[0].equals("Recoil"))
@@ -821,6 +864,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 pictureInPictureRadius = Float.parseFloat(split[4]);
             } else if (split[0].equals("PictureInPictureReticle")) {
                 pictureInPictureReticle = split[1];
+            } else if (split[0].equals("PictureInPictureAutoDepth")) {
+                pictureInPictureAutoDepth = Boolean.parseBoolean(split[1]);
             } else if (split[0].equals("PictureInPictureReticleScale")) {
                 pictureInPictureReticleScale = Float.parseFloat(split[1]);
             } else if (split[0].equals("Magnification")) {
@@ -1821,7 +1866,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
             stackSpread *= sneakSpreadMultiplier;
         }
 
-        return stackSpread;
+        return stackSpread * getHeatPenaltyMultiplier(stack, heatSpreadPenalty);
     }
 
     /**
@@ -1852,7 +1897,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
 
         stackSpread = Math.max(stackSpread, minSpread);
 
-        return stackSpread;
+        return stackSpread * getHeatPenaltyMultiplier(stack, heatSpreadPenalty);
     }
 
     /**
@@ -1875,7 +1920,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
 
         stackSpread = Math.max(stackSpread, minSpread);
 
-        return stackSpread;
+        return stackSpread * getHeatPenaltyMultiplier(stack, heatSpreadPenalty);
     }
 
     /**
@@ -1886,7 +1931,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         for (AttachmentType attachment : getCurrentAttachments(stack)) {
             stackRecoil *= attachment.recoilMultiplier;
         }
-        return stackRecoil;
+        return stackRecoil * getHeatPenaltyMultiplier(stack, heatRecoilPenalty);
     }
 
     /**
@@ -1911,7 +1956,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         } else if (sprinting) {
             stackRecoil *= recoilSprintingMultiplier;
         }
-        return stackRecoil;
+        return stackRecoil * getHeatPenaltyMultiplier(stack, heatRecoilPenalty);
     }
 
     /**
@@ -1935,7 +1980,15 @@ public class GunType extends PaintableType implements IScope, IMarkable {
             stackRecoilYaw *= recoilSprintingMultiplierYaw;
         }
 
-        return stackRecoilYaw;
+        return stackRecoilYaw * getHeatPenaltyMultiplier(stack, heatRecoilPenalty);
+    }
+
+    private float getHeatPenaltyMultiplier(ItemStack stack, float maximumPenalty) {
+        if (!useHeatSystem || maximumPenalty <= 0F || stack == null || maxHeat <= 0F) {
+            return 1F;
+        }
+        float heatRatio = Math.max(0F, Math.min(1F, ItemGun.getHeat(stack) / maxHeat));
+        return 1F + maximumPenalty * heatRatio * heatRatio;
     }
 
 
