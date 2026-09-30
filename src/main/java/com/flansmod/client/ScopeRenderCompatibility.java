@@ -104,6 +104,9 @@ final class ScopeRenderCompatibility {
     private static Field celeritasSectionsRequestingUpdateField;
     private static Field celeritasLastCameraPositionField;
     private static Field celeritasCameraPositionField;
+    private static Class<?> celeritasRenderGlobalClass;
+    private static Field celeritasFrameField;
+    private static Field celeritasLastFovField;
 
     private static boolean distantHorizonsChecked;
     private static Field distantHorizonsModelViewField;
@@ -1143,10 +1146,18 @@ final class ScopeRenderCompatibility {
             Object renderGlobal = Minecraft.getMinecraft().renderGlobal;
             if (renderGlobal != null) {
                 try {
-                    state.celeritasFrameField = getAccessibleField(
-                            renderGlobal.getClass(), "celeritas$frame");
-                    state.celeritasLastFovField = getAccessibleField(
-                            renderGlobal.getClass(), "celeritas$lastFov");
+                    Class<?> renderGlobalClass = renderGlobal.getClass();
+                    if (celeritasRenderGlobalClass != renderGlobalClass) {
+                        Field frameField = getAccessibleField(
+                                renderGlobalClass, "celeritas$frame");
+                        Field lastFovField = getAccessibleField(
+                                renderGlobalClass, "celeritas$lastFov");
+                        celeritasFrameField = frameField;
+                        celeritasLastFovField = lastFovField;
+                        celeritasRenderGlobalClass = renderGlobalClass;
+                    }
+                    state.celeritasFrameField = celeritasFrameField;
+                    state.celeritasLastFovField = celeritasLastFovField;
                     state.celeritasRenderGlobal = renderGlobal;
                     state.celeritasFrame =
                             state.celeritasFrameField.getInt(renderGlobal);

@@ -5,6 +5,7 @@ import com.flansmod.common.guns.IScope;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
 import cpw.mods.fml.common.ObfuscationReflectionHelper;
+import cpw.mods.fml.relauncher.ReflectionHelper;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.Minecraft;
@@ -29,6 +30,7 @@ import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GLContext;
 
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 import java.util.ArrayList;
@@ -116,6 +118,20 @@ public final class ThermalScopeEffect {
 			"    gl_FragColor = vec4(mix(outputColor, modelOutput, modelDisplay), 1.0);\n" +
             "}\n";
 
+    /** Color PiP resolves to this sample when thermalDisplay is zero. */
+    private static final String COLOR_LENS_FRAGMENT_SHADER =
+            "#version 120\n" +
+            "uniform sampler2D sceneTexture;\n" +
+            "uniform float sourceAspect;\n" +
+            "uniform float modelMagnification;\n" +
+            "varying vec2 textureCoordinate;\n" +
+            "void main() {\n" +
+            "    vec2 sourceUv = textureCoordinate;\n" +
+            "    sourceUv.x = 0.5 + (sourceUv.x - 0.5) / (max(sourceAspect, 1.0) * max(modelMagnification, 1.0));\n" +
+            "    sourceUv.y = 0.5 + (sourceUv.y - 0.5) / max(modelMagnification, 1.0);\n" +
+            "    gl_FragColor = vec4(texture2D(sceneTexture, sourceUv).rgb, 1.0);\n" +
+            "}\n";
+
     private static final int MODEL_LENS_SIZE = 1024;
     private static final int POST_COMPOSITE_LENS_SEGMENTS = 32;
     /** Keep the post-composite image just inside the physical model aperture. */
@@ -130,6 +146,11 @@ public final class ThermalScopeEffect {
     private static int sceneWidth = -1;
     private static int sceneHeight = -1;
     private static int shaderProgram = -1;
+    private static int colorLensShaderProgram = -1;
+    private static boolean colorLensShaderUnavailable;
+    private static int colorLensSceneTextureUniform = -1;
+    private static int colorLensSourceAspectUniform = -1;
+    private static int colorLensModelMagnificationUniform = -1;
     private static int sceneTextureUniform = -1;
     private static int heatMaskUniform = -1;
     private static int resolutionUniform = -1;
@@ -389,11 +410,8 @@ public final class ThermalScopeEffect {
         int previousFramebuffer = GL11.glGetInteger(
                 EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
         int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
-        Double previousZoom = ObfuscationReflectionHelper.getPrivateValue(
-                EntityRenderer.class, mc.entityRenderer,
-                "cameraZoom", "af", "field_78503_V");
-        Framebuffer previousMainFramebuffer = ObfuscationReflectionHelper.getPrivateValue(
-                Minecraft.class, mc, "framebufferMc", "field_147124_at");
+        Double previousZoom = readScopeField(ScopeFields.CAMERA_ZOOM, mc.entityRenderer);
+        Framebuffer previousMainFramebuffer = readScopeField(ScopeFields.MAIN_FRAMEBUFFER, mc);
         RenderGlobalState renderGlobalState = captureRenderGlobalState(mc.renderGlobal);
         boolean previousHideGui = mc.gameSettings.hideGUI;
         boolean previousAdvancedOpenGl = mc.gameSettings.advancedOpengl;
@@ -443,15 +461,13 @@ public final class ThermalScopeEffect {
                 previousMainFramebuffer.bindFramebuffer(true);
             } else {
                 ensureScopedSceneFramebuffer(mc);
-                ObfuscationReflectionHelper.setPrivateValue(Minecraft.class, mc,
-                        scopedSceneFramebuffer, "framebufferMc", "field_147124_at");
+                writeScopeField(ScopeFields.MAIN_FRAMEBUFFER, mc, scopedSceneFramebuffer);
                 scopedSceneFramebuffer.bindFramebuffer(true);
                 GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
             }
 
-            ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class,
-                    mc.entityRenderer, (double)magnification,
-                    "cameraZoom", "af", "field_78503_V");
+            writeScopeField(ScopeFields.CAMERA_ZOOM, mc.entityRenderer,
+                    (double)magnification);
             // The normal camera has already received this frame's chunk-build budget.
             mc.entityRenderer.renderWorld(partialTicks, 0L);
 
@@ -472,11 +488,9 @@ public final class ThermalScopeEffect {
             mc.gameSettings.hideGUI = previousHideGui;
             mc.gameSettings.advancedOpengl = previousAdvancedOpenGl;
             mc.gameSettings.clouds = previousClouds;
-            ObfuscationReflectionHelper.setPrivateValue(Minecraft.class, mc,
-                    previousMainFramebuffer, "framebufferMc", "field_147124_at");
-            ObfuscationReflectionHelper.setPrivateValue(EntityRenderer.class,
-                    mc.entityRenderer, previousZoom == null ? 1D : previousZoom,
-                    "cameraZoom", "af", "field_78503_V");
+            writeScopeField(ScopeFields.MAIN_FRAMEBUFFER, mc, previousMainFramebuffer);
+            writeScopeField(ScopeFields.CAMERA_ZOOM, mc.entityRenderer,
+                    previousZoom == null ? 1D : previousZoom);
             restoreRenderGlobalState(mc.renderGlobal, renderGlobalState);
             OpenGlHelper.func_153171_g(OpenGlHelper.field_153198_e, previousFramebuffer);
             GL20.glUseProgram(previousProgram);
@@ -771,35 +785,25 @@ public final class ThermalScopeEffect {
 
     private static RenderGlobalState captureRenderGlobalState(RenderGlobal renderGlobal) {
         RenderGlobalState state = new RenderGlobalState();
-        state.worldRenderers = ObfuscationReflectionHelper.getPrivateValue(
-                RenderGlobal.class, renderGlobal,
-                "worldRenderers", "field_72765_l");
+        state.worldRenderers = readScopeField(ScopeFields.WORLD_RENDERERS, renderGlobal);
         state.rendererVisibility = captureRendererVisibility(state.worldRenderers);
-        state.sortedWorldRenderers = ObfuscationReflectionHelper.getPrivateValue(
-                RenderGlobal.class, renderGlobal,
-                "sortedWorldRenderers", "field_72768_k");
+        state.sortedWorldRenderers = readScopeField(ScopeFields.SORTED_RENDERERS, renderGlobal);
         if (state.sortedWorldRenderers != null) {
             state.sortedWorldRendererOrder = state.sortedWorldRenderers.clone();
         }
-        state.worldRenderersToUpdate = ObfuscationReflectionHelper.getPrivateValue(
-                RenderGlobal.class, renderGlobal,
-                "worldRenderersToUpdate", "field_72767_j");
+        state.worldRenderersToUpdate = readScopeField(
+                ScopeFields.RENDERERS_TO_UPDATE, renderGlobal);
         if (state.worldRenderersToUpdate != null) {
             state.worldRenderersToUpdateContents =
                     new ArrayList<Object>(state.worldRenderersToUpdate);
         }
-        state.worldRenderersCheckIndex = ObfuscationReflectionHelper.getPrivateValue(
-                RenderGlobal.class, renderGlobal,
-                "worldRenderersCheckIndex", "field_72752_Q");
-        state.prevSortX = ObfuscationReflectionHelper.getPrivateValue(
-                RenderGlobal.class, renderGlobal, "prevSortX", "field_72758_d");
-        state.prevSortY = ObfuscationReflectionHelper.getPrivateValue(
-                RenderGlobal.class, renderGlobal, "prevSortY", "field_72759_e");
-        state.prevSortZ = ObfuscationReflectionHelper.getPrivateValue(
-                RenderGlobal.class, renderGlobal, "prevSortZ", "field_72756_f");
-        state.frustumCheckOffset = ObfuscationReflectionHelper.getPrivateValue(
-                RenderGlobal.class, renderGlobal,
-                "frustumCheckOffset", "field_72757_g");
+        state.worldRenderersCheckIndex = readScopeField(
+                ScopeFields.RENDERER_CHECK_INDEX, renderGlobal);
+        state.prevSortX = readScopeField(ScopeFields.PREV_SORT_X, renderGlobal);
+        state.prevSortY = readScopeField(ScopeFields.PREV_SORT_Y, renderGlobal);
+        state.prevSortZ = readScopeField(ScopeFields.PREV_SORT_Z, renderGlobal);
+        state.frustumCheckOffset = readScopeField(
+                ScopeFields.FRUSTUM_CHECK_OFFSET, renderGlobal);
         return state;
     }
 
@@ -815,42 +819,32 @@ public final class ThermalScopeEffect {
                     state.sortedWorldRenderers, 0,
                     Math.min(state.sortedWorldRendererOrder.length,
                             state.sortedWorldRenderers.length));
-            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
-                    renderGlobal, state.sortedWorldRenderers,
-                    "sortedWorldRenderers", "field_72768_k");
+            writeScopeField(ScopeFields.SORTED_RENDERERS,
+                    renderGlobal, state.sortedWorldRenderers);
         }
         if (state.worldRenderersToUpdate != null
                 && state.worldRenderersToUpdateContents != null) {
             state.worldRenderersToUpdate.clear();
             state.worldRenderersToUpdate.addAll(state.worldRenderersToUpdateContents);
-            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
-                    renderGlobal, state.worldRenderersToUpdate,
-                    "worldRenderersToUpdate", "field_72767_j");
+            writeScopeField(ScopeFields.RENDERERS_TO_UPDATE,
+                    renderGlobal, state.worldRenderersToUpdate);
         }
         if (state.worldRenderersCheckIndex != null) {
-            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
-                    renderGlobal, state.worldRenderersCheckIndex,
-                    "worldRenderersCheckIndex", "field_72752_Q");
+            writeScopeField(ScopeFields.RENDERER_CHECK_INDEX,
+                    renderGlobal, state.worldRenderersCheckIndex);
         }
         if (state.prevSortX != null) {
-            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
-                    renderGlobal, state.prevSortX,
-                    "prevSortX", "field_72758_d");
+            writeScopeField(ScopeFields.PREV_SORT_X, renderGlobal, state.prevSortX);
         }
         if (state.prevSortY != null) {
-            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
-                    renderGlobal, state.prevSortY,
-                    "prevSortY", "field_72759_e");
+            writeScopeField(ScopeFields.PREV_SORT_Y, renderGlobal, state.prevSortY);
         }
         if (state.prevSortZ != null) {
-            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
-                    renderGlobal, state.prevSortZ,
-                    "prevSortZ", "field_72756_f");
+            writeScopeField(ScopeFields.PREV_SORT_Z, renderGlobal, state.prevSortZ);
         }
         if (state.frustumCheckOffset != null) {
-            ObfuscationReflectionHelper.setPrivateValue(RenderGlobal.class,
-                    renderGlobal, state.frustumCheckOffset,
-                    "frustumCheckOffset", "field_72757_g");
+            writeScopeField(ScopeFields.FRUSTUM_CHECK_OFFSET,
+                    renderGlobal, state.frustumCheckOffset);
         }
     }
 
@@ -898,6 +892,52 @@ public final class ThermalScopeEffect {
         private Integer frustumCheckOffset;
     }
 
+    /** Forge's named reflection helper remaps and searches on every call. */
+    private static final class ScopeFields {
+        private static final Field CAMERA_ZOOM = find(EntityRenderer.class,
+                "cameraZoom", "af", "field_78503_V");
+        private static final Field MAIN_FRAMEBUFFER = find(Minecraft.class,
+                "framebufferMc", "field_147124_at");
+        private static final Field WORLD_RENDERERS = find(RenderGlobal.class,
+                "worldRenderers", "field_72765_l");
+        private static final Field SORTED_RENDERERS = find(RenderGlobal.class,
+                "sortedWorldRenderers", "field_72768_k");
+        private static final Field RENDERERS_TO_UPDATE = find(RenderGlobal.class,
+                "worldRenderersToUpdate", "field_72767_j");
+        private static final Field RENDERER_CHECK_INDEX = find(RenderGlobal.class,
+                "worldRenderersCheckIndex", "field_72752_Q");
+        private static final Field PREV_SORT_X = find(RenderGlobal.class,
+                "prevSortX", "field_72758_d");
+        private static final Field PREV_SORT_Y = find(RenderGlobal.class,
+                "prevSortY", "field_72759_e");
+        private static final Field PREV_SORT_Z = find(RenderGlobal.class,
+                "prevSortZ", "field_72756_f");
+        private static final Field FRUSTUM_CHECK_OFFSET = find(RenderGlobal.class,
+                "frustumCheckOffset", "field_72757_g");
+
+        private static Field find(Class<?> owner, String... names) {
+            return ReflectionHelper.findField(owner,
+                    ObfuscationReflectionHelper.remapFieldNames(owner.getName(), names));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T readScopeField(Field field, Object owner) {
+        try {
+            return (T)field.get(owner);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static void writeScopeField(Field field, Object owner, Object value) {
+        try {
+            field.set(owner, value);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     public static void render(Minecraft mc, float partialTicks) {
         if (!isModelLensDisplay()) {
             renderCapturedScene(mc, partialTicks);
@@ -910,6 +950,8 @@ public final class ThermalScopeEffect {
             return;
         }
         boolean modelDisplay = isModelLensDisplay();
+        boolean colorLensShader = modelDisplay && !hasThermalVision()
+                && ensureColorLensShader();
         int previousFramebuffer = GL11.glGetInteger(EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
         int previousActiveTexture = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
         GL13.glActiveTexture(GL13.GL_TEXTURE0);
@@ -951,22 +993,30 @@ public final class ThermalScopeEffect {
             GL11.glDisable(GL11.GL_ALPHA_TEST);
             GL11.glDisable(GL11.GL_BLEND);
             GL11.glEnable(GL11.GL_TEXTURE_2D);
-            GL20.glUseProgram(shaderProgram);
-            GL20.glUniform1i(sceneTextureUniform, 0);
-            GL20.glUniform1i(heatMaskUniform, 1);
-            GL20.glUniform2f(resolutionUniform, targetWidth, targetHeight);
-            GL20.glUniform1f(elapsedTimeUniform,
-                    (System.nanoTime() - START_TIME) / 1_000_000_000F);
-            GL20.glUniform1f(flirEnabledUniform, flirEnabled ? 1F : 0F);
-            GL20.glUniform1f(binocularDisplayUniform, isBinocularDisplay() ? 1F : 0F);
-            GL20.glUniform1f(modelDisplayUniform, modelDisplay ? 1F : 0F);
-			GL20.glUniform1f(thermalDisplayUniform, hasThermalVision() ? 1F : 0F);
-            GL20.glUniform1f(sourceAspectUniform,
-                    (float)mc.displayWidth / Math.max(mc.displayHeight, 1));
-            GL20.glUniform2f(sourceResolutionUniform, mc.displayWidth, mc.displayHeight);
             float magnification = modelDisplay ? getModelMagnification() : 1F;
-            GL20.glUniform1f(modelMagnificationUniform,
-                    scopedSceneCaptured ? 1F : Math.max(1F, magnification));
+            float sourceAspect = (float)mc.displayWidth / Math.max(mc.displayHeight, 1);
+            float sampledMagnification = scopedSceneCaptured
+                    ? 1F : Math.max(1F, magnification);
+            if (colorLensShader) {
+                GL20.glUseProgram(colorLensShaderProgram);
+                GL20.glUniform1i(colorLensSceneTextureUniform, 0);
+                GL20.glUniform1f(colorLensSourceAspectUniform, sourceAspect);
+                GL20.glUniform1f(colorLensModelMagnificationUniform, sampledMagnification);
+            } else {
+                GL20.glUseProgram(shaderProgram);
+                GL20.glUniform1i(sceneTextureUniform, 0);
+                GL20.glUniform1i(heatMaskUniform, 1);
+                GL20.glUniform2f(resolutionUniform, targetWidth, targetHeight);
+                GL20.glUniform1f(elapsedTimeUniform,
+                        (System.nanoTime() - START_TIME) / 1_000_000_000F);
+                GL20.glUniform1f(flirEnabledUniform, flirEnabled ? 1F : 0F);
+                GL20.glUniform1f(binocularDisplayUniform, isBinocularDisplay() ? 1F : 0F);
+                GL20.glUniform1f(modelDisplayUniform, modelDisplay ? 1F : 0F);
+                GL20.glUniform1f(thermalDisplayUniform, hasThermalVision() ? 1F : 0F);
+                GL20.glUniform1f(sourceAspectUniform, sourceAspect);
+                GL20.glUniform2f(sourceResolutionUniform, mc.displayWidth, mc.displayHeight);
+                GL20.glUniform1f(modelMagnificationUniform, sampledMagnification);
+            }
             if (modelDisplay) {
                 drawFullscreenQuad(targetWidth, targetHeight);
                 GL20.glUseProgram(0);
@@ -1412,6 +1462,39 @@ public final class ThermalScopeEffect {
         sourceAspectUniform = GL20.glGetUniformLocation(shaderProgram, "sourceAspect");
         sourceResolutionUniform = GL20.glGetUniformLocation(shaderProgram, "sourceResolution");
         modelMagnificationUniform = GL20.glGetUniformLocation(shaderProgram, "modelMagnification");
+        return true;
+    }
+
+    private static boolean ensureColorLensShader() {
+        if (colorLensShaderProgram >= 0) {
+            return true;
+        }
+        if (colorLensShaderUnavailable) {
+            return false;
+        }
+        int vertex = compileShader(GL20.GL_VERTEX_SHADER, VERTEX_SHADER);
+        int fragment = compileShader(GL20.GL_FRAGMENT_SHADER, COLOR_LENS_FRAGMENT_SHADER);
+        if (vertex < 0 || fragment < 0) {
+            if (vertex >= 0) GL20.glDeleteShader(vertex);
+            if (fragment >= 0) GL20.glDeleteShader(fragment);
+            colorLensShaderUnavailable = true;
+            return false;
+        }
+        int program = GL20.glCreateProgram();
+        GL20.glAttachShader(program, vertex);
+        GL20.glAttachShader(program, fragment);
+        GL20.glLinkProgram(program);
+        GL20.glDeleteShader(vertex);
+        GL20.glDeleteShader(fragment);
+        if (GL20.glGetProgrami(program, GL20.GL_LINK_STATUS) == GL11.GL_FALSE) {
+            GL20.glDeleteProgram(program);
+            colorLensShaderUnavailable = true;
+            return false;
+        }
+        colorLensShaderProgram = program;
+        colorLensSceneTextureUniform = GL20.glGetUniformLocation(program, "sceneTexture");
+        colorLensSourceAspectUniform = GL20.glGetUniformLocation(program, "sourceAspect");
+        colorLensModelMagnificationUniform = GL20.glGetUniformLocation(program, "modelMagnification");
         return true;
     }
 
