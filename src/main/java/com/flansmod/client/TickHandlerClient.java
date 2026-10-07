@@ -1162,6 +1162,9 @@ public class TickHandlerClient {
         FirstPersonNightVisionGogglesRenderer.render(minecraft, event.partialTicks);
         float intensity = NightVisionGogglesEffect.getIntensity(minecraft, event.partialTicks);
         NightVisionGogglesEffect.renderBeforeHud(minecraft, intensity);
+        if (intensity > 0.001F || ThermalScopeEffect.replacesPrimaryScene(minecraft)) {
+            MCHeliScopeMarkerCompat.renderMarkers(minecraft);
+        }
         NightVisionGogglesEffect.renderAfterHud(minecraft, intensity);
         if (intensity > 0.001F) {
             ScaledResolution resolution = new ScaledResolution(minecraft,
@@ -1190,14 +1193,19 @@ public class TickHandlerClient {
     @SubscribeEvent
     public void renderWorldLast(RenderWorldLastEvent event) {
         if (ThermalScopeEffect.isRenderingScopedWorld()) {
-            ThermalScopeEffect.captureHeatMask(event.partialTicks);
             return;
         }
-        ThermalScopeEffect.captureHeatMask(event.partialTicks);
         // The lightmap is ready. Restore normal gamma before GUI code can save options.
         NightVisionGogglesBrightness.endFrame(Minecraft.getMinecraft());
         BulletHoleDecalRenderer.render(event);
         TracerRicochetRenderer.render(event);
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void captureScopeWorldLast(RenderWorldLastEvent event) {
+        // WGE zones render at NORMAL priority and must be in the scene that the
+        // thermal overlay replaces. Keep the world matrices/depth valid here.
+        ThermalScopeEffect.captureHeatMask(event.partialTicks);
     }
 
     @SubscribeEvent

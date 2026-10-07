@@ -450,6 +450,7 @@ public final class ThermalScopeEffect {
         GL11.glPushMatrix();
         try {
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
+            MCHeliScopeMarkerCompat.beginScopedMarkers();
             renderingScopedWorld = true;
             mc.gameSettings.hideGUI = true;
             mc.gameSettings.advancedOpengl = false;
@@ -474,6 +475,10 @@ public final class ThermalScopeEffect {
             if (modelLensDisplay) {
                 Framebuffer completedScene = renderIntoMainFramebuffer
                         ? previousMainFramebuffer : scopedSceneFramebuffer;
+                completedScene.bindFramebuffer(true);
+                if (!previousHideGui) {
+                    MCHeliScopeMarkerCompat.renderMarkers(mc);
+                }
                 sceneCaptured = captureFramebufferScene(completedScene,
                         mc.displayWidth, mc.displayHeight);
                 if (hasThermalVision()) {
@@ -484,6 +489,7 @@ public final class ThermalScopeEffect {
                 }
             }
         } finally {
+            MCHeliScopeMarkerCompat.endScopedMarkers();
             renderingScopedWorld = false;
             mc.gameSettings.hideGUI = previousHideGui;
             mc.gameSettings.advancedOpengl = previousAdvancedOpenGl;
@@ -942,6 +948,10 @@ public final class ThermalScopeEffect {
         if (!isModelLensDisplay()) {
             renderCapturedScene(mc, partialTicks);
         }
+    }
+
+    static boolean replacesPrimaryScene(Minecraft mc) {
+        return isActive(mc) && !isModelLensDisplay();
     }
 
     private static void renderCapturedScene(Minecraft mc, float partialTicks) {
