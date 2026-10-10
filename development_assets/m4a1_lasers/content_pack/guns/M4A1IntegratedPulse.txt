@@ -1,0 +1,60 @@
+Name Integrated Pulse Rifle
+ShortName m4a1IntegratedPulse
+Icon M4A1
+Description Blue pulse M4A1 with a self-cooling energy cell
+Colour 255 255 255
+
+Ammo m4a1BluePulseBolt
+UseHeatSystem True
+MaxHeat 360
+HeatPerShot 9
+HeatCooldownPerTick 0.9
+HeatSpreadPenalty 0.75
+HeatRecoilPenalty 0.4
+OverheatLockoutTicks 100
+OverheatSound m4a1_laser_overheat
+CooledDownSound m4a1_laser_cooled
+BlasterSoundVolume 30
+CanForceReload False
+AllowRearm False
+
+Damage 9
+RoundsPerMin 900
+Mode FullAuto SemiAuto
+BulletSpeed 40
+Accuracy 0.3
+AimingSpreadConstant 0.4
+Recoil 1.2
+RandomRecoilRange 0.25
+DecreaseRecoil 1.0
+RandomRecoilYawRange 0.3
+DecreaseRecoilYaw 1.0
+ShootSound m4a1_laser_shot
+GunSoundRange 80
+EmptyClickSound emptyclick
+CanShootUnderwater False
+Deployable False
+OneHanded False
+MuzzleFlashParticle flansmod.bluemuzzleflash
+ShowMuzzleFlashParticle True
+ShowMuzzleFlashParticleFirstPerson False
+
+Model BFMCpack.M4A1_BlueEnergy
+ModelScale 1.15
+Texture M4A1_BlueEnergy_Atlas
+3rdModel BFMCpack.M4A1_BlueEnergy
+3rdModelScale 1.15
+3rdTexture M4A1_BlueEnergy_Atlas
+
+AllowAllAttachments True
+AllowLaserPointerAttachments False
+DisallowBarrelAttachments True
+AllowBarrelAttachments False
+AllowScopeAttachments True
+AllowStockAttachments True
+AllowGripAttachments True
+AllowGadgetAttachments True
+AllowSlideAttachments False
+AllowPumpAttachments True
+AllowAccessoryAttachments True
+NumGenericAttachmentSlots 3

@@ -1,0 +1,25 @@
+Name M4A1 Blue Pulse Bolt
+ShortName m4a1BluePulseBolt
+InternalProjectile True
+Model Bullet
+Icon M4A1
+Colour 40 170 255
+MaxStackSize 1
+RoundsPerItem 1
+Damage 1
+DamageVsVehicles 1
+FallSpeed 0
+Explosion 0
+ExplodeOnImpact False
+Fuse 0
+Fire 0
+BreaksGlass True
+HitBoxSize 0.1
+SmokeTrail False
+Tracer True
+TracerColor Blue
+TracerScale 2
+EnableBounciness False
+ShootHeadMultiplier 1.5
+ShootArmMultiplier 0.8
+ShootLegMultiplier 0.8

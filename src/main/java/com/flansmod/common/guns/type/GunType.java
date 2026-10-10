@@ -2,6 +2,7 @@ package com.flansmod.common.guns.type;
 
 import com.flansmod.client.model.*;
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.guns.EnumAttachmentType;
 import com.flansmod.common.guns.EnumFireMode;
 import com.flansmod.common.guns.EnumSecondaryFunction;
 import com.flansmod.common.guns.IMarkable;
@@ -473,6 +474,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * If this is true, then all attachments are allowed. Otherwise, the list is checked.
      */
     public boolean allowAllAttachments = false;
+    public boolean allowLaserPointerAttachments = true;
+    public boolean disallowBarrelAttachments = false;
     /**
      * The list of allowed attachments for this gun
      */
@@ -1028,6 +1031,10 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 //Attachment settings
             else if (split[0].equals("AllowAllAttachments"))
                 allowAllAttachments = Boolean.parseBoolean(split[1]);
+            else if (split[0].equals("AllowLaserPointerAttachments"))
+                allowLaserPointerAttachments = Boolean.parseBoolean(split[1]);
+            else if (split[0].equals("DisallowBarrelAttachments"))
+                disallowBarrelAttachments = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("AllowAttachments")) {
                 for (int i = 1; i < split.length; i++) {
                     allowedAttachments.add(AttachmentType.getAttachment(split[i]));
@@ -1776,7 +1783,12 @@ public class GunType extends PaintableType implements IScope, IMarkable {
             return null;
         }
         checkForTags(gun);
-        return AttachmentType.getFromNBT(gun.stackTagCompound.getCompoundTag("attachments").getCompoundTag(name));
+        AttachmentType attachment = AttachmentType.getFromNBT(gun.stackTagCompound.getCompoundTag("attachments").getCompoundTag(name));
+        if (attachment != null && ((!allowLaserPointerAttachments && attachment.isLaserPointer)
+                || (disallowBarrelAttachments && attachment.type == EnumAttachmentType.barrel))) {
+            return null;
+        }
+        return attachment;
     }
 
     /**

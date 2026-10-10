@@ -1706,7 +1706,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         PacketMuzzleFlash muzzlePacket = new PacketMuzzleFlash(entityPlayer,
                 showMuzzleFlash ? type.muzzleFlashParticle : "",
                 type.muzzleFlashParticleSize,
-                showMuzzleFlash,
+                showMuzzleFlash && (!type.useHeatSystem || type.showMuzzleFlashParticlesFirstPerson),
                 gunType.shortName);
         FlansMod.packetHandler.sendToAllAround(muzzlePacket, entityPlayer.posX, entityPlayer.posY,
                 entityPlayer.posZ, 160, entityPlayer.dimension);

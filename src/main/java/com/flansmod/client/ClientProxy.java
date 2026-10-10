@@ -570,6 +570,13 @@ public class ClientProxy extends CommonProxy {
                                 p_72726_2_, p_72726_4_, p_72726_6_,
                                 p_72726_8_, p_72726_10_, p_72726_12_, scale);
                         return null;
+                    } else if (p_72726_1_.equals("flansmod.bluemuzzleflash")
+                            || p_72726_1_.equals("flansmod.redmuzzleflash")) {
+                        EntityFMMuzzleFlash.spawnLaserBurst(theWorld, mc.effectRenderer,
+                                p_72726_2_, p_72726_4_, p_72726_6_,
+                                p_72726_8_, p_72726_10_, p_72726_12_, scale,
+                                p_72726_1_.equals("flansmod.bluemuzzleflash"));
+                        return null;
                     } else if (p_72726_1_.equals("flansmod.afterburn")) {
                         entityfx = new EntityAfterburn(theWorld, p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
                     } else if (p_72726_1_.equals("flansmod.fmsmoke")) { //小烟雾

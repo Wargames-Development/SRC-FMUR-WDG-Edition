@@ -1,0 +1,59 @@
+Name M4A1 Upgraded Laser
+ShortName m4a1UpgradedLaser
+Icon M4A1
+Description Red laser M4A1 with an upgraded self-cooling energy cell
+Colour 255 255 255
+
+Ammo m4a1RedLaserBolt
+UseHeatSystem True
+MaxHeat 200
+HeatPerShot 12
+HeatCooldownPerTick 0.8
+HeatSpreadPenalty 0.75
+HeatRecoilPenalty 0.4
+OverheatLockoutTicks 100
+OverheatSound m4a1_laser_overheat
+CooledDownSound m4a1_laser_cooled
+BlasterSoundVolume 30
+CanForceReload False
+AllowRearm False
+
+Damage 19
+RoundsPerMin 540
+Mode FullAuto SemiAuto
+BulletSpeed 40
+Accuracy 0.75
+AimingSpreadConstant 0.35
+Recoil 1.5
+RandomRecoilRange 0.9
+DecreaseRecoil 1.0
+RandomRecoilYawRange 1.1
+DecreaseRecoilYaw 1.0
+ShootSound m4a1_laser_shot
+GunSoundRange 80
+EmptyClickSound emptyclick
+CanShootUnderwater False
+Deployable False
+OneHanded False
+MuzzleFlashParticle flansmod.redmuzzleflash
+ShowMuzzleFlashParticle True
+ShowMuzzleFlashParticleFirstPerson False
+
+Model BFMCpack.M4A1_Energy
+ModelScale 1.15
+Texture M4A1_Energy_Atlas
+3rdModel BFMCpack.M4A1_Energy
+3rdModelScale 1.15
+3rdTexture M4A1_Energy_Atlas
+
+AllowAllAttachments True
+DisallowBarrelAttachments True
+AllowBarrelAttachments False
+AllowScopeAttachments True
+AllowStockAttachments True
+AllowGripAttachments True
+AllowGadgetAttachments True
+AllowSlideAttachments False
+AllowPumpAttachments True
+AllowAccessoryAttachments True
+NumGenericAttachmentSlots 3

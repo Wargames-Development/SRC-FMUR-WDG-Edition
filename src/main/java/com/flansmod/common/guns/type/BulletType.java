@@ -42,6 +42,8 @@ public class BulletType extends ShootableType {
     public boolean internalProjectile = false;
     /** Uses the green tracer palette. Existing tracer definitions default to red. */
     public boolean greenTracer = false;
+    /** Uses the blue tracer palette without changing existing red/green definitions. */
+    public boolean blueTracer = false;
     /** Visual-only multiplier for tracer length, width, and head size. */
     public float tracerScale = 1F;
     //新增:是否显示炮弹弹着点
@@ -311,6 +313,7 @@ public class BulletType extends ShootableType {
                     break;
                 case "TracerColor":
                     greenTracer = "Green".equalsIgnoreCase(split[1]);
+                    blueTracer = "Blue".equalsIgnoreCase(split[1]);
                     break;
                 case "TracerScale":
                     tracerScale = Math.max(0.1F, Math.min(4F, Float.parseFloat(split[1])));

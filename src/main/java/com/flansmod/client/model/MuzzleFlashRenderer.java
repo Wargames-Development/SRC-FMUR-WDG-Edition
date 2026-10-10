@@ -31,6 +31,7 @@ public final class MuzzleFlashRenderer {
         float nonSmokeUnit = unit * NON_SMOKE_SIZE_MULTIPLIER;
         float phase = remainingTicks >= 2 ? 0F : 1F;
         boolean blaster = loadedAmmo != null && loadedAmmo.internalProjectile;
+        boolean blueBlaster = blaster && loadedAmmo.blueTracer;
         double rotationRadians = Math.toRadians(rotationDegrees);
         Random random = new Random(0x4D555A5AL + pattern * 0x9E3779B9L);
         int flameParticleCount = 14 + random.nextInt(9);
@@ -72,12 +73,13 @@ public final class MuzzleFlashRenderer {
                     float z = (float) Math.sin(angle) * radial;
                     float size = (core ? 0.36F + random.nextFloat() * 0.18F
                             : 0.32F + random.nextFloat() * 0.24F) * nonSmokeUnit;
-                    float red = 1F;
+                    float red = blueBlaster ? (core ? 0.70F : 0.03F) : 1F;
                     float green = blaster
-                            ? (core ? 0.92F : (middle ? 0.25F : 0.03F))
+                            ? (blueBlaster ? (core ? 0.92F : (middle ? 0.55F : 0.23F))
+                            : (core ? 0.92F : (middle ? 0.25F : 0.03F)))
                             : (core ? 1F : (middle ? 0.92F : 0.79F));
                     float blue = blaster
-                            ? (core ? 0.92F : (middle ? 0.18F : 0.02F))
+                            ? (blueBlaster ? 1F : (core ? 0.92F : (middle ? 0.18F : 0.02F)))
                             : (core ? 0.86F : (middle ? 0.46F : 0.22F));
                     float alpha = core ? 0.96F : (middle ? 0.84F : 0.68F);
                     addCrossedParticle(tessellator, axial, y, z, size,
@@ -98,8 +100,9 @@ public final class MuzzleFlashRenderer {
                 float end = start + (0.46F + random.nextFloat() * 0.72F) * nonSmokeUnit;
                 float width = (0.028F + random.nextFloat() * 0.022F) * nonSmokeUnit;
                 addSpark(tessellator, start, end, y, z, width,
-                        1F, blaster ? 0.18F : 0.94F,
-                        blaster ? 0.12F : 0.52F, 0.9F);
+                        blueBlaster ? 0.08F : 1F,
+                        blueBlaster ? 0.58F : (blaster ? 0.18F : 0.94F),
+                        blueBlaster ? 1F : (blaster ? 0.12F : 0.52F), 0.9F);
             }
             tessellator.draw();
 
@@ -129,6 +132,47 @@ public final class MuzzleFlashRenderer {
                 }
                 tessellator.draw();
             }
+        } finally {
+            GL11.glPopAttrib();
+            ShaderRenderCompat.endPrimaryColorOnly(primaryColorOnly);
+            GL11.glColor4f(1F, 1F, 1F, 1F);
+        }
+    }
+
+    /** Heat visuals stay in the gun model's coordinates, including first person. */
+    public static void renderHeatEffect(boolean steam, int ageTicks) {
+        Random random = new Random((steam ? 0x535445414DL : 0x48454154L) + ageTicks * 37L);
+        float fade = steam ? 1F - ageTicks / 20F : 1F - ageTicks / 12F;
+        Tessellator tessellator = Tessellator.instance;
+        boolean primaryColorOnly = ShaderRenderCompat.beginPrimaryColorOnly();
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        try {
+            GL11.glDisable(GL11.GL_LIGHTING);
+            GL11.glDisable(GL11.GL_CULL_FACE);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glDepthMask(false);
+            GL11.glColorMask(true, true, true, false);
+            Minecraft.getMinecraft().renderEngine.bindTexture(PARTICLE_TEXTURE);
+            tessellator.startDrawingQuads();
+            tessellator.setBrightness(15728880);
+            for (int i = 0; i < (steam ? 20 : 28); i++) {
+                float travel = steam ? ((ageTicks + i * 7) % 20) * 0.018F
+                        : ageTicks * 0.020F + random.nextFloat() * 0.30F;
+                float x = steam ? 0.02F + random.nextFloat() * 0.06F : travel * 0.35F;
+                float y = travel * (steam ? 0.16F : 0.80F)
+                        + (random.nextFloat() - 0.5F) * (steam ? 0.05F : 0.08F);
+                float z = steam
+                        ? (i % 2 == 0 ? -1F : 1F) * (0.035F + travel * 0.95F)
+                        + (random.nextFloat() - 0.5F) * 0.035F
+                        : (random.nextFloat() - 0.5F) * 0.28F;
+                float size = 0.055F + travel * (steam ? 0.12F : 0.22F);
+                addCrossedParticle(tessellator, x, y, z, size,
+                        steam ? 0.84F : 0.42F, steam ? 0.94F : 0.39F,
+                        steam ? 1F : 0.37F, fade * (steam ? 0.42F : 0.34F),
+                        PUFF_TEXTURE_INDEX);
+            }
+            tessellator.draw();
         } finally {
             GL11.glPopAttrib();
             ShaderRenderCompat.endPrimaryColorOnly(primaryColorOnly);

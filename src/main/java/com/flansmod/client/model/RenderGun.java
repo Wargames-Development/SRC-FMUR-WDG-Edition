@@ -60,6 +60,8 @@ public class RenderGun implements IItemRenderer {
             new ResourceLocation("flansmod", "particle/FMTracerRed.png");
     private static final ResourceLocation GREEN_TRACER_TEXTURE =
             new ResourceLocation("flansmod", "particle/FMTracerGreen.png");
+    private static final ResourceLocation BLUE_TRACER_TEXTURE =
+            new ResourceLocation("flansmod", "particle/FMTracerBlue.png");
     public static float smoothing;
     public static float actualZoomProgress;
     public static float actualStanceProgress;
@@ -731,6 +733,37 @@ public class RenderGun implements IItemRenderer {
 
                 }
                 GL11.glPopMatrix();
+            }
+
+            if (rtype != ItemRenderType.ENTITY && gunType.useHeatSystem
+                    && model.muzzleFlashPoint != null && Minecraft.getMinecraft().theWorld != null) {
+                if (!gunType.shortName.equals(animations.heatEffectGun)) {
+                    animations.heatEffectGun = gunType.shortName;
+                    animations.lastOverheatTicks = 0;
+                    animations.overheatBurstUntil = 0L;
+                    animations.steamBurstUntil = 0L;
+                }
+                long tick = Minecraft.getMinecraft().theWorld.getTotalWorldTime();
+                int overheatTicks = ItemGun.getOverheatTicks(item);
+                if (overheatTicks > 0 && animations.lastOverheatTicks == 0)
+                    animations.overheatBurstUntil = tick + 12L;
+                else if (overheatTicks == 0 && animations.lastOverheatTicks > 0)
+                    animations.steamBurstUntil = tick + 20L;
+                animations.lastOverheatTicks = overheatTicks;
+                if (tick < animations.overheatBurstUntil || tick < animations.steamBurstUntil) {
+                    GL11.glPushMatrix();
+                    GL11.glTranslatef(model.muzzleFlashPoint.x, model.muzzleFlashPoint.y,
+                            model.muzzleFlashPoint.z);
+                    if (tick < animations.overheatBurstUntil)
+                        MuzzleFlashRenderer.renderHeatEffect(false,
+                                (int)(tick + 12L - animations.overheatBurstUntil));
+                    if (tick < animations.steamBurstUntil)
+                        MuzzleFlashRenderer.renderHeatEffect(true,
+                                (int)(tick + 20L - animations.steamBurstUntil));
+                    GL11.glPopMatrix();
+                    renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(
+                            gunType.getPaintjob(item.getItemDamage())));
+                }
             }
 
             // Render various shoot / reload animated parts
@@ -1933,12 +1966,15 @@ public class RenderGun implements IItemRenderer {
      */
     private void renderMuzzleTracer(float flashScale, BulletType tracerAmmo) {
         boolean greenTracer = tracerAmmo.greenTracer;
+        boolean blueTracer = tracerAmmo.blueTracer;
         float tracerScale = tracerAmmo.tracerScale;
         float length = 0.65F * tracerScale / Math.max(0.05F, Math.abs(flashScale));
-        float glowRed = greenTracer ? 0F : 1F;
-        float glowGreen = greenTracer ? 1F : 0F;
-        float accentRed = greenTracer ? 0.22F : 1F;
-        float coreGreen = greenTracer ? 1F : 0.22F;
+        float glowRed = blueTracer || greenTracer ? 0F : 1F;
+        float glowGreen = blueTracer ? 0.35F : (greenTracer ? 1F : 0F);
+        float glowBlue = blueTracer ? 1F : 0F;
+        float accentRed = blueTracer ? 0.08F : (greenTracer ? 0.22F : 1F);
+        float coreGreen = blueTracer ? 0.72F : (greenTracer ? 1F : 0.22F);
+        float coreBlue = blueTracer ? 1F : 0.08F;
 
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         try {
@@ -1954,12 +1990,14 @@ public class RenderGun implements IItemRenderer {
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
             GL11.glEnable(GL11.GL_LINE_SMOOTH);
             GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
-            renderEngine.bindTexture(greenTracer ? GREEN_TRACER_TEXTURE : RED_TRACER_TEXTURE);
+            renderEngine.bindTexture(blueTracer ? BLUE_TRACER_TEXTURE
+                    : (greenTracer ? GREEN_TRACER_TEXTURE : RED_TRACER_TEXTURE));
 
-            drawMuzzleTracerLine(length, 9F * tracerScale, glowRed, glowGreen, 0F, 0.12F);
+            drawMuzzleTracerLine(length, 9F * tracerScale, glowRed, glowGreen, glowBlue, 0.12F);
             drawMuzzleTracerLine(length, 5F * tracerScale,
-                    greenTracer ? 0.03F : 1F, greenTracer ? 1F : 0.03F, 0F, 0.30F);
-            drawMuzzleTracerLine(length, 2F * tracerScale, accentRed, coreGreen, 0.08F, 0.95F);
+                    blueTracer ? 0.02F : (greenTracer ? 0.03F : 1F),
+                    blueTracer ? 0.55F : (greenTracer ? 1F : 0.03F), glowBlue, 0.30F);
+            drawMuzzleTracerLine(length, 2F * tracerScale, accentRed, coreGreen, coreBlue, 0.95F);
         } finally {
             GL11.glPopAttrib();
             GL11.glColor4f(1F, 1F, 1F, 1F);

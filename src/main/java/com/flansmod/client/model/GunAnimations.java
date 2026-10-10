@@ -76,6 +76,10 @@ public class GunAnimations {
     public boolean showMuzzleFireball = true;
     public float muzzleFlashSizeMultiplier = 1F;
     public float muzzleFlashRotation = 0F;
+    public String heatEffectGun;
+    public int lastOverheatTicks = 0;
+    public long overheatBurstUntil = 0L;
+    public long steamBurstUntil = 0L;
 
     /**
      * Casing mechanics

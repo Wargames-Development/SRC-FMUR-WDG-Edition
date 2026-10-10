@@ -106,6 +106,38 @@ public class EntityFMMuzzleFlash extends EntityFX {
         spawnSmokeBurst(world, renderer, x, y, z, directionX, directionY, directionZ, scale);
     }
 
+    /** Short energy burst with no firearm smoke. */
+    public static void spawnLaserBurst(World world, EffectRenderer renderer,
+                                       double x, double y, double z,
+                                       double directionX, double directionY, double directionZ,
+                                       float requestedScale, boolean blue) {
+        if (world == null || renderer == null) {
+            return;
+        }
+        DirectionBasis basis = createDirectionBasis(world, directionX, directionY, directionZ);
+        Random random = world.rand;
+        float scale = Math.max(0.25F, requestedScale) * 0.25F;
+        for (int i = 0; i < 16; i++) {
+            double angle = random.nextDouble() * Math.PI * 2D;
+            double radial = random.nextDouble() * scale * 0.16D;
+            double offset = (0.05D + random.nextDouble() * 0.55D) * scale;
+            double right = Math.cos(angle) * radial;
+            double up = Math.sin(angle) * radial;
+            float red = blue ? (i < 3 ? 0.70F : 0.03F) : 1F;
+            float green = blue ? (i < 3 ? 0.92F : 0.30F) : (i < 3 ? 0.90F : 0.18F);
+            float blueValue = blue ? 1F : (i < 3 ? 0.85F : 0.08F);
+            renderer.addEffect(new EntityFMMuzzleFlash(world,
+                    x + basis.directionX * offset + basis.rightX * right + basis.upX * up,
+                    y + basis.directionY * offset + basis.rightY * right + basis.upY * up,
+                    z + basis.directionZ * offset + basis.rightZ * right + basis.upZ * up,
+                    basis.directionX * scale * 0.08D,
+                    basis.directionY * scale * 0.08D,
+                    basis.directionZ * scale * 0.08D,
+                    scale * (1.8F + random.nextFloat() * 1.6F),
+                    red, green, blueValue, 3));
+        }
+    }
+
     public static void spawnSmokeBurst(World world, EffectRenderer renderer,
                                        double x, double y, double z,
                                        double directionX, double directionY, double directionZ,

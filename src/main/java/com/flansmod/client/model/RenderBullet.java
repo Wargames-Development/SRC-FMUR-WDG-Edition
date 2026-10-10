@@ -23,6 +23,8 @@ public class RenderBullet extends Render
 			new ResourceLocation("flansmod", "particle/FMTracerRed.png");
 	private static final ResourceLocation GREEN_TRACER_TEXTURE =
 			new ResourceLocation("flansmod", "particle/FMTracerGreen.png");
+	private static final ResourceLocation BLUE_TRACER_TEXTURE =
+			new ResourceLocation("flansmod", "particle/FMTracerBlue.png");
 	private final Map<EntityBullet, VisualOriginCorrection> visualOriginCorrections =
 			new WeakHashMap<EntityBullet, VisualOriginCorrection>();
 
@@ -162,10 +164,13 @@ public class RenderBullet extends Render
 		double tailY = -directionY * length;
 		double tailZ = -directionZ * length;
 		boolean greenTracer = bullet.type.greenTracer;
-		float glowRed = greenTracer ? 0F : 1F;
-		float glowGreen = greenTracer ? 1F : 0F;
-		float accentRed = greenTracer ? 0.04F : 1F;
-		float coreGreen = greenTracer ? 1F : 0.04F;
+		boolean blueTracer = bullet.type.blueTracer;
+		float glowRed = blueTracer || greenTracer ? 0F : 1F;
+		float glowGreen = blueTracer ? 0.35F : (greenTracer ? 1F : 0F);
+		float glowBlue = blueTracer ? 1F : 0F;
+		float accentRed = blueTracer ? 0.08F : (greenTracer ? 0.04F : 1F);
+		float coreGreen = blueTracer ? 0.72F : (greenTracer ? 1F : 0.04F);
+		float coreBlue = blueTracer ? 1F : 0.01F;
 
 		GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
 		try
@@ -182,24 +187,26 @@ public class RenderBullet extends Render
 			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
 			GL11.glEnable(GL11.GL_LINE_SMOOTH);
 			GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
-			minecraft.renderEngine.bindTexture(greenTracer ? GREEN_TRACER_TEXTURE : RED_TRACER_TEXTURE);
+			minecraft.renderEngine.bindTexture(blueTracer ? BLUE_TRACER_TEXTURE
+					: (greenTracer ? GREEN_TRACER_TEXTURE : RED_TRACER_TEXTURE));
 
 			if(length > 0.05D)
 			{
 				drawTracerLine(tailX, tailY, tailZ, 11F * tracerScale,
-						glowRed, glowGreen, 0F, scaledAlpha(0.10F, nightVisionBrightness));
+						glowRed, glowGreen, glowBlue, scaledAlpha(0.10F, nightVisionBrightness));
 				drawTracerLine(tailX, tailY, tailZ, 6F * tracerScale,
-						greenTracer ? 0.015F : 1F, greenTracer ? 1F : 0.015F, 0F,
+						blueTracer ? 0.02F : (greenTracer ? 0.015F : 1F),
+						blueTracer ? 0.55F : (greenTracer ? 1F : 0.015F), glowBlue,
 						scaledAlpha(0.24F, nightVisionBrightness));
 				drawTracerLine(tailX, tailY, tailZ, 2.25F * tracerScale,
-						accentRed, coreGreen, 0.01F, 1F);
+						accentRed, coreGreen, coreBlue, 1F);
 			}
 
 			GL11.glEnable(GL11.GL_POINT_SMOOTH);
 			GL11.glHint(GL11.GL_POINT_SMOOTH_HINT, GL11.GL_NICEST);
-			drawTracerPoint(9F * tracerScale, glowRed, glowGreen, 0F,
+			drawTracerPoint(9F * tracerScale, glowRed, glowGreen, glowBlue,
 					scaledAlpha(0.16F, nightVisionBrightness));
-			drawTracerPoint(3.5F * tracerScale, accentRed, coreGreen, 0.01F, 1F);
+			drawTracerPoint(3.5F * tracerScale, accentRed, coreGreen, coreBlue, 1F);
 		}
 		finally
 		{

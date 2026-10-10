@@ -1,0 +1,5 @@
+{
+  "m4a1_laser_shot": { "category": "player", "sounds": ["flansmod:m4a1_laser_shot"] },
+  "m4a1_laser_overheat": { "category": "player", "sounds": ["flansmod:m4a1_laser_overheat"] },
+  "m4a1_laser_cooled": { "category": "player", "sounds": ["flansmod:m4a1_laser_cooled"] }
+}
