@@ -1137,6 +1137,33 @@ public final class ThermalScopeEffect {
         return renderingScopedWorld;
     }
 
+    public static void beginModelLensFrame() {
+        postCompositeLensGeometryValid = false;
+    }
+
+    /** Window coordinates use the same bottom-left origin as MCHR projections. */
+    static boolean isInsideModelLens(float windowX, float windowY) {
+        if (!postCompositeLensGeometryValid || !isModelLensActive()) {
+            return false;
+        }
+        Minecraft mc = Minecraft.getMinecraft();
+        float x = windowX * 2F / mc.displayWidth - 1F;
+        float y = windowY * 2F / mc.displayHeight - 1F;
+        boolean inside = false;
+        for (int i = 1, j = POST_COMPOSITE_LENS_SEGMENTS;
+                i <= POST_COMPOSITE_LENS_SEGMENTS; j = i++) {
+            float xi = postCompositeLensNdcX[i];
+            float yi = postCompositeLensNdcY[i];
+            float xj = postCompositeLensNdcX[j];
+            float yj = postCompositeLensNdcY[j];
+            if ((yi > y) != (yj > y)
+                    && x < (xj - xi) * (y - yi) / (yj - yi) + xi) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
     public static int getModelLensTexture() {
         return modelLensValid && modelLensFramebuffer != null
                 ? modelLensFramebuffer.framebufferTexture : -1;
@@ -1153,15 +1180,13 @@ public final class ThermalScopeEffect {
     }
 
     /**
-     * Capture the exact projected aperture used by the first-person model. Shader
-     * PiP is drawn after the shader pipeline, so it cannot use depth to clip against
-     * the scope housing. Reusing the model-space aperture prevents the late pass
-     * from painting over narrow optic rims while the ADS alignment is still moving.
+     * Capture the projected aperture for primary HUD marker filtering and the
+     * late shader PiP pass. The latter cannot use depth to clip the scope housing,
+     * so it follows the model-space aperture while ADS alignment is still moving.
      */
     public static void capturePostCompositeModelLensGeometry(float lensX, float lensY,
             float lensZ, float lensRadius, float scale) {
-        if (!isModelLensActive() || !ScopeRenderCompatibility.isShaderPackInUse()
-                || lensRadius <= 0F) {
+        if (!isModelLensActive() || lensRadius <= 0F) {
             postCompositeLensGeometryValid = false;
             return;
         }
@@ -1174,7 +1199,8 @@ public final class ThermalScopeEffect {
         float x = lensX * scale;
         float centerY = lensY * scale;
         float centerZ = lensZ * scale;
-        float radius = lensRadius * scale * POST_COMPOSITE_LENS_INSET;
+        float radius = lensRadius * scale * (ScopeRenderCompatibility.isShaderPackInUse()
+                ? POST_COMPOSITE_LENS_INSET : 1F);
         if (!projectPostCompositeLensVertex(x, centerY, centerZ, 0)) {
             postCompositeLensGeometryValid = false;
             return;

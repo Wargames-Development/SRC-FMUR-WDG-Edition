@@ -1153,6 +1153,13 @@ public class TickHandlerClient {
         }
     }
 
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public void filterScopeMarkers(RenderGameOverlayEvent.Pre event) {
+        if (event.type == ElementType.HELMET) {
+            MCHeliScopeMarkerCompat.hidePrimaryMarkersInsideLens(Minecraft.getMinecraft());
+        }
+    }
+
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public void renderNightVisionAfterScope(RenderGameOverlayEvent.Post event) {
         if (event.type != ElementType.HELMET || Minecraft.getMinecraft().gameSettings.hideGUI) {
@@ -1212,6 +1219,7 @@ public class TickHandlerClient {
     public void renderTick(TickEvent.RenderTickEvent event) {
         switch (event.phase) {
             case START:
+                ThermalScopeEffect.beginModelLensFrame();
                 NightVisionGogglesBrightness.beginFrame(Minecraft.getMinecraft());
                 RenderGun.smoothing = event.renderTickTime;
                 renderTickStart(Minecraft.getMinecraft(), event.renderTickTime);

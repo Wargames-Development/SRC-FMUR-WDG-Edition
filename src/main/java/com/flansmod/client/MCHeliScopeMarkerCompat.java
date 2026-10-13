@@ -15,8 +15,10 @@ import org.lwjgl.opengl.GLContext;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 
 /** Optional MCHR HUD markers in FMUR's secondary camera and vision overlays. */
 @SideOnly(Side.CLIENT)
@@ -29,6 +31,11 @@ final class MCHeliScopeMarkerCompat {
     private static Field tickHandlerField;
     private static Field markerGuiField;
     private static Field scaleFactorField;
+    private static Field markerPositionField;
+    private static Field markerTypeField;
+    private static Field markerSizeField;
+    private static Field doubleValueField;
+    private static int pointMarkerType;
     private static Method drawGui;
     private static Object primaryPositions;
     private static Object primaryMarkedIds;
@@ -62,6 +69,14 @@ final class MCHeliScopeMarkerCompat {
             tickHandlerField = tickHandler.getField("instance");
             markerGuiField = tickHandler.getField("gui_EMarker");
             scaleFactorField = gui.getField("scaleFactor");
+            Class<?> marker = Class.forName("mcheli.MCH_MarkEntityPos", false, loader);
+            markerPositionField = marker.getField("pos");
+            markerTypeField = marker.getField("type");
+            Class<?> targetType = Class.forName("mcheli.multiplay.MCH_TargetType", false, loader);
+            pointMarkerType = ((Enum<?>)targetType.getField("POINT").get(null)).ordinal();
+            Class<?> config = Class.forName("mcheli.MCH_Config", false, loader);
+            markerSizeField = config.getField("EntityMarkerSize");
+            doubleValueField = markerSizeField.getType().getField("prmDouble");
             drawGui = markers.getMethod("drawGui", EntityPlayer.class, boolean.class);
             available = true;
         } catch (ReflectiveOperationException | LinkageError exception) {
@@ -175,6 +190,43 @@ final class MCHeliScopeMarkerCompat {
             GL11.glPopAttrib();
             GL13.glActiveTexture(previousActiveTexture);
             GL11.glMatrixMode(previousMatrixMode);
+        }
+    }
+
+    static void hidePrimaryMarkersInsideLens(Minecraft minecraft) {
+        if (!ThermalScopeEffect.isModelLensActive() || primaryPositions != null || !isAvailable()) {
+            return;
+        }
+        try {
+            ArrayList<?> positions = (ArrayList<?>)positionsField.get(null);
+            if (positions == null) {
+                return;
+            }
+            int scale = new ScaledResolution(minecraft,
+                    minecraft.displayWidth, minecraft.displayHeight).getScaleFactor();
+            float size = (float)doubleValueField.getDouble(markerSizeField.get(null)) * scale;
+            for (Iterator<?> iterator = positions.iterator(); iterator.hasNext();) {
+                Object marker = iterator.next();
+                if (markerTypeField.getInt(marker) >= pointMarkerType) {
+                    continue;
+                }
+                FloatBuffer position = (FloatBuffer)markerPositionField.get(marker);
+                if (position == null || position.get(2) < 0F || position.get(2) >= 1F) {
+                    continue;
+                }
+                float x = position.get(0);
+                float tipY = position.get(1) + 10F * scale;
+                // MCHR draws its triangle above the projected anchor. Remove the
+                // primary-camera glyph when it overlaps the magnified aperture;
+                // the independent scoped collection still draws the correct marker.
+                if (ThermalScopeEffect.isInsideModelLens(x, tipY)
+                        || ThermalScopeEffect.isInsideModelLens(x - size * 0.5F, tipY + size)
+                        || ThermalScopeEffect.isInsideModelLens(x + size * 0.5F, tipY + size)) {
+                    iterator.remove();
+                }
+            }
+        } catch (ReflectiveOperationException | LinkageError exception) {
+            disable(exception);
         }
     }
 

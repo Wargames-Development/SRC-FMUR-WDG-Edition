@@ -1693,18 +1693,16 @@ public class RenderGun implements IItemRenderer {
 	private void renderPictureInPictureLens(float lensX, float lensY, float lensZ,
 			float lensRadius, float scale) {
 
-		// Shader color PiP is composited after the main shader pipeline. Capture the
-		// aperture from the exact model matrices before skipping the in-world lens;
-		// the late compositor then follows the physical optic instead of a fixed
-		// screen-space circle that can cover the shroud during ADS alignment.
-		if (ThermalScopeEffect.usesPostCompositeModelLens()) {
-			ThermalScopeEffect.capturePostCompositeModelLensGeometry(
-					lensX, lensY, lensZ, lensRadius, scale);
-			return;
-		}
-
 		int lensTexture = ThermalScopeEffect.getModelLensTexture();
 		if (lensTexture < 0) {
+			return;
+		}
+		ThermalScopeEffect.capturePostCompositeModelLensGeometry(
+				lensX, lensY, lensZ, lensRadius, scale);
+
+		// The same aperture filters primary HUD markers and positions the late
+		// shader compositor, which follows the physical optic during ADS alignment.
+		if (ThermalScopeEffect.usesPostCompositeModelLens()) {
 			return;
 		}
 
