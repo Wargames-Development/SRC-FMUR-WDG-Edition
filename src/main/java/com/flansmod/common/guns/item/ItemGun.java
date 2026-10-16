@@ -76,6 +76,7 @@ import static com.flansmod.client.FlansModClient.*;
 
 
 public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptionable, ILockable {
+    private static final String CHAMBERED_ROUND_TAG = "FMURChamberedRound";
 
     private static final ExecutorService threadPool = Executors.newFixedThreadPool(2);
     private static final String HEAT_TAG = "FlansHeat";
@@ -233,6 +234,38 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             //Set the tags to match the bullet stack
             bullet.writeToNBT(ammoTags);
         }
+    }
+
+    /** A tactical magazine swap can leave one round in the chamber. */
+    public ItemStack getChamberedRound(ItemStack gun) {
+        if (gun == null || type.getSecondaryFire(gun) || type.getNumAmmoItemsInGun(gun) != 1
+                || !gun.hasTagCompound() || !gun.getTagCompound().hasKey(CHAMBERED_ROUND_TAG))
+            return null;
+        ItemStack round = ItemStack.loadItemStackFromNBT(
+                gun.getTagCompound().getCompoundTag(CHAMBERED_ROUND_TAG));
+        return round != null && round.getItem() instanceof ItemShootable
+                && round.getItemDamage() < round.getMaxDamage()
+                && type.isAmmo(((ItemShootable) round.getItem()).type, gun) ? round : null;
+    }
+
+    private void setChamberedRound(ItemStack gun, ItemStack round) {
+        if (!gun.hasTagCompound())
+            gun.setTagCompound(new NBTTagCompound());
+        if (round == null)
+            gun.getTagCompound().removeTag(CHAMBERED_ROUND_TAG);
+        else
+            gun.getTagCompound().setTag(CHAMBERED_ROUND_TAG, round.writeToNBT(new NBTTagCompound()));
+    }
+
+    private boolean hasLoadedRound(ItemStack gun, GunType gunType) {
+        if (getChamberedRound(gun) != null)
+            return true;
+        for (int slot = 0; slot < gunType.getNumAmmoItemsInGun(gun); slot++) {
+            ItemStack ammo = getBulletItemStack(gun, slot);
+            if (ammo != null && ammo.getItemDamage() < ammo.getMaxDamage())
+                return true;
+        }
+        return false;
     }
 
     @Override
@@ -425,6 +458,10 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                                 } else {
                                     //Send packet when firing a semi or starting to fire a full
                                     if (leftMouseHeld && !lastLeftMouseHeld && offHandGunType.getFireMode(offHandGunStack) != EnumFireMode.RAILGUN) {
+                                        if (offHandGunType.getNumAmmoItemsInGun(offHandGunStack) > 1
+                                                && hasLoadedRound(offHandGunStack, offHandGunType)
+                                                && FlansModClient.reloadTime(true) > 0)
+                                            FlansModClient.getGunAnimations(player, true).cancelReload();
                                         sendGunFirePacket(player, true, true);
                                         if (clientSideShoot(player, offHandGunStack, offHandGunType, true))
                                             player.inventory.setInventorySlotContents(data.offHandGunSlot - 1, null);
@@ -469,6 +506,10 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     } else {
                         //Send packet when firing a semi or starting to fire a full
                         if (rightMouseHeld && !lastRightMouseHeld && type.getFireMode(itemstack) != EnumFireMode.RAILGUN) {
+                            if (type.getNumAmmoItemsInGun(itemstack) > 1
+                                    && hasLoadedRound(itemstack, type)
+                                    && FlansModClient.reloadTime(false) > 0)
+                                FlansModClient.getGunAnimations(player, false).cancelReload();
                             sendGunFirePacket(player, false, true);
                             if (clientSideShoot(player, itemstack, type, false))
                                 player.inventory.setInventorySlotContents(player.inventory.currentItem, null);
@@ -1238,6 +1279,14 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             //Drivers can't shoot
             if (player.ridingEntity != null)
                 return;
+            ItemStack firingStack = left && data.offHandGunSlot > 0
+                    ? player.inventory.getStackInSlot(data.offHandGunSlot - 1) : stack;
+            if (isShooting && firingStack != null && firingStack.getItem() instanceof ItemGun) {
+                ItemGun firingGun = (ItemGun) firingStack.getItem();
+                if (firingGun.type.getNumAmmoItemsInGun(firingStack) > 1
+                        && firingGun.hasLoadedRound(firingStack, firingGun.type))
+                    data.cancelSingleReload(player, firingStack, left);
+            }
             if (left && data.offHandGunSlot != 0) {
                 ItemStack offHandGunStack = player.inventory.getStackInSlot(data.offHandGunSlot - 1);
                 GunType gunType = ((ItemGun) offHandGunStack.getItem()).type;
@@ -1287,10 +1336,12 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         if (((left && data.shootTimeLeft <= 0) || (!left && data.shootTimeRight <= 0)) && !data.isReloading(gunStack)) {
             //Go through the bullet stacks in the gun and see if any of them are not null
             int bulletID = 0;
-            ItemStack bulletStack = null;
+            ItemStack bulletStack = gunType.useHeatSystem ? null : getChamberedRound(gunStack);
+            boolean chamberedShot = bulletStack != null;
             ShootableType heatProjectile = gunType.useHeatSystem && !gunType.ammo.isEmpty()
                     && gunType.ammo.get(0) instanceof BulletType ? gunType.ammo.get(0) : null;
-            for (; !gunType.useHeatSystem && bulletID < gunType.getNumAmmoItemsInGun(gunStack); bulletID++) {
+            for (; !gunType.useHeatSystem && bulletStack == null
+                    && bulletID < gunType.getNumAmmoItemsInGun(gunStack); bulletID++) {
                 ItemStack checkingStack = getBulletItemStack(gunStack, bulletID);
                 if (checkingStack != null && checkingStack.getItem() != null && checkingStack.getItemDamage() < checkingStack.getMaxDamage()) {
                     bulletStack = checkingStack;
@@ -1347,7 +1398,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     }
 
                     int reloadTicks = Math.max(1, (int) Math.ceil(reloadTime));
-                    data.startReload(gunStack, reloadTicks, left, false, false, false);
+                    data.startReload(gunStack, reloadTicks, reloadCount, left, false, false, false);
                     if (left) {
                         data.reloadingLeft = true;
                         data.burstRoundsRemainingLeft = 0;
@@ -1412,6 +1463,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
 
                 if (gunType.useHeatSystem) {
                     addHeat(gunStack, gunType, entityplayer);
+                } else if (chamberedShot) {
+                    setChamberedRound(gunStack, null);
                 } else {
                     //Damage the bullet item
                     bulletStack.setItemDamage(bulletStack.getItemDamage() + 1);
@@ -1547,8 +1600,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         for (int ammoSlot = 0; ammoSlot < gunType.getNumAmmoItemsInGun(gunStack); ammoSlot++) {
             ItemStack loadedAmmo = getBulletItemStack(gunStack, ammoSlot);
             boolean needsAmmo = loadedAmmo == null
-                    || loadedAmmo.getItemDamage() == loadedAmmo.getMaxDamage()
-                    || forceReload;
+                    || loadedAmmo.getItemDamage() >= loadedAmmo.getMaxDamage()
+                    || forceReload && gunType.getNumAmmoItemsInGun(gunStack) == 1;
             if (!needsAmmo)
                 continue;
 
@@ -1568,6 +1621,19 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
      * Reload方法 , 换弹逻辑所在 , 检查枪支的弹药槽，寻找可用的弹药并装填到枪支中 , 若返回 true 则换弹成功 反之失败
      */
     public boolean reload(ItemStack gunStack, GunType gunType, World world, Entity entity, IInventory inventory, boolean creative, boolean forceReload, boolean combineAmmoOnReload, boolean ammoToUpperInventory) {
+        return reload(gunStack, gunType, world, entity, inventory, creative, forceReload,
+                combineAmmoOnReload, ammoToUpperInventory, Integer.MAX_VALUE);
+    }
+
+    public boolean reloadOne(ItemStack gunStack, GunType gunType, World world, EntityPlayer player,
+                             boolean forceReload, boolean combineAmmoOnReload, boolean ammoToUpperInventory) {
+        return reload(gunStack, gunType, world, player, player.inventory, player.capabilities.isCreativeMode,
+                forceReload, combineAmmoOnReload, ammoToUpperInventory, 1);
+    }
+
+    private boolean reload(ItemStack gunStack, GunType gunType, World world, Entity entity, IInventory inventory,
+                           boolean creative, boolean forceReload, boolean combineAmmoOnReload,
+                           boolean ammoToUpperInventory, int maxLoads) {
 
         if (gunType.useHeatSystem)
             return false;
@@ -1590,10 +1656,12 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         if (forceReload && !gunType.canForceReload)
             return false;
         String preferredAmmoShortname = ((ItemGun) gunStack.getItem()).getPreferredAmmoStack(gunStack); // 需要换的弹药类型的shortname
+        boolean singleReload = gunType.getNumAmmoItemsInGun(gunStack) > 1;
         for (int i = 0; i < gunType.getNumAmmoItemsInGun(gunStack); i++) { // 遍历枪里每个弹药槽
             ItemStack bulletStack = getBulletItemStack(gunStack, i); // 获取弹药槽stack
             // 如果弹药槽内没有弹匣 , 或弹匣为空 , 或这是一次强制换弹
-            if (bulletStack == null || bulletStack.getItemDamage() == bulletStack.getMaxDamage() || forceReload) {
+            if (bulletStack == null || bulletStack.getItemDamage() >= bulletStack.getMaxDamage()
+                    || forceReload && !singleReload) {
                 //遍历玩家的背包（或者其他包含物品槽的地方，如存储箱、容器等），然后查找包含子弹（弹药）的物品栈中哪一个具有最多数量的子弹
                 int bestSlot = -1;
                 int bulletsInBestSlot = -1;
@@ -1626,6 +1694,15 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     if (newBulletStack.stackSize <= 0)
                         newBulletStack = null;
                     inventory.setInventorySlotContents(bestSlot, newBulletStack);
+                    if (forceReload && !singleReload && getChamberedRound(gunStack) == null
+                            && bulletStack != null && bulletStack.getMaxDamage() > 1
+                            && bulletStack.getItemDamage() < bulletStack.getMaxDamage()) {
+                        ItemStack chamberRound = bulletStack.copy();
+                        chamberRound.stackSize = 1;
+                        chamberRound.setItemDamage(chamberRound.getMaxDamage() - 1);
+                        setChamberedRound(gunStack, chamberRound);
+                        bulletStack.setItemDamage(bulletStack.getItemDamage() + 1);
+                    }
                     //掉落物品 , (如果需要且玩家此时不为创造模式 , 掉落所需物品)
                     if (bulletStack != null && bulletStack.getItem() instanceof ItemShootable && ((ItemShootable) bulletStack.getItem()).type.dropItemOnReload != null && !creative && bulletStack.getItemDamage() == bulletStack.getMaxDamage())
                         dropItem(world, entity, ((ItemShootable) bulletStack.getItem()).type.dropItemOnReload);
@@ -1640,6 +1717,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
 
                     //成功装弹!
                     reloadedSomething = true;
+                    if (--maxLoads == 0)
+                        break;
                 }
             }
         }

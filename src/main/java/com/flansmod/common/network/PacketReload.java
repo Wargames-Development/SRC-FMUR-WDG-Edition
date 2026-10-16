@@ -175,6 +175,8 @@ public class PacketReload extends PacketBase {
                 return;
             }
             //检查枪械是否为空仓
+            if (data.cancelSingleReload(playerEntity, gunStack, left))
+                return;
             if (data.isReloading(gunStack) || data.hasReloadInHand(left))
                 return;
             boolean empty = true;
@@ -196,9 +198,7 @@ public class PacketReload extends PacketBase {
                 for (int i = 0; i < type.getNumAmmoItemsInGun(gunStack); i++) { // 遍历
                     ItemStack oldBulletStack = ((ItemGun) gunStack.getItem()).getBulletItemStack(gunStack, i); // 遍历到的gun中原有的弹药槽
                     if (oldBulletStack == null
-                            || oldBulletStack.getMaxDamage() - oldBulletStack.getItemDamage() == 0
-                            || type.canForceReload) {
-                        // Manual reload replaces this slot, so include it in the animation duration.
+                            || oldBulletStack.getItemDamage() >= oldBulletStack.getMaxDamage()) {
                         reloadCount += 1;
                     }
                 }
@@ -218,7 +218,7 @@ public class PacketReload extends PacketBase {
                 }
 
                 int reloadTicks = Math.max(1, (int) Math.ceil(reloadTime));
-                data.startReload(gunStack, reloadTicks, left, true, combineAmmo, ammoToUpperInventory);
+                data.startReload(gunStack, reloadTicks, reloadCount, left, true, combineAmmo, ammoToUpperInventory);
                 //Set the reload delay
                 if (left)
                     data.reloadingLeft = true;

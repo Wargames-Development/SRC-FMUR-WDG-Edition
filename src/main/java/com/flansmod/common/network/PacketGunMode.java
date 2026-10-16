@@ -73,6 +73,9 @@ public class PacketGunMode extends PacketBase {
                 if (currentMode != nextMode) {
                     gun.type.setFireMode(itemStack, nextMode.ordinal());
                     FlansMod.getPacketHandler().sendTo(new PacketGunMode(nextMode), playerEntity);
+                    PacketPlaySound.sendSoundPacket(playerEntity.posX, playerEntity.posY,
+                            playerEntity.posZ, 12D, playerEntity.dimension, "fireswitch",
+                            false, false, 0.6F);
                 }
             }
         } else {

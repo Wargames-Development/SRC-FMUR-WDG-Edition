@@ -7,6 +7,10 @@
     "category": "player",
     "sounds": ["flansmod:defaultshellinsert"]
   },
+  "fireswitch": {
+    "category": "player",
+    "sounds": ["flansmod:fireswitch"]
+  },
   "target_hit": {
     "category": "player",
     "sounds": ["flansmod:target_hit"]

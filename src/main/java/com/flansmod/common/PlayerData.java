@@ -194,7 +194,7 @@ public class PlayerData {
 		snapshots[0] = new PlayerSnapshot(player);
 	}
 
-	public void startReload(ItemStack gunStack, float reloadTime, boolean left, boolean forceReload,
+	public void startReload(ItemStack gunStack, float reloadTime, int reloadCount, boolean left, boolean forceReload,
 			boolean combineAmmo, boolean ammoToUpperInventory) {
 		if (gunStack == null || reloadTime <= 0F)
 			return;
@@ -204,10 +204,10 @@ public class PlayerData {
 		gunStack.getTagCompound().setString(RELOAD_ID_TAG, reloadId);
 		if (left)
 			reloadLeft = new ReloadState(gunStack, reloadId, reloadTime, forceReload,
-					combineAmmo, ammoToUpperInventory);
+					combineAmmo, ammoToUpperInventory, reloadCount);
 		else
 			reloadRight = new ReloadState(gunStack, reloadId, reloadTime, forceReload,
-					combineAmmo, ammoToUpperInventory);
+					combineAmmo, ammoToUpperInventory, reloadCount);
 	}
 
 	public boolean hasReloadInHand(boolean left) {
@@ -247,8 +247,22 @@ public class PlayerData {
 			return;
 
 		reloadState.timeLeft--;
+		if (!player.worldObj.isRemote && reloadState.shellsToLoad > 0) {
+			ItemGun gunItem = (ItemGun) inventoryStack.getItem();
+			int completed = (int) ((reloadState.totalTime - Math.max(0F, reloadState.timeLeft))
+					* reloadState.shellsToLoad / reloadState.totalTime);
+			while (reloadState.shellsLoaded < completed) {
+				if (!gunItem.reloadOne(inventoryStack, gunItem.type, player.worldObj, player,
+						reloadState.forceReload, reloadState.combineAmmo, reloadState.ammoToUpperInventory)) {
+					cancelReload(player, reloadState, inventoryStack, left);
+					return;
+				}
+				reloadState.shellsLoaded++;
+			}
+		}
 		if (reloadState.timeLeft <= 0F) {
-			if (!player.worldObj.isRemote && inventoryStack.getItem() instanceof ItemGun) {
+			if (!player.worldObj.isRemote && reloadState.shellsToLoad == 0
+					&& inventoryStack.getItem() instanceof ItemGun) {
 				ItemGun gunItem = (ItemGun) inventoryStack.getItem();
 				gunItem.reload(inventoryStack, gunItem.type, player.worldObj, player,
 						reloadState.forceReload, left, reloadState.combineAmmo,
@@ -262,6 +276,14 @@ public class PlayerData {
 		clearReload(reloadState, inventoryStack, left);
 		if (!player.worldObj.isRemote && player instanceof EntityPlayerMP)
 			syncReloadCancellation(player, left);
+	}
+
+	public boolean cancelSingleReload(EntityPlayer player, ItemStack gunStack, boolean left) {
+		ReloadState reloadState = getReloadState(left);
+		if (reloadState == null || reloadState.shellsToLoad == 0 || !isReloading(reloadState, gunStack))
+			return false;
+		cancelReload(player, reloadState, findReloadStack(player, reloadState), left);
+		return true;
 	}
 
 	private ReloadState getReloadState(boolean left) {
@@ -344,16 +366,23 @@ public class PlayerData {
 		private final boolean forceReload;
 		private final boolean combineAmmo;
 		private final boolean ammoToUpperInventory;
+		private final float totalTime;
+		private final int shellsToLoad;
+		private int shellsLoaded;
 		private float timeLeft;
 
 		private ReloadState(ItemStack gunStack, String reloadId, float timeLeft, boolean forceReload,
-				boolean combineAmmo, boolean ammoToUpperInventory) {
+				boolean combineAmmo, boolean ammoToUpperInventory, int reloadCount) {
 			this.gunStack = gunStack;
 			this.reloadId = reloadId;
 			this.timeLeft = timeLeft;
 			this.forceReload = forceReload;
 			this.combineAmmo = combineAmmo;
 			this.ammoToUpperInventory = ammoToUpperInventory;
+			this.totalTime = timeLeft;
+			this.shellsToLoad = gunStack.getItem() instanceof ItemGun
+					&& ((ItemGun) gunStack.getItem()).type.getNumAmmoItemsInGun(gunStack) > 1
+					? reloadCount : 0;
 		}
 	}
 

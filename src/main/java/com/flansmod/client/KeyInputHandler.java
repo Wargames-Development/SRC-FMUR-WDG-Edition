@@ -197,7 +197,8 @@ public class KeyInputHandler {
 //            return;
 //        }
 
-        if (reloadKey.isPressed() && FlansModClient.shootTime(false) <= 0) {
+        if (reloadKey.isPressed() && (FlansModClient.shootTime(false) <= 0
+                || FlansModClient.reloadTime(false) > 0)) {
             FlansMod.getPacketHandler().sendToServer(new PacketReload(false, FlansModClient.combineAmmoOnReload, FlansModClient.ammoToUpperInventoryOnReload));
             return;
         }
