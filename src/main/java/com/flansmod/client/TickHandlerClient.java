@@ -42,13 +42,11 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.RenderItem;
-import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MathHelper;
-import net.minecraft.util.IIcon;
 import net.minecraft.util.MouseHelper;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.ResourceLocation;
@@ -1682,12 +1680,9 @@ public class TickHandlerClient {
                                int screenWidth, int screenHeight) {
         int loaded = 0;
         int capacity = 0;
-        ItemStack ammoIcon = null;
         for (int slot = 0; slot < gunType.getNumAmmoItemsInGun(gunStack); slot++) {
             ItemStack ammo = gunItem.getBulletItemStack(gunStack, slot);
             if (ammo != null) {
-                if (ammoIcon == null && ammo.getItem() != null)
-                    ammoIcon = ammo;
                 loaded += Math.max(0, ammo.getMaxDamage() - ammo.getItemDamage());
                 capacity += Math.max(1, ammo.getMaxDamage());
             } else {
@@ -1704,18 +1699,11 @@ public class TickHandlerClient {
             if (ammo != null && ammo.stackSize > 0 && ammo.getItem() instanceof ItemShootable
                     && ammo.getItemDamage() < ammo.getMaxDamage()
                     && gunType.isAmmo(((ItemShootable) ammo.getItem()).type, gunStack)) {
-                // Reloading consumes one inventory item for each loose round or magazine.
-                if (reserve == 0)
-                    ammoIcon = ammo;
-                reserve += ammo.stackSize;
+                reserve += ammo.stackSize * (ammo.getMaxDamage() - ammo.getItemDamage());
                 capacity = Math.max(capacity,
                         ammo.getMaxDamage() * gunType.getNumAmmoItemsInGun(gunStack));
             }
         }
-        if (ammoIcon == null && !gunType.ammo.isEmpty() && gunType.ammo.get(0) != null
-                && gunType.ammo.get(0).getItem() != null)
-            ammoIcon = new ItemStack(gunType.ammo.get(0).getItem());
-
         boolean empty = loaded == 0;
         boolean lowAmmo = !empty && loaded * 4 <= capacity;
         int countColor = empty || lowAmmo ? 0xD0EF7474 : 0xC058E2D4;
@@ -1726,26 +1714,23 @@ public class TickHandlerClient {
         FontRenderer font = mc.fontRenderer;
         String loadedText = Integer.toString(loaded);
         String reserveText = Integer.toString(reserve);
-        String gunName = gunStack.getDisplayName();
-        float countScale = Math.min(2F, 72F / Math.max(1, font.getStringWidth(loadedText)));
+        float countScale = Math.min(2F, 55F / Math.max(1, font.getStringWidth(loadedText)));
         int loadedWidth = (int) (font.getStringWidth(loadedText) * countScale);
-        int panelWidth = Math.max(136, 54 + loadedWidth + font.getStringWidth(reserveText) + 41);
-        List<String> nameLines = font.listFormattedStringToWidth(gunName, panelWidth - 16);
-        while (nameLines.size() > 2 && panelWidth < 200) {
-            panelWidth += 8;
-            nameLines = font.listFormattedStringToWidth(gunName, panelWidth - 16);
-        }
-        int panelHeight = 48 + nameLines.size() * 10;
+        int dividerOffset = 59 + loadedWidth;
+        int reserveWidth = Math.max(30, font.getStringWidth(reserveText)) + 12;
+        int panelWidth = dividerOffset + reserveWidth;
+        int panelHeight = 49;
         int x = screenWidth - panelWidth - 8;
         int y = screenHeight - panelHeight - 8;
-        int reserveX = x + panelWidth - 9 - font.getStringWidth(reserveText);
-        int ammoIconX = reserveX - 19;
-        int ammoIconY = y + 6;
+        int reserveX = x + dividerOffset
+                + (reserveWidth - font.getStringWidth(reserveText)) / 2;
 
         Gui.drawRect(x, y, x + panelWidth, y + panelHeight, empty ? 0x90402125 : 0x900A2428);
         Gui.drawRect(x, y, x + panelWidth, y + 2, accentColor);
-        Gui.drawRect(x + 4, y + 4, x + 43, y + 41, empty ? 0x304D2020 : 0x2832DCCB);
-        Gui.drawRect(x + 47, y + 7, x + 48, y + 39, empty ? 0x887F3838 : 0x8844CFC5);
+        Gui.drawRect(x + 4, y + 4, x + dividerOffset - 4, y + 45,
+                empty ? 0x304D2020 : 0x2832DCCB);
+        Gui.drawRect(x + dividerOffset, y + 7, x + dividerOffset + 1, y + 42,
+                empty ? 0x887F3838 : 0x8844CFC5);
 
         RenderHelper.enableGUIStandardItemLighting();
         GL11.glEnable(GL12.GL_RESCALE_NORMAL);
@@ -1755,69 +1740,36 @@ public class TickHandlerClient {
         GL11.glScalef(2F, 2F, 1F);
         itemRenderer.renderItemIntoGUI(font, mc.renderEngine, gunStack, 0, 0);
         GL11.glPopMatrix();
-        if (ammoIcon != null)
-            itemRenderer.renderItemIntoGUI(font, mc.renderEngine, ammoIcon, ammoIconX, ammoIconY);
         GL11.glDisable(GL12.GL_RESCALE_NORMAL);
         RenderHelper.disableStandardItemLighting();
         GL11.glColor4f(1F, 1F, 1F, 1F);
-        if (empty) {
-            Gui.drawRect(x + 4, y + 4, x + 43, y + 41, 0x50BB5050);
-            if (ammoIcon != null)
-                renderAmmoIconGlow(mc, ammoIcon, ammoIconX, ammoIconY);
-        }
+        if (empty)
+            Gui.drawRect(x + 4, y + 4, x + dividerOffset - 4, y + 45, 0x50BB5050);
 
         GL11.glPushMatrix();
-        GL11.glTranslatef(x + 54, y + 8, 0F);
+        GL11.glTranslatef(x + 43 + (dividerOffset - 47 - loadedWidth) / 2F,
+                y + (panelHeight - font.FONT_HEIGHT * countScale) / 2F, 0F);
         GL11.glScalef(countScale, countScale, 1F);
         font.drawStringWithShadow(loadedText, 0, 0, countColor);
         GL11.glPopMatrix();
 
-        font.drawStringWithShadow(reserveText, reserveX, y + 9, detailColor);
+        font.drawStringWithShadow(reserveText, reserveX, y + 11, detailColor);
 
         EnumFireMode mode = gunType.getFireMode(gunStack);
         int bulletCount = mode == EnumFireMode.BURST ? 2
                 : mode == EnumFireMode.FULLAUTO || mode == EnumFireMode.MINIGUN ? 3 : 1;
         String modeLetter = mode == EnumFireMode.BURST ? "B"
                 : mode == EnumFireMode.FULLAUTO || mode == EnumFireMode.MINIGUN ? "A" : "S";
-        int bulletsX = x + panelWidth - 7 - (bulletCount * 8 - 2);
+        int bulletsX = x + dividerOffset + (reserveWidth - (bulletCount * 8 - 2)) / 2;
         font.drawStringWithShadow(modeLetter,
                 bulletsX + (bulletCount * 8 - 2 - font.getStringWidth(modeLetter)) / 2,
-                y + 20, empty ? 0xA0C07070 : 0xA0A2CF86);
+                y + 26, empty ? 0xA0C07070 : 0xA0A2CF86);
         for (int bullet = 0; bullet < bulletCount; bullet++) {
             int bulletX = bulletsX + bullet * 8;
-            Gui.drawRect(bulletX + 2, y + 29, bulletX + 4, y + 31, bulletColor);
-            Gui.drawRect(bulletX + 1, y + 31, bulletX + 5, y + 38, bulletColor);
-            Gui.drawRect(bulletX, y + 38, bulletX + 6, y + 40, bulletColor);
+            Gui.drawRect(bulletX + 2, y + 35, bulletX + 4, y + 37, bulletColor);
+            Gui.drawRect(bulletX + 1, y + 37, bulletX + 5, y + 44, bulletColor);
+            Gui.drawRect(bulletX, y + 44, bulletX + 6, y + 46, bulletColor);
         }
-
-        for (int line = 0; line < nameLines.size(); line++)
-            font.drawStringWithShadow(nameLines.get(line), x + 8, y + 43 + line * 10,
-                    empty ? detailColor : 0xB09CE0D8);
-    }
-
-    private void renderAmmoIconGlow(Minecraft mc, ItemStack ammo, int x, int y) {
-        IIcon icon = ammo.getIconIndex();
-        if (icon == null)
-            return;
-        // The item texture's alpha confines the red overlay to the icon pixels.
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT
-                | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_TEXTURE_BIT);
-        GL11.glDisable(GL11.GL_DEPTH_TEST);
-        GL11.glDepthMask(false);
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GL11.glEnable(GL11.GL_BLEND);
-        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
-        GL11.glColor4f(1F, 0.2F, 0.2F, 0.65F);
-        mc.renderEngine.bindTexture(TextureMap.locationItemsTexture);
-        Tessellator tessellator = Tessellator.instance;
-        tessellator.startDrawingQuads();
-        tessellator.addVertexWithUV(x, y + 16, 0D, icon.getMinU(), icon.getMaxV());
-        tessellator.addVertexWithUV(x + 16, y + 16, 0D, icon.getMaxU(), icon.getMaxV());
-        tessellator.addVertexWithUV(x + 16, y, 0D, icon.getMaxU(), icon.getMinV());
-        tessellator.addVertexWithUV(x, y, 0D, icon.getMinU(), icon.getMinV());
-        tessellator.draw();
-        GL11.glPopAttrib();
-        GL11.glColor4f(1F, 1F, 1F, 1F);
     }
 
     private void drawSlotInventory(FontRenderer fontRenderer, ItemStack itemstack, int i, int j) {
