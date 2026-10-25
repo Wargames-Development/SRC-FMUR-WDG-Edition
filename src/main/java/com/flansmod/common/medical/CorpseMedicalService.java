@@ -27,8 +27,6 @@ public final class CorpseMedicalService {
             return null;
         }
 
-        clearCorpseForPlayer(player);
-
         EntityCorpse corpse = new EntityCorpse(player.worldObj, player);
         corpse.captureInventory(player);
         corpse.setLocationAndAngles(player.posX, player.posY, player.posZ, player.rotationYaw, 0.0F);
@@ -114,11 +112,10 @@ public final class CorpseMedicalService {
 
         EntityCorpse corpse = findCorpse(event.entityPlayer.getUniqueID(), event.entityPlayer.getCommandSenderName());
         if (corpse != null) {
-            // The corpse already captured the inventory with its original slot
-            // positions during LivingDeathEvent. Cancel at highest priority so
-            // TeamsManager and vanilla cannot transform or spawn these drops.
+            // The corpse captured these stacks before vanilla cleared the player.
+            // An empty drop list is enough for Forge and avoids canceling the
+            // death event on hybrid servers such as Crucible.
             event.drops.clear();
-            event.setCanceled(true);
         }
     }
 
@@ -136,6 +133,13 @@ public final class CorpseMedicalService {
         MinecraftServer server = MinecraftServer.getServer();
         if (server == null || server.worldServers == null) {
             return null;
+        }
+
+        CorpseRef registered = playerUuid == null ? null : ACTIVE_CORPSES.get(playerUuid);
+        if (registered != null) {
+            World world = server.worldServerForDimension(registered.dimension);
+            Entity entity = world == null ? null : world.getEntityByID(registered.entityId);
+            if (entity instanceof EntityCorpse && !entity.isDead) return (EntityCorpse) entity;
         }
 
         for (World world : server.worldServers) {

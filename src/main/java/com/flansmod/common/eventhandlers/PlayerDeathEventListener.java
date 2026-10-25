@@ -4,27 +4,25 @@ import com.flansmod.common.FlansMod;
 import com.flansmod.common.guns.EntityBullet;
 import com.flansmod.common.guns.EntityGrenade;
 import com.flansmod.common.medical.CorpseMedicalService;
+import com.flansmod.common.mob.EntityCorpse;
 import com.flansmod.common.mob.EntitySoldier;
 import com.flansmod.common.network.PacketKillMessage;
 import com.flansmod.common.types.InfoType;
-import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
-import cpw.mods.fml.common.gameevent.PlayerEvent.PlayerLoggedOutEvent;
-import cpw.mods.fml.common.gameevent.PlayerEvent.PlayerRespawnEvent;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerDropsEvent;
+import net.minecraftforge.event.entity.player.EntityInteractEvent;
 
 @SuppressWarnings("unused")
 public class PlayerDeathEventListener {
 
     public PlayerDeathEventListener() {
         MinecraftForge.EVENT_BUS.register(this);
-        FMLCommonHandler.instance().bus().register(this);
     }
 
     @SubscribeEvent
@@ -73,13 +71,22 @@ public class PlayerDeathEventListener {
         CorpseMedicalService.captureDeathDrops(event);
     }
 
-    @SubscribeEvent
-    public void onPlayerRespawn(PlayerRespawnEvent event) {
-        CorpseMedicalService.clearCorpseForPlayer(event.player);
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public void onCorpseInteract(EntityInteractEvent event) {
+        if (!(event.target instanceof EntityCorpse) || event.entityPlayer == null
+                || event.entityPlayer.worldObj.isRemote) {
+            return;
+        }
+
+        EntityCorpse corpse = (EntityCorpse) event.target;
+        if (corpse.worldObj != event.entityPlayer.worldObj || !corpse.isUseableByPlayer(event.entityPlayer)) {
+            return;
+        }
+
+        // Open before claim interaction handlers inspect this entity. Looting a
+        // body is available to every player regardless of claim ownership.
+        corpse.interactFirst(event.entityPlayer);
+        event.setCanceled(true);
     }
 
-    @SubscribeEvent
-    public void onPlayerLogout(PlayerLoggedOutEvent event) {
-        CorpseMedicalService.clearCorpseForPlayer(event.player);
-    }
 }

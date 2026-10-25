@@ -36,6 +36,12 @@ public final class Integrations {
             return false;
         }
 
+        // Bullet simulation also runs on clients. WGCore permissions resolve
+        // server world data and must only be queried by the authoritative side.
+        if (world.isRemote) {
+            return true;
+        }
+
         if (!(targetEntity instanceof EntityPlayer)) {
             return true;
         }

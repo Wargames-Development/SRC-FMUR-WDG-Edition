@@ -1169,7 +1169,8 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                 if (entity != this && entity != this.owner && !entity.isDead
                         && !(entity instanceof EntityItem) && !(entity instanceof EntityXPOrb) && !(entity instanceof EntityArrow)
                         && (entity.getClass().toString().indexOf("flansmod.") < 0
-                        || entity instanceof EntityAAGun || entity instanceof EntityGrenade)) {
+                        || entity instanceof EntityAAGun || entity instanceof EntityGrenade
+                        || entity instanceof com.flansmod.common.mob.EntityCorpse)) {
                     AxisAlignedBB bb = HitboxHelper.getFixedBoundingBox(entity);
                     //AxisAlignedBB bb = entity.boundingBox.expand(-(entity.posX - entity.prevPosX) * 2.0D, -(entity.posY - entity.prevPosY) * 2.0D, -(entity.posZ - entity.prevPosZ) * 2.0D);
                     MovingObjectPosition mop = bb.expand(hitBoxSize, hitBoxSize, hitBoxSize).calculateIntercept(origin.toVec3(), Vec3.createVectorHelper(this.posX + this.motionX, this.posY + this.motionY, this.posZ + this.motionZ));

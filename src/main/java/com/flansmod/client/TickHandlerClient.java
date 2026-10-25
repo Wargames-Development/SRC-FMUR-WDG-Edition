@@ -51,7 +51,6 @@ import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraftforge.client.event.MouseEvent;
-import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
@@ -131,7 +130,6 @@ public class TickHandlerClient {
     private boolean isInFlash;
     private int flashTime;
     public static int apsMarkerTime;
-    private long corpseExpiryTimeMillis = -1L;
     private int deathScreenDisplayWidth = -1;
     private int deathScreenDisplayHeight = -1;
 
@@ -321,32 +319,6 @@ public class TickHandlerClient {
             if (((ItemGun) player.getCurrentEquippedItem().getItem()).type.oneHanded && Keyboard.isKeyDown(Minecraft.getMinecraft().gameSettings.keyBindSneak.getKeyCode()) && Math.abs(event.dwheel) > 0)
                 event.setCanceled(true);
         }
-    }
-
-    @SubscribeEvent
-    public void drawDeathScreenStatus(GuiScreenEvent.DrawScreenEvent.Post event) {
-        if (!(event.gui instanceof GuiGameOver) || !FlansMod.playerCorpsesEnabled) {
-            corpseExpiryTimeMillis = -1L;
-            return;
-        }
-
-        Minecraft mc = Minecraft.getMinecraft();
-        if (corpseExpiryTimeMillis < 0L) {
-            int elapsedTicks = mc.thePlayer != null ? Math.max(0, mc.thePlayer.deathTime) : 0;
-            long remainingMillis = Math.max(0L, FlansMod.corpseLifetimeSeconds * 1000L - elapsedTicks * 50L);
-            corpseExpiryTimeMillis = System.currentTimeMillis() + remainingMillis;
-        }
-
-        long remainingMillis = Math.max(0L, corpseExpiryTimeMillis - System.currentTimeMillis());
-        int remainingSeconds = (int) ((remainingMillis + 999L) / 1000L);
-        int minutes = remainingSeconds / 60;
-        int seconds = remainingSeconds % 60;
-        String timer = String.format("Body expires in %d:%02d", minutes, seconds);
-        String instruction = "Respawn to continue";
-        int centerX = event.gui.width / 2;
-        int baseY = event.gui.height / 4 + 132;
-        event.gui.drawCenteredString(mc.fontRenderer, timer, centerX, baseY, 0xFFFFFF);
-        event.gui.drawCenteredString(mc.fontRenderer, instruction, centerX, baseY + 12, 0xBFBFBF);
     }
 
     @SubscribeEvent
@@ -1277,7 +1249,6 @@ public class TickHandlerClient {
             deathScreenDisplayWidth = mc.displayWidth;
             deathScreenDisplayHeight = mc.displayHeight;
         } else {
-            corpseExpiryTimeMillis = -1L;
             deathScreenDisplayWidth = -1;
             deathScreenDisplayHeight = -1;
         }

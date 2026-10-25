@@ -48,7 +48,8 @@ repositories {
 }
 
 dependencies {
-    compile fileTree(dir: 'lib', include: ['*.jar'])
+    // Use the MCP-mapped WGCore dev jar for local compilation and runs.
+    compile fileTree(dir: 'lib', include: ['*.jar'], exclude: ['WGCore-2.7.5_X211.jar'])
 
     implementation 'codechicken:CodeChickenCore:1.7.10-1.0.4.29:dev'
     compileOnly 'codechicken:CodeChickenCore:1.7.10-1.0.4.29:src'

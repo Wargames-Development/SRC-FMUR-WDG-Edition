@@ -1,7 +1,6 @@
 package com.flansmod.common.mob;
 
 import com.flansmod.common.FlansMod;
-import com.flansmod.common.types.InfoType;
 import com.flansmod.common.medical.CorpseMedicalService;
 import com.flansmod.common.teams.PlayerEquipmentInventory;
 import cpw.mods.fml.common.network.ByteBufUtils;
@@ -11,17 +10,17 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.util.DamageSource;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.World;
 
 import java.util.UUID;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
+public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData, IInventory {
 
     private EntityPlayer owner;
     private String playerName;
@@ -37,14 +36,17 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
     private float leftLegRotationX, leftLegRotationY, leftLegRotationZ;
     private float rightLegRotationX, rightLegRotationY, rightLegRotationZ;
     private boolean isDown;
-    private final List<StoredItem> storedInventory = new ArrayList<StoredItem>();
+    private final ItemStack[] storedInventory = new ItemStack[54];
     private boolean inventoryReleased;
+    private int shotCount;
+    private long expiresAtMillis;
 
     public EntityCorpse(World world) {
         super(world);
         renderDistanceWeight = 100D;
         ignoreFrustumCheck = true;
         setSize(0.6F, 0.3F);
+        expiresAtMillis = System.currentTimeMillis() + Math.max(1, FlansMod.corpseLifetimeSeconds) * 1000L;
     }
 
     public EntityCorpse(World world, EntityPlayer player) {
@@ -54,6 +56,7 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
         this.playerDisplayName = player.getDisplayName();
         this.playerUuid = player.getUniqueID();
         this.scoreboardTeamName = player.getTeam() != null ? player.getTeam().getRegisteredName() : "";
+        this.expiresAtMillis = System.currentTimeMillis() + Math.max(1, FlansMod.corpseLifetimeSeconds) * 1000L;
 
         this.headRotationX = (float) (Math.random() * 30 - 15);
         this.headRotationY = (float) (Math.random() * 360 - 180);
@@ -83,8 +86,7 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
     public void onUpdate() {
         super.onUpdate();
 
-        int lifetimeTicks = Math.max(1, FlansMod.corpseLifetimeSeconds) * 20;
-        if (!worldObj.isRemote && ticksExisted > lifetimeTicks) {
+        if (!worldObj.isRemote && System.currentTimeMillis() >= expiresAtMillis) {
             expireAndDropInventory();
             return;
         }
@@ -109,16 +111,18 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
         }
         scoreboardTeamName = nbt.getString("ScoreboardTeam");
 
-        storedInventory.clear();
+        for (int slot = 0; slot < storedInventory.length; slot++) storedInventory[slot] = null;
         NBTTagList inventoryTags = nbt.getTagList("StoredInventory", 10);
         for (int index = 0; index < inventoryTags.tagCount(); index++) {
             NBTTagCompound itemTag = inventoryTags.getCompoundTagAt(index);
             ItemStack stack = ItemStack.loadItemStackFromNBT(itemTag);
-            if (stack != null) {
-                storedInventory.add(new StoredItem(itemTag.getInteger("CorpseSlot"), stack));
-            }
+            int slot = itemTag.getInteger("CorpseSlot");
+            if (stack != null && slot >= 0 && slot < storedInventory.length) storedInventory[slot] = stack;
         }
         inventoryReleased = nbt.getBoolean("InventoryReleased");
+        shotCount = nbt.getInteger("ShotCount");
+        expiresAtMillis = nbt.hasKey("ExpiresAtMillis") ? nbt.getLong("ExpiresAtMillis")
+                : System.currentTimeMillis() + Math.max(1, FlansMod.corpseLifetimeSeconds) * 1000L;
 
         headRotationX = nbt.getFloat("HeadRotationX");
         headRotationY = nbt.getFloat("HeadRotationY");
@@ -147,17 +151,18 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
         nbt.setString("ScoreboardTeam", safe(scoreboardTeamName));
 
         NBTTagList inventoryTags = new NBTTagList();
-        for (StoredItem storedItem : storedInventory) {
-            if (storedItem.stack == null) {
-                continue;
-            }
+        for (int slot = 0; slot < storedInventory.length; slot++) {
+            ItemStack stack = storedInventory[slot];
+            if (stack == null) continue;
             NBTTagCompound itemTag = new NBTTagCompound();
-            storedItem.stack.writeToNBT(itemTag);
-            itemTag.setInteger("CorpseSlot", storedItem.slot);
+            stack.writeToNBT(itemTag);
+            itemTag.setInteger("CorpseSlot", slot);
             inventoryTags.appendTag(itemTag);
         }
         nbt.setTag("StoredInventory", inventoryTags);
         nbt.setBoolean("InventoryReleased", inventoryReleased);
+        nbt.setInteger("ShotCount", shotCount);
+        nbt.setLong("ExpiresAtMillis", expiresAtMillis);
 
         nbt.setFloat("HeadRotationX", headRotationX);
         nbt.setFloat("HeadRotationY", headRotationY);
@@ -180,7 +185,23 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
 
     @Override
     public boolean canBeCollidedWith() {
-        return false;
+        return true;
+    }
+
+    @Override
+    public boolean interactFirst(EntityPlayer player) {
+        if (!worldObj.isRemote && !isDead && player.getDistanceSqToEntity(this) <= 64.0D) {
+            player.displayGUIChest(this);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean attackEntityFrom(DamageSource source, float amount) {
+        if (worldObj.isRemote || isDead || amount <= 0.0F || source == null
+                || !(source.getSourceOfDamage() instanceof com.flansmod.common.guns.EntityBullet)) return false;
+        if (++shotCount >= 3) expireAndDropInventory();
+        return true;
     }
 
     @Override
@@ -202,7 +223,7 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
     }
 
     public void captureInventory(EntityPlayer player) {
-        storedInventory.clear();
+        for (int slot = 0; slot < storedInventory.length; slot++) storedInventory[slot] = null;
         inventoryReleased = false;
         if (player == null || player.inventory == null) {
             return;
@@ -214,7 +235,7 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
         for (int slot = 0; slot < player.inventory.getSizeInventory(); slot++) {
             ItemStack stack = player.inventory.getStackInSlot(slot);
             if (stack != null) {
-                storedInventory.add(new StoredItem(slot, stack.copy()));
+                if (slot < storedInventory.length) storedInventory[slot] = stack.copy();
             }
         }
         PlayerEquipmentInventory equipment = PlayerEquipmentInventory.get(player);
@@ -222,7 +243,8 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
             for (int slot = 0; slot < equipment.getSizeInventory(); slot++) {
                 ItemStack stack = equipment.getStackInSlot(slot);
                 if (stack != null) {
-                    storedInventory.add(new StoredItem(player.inventory.getSizeInventory() + slot, stack.copy()));
+                    int corpseSlot = player.inventory.getSizeInventory() + slot;
+                    if (corpseSlot < storedInventory.length) storedInventory[corpseSlot] = stack.copy();
                 }
             }
         }
@@ -230,14 +252,13 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
 
     public void expireAndDropInventory() {
         if (worldObj != null && !worldObj.isRemote && !inventoryReleased) {
-            for (StoredItem storedItem : storedInventory) {
-                ItemStack stack = storedItem.stack;
-                InfoType type = stack != null ? InfoType.getType(stack) : null;
-                if (stack != null && (type == null || type.canDrop)) {
+            for (int slot = 0; slot < storedInventory.length; slot++) {
+                ItemStack stack = storedInventory[slot];
+                if (stack != null) {
                     entityDropItem(stack.copy(), 0.0F);
                 }
             }
-            storedInventory.clear();
+            for (int slot = 0; slot < storedInventory.length; slot++) storedInventory[slot] = null;
             inventoryReleased = true;
         }
         setDead();
@@ -405,13 +426,30 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData {
         return value == null ? "" : value;
     }
 
-    private static final class StoredItem {
-        private final int slot;
-        private final ItemStack stack;
-
-        private StoredItem(int slot, ItemStack stack) {
-            this.slot = slot;
-            this.stack = stack;
-        }
+    @Override public int getSizeInventory() { return storedInventory.length; }
+    @Override public ItemStack getStackInSlot(int slot) { return slot >= 0 && slot < storedInventory.length ? storedInventory[slot] : null; }
+    @Override public ItemStack decrStackSize(int slot, int amount) {
+        ItemStack stack = getStackInSlot(slot);
+        if (stack == null) return null;
+        if (stack.stackSize <= amount) { storedInventory[slot] = null; return stack; }
+        ItemStack taken = stack.splitStack(amount);
+        if (stack.stackSize <= 0) storedInventory[slot] = null;
+        return taken;
     }
+    @Override public ItemStack getStackInSlotOnClosing(int slot) {
+        ItemStack stack = getStackInSlot(slot);
+        if (stack != null) storedInventory[slot] = null;
+        return stack;
+    }
+    @Override public void setInventorySlotContents(int slot, ItemStack stack) {
+        if (slot >= 0 && slot < storedInventory.length) storedInventory[slot] = stack;
+    }
+    @Override public String getInventoryName() { return getPlayerDisplayName() + "'s body"; }
+    @Override public boolean hasCustomInventoryName() { return true; }
+    @Override public int getInventoryStackLimit() { return 64; }
+    @Override public void markDirty() { }
+    @Override public boolean isUseableByPlayer(EntityPlayer player) { return !isDead && player.getDistanceSqToEntity(this) <= 64.0D; }
+    @Override public void openInventory() { }
+    @Override public void closeInventory() { }
+    @Override public boolean isItemValidForSlot(int slot, ItemStack stack) { return false; }
 }

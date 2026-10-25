@@ -81,7 +81,7 @@ public class RenderCorpse extends Render {
         GL11.glPopMatrix();
 
         if (entity.getPlayerDisplayName() != null) {
-            RenderUtils.renderNameTag(entity, x, y - 1.5 , z, entity.getPlayerDisplayName() + " [Downed]", 16, this.renderManager);
+            RenderUtils.renderNameTag(entity, x, y - 1.5 , z, entity.getPlayerDisplayName(), 16, this.renderManager);
         }
     }
 
