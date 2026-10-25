@@ -1,10 +1,11 @@
 Name Integrated Pulse Rifle
 ShortName m4a1IntegratedPulse
-Icon M4A1
+Icon M4A1_BlueLaser
 Description Blue pulse M4A1 with a self-cooling energy cell
 Colour 255 255 255
 
 Ammo m4a1BluePulseBolt
+HideCompatibleAmmo True
 UseHeatSystem True
 MaxHeat 360
 HeatPerShot 9

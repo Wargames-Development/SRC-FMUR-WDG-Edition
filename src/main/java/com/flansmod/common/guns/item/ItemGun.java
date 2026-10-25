@@ -363,7 +363,7 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
             }
         }
 
-        if (type.ammo.isEmpty())
+        if (type.hideCompatibleAmmo || type.ammo.isEmpty())
             return;
 
         List<String> ammoNames = new ArrayList<String>();

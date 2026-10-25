@@ -92,6 +92,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * The list of bullet types that can be used in this gun
      */
     public List<ShootableType> ammo = new ArrayList<>();
+    public boolean hideCompatibleAmmo = false;
     /**
      * Whether the player can press the reload key (default R) to reload this gun
      */
@@ -949,7 +950,9 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 ShootableType type = ShootableType.getShootableType(split[1]);
                 if (type != null)
                     ammo.add(type);
-            } else if (split[0].equals("NumAmmoSlots") || split[0].equals("NumAmmoItemsInGun") || split[0].equals("LoadIntoGun"))
+            } else if (split[0].equals("HideCompatibleAmmo"))
+                hideCompatibleAmmo = Boolean.parseBoolean(split[1]);
+            else if (split[0].equals("NumAmmoSlots") || split[0].equals("NumAmmoItemsInGun") || split[0].equals("LoadIntoGun"))
                 numPrimaryAmmoItems = Integer.parseInt(split[1]);
             else if (split[0].equals("BulletSpeed"))
                 bulletSpeed = Float.parseFloat(split[1]);

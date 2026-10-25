@@ -1,10 +1,11 @@
-Name M4A1 Upgraded Laser
-ShortName m4a1UpgradedLaser
-Icon M4A1
-Description Red laser M4A1 with an upgraded self-cooling energy cell
+Name M4A1 Prototype Laser
+ShortName m4a1PrototypeLaser
+Icon M4A1_RedLaser
+Description Volatile red laser prototype with higher damage and erratic recoil
 Colour 255 255 255
 
 Ammo m4a1RedLaserBolt
+HideCompatibleAmmo True
 UseHeatSystem True
 MaxHeat 200
 HeatPerShot 12
