@@ -1,2 +1,0 @@
-Original gun models and textures: invalidsyntax
-Toolbox 2.0 conversion and game integration: Wargames Development Group

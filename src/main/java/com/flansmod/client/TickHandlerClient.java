@@ -10,7 +10,6 @@ import com.flansmod.common.PlayerHandler;
 import com.flansmod.common.driveables.*;
 import com.flansmod.common.driveables.mechas.EntityMecha;
 import com.flansmod.common.guns.EntityShootable;
-import com.flansmod.common.guns.EntityChemLight;
 import com.flansmod.common.guns.EnumFireMode;
 import com.flansmod.common.guns.FlashlightState;
 import com.flansmod.common.guns.item.ItemGrenade;
@@ -1355,24 +1354,7 @@ public class TickHandlerClient {
             }
 
             for (Object obj : mc.theWorld.loadedEntityList) {
-                if (obj instanceof EntityChemLight) {
-                    EntityChemLight chemLight = (EntityChemLight)obj;
-                    if (!chemLight.isDead && chemLight.getRemainingLife() > 0) {
-                        int x = MathHelper.floor_double(chemLight.posX);
-                        int y = MathHelper.floor_double(chemLight.posY);
-                        int z = MathHelper.floor_double(chemLight.posZ);
-                        blockLightOverrides.add(new Vector3i(x, y, z));
-                        int existing = mc.theWorld.getSavedLightValue(EnumSkyBlock.Block, x, y, z);
-                        mc.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z,
-                                Math.max(existing, EntityChemLight.LIGHT_LEVEL));
-                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x + 1, y, z);
-                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x - 1, y, z);
-                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y + 1, z);
-                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y - 1, z);
-                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y, z + 1);
-                        mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y, z - 1);
-                    }
-                } else if (obj instanceof EntityShootable) {
+                if (obj instanceof EntityShootable) {
                     EntityShootable bullet = (EntityShootable) obj;
                     if (!bullet.isDead && bullet.getType().hasDynamicLight) {
                         int x = (int) bullet.posX;

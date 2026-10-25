@@ -740,6 +740,21 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
     @SideOnly(Side.CLIENT)
     public void SpawnBlockPar(MovingObjectPosition raytraceResult, int xTile, int yTile, int zTile, Block block) {
+        Material material = block.getMaterial();
+        if (material == Material.iron || material == Material.anvil || block == Blocks.iron_bars) {
+            // Internal projectiles already send their sparks from the server.
+            if (!type.internalProjectile && rand.nextBoolean()) {
+                double[] normal = getHitNormal(raytraceResult.sideHit);
+                for (int i = 0; i < 7; i++) {
+                    FlansMod.proxy.spawnParticle("flansmod.electricalsparks",
+                            raytraceResult.hitVec.xCoord + normal[0] * 0.03D,
+                            raytraceResult.hitVec.yCoord + normal[1] * 0.03D,
+                            raytraceResult.hitVec.zCoord + normal[2] * 0.03D,
+                            0D, 0D, 0D);
+                }
+            }
+            return;
+        }
         int num = type.flakParticlesCrack + rand.nextInt(3);
         float scale = 1.0F;
         for (int i = 0; i < num; i++) {
@@ -1474,6 +1489,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
                     Block block = worldObj.getBlock(xTile, yTile, zTile);
                     Material mat = block.getMaterial();
+                    boolean metalImpact = mat == Material.iron || mat == Material.anvil || block == Blocks.iron_bars;
 
                     // Glass destruction is server-owned and happens before penetration continues.
                     if (!worldObj.isRemote && mat == Material.glass && TeamsManager.canBreakGlass) {
@@ -1483,7 +1499,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
                     if (type.hitSoundEnable) {
                         //如果材质是铁质物品
-                        if (mat == Material.iron || mat == Material.anvil) {
+                        if (metalImpact) {
                             PacketPlaySound.sendSoundPacket(posX, posY, posZ, type.hitSoundRange, dimension, type.hitSoundIron, true);
                         } else {
                             PacketPlaySound.sendSoundPacket(posX, posY, posZ, type.hitSoundRange, dimension, type.hitSound, true);
@@ -1492,12 +1508,14 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
                     if (!worldObj.isRemote && mat != Material.air && mat != Material.glass) {
                         double[] normal = getHitNormal(raytraceResult.sideHit);
-                        FlansMod.getPacketHandler().sendToAllAround(new PacketParticle(type.internalProjectile
-                                        ? "flansmod.blasterscorch" : "flansmod.bullethole",
-                                        hitVec.xCoord, hitVec.yCoord, hitVec.zCoord,
-                                        normal[0], normal[1], normal[2], 1.0F),
-                                hitVec.xCoord, hitVec.yCoord, hitVec.zCoord, 64F, dimension);
-                        if (type.internalProjectile) {
+                        if (block != Blocks.iron_bars) {
+                            FlansMod.getPacketHandler().sendToAllAround(new PacketParticle(type.internalProjectile
+                                            ? "flansmod.blasterscorch" : "flansmod.bullethole",
+                                            hitVec.xCoord, hitVec.yCoord, hitVec.zCoord,
+                                            normal[0], normal[1], normal[2], 1.0F),
+                                    hitVec.xCoord, hitVec.yCoord, hitVec.zCoord, 64F, dimension);
+                        }
+                        if (type.internalProjectile && (!metalImpact || rand.nextBoolean())) {
                             spawnBlasterImpactSparks(hitVec.xCoord, hitVec.yCoord, hitVec.zCoord, normal);
                         }
                     }
