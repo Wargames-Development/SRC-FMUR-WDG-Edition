@@ -1,4 +1,4 @@
-Name Serbian Tier 5 Vest
+Name Serbian Vest
 ShortName tapSerbiaT5Vest
 Icon taparmor_tapSerbiaT5Vest
 Colour 255 255 255

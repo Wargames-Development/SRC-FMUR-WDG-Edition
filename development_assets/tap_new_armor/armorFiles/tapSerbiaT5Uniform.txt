@@ -1,4 +1,4 @@
-Name Serbian Tier 5 Uniform
+Name Serbian Uniform
 ShortName tapSerbiaT5Uniform
 Icon taparmor_tapSerbiaT5Uniform
 Colour 255 255 255

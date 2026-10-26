@@ -28,6 +28,9 @@ gradle.projectsEvaluated {
             ['ModelCryeCarrier', 'ModelGhillieChest', 'ModelGhillieBoots'].each { name ->
                 root.delete(new File(pack, "com/flansmod/client/model/NewTapArmor/${name}.class"))
             }
+            ['ModelGhillieBase', 'ModelGhillieHelmet', 'ModelGhillieSuit'].each { name ->
+                root.delete(new File(pack, "com/flansmod/client/model/NewTapArmor/${name}.class"))
+            }
             root.delete(new File(pack, 'assets/flansmod/armor/SkinTapNewCryv_2.png'))
         }
         doLast {

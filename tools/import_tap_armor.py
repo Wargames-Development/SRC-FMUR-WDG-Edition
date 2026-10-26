@@ -9,6 +9,7 @@ import collections
 import hashlib
 import io
 from pathlib import Path
+import re
 import zipfile
 
 import numpy as np
@@ -62,15 +63,15 @@ SOURCES = {
 
 # Name, short name, model key, texture source, item kind, description.
 ITEMS = [
-    ("Estonian Tier 5 Helmet", "tapEstoniaT5Helmet", "EstoniaHelmet", "est_h", "helmet", "Estonian Combat Helmet_Year: Unknown_Estonian Woodland"),
-    ("Estonian Tier 5 Uniform", "tapEstoniaT5Uniform", "EstoniaUniform", "est_u", "uniform", "Estonian Battle Dress_Year: Unknown_Estonian Woodland"),
-    ("Estonian Tier 5 Vest", "tapEstoniaT5Vest", "EstoniaVest", "est_v", "vest", "Estonian Body Armour_Year: Unknown_Estonian Woodland"),
+    ("Estonian Helmet", "tapEstoniaT5Helmet", "EstoniaHelmet", "est_h", "helmet", "Estonian Combat Helmet_Year: Unknown_Estonian Woodland"),
+    ("Estonian Uniform", "tapEstoniaT5Uniform", "EstoniaUniform", "est_u", "uniform", "Estonian Battle Dress_Year: Unknown_Estonian Woodland"),
+    ("Estonian Vest", "tapEstoniaT5Vest", "EstoniaVest", "est_v", "vest", "Estonian Body Armour_Year: Unknown_Estonian Woodland"),
     ("Estonian Snow Helmet", "tapEstoniaSnowHelmet", "EstoniaHelmet", "est_snow", "helmet", "Estonian Combat Helmet_Year: Unknown_Snow Digital"),
     ("Estonian Snow Uniform", "tapEstoniaSnowUniform", "EstoniaUniform", "est_snow", "uniform", "Estonian Battle Dress_Year: Unknown_Snow Digital"),
     ("Estonian Snow Vest", "tapEstoniaSnowVest", "EstoniaVest", "est_snow", "vest", "Estonian Body Armour_Year: Unknown_Snow Digital"),
-    ("South Korean Tier 4.5 Helmet", "tapKorea45Helmet", "KoreaHelmet", "kor_h", "helmet", "South Korean Combat Helmet_Year: Unknown_Digital Camouflage"),
-    ("South Korean Tier 4.5 Uniform", "tapKorea45Uniform", "KoreaUniform", "kor_u", "uniform", "South Korean Battle Dress_Year: Unknown_Digital Camouflage"),
-    ("South Korean Tier 4.5 Vest", "tapKorea45Vest", "KoreaVest", "kor_v", "vest", "South Korean Body Armour_Year: Unknown_Digital Camouflage"),
+    ("South Korean Helmet", "tapKorea45Helmet", "KoreaHelmet", "kor_h", "helmet", "South Korean Combat Helmet_Year: Unknown_Digital Camouflage"),
+    ("South Korean Uniform", "tapKorea45Uniform", "KoreaUniform", "kor_u", "uniform", "South Korean Battle Dress_Year: Unknown_Digital Camouflage"),
+    ("South Korean Vest", "tapKorea45Vest", "KoreaVest", "kor_v", "vest", "South Korean Body Armour_Year: Unknown_Digital Camouflage"),
     ("Japanese Fang M1 Helmet", "tapJapanFangHelmet", "JapanHelmet", "jpn_h", "helmet", "Japanese Combat Helmet_Year: 1941_Fang Camouflage"),
     ("Japanese Fang Uniform", "tapJapanFangUniform", "JapanUniform", "jpn_u", "uniform", "Japanese Battle Dress_Year: Unknown_Fang Camouflage"),
     ("Japanese Ballistic Combat Vest Mk1", "tapJapanVestMk1", "JapanVest", "jpn_v", "vest", "Japanese Body Armour_Year: Unknown_Woodland Camouflage"),
@@ -83,9 +84,9 @@ ITEMS = [
     ("Polish wz.93 PASGT Helmet", "tapPolandHelmet", "PolandHelmet", "pol_h", "helmet", "Polish Combat Helmet_Year: 1993_wz.93 Pantera"),
     ("Polish wz.93 Uniform", "tapPolandUniform", "PolandUniform", "pol_u", "uniform", "Polish Battle Dress_Year: 1993_wz.93 Pantera"),
     ("Polish wz.93 OCHRA Vest", "tapPolandVest", "PolandVest", "pol_v", "vest", "Polish Body Armour_Year: Unknown_wz.93 Pantera"),
-    ("Serbian Tier 5 Helmet", "tapSerbiaT5Helmet", "SerbiaHelmet", "ser_h", "helmet", "Serbian Combat Helmet_Year: Unknown_Serbian Woodland"),
-    ("Serbian Tier 5 Uniform", "tapSerbiaT5Uniform", "SerbiaUniform", "ser_u", "uniform", "Serbian Battle Dress_Year: Unknown_Serbian Woodland"),
-    ("Serbian Tier 5 Vest", "tapSerbiaT5Vest", "SerbiaVest", "ser_v", "vest", "Serbian Body Armour_Year: Unknown_Olive Drab"),
+    ("Serbian Helmet", "tapSerbiaT5Helmet", "SerbiaHelmet", "ser_h", "helmet", "Serbian Combat Helmet_Year: Unknown_Serbian Woodland"),
+    ("Serbian Uniform", "tapSerbiaT5Uniform", "SerbiaUniform", "ser_u", "uniform", "Serbian Battle Dress_Year: Unknown_Serbian Woodland"),
+    ("Serbian Vest", "tapSerbiaT5Vest", "SerbiaVest", "ser_v", "vest", "Serbian Body Armour_Year: Unknown_Olive Drab"),
     ("Phase II Clone Helmet", "tapClonePhase2Helmet", "CloneHelmet", "clone_h", "helmet", "Republic Combat Helmet_Year: Unknown_White Armour"),
     ("Phase II Clone Body Armour", "tapClonePhase2Body", "CloneBody", "clone_u", "uniform", "Republic Battle Armour_Year: Unknown_White Armour"),
     ("Mexican Combat Helmet", "tapMexicoHelmet", "MexicoHelmet", "mex_h", "helmet", "Mexican Combat Helmet_Year: Unknown_Mexican Woodland"),
@@ -102,6 +103,9 @@ ITEMS = [
     ("Russian Tanker Hat", "tapTankerHat", "TankerHat", "tank_h", "helmet", "Russian Tanker Hat_Year: Unknown_Black"),
     ("Ghillie Hood", "tapGhillieHood", "GhillieHelmet", "ghillie", "helmet", "Ghillie Hood_Year: Unknown_Woodland Camouflage"),
     ("Ghillie Suit", "tapGhillieSuit", "GhillieSuit", "ghillie", "uniform", "Ghillie Suit_Year: Unknown_Woodland Camouflage"),
+    ("Snow Ghillie Hood", "tapSnowGhillieHood", "GhillieHelmet", "ghillie_snow", "helmet", "Snow Ghillie Hood_Year: Unknown_Snow Digital"),
+    ("Snow Ghillie Suit", "tapSnowGhillieSuit", "GhillieSuit", "ghillie_snow", "uniform", "Snow Ghillie Suit_Year: Unknown_Snow Digital"),
+    ("White Balaclava", "tapWhiteBalaclava", "NewArmor.BalaclavaEye", "balaclava_white", "face", "White Balaclava_Year: Unknown_Snow White"),
 ]
 
 OBSOLETE_ITEMS = ("tapKoreaT5Helmet", "tapKoreaT5Uniform", "tapKoreaT5Vest",
@@ -161,28 +165,105 @@ def snow_texture(image):
     return result.getvalue()
 
 
+def snow_ghillie_texture(image):
+    original = np.asarray(Image.open(io.BytesIO(image)).convert("RGBA"), dtype=np.uint8).copy()
+    pattern = Image.open(OUTPUT / "source" / "estonia_snow_camo.png").convert("RGB")
+    pattern = np.asarray(pattern.resize((96, 96), Image.Resampling.NEAREST), dtype=np.uint8)
+    y, x = np.indices(original.shape[:2])
+    camo = pattern[y % 96, x % 96].astype(np.float32)
+    # Snow white with the supplied grey digital shapes; retain the original foliage shading.
+    shade = original[:, :, :3].mean(axis=2).astype(np.float32) / 255.0
+    brightness = 0.88 + 0.12 * shade
+    original[:, :, :3] = np.clip(camo * brightness[:, :, None], 0, 255).astype(np.uint8)
+    result = io.BytesIO()
+    Image.fromarray(original, "RGBA").save(result, format="PNG")
+    return result.getvalue()
+
+
+def white_balaclava_texture(image):
+    original = np.asarray(Image.open(io.BytesIO(image)).convert("RGBA"), dtype=np.uint8).copy()
+    original[original[:, :, 3] > 0, :3] = (236, 240, 242)
+    result = io.BytesIO()
+    Image.fromarray(original, "RGBA").save(result, format="PNG")
+    return result.getvalue()
+
+
 def write_ghillie_models(source):
     start = source.index("public class Ghillie extends ModelBiped")
     source = source[start:].replace("public class Ghillie extends ModelBiped",
                                     "public class ModelGhillieBase extends ModelCustomArmour")
+    source = "\n".join(line for line in source.splitlines()
+                       if not line.lstrip().startswith("//")) + "\n"
     source = source.replace("    public Ghillie() {", "    public ModelGhillieBase(int part) {")
     source = source.replace("super(0.02f, 0, 115, 115);", "super();\n        this.part = part;")
-    source = source.replace(", false)", ")")  # Forge 1.7.10 ModelBox has no mirror argument.
+    source = source.replace(", false)", ")")
+    # Content-pack classes are not reobfuscated with the mod jar. Avoid direct
+    # ModelBox and cubeList references, which only resolve in the dev environment.
+    source = re.sub(r"(\w+)\.cubeList\.add\(new ModelBox\(\1, (\d+), (\d+), (.*?)\)\);",
+                    lambda match: (f"{match[1]}.setTextureOffset({match[2]}, {match[3]});\n"
+                                   f"        {match[1]}.addBox({match[4]});"), source)
+    if "new ModelBox(" in source or ".cubeList" in source:
+        raise ValueError("Ghillie model still references dev-only Minecraft fields")
+    for name in ("leftarm_ghillie", "rightarm_ghillie"):
+        source = re.sub(rf"({name}\.addBox\([^\n]*4, 12, 4, )0\.0F\);",
+                        r"\g<1>0.15F);", source)
+        source = re.sub(rf"({name}\.addBox\([^\n]*4, 9, 4, )0\.1F\);",
+                        r"\g<1>0.25F);", source)
+    for name in ("leftleg_ghillie", "rightleg_ghillie"):
+        source = re.sub(rf"({name}\.addBox\([^\n]*4, 12, 4, )0\.13F\);",
+                        r"\g<1>0.25F);", source)
     source = source.replace("        this.bipedHead.addChild(hood);",
-                            "        this.bipedHead.cubeList.clear();\n"
-                            "        this.bipedBody.cubeList.clear();\n"
+                            "        this.bipedHead = new ModelRenderer(this);\n"
+                            "        this.bipedBody = new ModelRenderer(this);\n"
                             "        this.bipedHead.addChild(hood);")
     render_start = source.index("    @Override\n    public void render(")
     render_end = source.index("    public void setRotationAngle", render_start)
     render = """    @Override
     public void render(Entity entity, float f, float f1, float f2, float f3, float f4, float f5) {
         isSneak = entity.isSneaking();
+        isRiding = entity.isRiding();
+        ItemStack held = entity instanceof EntityLivingBase
+                ? ((EntityLivingBase) entity).getEquipmentInSlot(0) : null;
+        heldItemRight = held == null ? 0 : 1;
+        aimedBow = false;
+        if (held != null && entity instanceof EntityPlayer
+                && ((EntityPlayer) entity).getItemInUseCount() > 0) {
+            EnumAction action = held.getItemUseAction();
+            if (action == EnumAction.block) heldItemRight = 3;
+            if (action == EnumAction.bow) aimedBow = true;
+        }
         setRotationAngles(f, f1, f2, f3, f4, f5, entity);
+        if (entity instanceof EntityPlayer) {
+            Render renderer = RenderManager.instance.getEntityRenderObject(entity);
+            if (renderer instanceof RenderPlayer) {
+                ModelBiped playerModel = ((RenderPlayer) renderer).modelBipedMain;
+                copyPose(playerModel.bipedHead, bipedHead);
+                copyPose(playerModel.bipedBody, bipedBody);
+                copyPose(playerModel.bipedLeftArm, bipedLeftArm);
+                copyPose(playerModel.bipedRightArm, bipedRightArm);
+                copyPose(playerModel.bipedLeftLeg, bipedLeftLeg);
+                copyPose(playerModel.bipedRightLeg, bipedRightLeg);
+            }
+        }
         GL11.glPushMatrix();
         try {
             GL11.glScalef(type.modelScale, type.modelScale, type.modelScale);
-            if (part == 0) bipedHead.render(f5);
+            if (part == 0) {
+                bipedHead.showModel = true;
+                bipedHead.isHidden = false;
+                bipedHead.render(f5);
+            }
             if (part == 1) {
+                bipedBody.showModel = true;
+                bipedLeftArm.showModel = true;
+                bipedRightArm.showModel = true;
+                bipedLeftLeg.showModel = true;
+                bipedRightLeg.showModel = true;
+                bipedBody.isHidden = false;
+                bipedLeftArm.isHidden = false;
+                bipedRightArm.isHidden = false;
+                bipedLeftLeg.isHidden = false;
+                bipedRightLeg.isHidden = false;
                 bipedBody.render(f5);
                 bipedLeftArm.render(f5);
                 bipedRightArm.render(f5);
@@ -194,17 +275,34 @@ def write_ghillie_models(source):
         }
     }
 
+    private void copyPose(ModelRenderer from, ModelRenderer to) {
+        to.rotationPointX = from.rotationPointX;
+        to.rotationPointY = from.rotationPointY;
+        to.rotationPointZ = from.rotationPointZ;
+        to.rotateAngleX = from.rotateAngleX;
+        to.rotateAngleY = from.rotateAngleY;
+        to.rotateAngleZ = from.rotateAngleZ;
+    }
+
 """
     source = source[:render_start] + render + source[render_end:]
     source = source.replace("public class ModelGhillieBase extends ModelCustomArmour {",
                             "public class ModelGhillieBase extends ModelCustomArmour {\n    private final int part;")
     imports = ("package com.flansmod.client.model.NewTapArmor;\n\n"
                "import com.flansmod.client.model.ModelCustomArmour;\n"
-               "import net.minecraft.client.model.ModelBox;\n"
+               "import net.minecraft.client.model.ModelBiped;\n"
                "import net.minecraft.client.model.ModelRenderer;\n"
+               "import net.minecraft.client.renderer.entity.Render;\n"
+               "import net.minecraft.client.renderer.entity.RenderManager;\n"
+               "import net.minecraft.client.renderer.entity.RenderPlayer;\n"
                "import net.minecraft.entity.Entity;\n"
+               "import net.minecraft.entity.EntityLivingBase;\n"
+               "import net.minecraft.entity.player.EntityPlayer;\n"
+               "import net.minecraft.item.EnumAction;\n"
+               "import net.minecraft.item.ItemStack;\n"
                "import org.lwjgl.opengl.GL11;\n\n")
-    folder = OUTPUT / "com" / "flansmod" / "client" / "model" / "NewTapArmor"
+    folder = ROOT / "src" / "main" / "java" / "com" / "flansmod" / "client" / "model" / "NewTapArmor"
+    folder.mkdir(parents=True, exist_ok=True)
     (folder / "ModelGhillieBase.java").write_text(imports + source, encoding="utf-8")
     for name, part in (("Helmet", 0), ("Suit", 1)):
         wrapper = ("package com.flansmod.client.model.NewTapArmor;\n\n"
@@ -254,22 +352,23 @@ def model_source(key, width, height, elements):
 
 def definition(item, texture):
     name, short, model, _, kind, description = item
-    type_name = {"helmet": "Helmet", "uniform": "Chest", "vest": "Pants", "boots": "Boots"}[kind]
-    defence = {"helmet": "0.2", "uniform": "0.3", "vest": "0.05", "boots": "0.05"}[kind]
+    type_name = {"helmet": "Helmet", "uniform": "Chest", "vest": "Pants", "boots": "Boots", "face": "Face"}[kind]
+    defence = {"helmet": "0.2", "uniform": "0.3", "vest": "0.05", "boots": "0.05", "face": "0.0"}[kind]
     common = [f"Name {name}", f"ShortName {short}", f"Icon taparmor_{short}",
               "Colour 255 255 255", f"Type {type_name}", f"Defence {defence}",
-              f"Model NewTapArmor.{model}", f"ArmourTexture {texture}"]
+              f"Model {model if '.' in model else 'NewTapArmor.' + model}", f"ArmourTexture {texture}"]
     if short in ("tapClonePhase2Helmet", "tapClonePhase2Body"):
         common += ["HideFromCreative true"]
-    if kind != "helmet":
+    if kind in ("uniform", "vest", "boots"):
         common += ["MoveSpeedModifier 1.0", "KnockbackModifier 0.8"]
     if kind == "helmet":
         common += ["headArmor 200"]
     elif kind == "uniform":
-        common += ["bodyArmor 100", "armArmor 100", "ModelScale 1.05"]
+        scale = "1.0" if short in ("tapGhillieSuit", "tapSnowGhillieSuit") else "1.05"
+        common += ["bodyArmor 100", "armArmor 100", f"ModelScale {scale}"]
     elif kind == "vest":
         common += ["bodyArmor 300", "backArmor 300", "Durability 50", "ModelScale 1.05"]
-    else:
+    elif kind == "boots":
         common += ["Durability 50", "ModelScale 1.05"]
     common += [f"Description {description}"]
     return "\n".join(common) + "\n"
@@ -283,6 +382,9 @@ def main():
     with zipfile.ZipFile(OUTPUT / "source" / "MWC Ghillie.zip") as ghillie:
         archives["ghillie"] = 115, 115, [], ghillie.read("ghillie.png")
         ghillie_source = ghillie.read("Ghillie.java").decode("utf-8-sig")
+    archives["ghillie_snow"] = 115, 115, [], snow_ghillie_texture(archives["ghillie"][3])
+    archives["balaclava_white"] = 64, 64, [], white_balaclava_texture(
+        (OUTPUT / "source" / "balaclava_black.png").read_bytes())
     width, height, _, image = archives["est_h"]
     archives["est_snow"] = width, height, [], snow_texture(image)
     uniform_ids = {fields[2] for fields in archives["kor_u"][2]}

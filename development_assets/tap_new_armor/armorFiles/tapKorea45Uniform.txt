@@ -1,4 +1,4 @@
-Name South Korean Tier 4.5 Uniform
+Name South Korean Uniform
 ShortName tapKorea45Uniform
 Icon taparmor_tapKorea45Uniform
 Colour 255 255 255

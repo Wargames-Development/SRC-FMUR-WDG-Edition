@@ -1,0 +1,10 @@
+Name Snow Ghillie Hood
+ShortName tapSnowGhillieHood
+Icon taparmor_tapSnowGhillieHood
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.GhillieHelmet
+ArmourTexture SkinTapNewGhilliesnow
+headArmor 200
+Description Snow Ghillie Hood_Year: Unknown_Snow Digital

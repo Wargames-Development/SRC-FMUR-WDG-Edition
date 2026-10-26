@@ -1,4 +1,4 @@
-Name South Korean Tier 4.5 Helmet
+Name South Korean Helmet
 ShortName tapKorea45Helmet
 Icon taparmor_tapKorea45Helmet
 Colour 255 255 255

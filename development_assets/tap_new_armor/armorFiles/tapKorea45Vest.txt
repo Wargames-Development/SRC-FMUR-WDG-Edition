@@ -1,4 +1,4 @@
-Name South Korean Tier 4.5 Vest
+Name South Korean Vest
 ShortName tapKorea45Vest
 Icon taparmor_tapKorea45Vest
 Colour 255 255 255

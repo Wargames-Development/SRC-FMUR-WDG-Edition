@@ -5,6 +5,7 @@ import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.client.ThermalScopeEffect;
 import com.flansmod.client.model.animation.gltf.GLTFAnimationController;
 import com.flansmod.client.model.animation.gltf.model.EnumAnimationPart;
+import com.flansmod.client.tmt.ModelRendererTurbo;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.PlayerData;
 import com.flansmod.common.PlayerHandler;
@@ -18,11 +19,13 @@ import com.flansmod.common.guns.type.BulletType;
 import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.guns.type.ShootableType;
 import com.flansmod.common.paintjob.Paintjob;
+import com.flansmod.common.teams.ItemTeamArmour;
 import com.flansmod.common.vector.Vector3f;
 import cpw.mods.fml.relauncher.Side;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.model.ModelBiped;
+import net.minecraft.client.model.ModelRenderer;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderBlocks;
 import net.minecraft.client.renderer.Tessellator;
@@ -1846,6 +1849,7 @@ public class RenderGun implements IItemRenderer {
             modelBipedMain.bipedRightArm.offsetY = 0F;
             if (!model.rightHandAmmo) {
                 modelBipedMain.bipedRightArm.render(0.0625F);
+                renderFirstPersonArmour(player, true);
             }
         }
         GL11.glPopMatrix();
@@ -1878,6 +1882,7 @@ public class RenderGun implements IItemRenderer {
             modelBipedMain.bipedLeftArm.offsetY = 0F;
             if (!model.leftHandAmmo) {
                 modelBipedMain.bipedLeftArm.render(0.0625F);
+                renderFirstPersonArmour(player, false);
             }
         }
         GL11.glPopMatrix();
@@ -1920,6 +1925,7 @@ public class RenderGun implements IItemRenderer {
         modelBipedMain.bipedRightArm.offsetY = 0F;
         if (model.rightHandAmmo) {
             modelBipedMain.bipedRightArm.render(0.0625F);
+            renderFirstPersonArmour(player, true);
         }
         GL11.glPopMatrix();
 
@@ -1952,10 +1958,51 @@ public class RenderGun implements IItemRenderer {
         modelBipedMain.bipedLeftArm.offsetY = 0F;
         if (model.leftHandAmmo) {
             modelBipedMain.bipedLeftArm.render(0.0625F);
+            renderFirstPersonArmour(player, false);
         }
         GL11.glPopMatrix();
 
         GL11.glPopMatrix();
+    }
+
+    private void renderFirstPersonArmour(EntityPlayer player, boolean right) {
+        for (int slot = 2; slot >= 1; slot--) {
+            ItemStack stack = player.inventory.armorInventory[slot];
+            if (stack == null || !(stack.getItem() instanceof ItemTeamArmour)) {
+                continue;
+            }
+            ItemTeamArmour armour = (ItemTeamArmour) stack.getItem();
+            ModelCustomArmour model = armour.type.model;
+            if (model == null) {
+                continue;
+            }
+            ModelRenderer arm = right ? model.bipedRightArm : model.bipedLeftArm;
+            ModelRendererTurbo[] parts = right ? model.rightArmModel : model.leftArmModel;
+            if ((parts == null || parts.length == 0) &&
+                    (arm.childModels == null || arm.childModels.isEmpty())) {
+                continue;
+            }
+            renderEngine.bindTexture(armour.getArmorTextureLocation());
+            GL11.glColor4f(1F, 1F, 1F, 1F);
+            if (parts != null && parts.length > 0) {
+                GL11.glPushMatrix();
+                GL11.glScalef(armour.type.modelScale, armour.type.modelScale, armour.type.modelScale);
+                model.render(parts, right ? firstPersonArmModel.bipedRightArm : firstPersonArmModel.bipedLeftArm,
+                        0.0625F, armour.type.modelScale);
+                GL11.glPopMatrix();
+            } else {
+                float x = arm.rotateAngleX, y = arm.rotateAngleY, z = arm.rotateAngleZ;
+                arm.rotateAngleX = arm.rotateAngleY = arm.rotateAngleZ = 0F;
+                GL11.glPushMatrix();
+                GL11.glScalef(armour.type.modelScale, armour.type.modelScale, armour.type.modelScale);
+                arm.render(0.0625F);
+                GL11.glPopMatrix();
+                arm.rotateAngleX = x;
+                arm.rotateAngleY = y;
+                arm.rotateAngleZ = z;
+            }
+        }
+        renderEngine.bindTexture(Minecraft.getMinecraft().thePlayer.getLocationSkin());
     }
 
     /**

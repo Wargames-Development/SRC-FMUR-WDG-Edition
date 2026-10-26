@@ -1,0 +1,9 @@
+Name White Balaclava
+ShortName tapWhiteBalaclava
+Icon taparmor_tapWhiteBalaclava
+Colour 255 255 255
+Type Face
+Defence 0.0
+Model NewArmor.BalaclavaEye
+ArmourTexture SkinTapNewBalaclavawhite
+Description White Balaclava_Year: Unknown_Snow White

@@ -10,5 +10,5 @@ MoveSpeedModifier 1.0
 KnockbackModifier 0.8
 bodyArmor 100
 armArmor 100
-ModelScale 1.05
+ModelScale 1.0
 Description Ghillie Suit_Year: Unknown_Woodland Camouflage

@@ -1,4 +1,4 @@
-Name Estonian Tier 5 Uniform
+Name Estonian Uniform
 ShortName tapEstoniaT5Uniform
 Icon taparmor_tapEstoniaT5Uniform
 Colour 255 255 255
