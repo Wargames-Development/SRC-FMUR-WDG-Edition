@@ -1,0 +1,27 @@
+// Offline integration checks against this project's compiled classes and a supplied pack.
+// Invoke with -I tools/creative_inventory_compat.gradle -PcompatModsDir=/path/to/mods.
+gradle.projectsEvaluated {
+    def p = rootProject
+    def mods = p.file(p.property('compatModsDir'))
+    def nei = p.fileTree(dir: mods, include: 'NotEnoughItems-*.jar').files
+    def inv = p.fileTree(dir: mods, include: 'InventoryTweaks-*.jar').files
+    def mouse = p.fileTree(dir: mods, include: 'MouseTweaks-*.jar').files
+    assert nei.size() == 1 && inv.size() == 1 && mouse.size() == 1 : 'Supply exactly one of each inventory helper jar'
+    // Installed helpers must precede the older development dependency versions.
+    def testClasspath = p.files(nei, inv) + p.sourceSets.main.runtimeClasspath
+    def compiled = new File(p.buildDir, 'creative-inventory-compat')
+    def compile = p.tasks.create('compileCreativeInventoryCompat', JavaCompile) {
+        dependsOn 'compileJava'
+        source p.file('tools/creative_inventory_compat/CreativeSmoke.java')
+        classpath = testClasspath
+        destinationDir = compiled
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+    p.tasks.create('testCreativeInventoryCompat', JavaExec) {
+        dependsOn compile
+        classpath = p.files(compiled) + testClasspath
+        main = 'CreativeSmoke'
+        args mouse.first().absolutePath
+    }
+}
