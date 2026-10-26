@@ -1,0 +1,10 @@
+Name Mexican Combat Helmet
+ShortName tapMexicoHelmet
+Icon taparmor_tapMexicoHelmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.MexicoHelmet
+ArmourTexture SkinTapNewMexh
+headArmor 200
+Description Mexican Combat Helmet_Year: Unknown_Mexican Woodland

@@ -1,0 +1,10 @@
+Name Romanian M2017 Helmet
+ShortName tapRomaniaHelmet
+Icon taparmor_tapRomaniaHelmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.RomaniaHelmet
+ArmourTexture SkinTapNewRomh
+headArmor 200
+Description Romanian Combat Helmet_Year: 2017_M2017 Camouflage

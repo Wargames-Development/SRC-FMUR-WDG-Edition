@@ -1,0 +1,10 @@
+Name Japanese Fang M1 Helmet
+ShortName tapJapanFangHelmet
+Icon taparmor_tapJapanFangHelmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.JapanHelmet
+ArmourTexture SkinTapNewJpnh
+headArmor 200
+Description Japanese Combat Helmet_Year: 1941_Fang Camouflage

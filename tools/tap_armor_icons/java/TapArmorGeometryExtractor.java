@@ -1,8 +1,12 @@
 import com.flansmod.client.model.ModelCustomArmour;
+import com.flansmod.client.model.ModelGun;
 import com.flansmod.client.tmt.ModelRendererTurbo;
 import com.flansmod.client.tmt.PositionTextureVertex;
 import com.flansmod.client.tmt.PositionTransformVertex;
 import com.flansmod.client.tmt.TexturedPolygon;
+import net.minecraft.client.model.ModelBox;
+import net.minecraft.client.model.ModelRenderer;
+import net.minecraft.client.model.TexturedQuad;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -42,6 +46,19 @@ public final class TapArmorGeometryExtractor {
     }
 
     public static void main(String[] args) throws Exception {
+        if (args.length == 3 && args[0].equals("--gun")) {
+            File pack = new File(args[1]).getCanonicalFile();
+            File output = new File(args[2]).getCanonicalFile();
+            Field facesField = ModelRendererTurbo.class.getDeclaredField("faces");
+            facesField.setAccessible(true);
+            ClassLoader loader = new RemappingModelClassLoader(pack.toURI().toURL(),
+                    TapArmorGeometryExtractor.class.getClassLoader());
+            ModelGun gun = (ModelGun) Class.forName("com.flansmod.client.model.BFMCpack.ModelHK416", true, loader)
+                    .getConstructor().newInstance();
+            Files.createDirectories(output.getParentFile().toPath());
+            System.out.println("Extracted HK416 faces: " + dumpGun(gun, output, facesField));
+            return;
+        }
         if (args.length != 2) {
             throw new IllegalArgumentException("Expected <TaP pack directory> <mesh output directory>");
         }
@@ -57,6 +74,8 @@ public final class TapArmorGeometryExtractor {
         Set<String> models = findModels(armourFiles);
         Field facesField = ModelRendererTurbo.class.getDeclaredField("faces");
         facesField.setAccessible(true);
+        Field quadsField = ModelBox.class.getDeclaredField("quadList");
+        quadsField.setAccessible(true);
         ClassLoader modelLoader = new RemappingModelClassLoader(pack.toURI().toURL(),
                 TapArmorGeometryExtractor.class.getClassLoader());
 
@@ -67,7 +86,7 @@ public final class TapArmorGeometryExtractor {
             ModelCustomArmour model = (ModelCustomArmour) Class.forName(className, true, modelLoader)
                     .getConstructor().newInstance();
             File meshFile = new File(output, modelName.replace('.', '_') + ".mesh");
-            int faceCount = dumpModel(model, modelName, meshFile, facesField);
+            int faceCount = dumpModel(model, modelName, meshFile, facesField, quadsField);
             totalFaces += faceCount;
             manifest.add(modelName + "\t" + meshFile.getName() + "\t" + faceCount);
         }
@@ -120,13 +139,22 @@ public final class TapArmorGeometryExtractor {
     }
 
     private static int dumpModel(ModelCustomArmour model, String modelName, File output,
-                                 Field facesField) throws Exception {
+                                 Field facesField, Field quadsField) throws Exception {
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
                 new FileOutputStream(output), StandardCharsets.UTF_8));
         int count = 0;
         try {
             writer.write("model\t" + modelName);
             writer.newLine();
+            if (modelName.equals("NewTapArmor.GhillieHelmet")) {
+                count += dumpNativePart(model.bipedHead, new ArrayList<ModelRenderer>(), writer, quadsField);
+            } else if (modelName.equals("NewTapArmor.GhillieSuit")) {
+                count += dumpNativePart(model.bipedBody, new ArrayList<ModelRenderer>(), writer, quadsField);
+                count += dumpNativePart(model.bipedLeftArm, new ArrayList<ModelRenderer>(), writer, quadsField);
+                count += dumpNativePart(model.bipedRightArm, new ArrayList<ModelRenderer>(), writer, quadsField);
+                count += dumpNativePart(model.bipedLeftLeg, new ArrayList<ModelRenderer>(), writer, quadsField);
+                count += dumpNativePart(model.bipedRightLeg, new ArrayList<ModelRenderer>(), writer, quadsField);
+            }
             for (String groupName : GROUPS) {
                 Field groupField = ModelCustomArmour.class.getField(groupName);
                 ModelRendererTurbo[] parts = (ModelRendererTurbo[]) groupField.get(model);
@@ -174,6 +202,117 @@ public final class TapArmorGeometryExtractor {
         return count;
     }
 
+    private static int dumpNativePart(ModelRenderer part, List<ModelRenderer> chain,
+                                      BufferedWriter writer, Field quadsField) throws Exception {
+        chain.add(part);
+        int count = 0;
+        for (Object cube : part.cubeList) {
+            TexturedQuad[] quads = (TexturedQuad[]) quadsField.get((ModelBox) cube);
+            for (TexturedQuad quad : quads) {
+                writer.write("bodyModel");
+                for (net.minecraft.client.model.PositionTextureVertex vertex : quad.vertexPositions) {
+                    double[] point = transformNative(vertex.vector3D.xCoord,
+                            vertex.vector3D.yCoord, vertex.vector3D.zCoord, chain);
+                    writer.write('\t');
+                    writer.write(Double.toString(point[0]));
+                    writer.write(',' );
+                    writer.write(Double.toString(point[1]));
+                    writer.write(',' );
+                    writer.write(Double.toString(point[2]));
+                    writer.write(',' );
+                    writer.write(Float.toString(vertex.texturePositionX));
+                    writer.write(',' );
+                    writer.write(Float.toString(vertex.texturePositionY));
+                    writer.write(",1");
+                }
+                writer.newLine();
+                count++;
+            }
+        }
+        if (part.childModels != null) {
+            for (Object child : part.childModels) {
+                count += dumpNativePart((ModelRenderer) child, chain, writer, quadsField);
+            }
+        }
+        chain.remove(chain.size() - 1);
+        return count;
+    }
+
+    private static int dumpGun(ModelGun gun, File output, Field facesField) throws Exception {
+        BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
+                new FileOutputStream(output), StandardCharsets.UTF_8));
+        int count = 0;
+        try {
+            writer.write("model\tBFMCpack.HK416");
+            writer.newLine();
+            for (Field field : ModelGun.class.getFields()) {
+                if (field.getType() != ModelRendererTurbo[].class) {
+                    continue;
+                }
+                ModelRendererTurbo[] parts = (ModelRendererTurbo[]) field.get(gun);
+                if (parts == null) {
+                    continue;
+                }
+                for (ModelRendererTurbo part : parts) {
+                    if (part == null) {
+                        continue;
+                    }
+                    TexturedPolygon[] faces = (TexturedPolygon[]) facesField.get(part);
+                    if (faces == null) {
+                        continue;
+                    }
+                    for (TexturedPolygon face : faces) {
+                        if (face == null || face.vertexPositions == null || face.vertexPositions.length < 3) {
+                            continue;
+                        }
+                        writer.write(field.getName());
+                        for (PositionTextureVertex vertex : face.vertexPositions) {
+                            if (vertex instanceof PositionTransformVertex) {
+                                ((PositionTransformVertex) vertex).setTransformation();
+                            }
+                            double[] point = transformNative(vertex.vector3D.xCoord,
+                                    vertex.vector3D.yCoord, vertex.vector3D.zCoord,
+                                    Collections.<ModelRenderer>singletonList(part));
+                            writer.write('\t');
+                            writer.write(Double.toString(point[0])); writer.write(',');
+                            writer.write(Double.toString(point[1])); writer.write(',');
+                            writer.write(Double.toString(point[2])); writer.write(',');
+                            writer.write(Float.toString(vertex.texturePositionX)); writer.write(',');
+                            writer.write(Float.toString(vertex.texturePositionY)); writer.write(',');
+                            writer.write(Float.toString(vertex.texturePositionW));
+                        }
+                        writer.newLine();
+                        count++;
+                    }
+                }
+            }
+        } finally {
+            writer.close();
+        }
+        return count;
+    }
+
+    private static double[] transformNative(double x, double y, double z,
+                                            List<ModelRenderer> chain) {
+        for (int i = chain.size() - 1; i >= 0; i--) {
+            ModelRenderer part = chain.get(i);
+            double cx = Math.cos(part.rotateAngleX), sx = Math.sin(part.rotateAngleX);
+            double cy = Math.cos(part.rotateAngleY), sy = Math.sin(part.rotateAngleY);
+            double cz = Math.cos(part.rotateAngleZ), sz = Math.sin(part.rotateAngleZ);
+            double yy = y * cx - z * sx, zz = y * sx + z * cx;
+            y = yy; z = zz;
+            double xx = x * cy + z * sy;
+            zz = -x * sy + z * cy;
+            x = xx; z = zz;
+            xx = x * cz - y * sz;
+            yy = x * sz + y * cz;
+            x = xx + part.rotationPointX + part.offsetX;
+            y = yy + part.rotationPointY + part.offsetY;
+            z += part.rotationPointZ + part.offsetZ;
+        }
+        return new double[]{x, y, z};
+    }
+
     private static void writeLines(File output, List<String> lines) throws Exception {
         BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
                 new FileOutputStream(output), StandardCharsets.UTF_8));
@@ -196,7 +335,8 @@ public final class TapArmorGeometryExtractor {
         @Override
         protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
             if (!name.startsWith("com.flansmod.client.model.NewArmor.")
-                    && !name.startsWith("com.flansmod.client.model.NewAge.")) {
+                    && !name.startsWith("com.flansmod.client.model.NewAge.")
+                    && !name.startsWith("com.flansmod.client.model.BFMCpack.")) {
                 return super.loadClass(name, resolve);
             }
             synchronized (getClassLoadingLock(name)) {

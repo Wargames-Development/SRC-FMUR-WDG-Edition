@@ -1,0 +1,15 @@
+Name Danish M00 Fragmentation Vest
+ShortName tapDenmarkVest
+Icon taparmor_tapDenmarkVest
+Colour 255 255 255
+Type Pants
+Defence 0.05
+Model NewTapArmor.DenmarkVest
+ArmourTexture SkinTapNewDenh
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 300
+backArmor 300
+Durability 50
+ModelScale 1.05
+Description Danish Fragmentation Vest_Year: 2000_M84 Camouflage

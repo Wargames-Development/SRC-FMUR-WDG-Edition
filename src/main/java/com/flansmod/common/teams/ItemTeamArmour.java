@@ -54,7 +54,9 @@ public class ItemTeamArmour extends ItemArmor implements ISpecialArmor, IFlanIte
                 + (type.type == 2 ? "2" : "1") + ".png";
         armourTextureLocation = new ResourceLocation(armourTexture);
         type.item = this;
-        setCreativeTab(FlansMod.tabFlanTeams);
+        if (!t.hideFromCreative) {
+            setCreativeTab(FlansMod.tabFlanTeams);
+        }
         if (t.durability > 0) setMaxDamage(t.durability);
         else if (FlansMod.breakableArmor == 1)
             setMaxDamage(FlansMod.defaultArmorDurability);

@@ -1,0 +1,48 @@
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    def generated = root.file('development_assets/tap_new_armor')
+    def pack = root.file('eclipse/Flan/TaP-Escalation')
+
+    def compileModels = root.task('compileTapNewArmorModels', type: JavaCompile,
+            dependsOn: root.tasks.compileJava) {
+        source = root.fileTree(generated) { include 'com/**/*.java' }
+        classpath = root.sourceSets.main.runtimeClasspath
+        destinationDir = pack
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+        options.encoding = 'UTF-8'
+    }
+
+    root.task('installTapNewArmor', type: Copy, dependsOn: compileModels) {
+        from(generated) {
+            include 'armorFiles/**'
+            include 'assets/**'
+        }
+        into pack
+        doFirst {
+            ['tapKoreaT5Helmet', 'tapKoreaT5Uniform', 'tapKoreaT5Vest',
+             'tapCryeCarrier', 'tapGhillieBoots'].each { name ->
+                root.delete(new File(pack, "armorFiles/${name}.txt"),
+                        new File(pack, "assets/flansmod/textures/items/taparmor_${name}.png"))
+            }
+            ['ModelCryeCarrier', 'ModelGhillieChest', 'ModelGhillieBoots'].each { name ->
+                root.delete(new File(pack, "com/flansmod/client/model/NewTapArmor/${name}.class"))
+            }
+            root.delete(new File(pack, 'assets/flansmod/armor/SkinTapNewCryv_2.png'))
+        }
+        doLast {
+            def languageFile = new File(pack, 'assets/flansmod/lang/en_US.lang')
+            def additions = new File(generated, 'lang_additions/en_US.lang').readLines('UTF-8')
+            def replacementKeys = additions.collect { line -> line.substring(0, line.indexOf('=')) }
+            def obsoleteKeys = ['item.tapKoreaT5Helmet.name', 'item.tapKoreaT5Uniform.name',
+                                'item.tapKoreaT5Vest.name', 'item.tapCryeCarrier.name',
+                                'item.tapGhillieBoots.name']
+            def existing = languageFile.readLines('UTF-8').findAll { line ->
+                def key = line.contains('=') ? line.substring(0, line.indexOf('=')) : ''
+                !obsoleteKeys.contains(key) && !replacementKeys.contains(key)
+            }
+            existing.addAll(additions)
+            languageFile.setText(existing.join('\n') + '\n', 'UTF-8')
+        }
+    }
+}

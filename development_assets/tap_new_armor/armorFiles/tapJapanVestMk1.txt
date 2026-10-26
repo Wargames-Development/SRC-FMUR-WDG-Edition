@@ -1,0 +1,15 @@
+Name Japanese Ballistic Combat Vest Mk1
+ShortName tapJapanVestMk1
+Icon taparmor_tapJapanVestMk1
+Colour 255 255 255
+Type Pants
+Defence 0.05
+Model NewTapArmor.JapanVest
+ArmourTexture SkinTapNewJpnv
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 300
+backArmor 300
+Durability 50
+ModelScale 1.05
+Description Japanese Body Armour_Year: Unknown_Woodland Camouflage

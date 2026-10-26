@@ -1,0 +1,14 @@
+Name Romanian M2017 Uniform
+ShortName tapRomaniaUniform
+Icon taparmor_tapRomaniaUniform
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewTapArmor.RomaniaUniform
+ArmourTexture SkinTapNewRomh
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description Romanian Battle Dress_Year: 2017_M2017 Camouflage

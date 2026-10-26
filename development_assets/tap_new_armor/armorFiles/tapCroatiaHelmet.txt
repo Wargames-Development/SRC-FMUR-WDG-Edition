@@ -1,0 +1,10 @@
+Name Croatian Modern Helmet
+ShortName tapCroatiaHelmet
+Icon taparmor_tapCroatiaHelmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.CroatiaHelmet
+ArmourTexture SkinTapNewCroh
+headArmor 200
+Description Croatian Combat Helmet_Year: Unknown_Croatian Woodland

@@ -1,0 +1,10 @@
+Name Serbian Tier 5 Helmet
+ShortName tapSerbiaT5Helmet
+Icon taparmor_tapSerbiaT5Helmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.SerbiaHelmet
+ArmourTexture SkinTapNewSerh
+headArmor 200
+Description Serbian Combat Helmet_Year: Unknown_Serbian Woodland

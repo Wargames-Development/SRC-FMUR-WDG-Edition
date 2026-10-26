@@ -313,7 +313,8 @@ public class FlansMod {
         GameRegistry.registerItem(crosshairsymbol, "crosshairsymbol", MODID);
 
         workbench = (BlockFlansWorkbench) (new BlockFlansWorkbench(1, 0).setBlockName("flansWorkbench").setBlockTextureName("flansWorkbench"));
-        GameRegistry.registerBlock(workbench, ItemBlockManyNames.class, "flansWorkbench");
+        GameRegistry.registerBlock(workbench, ItemBlockFlansWorkbench.class, "flansWorkbench");
+        GameRegistry.registerTileEntity(TileEntityGunsmithStation.class, MODID + ":gunsmithStation");
         GameRegistry.addRecipe(new ItemStack(workbench, 1, 0), "BBB", "III", "III", 'B', Items.bowl, 'I', Items.iron_ingot);
         GameRegistry.addRecipe(new ItemStack(workbench, 1, 1), "ICI", "III", 'C', Items.cauldron, 'I', Items.iron_ingot);
 

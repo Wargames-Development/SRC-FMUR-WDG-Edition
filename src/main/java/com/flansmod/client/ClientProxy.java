@@ -8,6 +8,7 @@ import com.flansmod.client.particle.*;
 import com.flansmod.common.CommonProxy;
 import com.flansmod.common.ContentManager;
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.TileEntityGunsmithStation;
 import com.flansmod.common.driveables.*;
 import com.flansmod.common.driveables.mechas.EntityMecha;
 import com.flansmod.common.driveables.mechas.MechaType;
@@ -61,6 +62,7 @@ public class ClientProxy extends CommonProxy {
     public static RenderPlane planeRenderer;
     public static RenderVehicle vehicleRenderer;
     public static RenderMecha mechaRenderer;
+    private RenderGunsmithStation gunsmithStationRenderer;
 
     /**
      * The file locations of the content packs, used for loading
@@ -91,6 +93,8 @@ public class ClientProxy extends CommonProxy {
 
         for (MechaType mechaType : MechaType.types)
             MinecraftForgeClient.registerItemRenderer(mechaType.item, mechaRenderer);
+
+        MinecraftForgeClient.registerItemRenderer(Item.getItemFromBlock(FlansMod.workbench), gunsmithStationRenderer);
 
         FMLCommonHandler.instance().bus().register(new KeyInputHandler());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new PlayerEquipmentClientHandler());
@@ -199,6 +203,9 @@ public class ClientProxy extends CommonProxy {
         RenderingRegistry.registerEntityRenderingHandler(EntityConnectingLine.class, new RenderConnectingLine());
         RenderingRegistry.registerEntityRenderingHandler(EntityCorpse.class, new RenderCorpse());
         ClientRegistry.bindTileEntitySpecialRenderer(TileEntitySpawner.class, new TileEntitySpawnerRenderer());
+        gunsmithStationRenderer = new RenderGunsmithStation();
+        ClientRegistry.bindTileEntitySpecialRenderer(TileEntityGunsmithStation.class,
+                gunsmithStationRenderer);
         FlansMod.log("Registered renderers.");
     }
 

@@ -1,0 +1,10 @@
+Name Russian Tanker Hat
+ShortName tapTankerHat
+Icon taparmor_tapTankerHat
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.TankerHat
+ArmourTexture SkinTapNewTankh
+headArmor 200
+Description Russian Tanker Hat_Year: Unknown_Black

@@ -1,0 +1,15 @@
+Name Mexican Combat Vest
+ShortName tapMexicoVest
+Icon taparmor_tapMexicoVest
+Colour 255 255 255
+Type Pants
+Defence 0.05
+Model NewTapArmor.MexicoVest
+ArmourTexture SkinTapNewMexh
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 300
+backArmor 300
+Durability 50
+ModelScale 1.05
+Description Mexican Body Armour_Year: Unknown_Mexican Woodland

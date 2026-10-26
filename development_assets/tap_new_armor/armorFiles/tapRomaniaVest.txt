@@ -1,0 +1,15 @@
+Name Romanian M2017 Vest
+ShortName tapRomaniaVest
+Icon taparmor_tapRomaniaVest
+Colour 255 255 255
+Type Pants
+Defence 0.05
+Model NewTapArmor.RomaniaVest
+ArmourTexture SkinTapNewRomh
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 300
+backArmor 300
+Durability 50
+ModelScale 1.05
+Description Romanian Body Armour_Year: 2017_M2017 Camouflage

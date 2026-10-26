@@ -1,0 +1,11 @@
+Name Phase II Clone Helmet
+ShortName tapClonePhase2Helmet
+Icon taparmor_tapClonePhase2Helmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.CloneHelmet
+ArmourTexture SkinTapNewCloneh
+HideFromCreative true
+headArmor 200
+Description Republic Combat Helmet_Year: Unknown_White Armour

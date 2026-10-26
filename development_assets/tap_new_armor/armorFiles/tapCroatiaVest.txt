@@ -1,0 +1,15 @@
+Name Croatian Modern Vest
+ShortName tapCroatiaVest
+Icon taparmor_tapCroatiaVest
+Colour 255 255 255
+Type Pants
+Defence 0.05
+Model NewTapArmor.CroatiaVest
+ArmourTexture SkinTapNewCroh
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 300
+backArmor 300
+Durability 50
+ModelScale 1.05
+Description Croatian Body Armour_Year: Unknown_Croatian Woodland

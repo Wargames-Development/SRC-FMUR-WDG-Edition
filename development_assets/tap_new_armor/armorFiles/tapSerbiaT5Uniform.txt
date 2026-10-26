@@ -1,0 +1,14 @@
+Name Serbian Tier 5 Uniform
+ShortName tapSerbiaT5Uniform
+Icon taparmor_tapSerbiaT5Uniform
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewTapArmor.SerbiaUniform
+ArmourTexture SkinTapNewSerh
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description Serbian Battle Dress_Year: Unknown_Serbian Woodland

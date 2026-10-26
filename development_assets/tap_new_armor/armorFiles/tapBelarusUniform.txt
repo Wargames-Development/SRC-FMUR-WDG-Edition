@@ -1,0 +1,14 @@
+Name Belarusian VKBO Uniform
+ShortName tapBelarusUniform
+Icon taparmor_tapBelarusUniform
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewTapArmor.BelarusUniform
+ArmourTexture SkinTapNewBelu
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description Belarusian Battle Dress_Year: Unknown_EMR Camouflage

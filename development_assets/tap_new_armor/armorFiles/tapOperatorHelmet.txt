@@ -1,0 +1,10 @@
+Name Operator FAST Helmet
+ShortName tapOperatorHelmet
+Icon taparmor_tapOperatorHelmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.OperatorHelmet
+ArmourTexture SkinTapNewOph
+headArmor 200
+Description Operator Combat Helmet_Year: Unknown_Olive Drab

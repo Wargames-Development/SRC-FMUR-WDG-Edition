@@ -1,0 +1,14 @@
+Name Japanese Fang Uniform
+ShortName tapJapanFangUniform
+Icon taparmor_tapJapanFangUniform
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewTapArmor.JapanUniform
+ArmourTexture SkinTapNewJpnh
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description Japanese Battle Dress_Year: Unknown_Fang Camouflage

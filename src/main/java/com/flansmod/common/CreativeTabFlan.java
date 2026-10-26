@@ -9,6 +9,7 @@ import com.flansmod.common.guns.item.ItemAttachment;
 import com.flansmod.common.guns.item.ItemBullet;
 import com.flansmod.common.guns.item.ItemGrenade;
 import com.flansmod.common.guns.type.GunType;
+import com.flansmod.common.teams.ItemTeamArmour;
 import com.flansmod.common.types.IFlanItem;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -73,9 +74,11 @@ public class CreativeTabFlan extends CreativeTabs {
                 if(FlansMod.armourItems.size() == 0) {
                     return new ItemStack(Blocks.wool, 1, 11);
                 } else {
-                    Item item = FlansMod.armourItems.get(icon % FlansMod.armourItems.size());
-                    if(item != null)
-                        return new ItemStack(item);
+                    for (int offset = 0; offset < FlansMod.armourItems.size(); offset++) {
+                        ItemTeamArmour item = FlansMod.armourItems.get((icon + offset) % FlansMod.armourItems.size());
+                        if (item != null && !item.type.hideFromCreative)
+                            return new ItemStack(item);
+                    }
                     return new ItemStack(Blocks.wool, 1, 11);
                 }
             case 4:

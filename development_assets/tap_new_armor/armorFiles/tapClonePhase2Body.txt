@@ -1,0 +1,15 @@
+Name Phase II Clone Body Armour
+ShortName tapClonePhase2Body
+Icon taparmor_tapClonePhase2Body
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewTapArmor.CloneBody
+ArmourTexture SkinTapNewCloneh
+HideFromCreative true
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description Republic Battle Armour_Year: Unknown_White Armour

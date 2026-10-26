@@ -1,0 +1,14 @@
+Name Mexican Combat Uniform
+ShortName tapMexicoUniform
+Icon taparmor_tapMexicoUniform
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewTapArmor.MexicoUniform
+ArmourTexture SkinTapNewMexh
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description Mexican Battle Dress_Year: Unknown_Mexican Woodland

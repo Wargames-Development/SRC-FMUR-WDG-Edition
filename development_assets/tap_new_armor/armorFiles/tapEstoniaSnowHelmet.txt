@@ -1,0 +1,10 @@
+Name Estonian Snow Helmet
+ShortName tapEstoniaSnowHelmet
+Icon taparmor_tapEstoniaSnowHelmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.EstoniaHelmet
+ArmourTexture SkinTapNewEstsnow
+headArmor 200
+Description Estonian Combat Helmet_Year: Unknown_Snow Digital

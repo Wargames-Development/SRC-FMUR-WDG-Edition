@@ -1,0 +1,14 @@
+Name Polish wz.93 Uniform
+ShortName tapPolandUniform
+Icon taparmor_tapPolandUniform
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewTapArmor.PolandUniform
+ArmourTexture SkinTapNewPolu
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description Polish Battle Dress_Year: 1993_wz.93 Pantera

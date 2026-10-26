@@ -19,4 +19,13 @@ gradle.projectsEvaluated {
         args root.file('eclipse/Flan/TaP-Escalation').absolutePath,
                 root.file("${root.buildDir}/tap-armor-icons/meshes").absolutePath
     }
+
+    root.task('extractHK416Geometry', type: JavaExec,
+            dependsOn: [root.tasks.compileJava, compileExtractor]) {
+        classpath = root.files(tapArmorToolClasses) + root.sourceSets.main.runtimeClasspath \
+                + root.files('eclipse/Flan/BFMC Gun Pack')
+        main = 'TapArmorGeometryExtractor'
+        args '--gun', root.file('eclipse/Flan/BFMC Gun Pack').absolutePath,
+                root.file("${root.buildDir}/hk416/HK416.mesh").absolutePath
+    }
 }

@@ -1,0 +1,10 @@
+Name Polish wz.93 PASGT Helmet
+ShortName tapPolandHelmet
+Icon taparmor_tapPolandHelmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.PolandHelmet
+ArmourTexture SkinTapNewPolh
+headArmor 200
+Description Polish Combat Helmet_Year: 1993_wz.93 Pantera

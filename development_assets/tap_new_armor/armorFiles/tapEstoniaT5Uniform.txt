@@ -1,0 +1,14 @@
+Name Estonian Tier 5 Uniform
+ShortName tapEstoniaT5Uniform
+Icon taparmor_tapEstoniaT5Uniform
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewTapArmor.EstoniaUniform
+ArmourTexture SkinTapNewEsth
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description Estonian Battle Dress_Year: Unknown_Estonian Woodland

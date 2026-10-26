@@ -1,0 +1,10 @@
+Name South Korean Tier 4.5 Helmet
+ShortName tapKorea45Helmet
+Icon taparmor_tapKorea45Helmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.KoreaHelmet
+ArmourTexture SkinTapNewKorh
+headArmor 200
+Description South Korean Combat Helmet_Year: Unknown_Digital Camouflage

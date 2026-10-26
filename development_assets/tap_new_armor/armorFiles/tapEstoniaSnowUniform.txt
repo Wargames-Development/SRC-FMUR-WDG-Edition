@@ -1,0 +1,14 @@
+Name Estonian Snow Uniform
+ShortName tapEstoniaSnowUniform
+Icon taparmor_tapEstoniaSnowUniform
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewTapArmor.EstoniaUniform
+ArmourTexture SkinTapNewEstsnow
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description Estonian Battle Dress_Year: Unknown_Snow Digital

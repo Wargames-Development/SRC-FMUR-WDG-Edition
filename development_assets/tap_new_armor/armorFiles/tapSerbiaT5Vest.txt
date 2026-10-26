@@ -1,0 +1,15 @@
+Name Serbian Tier 5 Vest
+ShortName tapSerbiaT5Vest
+Icon taparmor_tapSerbiaT5Vest
+Colour 255 255 255
+Type Pants
+Defence 0.05
+Model NewTapArmor.SerbiaVest
+ArmourTexture SkinTapNewSerh
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 300
+backArmor 300
+Durability 50
+ModelScale 1.05
+Description Serbian Body Armour_Year: Unknown_Olive Drab

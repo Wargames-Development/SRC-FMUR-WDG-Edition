@@ -1,0 +1,14 @@
+Name South Korean Tier 4.5 Uniform
+ShortName tapKorea45Uniform
+Icon taparmor_tapKorea45Uniform
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewTapArmor.KoreaUniform
+ArmourTexture SkinTapNewKorh
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description South Korean Battle Dress_Year: Unknown_Digital Camouflage

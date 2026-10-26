@@ -1,0 +1,10 @@
+Name Danish M96 Helmet
+ShortName tapDenmarkHelmet
+Icon taparmor_tapDenmarkHelmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.DenmarkHelmet
+ArmourTexture SkinTapNewDenh
+headArmor 200
+Description Danish Combat Helmet_Year: 1996_M84 Camouflage

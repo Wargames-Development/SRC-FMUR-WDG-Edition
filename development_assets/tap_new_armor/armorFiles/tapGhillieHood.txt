@@ -1,0 +1,10 @@
+Name Ghillie Hood
+ShortName tapGhillieHood
+Icon taparmor_tapGhillieHood
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewTapArmor.GhillieHelmet
+ArmourTexture SkinTapNewGhillie
+headArmor 200
+Description Ghillie Hood_Year: Unknown_Woodland Camouflage
