@@ -98,6 +98,7 @@ public class ClientProxy extends CommonProxy {
 
         FMLCommonHandler.instance().bus().register(new KeyInputHandler());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new PlayerEquipmentClientHandler());
+        PlayerLodRenderer.register();
         new TickHandlerClient();
     }
 

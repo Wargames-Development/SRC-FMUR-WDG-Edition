@@ -1169,6 +1169,11 @@ public class TickHandlerClient {
     }
 
     @SubscribeEvent
+    public void suppressThermalNameplates(net.minecraftforge.client.event.RenderLivingEvent.Specials.Pre event) {
+        if (ThermalRenderApi.isHeatPass()) event.setCanceled(true);
+    }
+
+    @SubscribeEvent
     public void renderTick(TickEvent.RenderTickEvent event) {
         switch (event.phase) {
             case START:

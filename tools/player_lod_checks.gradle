@@ -1,0 +1,43 @@
+// Opt-in checks using the existing Forge runtime; no production build/dependency changes.
+gradle.projectsEvaluated {
+    def p = gradle.rootProject
+    def compileChecks = p.tasks.create('compilePlayerLodChecks', JavaCompile) {
+        dependsOn p.tasks.classes
+        source = p.fileTree('tools/player_lod_checks/java') { include '**/*.java' }
+        classpath = p.sourceSets.main.runtimeClasspath
+        destinationDir = p.file('build/player-lod-checks/classes')
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+        options.encoding = 'UTF-8'
+    }
+    p.tasks.create('playerLodChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.client.PlayerLodChecks'
+        if (p.hasProperty('wgmapRuntime')) args p.property('wgmapRuntime')
+    }
+    p.tasks.create('playerLodGpuChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.client.PlayerLodGpuChecks'
+        doFirst {
+            if (!p.hasProperty('lwjglNatives')) throw new GradleException('Supply -PlwjglNatives=<LWJGL 2 natives directory>')
+            jvmArgs '-Djava.library.path=' + p.property('lwjglNatives')
+        }
+    }
+    p.tasks.create('playerLodServerChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.common.playerlod.PlayerLodServerChecks'
+    }
+    p.tasks.create('thermalGpuChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.client.ThermalGpuChecks'
+        if (p.hasProperty('mchrRuntime')) args p.property('mchrRuntime')
+        doFirst {
+            if (!p.hasProperty('lwjglNatives')) throw new GradleException('Supply -PlwjglNatives=<LWJGL 2 natives directory>')
+            jvmArgs '-Djava.library.path=' + p.property('lwjglNatives')
+        }
+    }
+}

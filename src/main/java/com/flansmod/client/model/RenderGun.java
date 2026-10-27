@@ -1696,12 +1696,12 @@ public class RenderGun implements IItemRenderer {
 	private void renderPictureInPictureLens(float lensX, float lensY, float lensZ,
 			float lensRadius, float scale) {
 
+		ThermalScopeEffect.capturePostCompositeModelLensGeometry(
+				lensX, lensY, lensZ, lensRadius, scale);
 		int lensTexture = ThermalScopeEffect.getModelLensTexture();
 		if (lensTexture < 0) {
 			return;
 		}
-		ThermalScopeEffect.capturePostCompositeModelLensGeometry(
-				lensX, lensY, lensZ, lensRadius, scale);
 
 		// The same aperture filters primary HUD markers and positions the late
 		// shader compositor, which follows the physical optic during ADS alignment.

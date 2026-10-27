@@ -141,7 +141,16 @@ final class ScopeRenderCompatibility {
      * through the temporary fixed-function pipeline.
      */
     static RenderState beginSecondaryRender() {
-        RenderState state = captureSecondaryState(false);
+        return beginSecondaryRender(true);
+    }
+
+    /** Geometry replay never enters a world render: leave DH/terrain caches alone. */
+    static RenderState beginEntityReplay() {
+        return beginSecondaryRender(false);
+    }
+
+    private static RenderState beginSecondaryRender(boolean worldCamera) {
+        RenderState state = captureSecondaryState(false, worldCamera);
         boolean shaderPackInUse = isShaderPackInUse();
         if (!shaderPackInUse) {
             return state;
@@ -168,12 +177,8 @@ final class ScopeRenderCompatibility {
             pipelines.put(dimension, state.fixedPipeline);
             pipelineField.set(manager, state.fixedPipeline);
             lastPreparedDimensionField.set(manager, dimension);
-            if (state.distantHorizonsStateCaptured) {
-                // This is a temporary camera, not a user shader toggle. DH would
-                // otherwise clear its terrain cache on both sides of every scope pass.
-                distantHorizonsShadersEnabledField.setBoolean(distantHorizonsClientApi, false);
-                distantHorizonsDeferTransparentField.setBoolean(distantHorizonsRenderProxy, false);
-            }
+            // DH compares its remembered shader flag with Iris's configured pack,
+            // not this temporary pipeline. Seeding false here forces a cache clear.
         } catch (ReflectiveOperationException ignored) {
             restoreIris(state);
             state.secondaryRenderAllowed = false;
@@ -185,14 +190,20 @@ final class ScopeRenderCompatibility {
     }
 
     private static RenderState captureSecondaryState(boolean reusePrimaryTerrain) {
+        return captureSecondaryState(reusePrimaryTerrain, true);
+    }
+
+    private static RenderState captureSecondaryState(boolean reusePrimaryTerrain, boolean worldCamera) {
         // Initialise Iris reflection first so RenderingState/SystemTime handles are
         // available when shaders are installed, even if the pack is currently off.
         isShaderPackInUse();
         RenderState state = new RenderState();
         captureRenderingState(state);
-        captureSystemTime(state);
-        captureDistantHorizonsState(state);
-        captureCeleritasState(state, reusePrimaryTerrain);
+        if (worldCamera) {
+            captureSystemTime(state);
+            captureDistantHorizonsState(state);
+            captureCeleritasState(state, reusePrimaryTerrain);
+        }
         if (blockRenderingSettings != null && blockRenderingSettingFields != null) {
             try {
                 state.blockRenderingSettings = blockRenderingSettings;

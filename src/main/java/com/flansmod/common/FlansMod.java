@@ -151,6 +151,7 @@ public class FlansMod {
     public static File flanDir;
     public static final float soundRange = 50F;
     public static float driveableUpdateRange = 400F;
+    public static int playerLodDistance = 512;
     public static final int numPlayerSnapshots = 20;
     public static int armourEnchantability = 0;
     public static boolean kickNonMatchingHashes = false;
@@ -930,6 +931,8 @@ public class FlansMod {
         showDistanceInKillMessage = configFile.getBoolean("ShowDistanceInKillMessage", "Gameplay Settings (synced)", showDistanceInKillMessage, "List distance between killer and killed in kill message.");
         driveableHitboxes = configFile.getBoolean("Driveable hitboxes", "Gameplay Settings (synced)", driveableHitboxes, "Make a hitbox for the main driveable entity.");
         driveableUpdateRange = configFile.getFloat("Driveable update range", "Gameplay Settings (synced)", driveableUpdateRange, 0, 1000, "Range in blocks for vehicles and planes to be updated.");
+        playerLodDistance = configFile.getInt("Player LOD distance", "Player LOD", 512, 0, 1024,
+                "Server-authoritative distant player range in blocks. 0 disables player LODs. Requires matching FMUR clients; WGMap supplies distant terrain masking.");
         reloadOnRightClick = configFile.getBoolean("Reload on right click", "Gameplay Settings (synced)", reloadOnRightClick, "Whether to reload a gun using right click, forces use of R.");
         defaultADSSpreadMultiplier = configFile.getFloat("Default ADS Spread Modifier", "Gameplay Settings (synced)", defaultADSSpreadMultiplier, 0, 10, "Modifier for spread when the player is aiming.");
         defaultADSSpreadMultiplierShotgun = configFile.getFloat("Default ADS Spread Modifier (Shotguns)", "Gameplay Settings (synced)", defaultADSSpreadMultiplierShotgun, 0, 10, "Modifier for spread when the player is aiming. (Multishot guns only).");
