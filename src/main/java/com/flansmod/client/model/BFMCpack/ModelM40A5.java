@@ -1208,6 +1208,7 @@ public class ModelM40A5 extends ModelGun //Same as Filename
         stockAttachPoint = Vector3f.add(stockAttachPoint, attVec, null);
 
         zoomOffsetY = -0.09F;
+        scopedLensScale = 2F;
 
         flipAll();
 

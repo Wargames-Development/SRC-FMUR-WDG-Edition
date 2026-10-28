@@ -150,7 +150,9 @@ final class ScopeRenderCompatibility {
     }
 
     private static RenderState beginSecondaryRender(boolean worldCamera) {
-        RenderState state = captureSecondaryState(false, worldCamera);
+        // Both PiP camera paths reuse the primary camera's terrain lists. Entity
+        // replay does not render terrain and must leave those caches alone.
+        RenderState state = captureSecondaryState(worldCamera, worldCamera);
         boolean shaderPackInUse = isShaderPackInUse();
         if (!shaderPackInUse) {
             return state;
@@ -177,8 +179,13 @@ final class ScopeRenderCompatibility {
             pipelines.put(dimension, state.fixedPipeline);
             pipelineField.set(manager, state.fixedPipeline);
             lastPreparedDimensionField.set(manager, dimension);
-            // DH compares its remembered shader flag with Iris's configured pack,
-            // not this temporary pipeline. Seeding false here forces a cache clear.
+            if (worldCamera && state.distantHorizonsStateCaptured) {
+                // IrisApi reports the active pipeline, so DH sees shaders OFF in
+                // this camera. Match that temporary mode before DH checks for a
+                // shader toggle and clears the primary world's LOD render cache.
+                distantHorizonsShadersEnabledField.setBoolean(distantHorizonsClientApi, false);
+                distantHorizonsDeferTransparentField.setBoolean(distantHorizonsRenderProxy, false);
+            }
         } catch (ReflectiveOperationException ignored) {
             restoreIris(state);
             state.secondaryRenderAllowed = false;
@@ -1002,14 +1009,23 @@ final class ScopeRenderCompatibility {
     }
 
     private static void initialiseDistantHorizonsReflection() {
+        initialiseDistantHorizonsReflection(ScopeRenderCompatibility.class.getClassLoader());
+    }
+
+    private static void initialiseDistantHorizonsReflection(ClassLoader loader) {
         if (distantHorizonsChecked) {
             return;
         }
         distantHorizonsChecked = true;
         try {
-            ClassLoader loader = ScopeRenderCompatibility.class.getClassLoader();
-            Class<?> renderHelper = Class.forName(
-                    "com.seibel.distanthorizons.RenderHelper", false, loader);
+            Class<?> renderHelper;
+            try {
+                renderHelper = Class.forName(
+                        "com.seibel.distanthorizons.forge17.RenderHelper", false, loader);
+            } catch (ClassNotFoundException olderVersion) {
+                renderHelper = Class.forName(
+                        "com.seibel.distanthorizons.RenderHelper", false, loader);
+            }
             Class<?> clientApi = Class.forName(
                     "com.seibel.distanthorizons.core.api.internal.ClientApi",
                     false, loader);

@@ -28,7 +28,12 @@ public final class ThermalGpuChecks {
             binocularCoverage();
             lateLensComposition();
             particleOcclusion();
+            emissiveParticles();
+            primaryApertureIsolation();
+            m40LensSize();
             entityReplayIsolation();
+            if (System.getProperty("fmur.checks.dhRuntime") != null)
+                distantHorizonsIsolation(System.getProperty("fmur.checks.dhRuntime"));
             precisionReplay(false,null);
             if (args.length > 0) try (URLClassLoader mchr = new URLClassLoader(
                     new java.net.URL[] {Paths.get(args[0]).toUri().toURL()},ThermalGpuChecks.class.getClassLoader())) {
@@ -333,6 +338,110 @@ public final class ThermalGpuChecks {
         return tex;
     }
 
+    private static void emissiveParticles() throws Exception {
+        ThermalCamera camera=ThermalCamera.INSTANCE;
+        int source=fbo(),depth=GL30.glGenRenderbuffers();
+        GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER,depth);
+        GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER,GL14.GL_DEPTH_COMPONENT24,SIZE,SIZE);
+        GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER,GL30.GL_DEPTH_ATTACHMENT,GL30.GL_RENDERBUFFER,depth);
+        for(boolean emissive:new boolean[]{false,true})
+            for(boolean behind:new boolean[]{false,true})
+                for(boolean premultiplied:new boolean[]{false,true}) {
+                    GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,source);
+                    GL11.glColorMask(true,true,true,true);GL11.glDepthMask(true);
+                    GL11.glClearDepth(0.5);GL11.glClearColor(0.12F,0.12F,0.12F,1);
+                    GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);
+                    GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(-1,1,-1,1,-1,1);
+                    GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();
+                    check(camera.prepareDepth(source,SIZE,SIZE),"Emissive sprite depth preparation");
+                    camera.captureColor(source,SIZE,SIZE);camera.projectSun(0,0,-1,0);camera.renderHeat(() -> {});
+                    int sprite=particleSprite(255,premultiplied);
+                    camera.renderParticles(() -> {
+                        GL11.glBindTexture(GL11.GL_TEXTURE_2D,sprite);
+                        GL11.glBlendFunc(premultiplied ? GL11.GL_ONE : GL11.GL_SRC_ALPHA,GL11.GL_ONE_MINUS_SRC_ALPHA);
+                        GL13.glMultiTexCoord2f(GL13.GL_TEXTURE1,emissive ? 240 : 0,240);
+                        GL11.glColor4f(1,0.3F,0.05F,1);quad(1,behind ? -0.5 : 0.5);
+                    });
+                    display(camera,true);
+                    int center=pixel(64,64).get(0)&255;
+                    check(emissive && !behind ? center==255 : center<100,"Only visible emissive sprites become white-hot");
+                    check((pixel(4,4).get(0)&255)<100,"White-hot sprites retain transparent edges");
+                    display(camera,false);check(Math.abs((pixel(64,64).get(0)&255)-31)<=2,"Emissive mask leaves FLIR-off color unchanged");
+                    GL11.glDeleteTextures(sprite);
+                }
+        GL13.glMultiTexCoord2f(GL13.GL_TEXTURE1,0,0);
+        nativeFlanFlash(camera,source);
+        GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,0);GL30.glDeleteFramebuffers(source);GL30.glDeleteRenderbuffers(depth);
+    }
+
+    private static void nativeFlanFlash(ThermalCamera camera,int source) throws Exception {
+        sun.misc.Unsafe allocator=(sun.misc.Unsafe)field(sun.misc.Unsafe.class,"theUnsafe").get(null);
+        net.minecraft.client.Minecraft mc=(net.minecraft.client.Minecraft)allocator.allocateInstance(net.minecraft.client.Minecraft.class);
+        com.flansmod.client.particle.EntityFlash flash=(com.flansmod.client.particle.EntityFlash)
+                allocator.allocateInstance(com.flansmod.client.particle.EntityFlash.class);
+        for(String name:new String[]{"particleRed","particleGreen","particleBlue"})
+            field(net.minecraft.client.particle.EntityFX.class,name).setFloat(flash,1);
+        int sprite=particleSprite(255,true);mc.renderEngine=new ParticleTextures(sprite);
+        cpw.mods.fml.client.FMLClientHandler handler=cpw.mods.fml.client.FMLClientHandler.instance();
+        Field client=field(handler.getClass(),"client");Object previous=client.get(handler);
+        try {
+            client.set(handler,mc);
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,source);GL11.glDepthMask(true);
+            GL11.glColorMask(true,true,true,true);GL11.glClearDepth(1);GL11.glClearColor(0.12F,0.12F,0.12F,1);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);
+            GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(-1,1,-1,1,-1,1);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();
+            check(camera.prepareDepth(source,SIZE,SIZE),"Native FMUR flash depth preparation");
+            camera.captureColor(source,SIZE,SIZE);camera.renderHeat(() -> {});
+            camera.renderParticles(() -> flash.renderParticle(net.minecraft.client.renderer.Tessellator.instance,0,1,1,0,0,0));
+            display(camera,true);
+            check((pixel(64,64).get(0)&255)==255,"Native FMUR flash sets emissive brightness after starting its batch");
+            check((pixel(4,4).get(0)&255)<100,"Native FMUR flash retains transparent sprite edges");
+            check(GL11.glGetError()==GL11.GL_NO_ERROR,"Native FMUR flash replay has no GL errors");
+        } finally {client.set(handler,previous);GL11.glDeleteTextures(sprite);}
+    }
+
+    private static void primaryApertureIsolation() throws Exception {
+        Field valid=field(ThermalScopeEffect.class,"postCompositeLensGeometryValid");
+        Field nested=field(ThermalScopeEffect.class,"renderingScopedWorld");
+        float[] x=(float[])field(ThermalScopeEffect.class,"postCompositeLensNdcX").get(null);
+        boolean oldValid=valid.getBoolean(null),oldNested=nested.getBoolean(null);float oldX=x[0];
+        try {
+            valid.setBoolean(null,true);x[0]=0.125F;nested.setBoolean(null,true);
+            ThermalScopeEffect.captureModelLensGeometry(0,0,-1,1,0,0,0,1,0,0.1F);
+            check(valid.getBoolean(null) && x[0]==0.125F,"Second world camera preserves primary aperture");
+            nested.setBoolean(null,false);
+            ThermalRenderApi.renderHeat(0,() -> ThermalScopeEffect.captureModelLensGeometry(0,0,-1,1,0,0,0,1,0,0.1F));
+            check(valid.getBoolean(null) && x[0]==0.125F,"Heat target's held optic preserves primary aperture");
+        } finally { valid.setBoolean(null,oldValid);nested.setBoolean(null,oldNested);x[0]=oldX; }
+    }
+
+    private static void m40LensSize() throws Exception {
+        com.flansmod.client.model.ModelGun model=new com.flansmod.client.model.BFMCpack.ModelM40A5();
+        check(model.scopedLensScale==2F,"M40 requests twice its previous ADS diameter");
+        sun.misc.Unsafe allocator=(sun.misc.Unsafe)field(sun.misc.Unsafe.class,"theUnsafe").get(null);
+        com.flansmod.common.guns.type.GunType gun=(com.flansmod.common.guns.type.GunType)
+                allocator.allocateInstance(com.flansmod.common.guns.type.GunType.class);
+        gun.pictureInPicture=true;gun.modelScale=0.05F;
+        gun.pictureInPictureX=13;gun.pictureInPictureY=173;gun.pictureInPictureZ=0.5F;gun.pictureInPictureRadius=9.75F;
+        Method align=com.flansmod.client.model.RenderGun.class.getDeclaredMethod("alignPictureInPictureScope",
+                gun.getClass(),com.flansmod.client.model.ModelGun.class,com.flansmod.common.guns.IScope.class,Float.TYPE);
+        align.setAccessible(true);Object renderer=new com.flansmod.client.model.RenderGun();
+        FloatBuffer matrix=BufferUtils.createFloatBuffer(16);float originalDepth=0;
+        for(float scale:new float[]{1,2}) {
+            model.scopedLensScale=scale;
+            GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GLU.gluPerspective(70,1,0.05F,256);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();GL11.glTranslatef(0.3F,-0.2F,-2);
+            align.invoke(renderer,gun,model,gun,1F);GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX,matrix);
+            float eyeX=gun.pictureInPictureX*gun.modelScale/16+matrix.get(12);
+            float eyeY=gun.pictureInPictureY*gun.modelScale/16+matrix.get(13);
+            float eyeZ=gun.pictureInPictureZ*gun.modelScale/16+matrix.get(14);
+            check(Math.abs(eyeX)<0.00001F && Math.abs(eyeY)<0.00001F,"M40 enlarged aperture stays centered");
+            if(scale==1)originalDepth=eyeZ;
+            else check(Math.abs(originalDepth/eyeZ-2)<0.00001F,"Actual M40 projection doubles lens diameter");
+        }
+    }
+
     private static void entityReplayIsolation() throws Exception {
         Class<?> compat=ScopeRenderCompatibility.class;
         java.util.Map<Field,Object> saved=new java.util.HashMap<Field,Object>();
@@ -364,15 +473,107 @@ public final class ThermalGpuChecks {
             check(FakeIris.manager.pipeline==primary,"Primary shader pipeline restored");
             check(FakeIris.manager.pipelines.get("test")==primary,"Primary dimension pipeline restored");
             check("test".equals(FakeIris.manager.dimension),"Prepared dimension restored");
+            state=ScopeRenderCompatibility.beginSecondaryRender();
+            try {
+                check(state.isSecondaryRenderAllowed(),"Isolated thermal world camera permitted");
+                check(FakeIris.manager.pipeline!=primary,"Thermal camera does not advance primary shader pipeline");
+            } finally {ScopeRenderCompatibility.endSecondaryRender(state);}
+            check(FakeIris.manager.pipeline==primary,"Thermal world camera restores primary shader pipeline");
         } finally {for(java.util.Map.Entry<Field,Object> entry:saved.entrySet())entry.getKey().set(null,entry.getValue());}
     }
 
+    private static void distantHorizonsIsolation(String jar) throws Exception {
+        Class<?> compat=ScopeRenderCompatibility.class;
+        java.util.Map<Field,Object> saved=new java.util.HashMap<Field,Object>();
+        for(Field f:compat.getDeclaredFields()) {
+            if(f.getName().startsWith("distantHorizons") || f.getName().startsWith("iris")
+                    || f.getName().equals("fixedPipelineConstructor") || f.getName().equals("pipelineField")
+                    || f.getName().equals("pipelinesPerDimensionField") || f.getName().equals("lastPreparedDimensionField")) {
+                f.setAccessible(true);saved.put(f,f.get(null));
+            }
+        }
+        try (URLClassLoader dh=new URLClassLoader(new java.net.URL[]{Paths.get(jar).toUri().toURL()},
+                ThermalGpuChecks.class.getClassLoader())) {
+            field(compat,"distantHorizonsChecked").setBoolean(null,false);
+            Method resolve=compat.getDeclaredMethod("initialiseDistantHorizonsReflection",ClassLoader.class);
+            resolve.setAccessible(true);resolve.invoke(null,dh);
+            check(field(compat,"distantHorizonsModelViewField").get(null)!=null,"Installed forge17 DH bridge resolves instead of silently disabling restoration");
+            Object api=field(compat,"distantHorizonsClientApi").get(null);
+            Object proxy=field(compat,"distantHorizonsRenderProxy").get(null);
+            Object renderState=field(compat,"distantHorizonsRenderState").get(null);
+            Field shaderMode=(Field)field(compat,"distantHorizonsShadersEnabledField").get(null);
+            Field deferred=(Field)field(compat,"distantHorizonsDeferTransparentField").get(null);
+            Field helperModel=(Field)field(compat,"distantHorizonsModelViewField").get(null);
+            Field helperProjection=(Field)field(compat,"distantHorizonsProjectionField").get(null);
+            Field worldModel=field(renderState.getClass(),"mcModelViewMatrix");
+            Field worldProjection=field(renderState.getClass(),"mcProjectionMatrix");
+            Object primaryModel=dh.loadClass("com.seibel.distanthorizons.core.util.math.DhMat4f").newInstance();
+            Object primaryProjection=dh.loadClass("com.seibel.distanthorizons.core.util.math.DhMat4f").newInstance();
+            primaryModel.getClass().getMethod("setTranslation",Float.TYPE,Float.TYPE,Float.TYPE)
+                    .invoke(primaryModel,128F,72F,-256F);
+            helperModel.set(null,primaryModel);helperProjection.set(null,primaryProjection);
+            worldModel.set(renderState,primaryModel);worldProjection.set(renderState,primaryProjection);
+            shaderMode.setBoolean(api,true);deferred.setBoolean(proxy,true);
+            FakeIris.manager=new FakeManager();Object primary=FakeIris.manager.pipeline;
+            field(compat,"irisChecked").setBoolean(null,true);
+            field(compat,"irisGetInstance").set(null,FakeIris.class.getMethod("getInstance"));
+            field(compat,"irisShaderPackInUse").set(null,FakeIris.class.getMethod("isShaderPackInUse"));
+            field(compat,"irisGetPipelineManager").set(null,FakeIris.class.getMethod("getPipelineManager"));
+            field(compat,"irisGetCurrentDimensionName").set(null,FakeIris.class.getMethod("getCurrentDimensionName"));
+            field(compat,"irisGetCloudSetting").set(null,FakePipeline.class.getMethod("getCloudSetting"));
+            field(compat,"fixedPipelineConstructor").set(null,FakePipeline.class.getConstructor());
+            field(compat,"pipelineField").set(null,FakeManager.class.getField("pipeline"));
+            field(compat,"pipelinesPerDimensionField").set(null,FakeManager.class.getField("pipelines"));
+            field(compat,"lastPreparedDimensionField").set(null,FakeManager.class.getField("dimension"));
+            for(int frame=0;frame<4;frame++) {
+                ScopeRenderCompatibility.RenderState state=ScopeRenderCompatibility.beginSecondaryRender();
+                try {
+                    check(state.isSecondaryRenderAllowed(),"Thermal camera allowed with actual DH bridge");
+                    check(!new FakeIris().isShaderPackInUse(),"Iris reports shaders off for fixed pipeline, matching installed IrisApi");
+                    check(shaderMode.getBoolean(api)==new FakeIris().isShaderPackInUse(),"DH shader-toggle cache-clear condition stays false in scope camera");
+                    check(!deferred.getBoolean(proxy),"Isolated thermal camera does not defer water into primary shader pass");
+                    GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GLU.gluPerspective(12,1,0.05F,256);
+                    FloatBuffer narrow=BufferUtils.createFloatBuffer(16);GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX,narrow);
+                    Class<?> helper=helperModel.getDeclaringClass();
+                    helper.getMethod("setProjectionMatrixFromBuffer",FloatBuffer.class).invoke(null,narrow);
+                    Object scopeProjection=helper.getMethod("getProjectionMatrix").invoke(null);
+                    check(scopeProjection.getClass().getField("m11").getFloat(scopeProjection)>9,"Actual DH matrix hook receives narrow scope projection");
+                    GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();GL11.glTranslatef(-128,-72,256);
+                    FloatBuffer view=BufferUtils.createFloatBuffer(16);GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX,view);
+                    helper.getMethod("setModelViewMatrixFromBuffer",FloatBuffer.class).invoke(null,view);
+                    Object scopeModel=helper.getMethod("getModelViewMatrix").invoke(null);
+                    check(scopeModel.getClass().getField("m03").getFloat(scopeModel)==-128,"Actual DH matrix hook retains camera translation");
+                    worldModel.set(renderState,scopeModel);worldProjection.set(renderState,scopeProjection);
+                    if(frame==2)throw new IllegalStateException("DH camera fixture");
+                } catch(IllegalStateException expected) {
+                    check(frame==2,"Only intentional camera failure is caught");
+                } finally {ScopeRenderCompatibility.endSecondaryRender(state);}
+                check(FakeIris.manager.pipeline==primary,"Primary shader pipeline restored after DH camera");
+                check(shaderMode.getBoolean(api),"DH shader-toggle cache-clear condition stays false on next primary frame");
+                check(deferred.getBoolean(proxy),"Primary DH transparency mode restored");
+                check(helperModel.get(null)==primaryModel && helperProjection.get(null)==primaryProjection,"DH helper camera matrices restored exactly");
+                check(worldModel.get(renderState)==primaryModel && worldProjection.get(renderState)==primaryProjection,"DH render-state camera matrices restored exactly");
+            }
+            ScopeRenderCompatibility.RenderState color=ScopeRenderCompatibility.beginShaderAwareSecondaryRender();
+            try {check(shaderMode.getBoolean(api) && deferred.getBoolean(proxy),"Working shader-aware color camera keeps DH shader mode");}
+            finally {ScopeRenderCompatibility.endSecondaryRender(color);}
+            FakeIris.manager.pipeline=new FakePipeline();shaderMode.setBoolean(api,false);deferred.setBoolean(proxy,false);
+            Object unshaded=FakeIris.manager.pipeline;
+            ScopeRenderCompatibility.RenderState vanilla=ScopeRenderCompatibility.beginSecondaryRender();
+            try {check(FakeIris.manager.pipeline==unshaded && !shaderMode.getBoolean(api),"No-shader camera keeps its existing pipeline and DH mode");}
+            finally {ScopeRenderCompatibility.endSecondaryRender(vanilla);}
+            check(!deferred.getBoolean(proxy) && helperModel.get(null)==primaryModel,"No-shader DH state restores unchanged");
+        } finally {for(java.util.Map.Entry<Field,Object> e:saved.entrySet())e.getKey().set(null,e.getValue());}
+    }
+
     public static final class FakePipeline {
-        public FakePipeline() { }
+        final boolean shaders;
+        public FakePipeline() { this(false); }
+        FakePipeline(boolean shaders) { this.shaders=shaders; }
         public String getCloudSetting(){return "OFF";}
     }
     public static final class FakeManager {
-        public Object pipeline=new FakePipeline();
+        public Object pipeline=new FakePipeline(true);
         public java.util.Map<Object,Object> pipelines=new java.util.HashMap<Object,Object>();
         public String dimension="test";
         public FakeManager(){pipelines.put("test",pipeline);}
@@ -380,7 +581,7 @@ public final class ThermalGpuChecks {
     public static final class FakeIris {
         static FakeManager manager;
         public static FakeIris getInstance(){return new FakeIris();}
-        public boolean isShaderPackInUse(){return true;}
+        public boolean isShaderPackInUse(){return ((FakePipeline)manager.pipeline).shaders;}
         public static Object getPipelineManager(){return manager;}
         public static String getCurrentDimensionName(){return "test";}
     }
@@ -422,6 +623,24 @@ public final class ThermalGpuChecks {
             check((pixel(64,64).get(0)&255)>180,"Actual cannon sprite center renders");
             check((pixel(4,4).get(0)&255)<20,"Actual cannon sprite corners stay transparent");
             check(textures.last!=null && textures.last.getResourcePath().equals("textures/entity/explosion.png"),"Shared thermals retain explosion texture alpha");
+            check(GL11.glGetError()==GL11.GL_NO_ERROR,"Native cannon primary draw has no GL errors");
+            // Match Minecraft's color/depth FBO; the test pbuffer has no GL_BACK.
+            int source=fbo(),depthBuffer=GL30.glGenRenderbuffers();
+            GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER,depthBuffer);
+            GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER,GL14.GL_DEPTH_COMPONENT24,SIZE,SIZE);
+            GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER,GL30.GL_DEPTH_ATTACHMENT,GL30.GL_RENDERBUFFER,depthBuffer);
+            GL11.glClearColor(0,0,0,0);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);
+            ThermalCamera sensor=ThermalCamera.INSTANCE;
+            check(sensor.prepareDepth(source,SIZE,SIZE),"Actual cannon thermal depth preparation");
+            sensor.captureColor(source,SIZE,SIZE);sensor.projectSun(0,0,-1,0);sensor.renderHeat(() -> {});
+            sensor.renderParticles(() -> {
+                try {render.invoke(effect,net.minecraft.client.renderer.Tessellator.instance,0F,1F,1F,0F,0F,0F);}
+                catch(ReflectiveOperationException failure){throw new AssertionError(failure);}
+            });
+            display(sensor,true);
+            check((pixel(64,64).get(0)&255)==255,"Actual MCHR cannon explosion is white-hot through shared thermal sensor");
+            check((pixel(4,4).get(0)&255)<100,"Actual MCHR thermal explosion keeps transparent corners");
+            GL30.glDeleteFramebuffers(source);GL30.glDeleteRenderbuffers(depthBuffer);
             check(GL11.glGetError()==GL11.GL_NO_ERROR,"Native cannon renderer has no GL errors");
         } finally {mode.setInt(null,oldMode);GL11.glDeleteTextures(texture);}
     }

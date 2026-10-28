@@ -1,5 +1,6 @@
 package com.flansmod.client.particle;
 
+import com.flansmod.client.ThermalRenderApi;
 import cpw.mods.fml.client.FMLClientHandler;
 import net.minecraft.client.particle.EntityFX;
 import net.minecraft.client.renderer.Tessellator;
@@ -41,6 +42,10 @@ public class EntityFlash extends EntityFX
     	GL11.glPushMatrix();
         //func_98187_b() = bindTexture();
     	par1Tessellator.startDrawingQuads();
+        // Starting this layer-3 batch clears EffectRenderer's brightness value.
+        if (ThermalRenderApi.isParticlePass()) {
+            par1Tessellator.setBrightness(getBrightnessForRender(par2));
+        }
 		GL11.glAlphaFunc(GL11.GL_GREATER, 0.001F);
 		GL11.glEnable(GL11.GL_BLEND);
 		int srcBlend = GL11.glGetInteger(GL11.GL_BLEND_SRC);

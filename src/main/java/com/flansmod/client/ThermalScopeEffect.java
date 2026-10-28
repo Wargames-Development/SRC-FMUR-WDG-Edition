@@ -233,9 +233,10 @@ public final class ThermalScopeEffect {
     private static void renderScopedWorld(Minecraft mc, float partialTicks) {
         boolean modelLensDisplay = isModelLensDisplay();
         boolean shaderPackInUse = ScopeRenderCompatibility.isShaderPackInUse();
-        // Keep DH, sky and translucent rendering on the pack's actual world pipeline.
-        // Only the geometry/particle replay is isolated from that pipeline.
-        boolean shaderAwareCamera = modelLensDisplay;
+        // A thermal sensor must not advance the primary shader pack's temporal
+        // history or reuse its hand/deferred targets for a second camera.
+        // Color PiP still needs the pack's lighting; thermals use our own sensor.
+        boolean shaderAwareCamera = modelLensDisplay && !hasThermalVision();
         float magnification = getSecondaryCameraMagnification();
         int previousFramebuffer = GL11.glGetInteger(
                 EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
@@ -862,6 +863,9 @@ public final class ThermalScopeEffect {
     /** Model-local right/up vectors let custom optics share the exact late aperture. */
     public static void captureModelLensGeometry(float x, float centerY, float centerZ,
             float rightX, float rightY, float rightZ, float upX, float upY, float upZ, float radius) {
+        // Replayed targets can carry the same optic as the viewer. Their weapon
+        // transforms must never replace the primary first-person aperture.
+        if (renderingScopedWorld || ThermalRenderApi.isHeatPass()) return;
         if (!isModelLensActive() || radius <= 0F) {
             postCompositeLensGeometryValid = false;
             return;

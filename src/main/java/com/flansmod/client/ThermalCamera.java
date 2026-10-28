@@ -55,14 +55,19 @@ final class ThermalCamera {
             + " gl_FragColor=vec4(mix(scene,sensor,window),1.0);\n"
             + "}\n";
     private static final String PARTICLE_VERTEX = "#version 120\n"
-            + "varying vec2 uv; varying vec4 color;\n"
-            + "void main(){gl_Position=ftransform();uv=gl_MultiTexCoord0.xy;color=gl_Color;}\n";
+            + "varying vec2 uv; varying vec4 color; varying float emissive;\n"
+            // Block-light 240 is the native emissive value used by explosion
+            // sprites (including vanilla's packed brightness 240). Sky light alone
+            // must not turn outdoor smoke into a heat source.
+            + "void main(){gl_Position=ftransform();uv=gl_MultiTexCoord0.xy;color=gl_Color;"
+            + "emissive=step(239.0,gl_MultiTexCoord1.x);}\n";
     private static final String PARTICLE_FRAGMENT = "#version 120\n"
-            + "uniform sampler2D particleTexture; varying vec2 uv; varying vec4 color;\n"
+            + "uniform sampler2D particleTexture; varying vec2 uv; varying vec4 color; varying float emissive;\n"
             + "void main(){vec4 p=texture2D(particleTexture,uv)*color;"
             // R blends the particle over white-hot; G multiplies exact transmittance.
             // Both straight-alpha and premultiplied particle blending preserve G.
-            + "gl_FragColor=vec4(dot(p.rgb,vec3(0.2126,0.7152,0.0722))*0.68,0.0,0.0,p.a);}\n";
+            + "float heat=mix(dot(p.rgb,vec3(0.2126,0.7152,0.0722))*0.68,p.a,emissive);"
+            + "gl_FragColor=vec4(heat,0.0,0.0,p.a);}\n";
 
     private final FloatBuffer projection = BufferUtils.createFloatBuffer(16);
     private final FloatBuffer modelview = BufferUtils.createFloatBuffer(16);
