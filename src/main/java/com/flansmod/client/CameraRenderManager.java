@@ -73,7 +73,8 @@ public final class CameraRenderManager implements IResourceManagerReloadListener
         if (!captured || world != mc.theWorld || mc.theWorld == null || mc.renderViewEntity == null) return null;
         if (width < 1 || height < 1 || !Float.isFinite(magnification) || magnification <= 0) return null;
         float aspect = (float)mc.displayWidth / Math.max(1, mc.displayHeight);
-        secondary.set(primary, width, height, magnification, aspect, modelLens ? 1F : aspect);
+        secondary.set(primary, width, height, magnification, aspect,
+                modelLens ? (float)width / height : aspect);
         for (int i = 0; i < 16; i++) {
             if (!Float.isFinite(secondary.projection.get(i)) || !Float.isFinite(secondary.modelView.get(i))) {
                 backend = "Unavailable: invalid camera matrices";

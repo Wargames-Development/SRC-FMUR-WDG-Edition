@@ -36,7 +36,7 @@ final class ThermalCamera {
             + "void main(){\n"
             + " vec2 uv=textureCoordinate; vec2 sampleUv=uv;\n"
             + " sampleUv.x=0.5+(uv.x-0.5)/(max(sourceAspect,1.0)*max(modelMagnification,1.0));\n"
-            + " sampleUv.y=0.5+(uv.y-0.5)/max(modelMagnification,1.0);\n"
+            + " sampleUv.y=0.5+(uv.y-0.5)*min(sourceAspect,1.0)/max(modelMagnification,1.0);\n"
             + " sampleUv=mix(uv,sampleUv,modelDisplay);\n"
             + " vec3 scene=texture2D(sceneTexture,sampleUv).rgb;\n"
             + " float hot=step(0.01,texture2D(heatMask,sampleUv).a);\n"

@@ -144,7 +144,12 @@ def nextBuildNumber = null
 gradle.taskGraph.whenReady { graph ->
     // Select the version before source replacement and resource input checks run.
     // An explicit number remains available for reproducible builds.
-    if (!gradle.startParameter.dryRun && !gradle.startParameter.projectProperties.containsKey('modBuildNumber') &&
+    // ForgeGradle captures the jar path for development launches before this hook runs.
+    // Renaming it here leaves FMUR off the game classpath.
+    def launchingGame = ['runClient', 'runServer', 'debugClient', 'debugServer']
+            .any { graph.hasTask(tasks.getByName(it)) }
+    if (!gradle.startParameter.dryRun && !launchingGame &&
+            !gradle.startParameter.projectProperties.containsKey('modBuildNumber') &&
             graph.hasTask(jar) && graph.hasTask(reobf) && jar.enabled && reobf.enabled) {
         nextBuildNumber = Math.addExact(project.modBuildNumber.toInteger(), 1)
         project.version = "${versionPrefix}${nextBuildNumber}${branchSuffix}"
