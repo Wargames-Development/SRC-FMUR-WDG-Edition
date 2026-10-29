@@ -13,6 +13,10 @@ final class ThermalFramebuffers {
     private ThermalFramebuffers() { }
     static String lastFailure() { return lastFailure; }
     static int depthTexture() { return depthTexture; }
+    static void destroyDepth() {
+        if (depthTexture != 0) GL11.glDeleteTextures(depthTexture);
+        depthTexture = 0; depthWidth = 0; depthHeight = 0;
+    }
 
     static int create() {
         ContextCapabilities caps = GLContext.getCapabilities();

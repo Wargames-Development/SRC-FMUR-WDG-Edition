@@ -133,6 +133,7 @@ public class FlansMod {
     public static boolean armsEnable = true;
     public static boolean casingEnable = true;
     public static float scopeSensitivityMultiplier = 1.33F;
+    public static int pipRenderingMode = 0;
     public static boolean crosshairEnable = false;
     public static boolean realisticRecoil = false;
     public static boolean enableSightDownwardMovement = true;
@@ -946,6 +947,7 @@ public class FlansMod {
         armsEnable = configFile.getBoolean("Enable Arms", Configuration.CATEGORY_GENERAL, armsEnable, "Enable arms rendering");
         casingEnable = configFile.getBoolean("Enable casings", Configuration.CATEGORY_GENERAL, casingEnable, "Enable bullet casing ejections");
         scopeSensitivityMultiplier = configFile.getFloat("Scope Sensitivity Multiplier", Configuration.CATEGORY_GENERAL, scopeSensitivityMultiplier, 0.1F, 4.0F, "Multiplier for mouse sensitivity while looking through magnified scopes. 1.0 preserves the previous sensitivity; 1.33 is 33% faster.");
+        pipRenderingMode = configFile.getInt("PiP Rendering Mode", Configuration.CATEGORY_GENERAL, 0, 0, 2, "0: Automatic, 1: Performance (lightweight), 2: Quality (supported shader camera, with lightweight fallback).");
         hdHitCrosshair = configFile.getBoolean("Enable HD hit marker", Configuration.CATEGORY_GENERAL, hdHitCrosshair, "");
         addAllPaintjobsToCreative = configFile.getBoolean("Add All Paintjobs To Creative", Configuration.CATEGORY_GENERAL, addAllPaintjobsToCreative, "Whether to list all available paintjobs in the Creative menu");
         fancyCrosshair = configFile.getBoolean("Fancy Crosshair", Configuration.CATEGORY_GENERAL, fancyCrosshair, "Change colour of crosshair based on hit. (Red = no penetration, green = full damage, light blue = headshot. Overrides normal colour settings.");
@@ -1005,6 +1007,7 @@ public class FlansMod {
         armsEnable = configFile.getBoolean("Enable Arms", Configuration.CATEGORY_GENERAL, armsEnable, "Enable arms rendering");
         casingEnable = configFile.getBoolean("Enable casings", Configuration.CATEGORY_GENERAL, casingEnable, "Enable bullet casing ejections");
         scopeSensitivityMultiplier = configFile.getFloat("Scope Sensitivity Multiplier", Configuration.CATEGORY_GENERAL, scopeSensitivityMultiplier, 0.1F, 4.0F, "Multiplier for mouse sensitivity while looking through magnified scopes. 1.0 preserves the previous sensitivity; 1.33 is 33% faster.");
+        pipRenderingMode = configFile.getInt("PiP Rendering Mode", Configuration.CATEGORY_GENERAL, 0, 0, 2, "0: Automatic, 1: Performance (lightweight), 2: Quality (supported shader camera, with lightweight fallback).");
         hdHitCrosshair = configFile.getBoolean("Enable HD hit marker", Configuration.CATEGORY_GENERAL, hdHitCrosshair, "");
         addAllPaintjobsToCreative = configFile.getBoolean("Add All Paintjobs To Creative", Configuration.CATEGORY_GENERAL, addAllPaintjobsToCreative, "Whether to list all available paintjobs in the Creative menu");
         fancyCrosshair = configFile.getBoolean("Fancy Crosshair", Configuration.CATEGORY_GENERAL, fancyCrosshair, "Change colour of crosshair based on hit. (Red = no penetration, green = full damage, light blue = headshot. Overrides normal colour settings.");

@@ -5,6 +5,7 @@ import com.flansmod.common.FlansMod;
 import com.flansmod.common.guns.EnumAttachmentType;
 import com.flansmod.common.guns.EnumFireMode;
 import com.flansmod.common.guns.IScope;
+import com.flansmod.common.guns.ThermalProfile;
 import com.flansmod.common.guns.item.ItemAttachment;
 import com.flansmod.common.paintjob.PaintableType;
 import com.flansmod.common.types.TypeFile;
@@ -124,6 +125,7 @@ public class AttachmentType extends PaintableType implements IScope
 	public boolean hasNightVision = false;
 	/** If true, this scope renders the client-side white-hot thermal view. */
 	public boolean hasThermalVision = false;
+	public ThermalProfile thermalProfile = ThermalProfile.DEFAULT;
 	/** Render the thermal feed on this attachment's model instead of over the screen. */
 	public boolean thermalOnModel = false;
 	/** Render a magnified colour view on a circular lens in the attachment model. */
@@ -334,6 +336,8 @@ public class AttachmentType extends PaintableType implements IScope
 				hasNightVision = Boolean.parseBoolean(split[1].toLowerCase());
 			else if(split[0].equals("HasThermalVision"))
 				hasThermalVision = Boolean.parseBoolean(split[1].toLowerCase());
+			else if(ThermalProfile.isField(split[0]))
+				thermalProfile = thermalProfile.with(split[0], String.join(" ", java.util.Arrays.copyOfRange(split, 1, split.length)));
 			else if(split[0].equals("ThermalOnModel"))
 				thermalOnModel = Boolean.parseBoolean(split[1].toLowerCase());
 			else if(split[0].equals("PictureInPicture"))

@@ -148,6 +148,14 @@ feel free to compile it yourself, however it might not work due to incomplete fi
 
     2. Wait for completion
 
+    Successful runtime-jar builds (`build`, `assemble`, `jar` or `reobf`) advance
+    `modBuildNumber` once and save it to `gradle.properties`. Compilation, tests,
+    IDE setup, dry runs and failed builds do not advance it. The jar filename,
+    embedded mod version and `mcmod.info` use the same number, without `-dev`.
+    For a fixed version, `-PmodBuildNumber=N` uses exactly N without changing the
+    saved counter. A build needs an online first run to cache the compile-only
+    renderer dependencies; later builds can use `--offline`.
+
 <br>
 
 3. Locate the mod file.

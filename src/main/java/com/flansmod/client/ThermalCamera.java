@@ -1,6 +1,7 @@
 package com.flansmod.client;
 
 import com.flansmod.common.driveables.EntityDriveable;
+import com.flansmod.common.guns.ThermalProfile;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import java.nio.ByteBuffer;
@@ -30,6 +31,7 @@ final class ThermalCamera {
             + "uniform vec2 resolution; uniform vec3 sun;\n"
             + "uniform float flirEnabled, binocularDisplay, modelDisplay, vehicleDisplay, thermalDisplay;\n"
             + "uniform float sourceAspect, modelMagnification;\n"
+            + "uniform float grain, contrast, sensitivity, bloomStrength, sensorGamma, sampleSeed, palette;\n"
             + "varying vec2 textureCoordinate;\n"
             + "void main(){\n"
             + " vec2 uv=textureCoordinate; vec2 sampleUv=uv;\n"
@@ -43,10 +45,23 @@ final class ThermalCamera {
             + " vec2 delta=(sampleUv-sun.xy)*vec2(max(sourceAspect,1.0),1.0);\n"
             + " float sky=step(0.999999,texture2D(sceneDepth,clamp(sun.xy,0.0,1.0)).r);\n"
             + " float bloom=exp(-dot(delta,delta)*90.0)*sun.z*sky*cover.g;\n"
-            + " float background=clamp(pow(gray,0.82)*0.68+bloom,0.0,0.96);\n"
+            + " float background=clamp(pow(gray,sensorGamma)*0.68+bloom*bloomStrength,0.0,0.96);\n"
             + " background=max(background,max(0.0,cover.r-cover.g));\n"
             + " float screenedHot=mix(cover.r,background,step(cover.g,0.02));\n"
-            + " vec3 thermal=vec3(mix(background,screenedHot,hot));\n"
+            + " float level=mix(background,screenedHot,hot);\n"
+            // Only visible emissive particles write blue. Smoke heat retains occlusion in RG.
+            + " vec2 px=1.0/max(resolution,vec2(1.0)); float burst=texture2D(particles,sampleUv).b*0.16;\n"
+            + " for(int i=0;i<4;i++){vec2 axis=vec2(0.0);"
+            + " if(i==0)axis=vec2(1,0);if(i==1)axis=vec2(-1,0);if(i==2)axis=vec2(0,1);if(i==3)axis=vec2(0,-1);"
+            + " burst+=texture2D(particles,sampleUv+axis*px*3.0).b*0.12;"
+            + " burst+=texture2D(particles,sampleUv+axis*px*7.0).b*0.07;}\n"
+            + " level+=burst*particlesValid*bloomStrength;\n"
+            + " float noise=fract(sin(dot(floor(sampleUv*resolution),vec2(12.9898,78.233))+sampleSeed)*43758.5453)-0.5;\n"
+            + " level=clamp((level*sensitivity-0.5)*contrast+0.5+noise*grain,0.0,1.0);\n"
+            + " vec3 thermal=vec3(level);\n"
+            + " if(palette>0.5 && palette<1.5) thermal=vec3(1.0-level);\n"
+            + " if(palette>1.5 && palette<2.5) thermal=clamp(vec3(level*3.0,level*3.0-1.0,level*3.0-2.0),0.0,1.0);\n"
+            + " if(palette>2.5) thermal=vec3(level*0.15,level,level*0.25);\n"
             + " vec3 sensor=mix(scene,thermal,flirEnabled*thermalDisplay);\n"
             + " vec2 centered=abs(uv-0.5); vec2 lens=(uv-0.5)*resolution;\n"
             + " float window=step(length(lens),resolution.y*0.405)*step(centered.y,0.16);\n"
@@ -55,19 +70,21 @@ final class ThermalCamera {
             + " gl_FragColor=vec4(mix(scene,sensor,window),1.0);\n"
             + "}\n";
     private static final String PARTICLE_VERTEX = "#version 120\n"
-            + "varying vec2 uv; varying vec4 color; varying float emissive;\n"
+            + "varying vec2 uv; varying vec4 color; varying float emissive,temperature,glow;\n"
             // Block-light 240 is the native emissive value used by explosion
             // sprites (including vanilla's packed brightness 240). Sky light alone
             // must not turn outdoor smoke into a heat source.
             + "void main(){gl_Position=ftransform();uv=gl_MultiTexCoord0.xy;color=gl_Color;"
-            + "emissive=step(239.0,gl_MultiTexCoord1.x);}\n";
+            + "emissive=step(239.0,gl_MultiTexCoord1.x);float smoke=step(240.5,gl_MultiTexCoord1.x);"
+            + "temperature=mix(1.0,clamp((gl_MultiTexCoord1.x-241.0)/14.0,0.0,1.0),smoke);"
+            + "glow=emissive*(1.0-smoke);}\n";
     private static final String PARTICLE_FRAGMENT = "#version 120\n"
-            + "uniform sampler2D particleTexture; varying vec2 uv; varying vec4 color; varying float emissive;\n"
+            + "uniform sampler2D particleTexture; varying vec2 uv; varying vec4 color; varying float emissive,temperature,glow;\n"
             + "void main(){vec4 p=texture2D(particleTexture,uv)*color;"
             // R blends the particle over white-hot; G multiplies exact transmittance.
             // Both straight-alpha and premultiplied particle blending preserve G.
-            + "float heat=mix(dot(p.rgb,vec3(0.2126,0.7152,0.0722))*0.68,p.a,emissive);"
-            + "gl_FragColor=vec4(heat,0.0,0.0,p.a);}\n";
+            + "float heat=mix(dot(p.rgb,vec3(0.2126,0.7152,0.0722))*0.68,temperature*p.a,emissive);"
+            + "gl_FragColor=vec4(heat,0.0,glow*p.a,p.a);}\n";
 
     private final FloatBuffer projection = BufferUtils.createFloatBuffer(16);
     private final FloatBuffer modelview = BufferUtils.createFloatBuffer(16);
@@ -75,8 +92,10 @@ final class ThermalCamera {
     private int width, height;
     private boolean depthPrepared, heatValid, particlesValid, warned;
     private float sunX, sunY, sunStrength;
+    private ThermalProfile profile = ThermalProfile.DEFAULT;
+    private int sampleSequence;
     private static int program, particleProgram, particleTextureUniform;
-    private static final int[] uniforms = new int[14];
+    private static final int[] uniforms = new int[21];
     private static boolean shaderFailed;
 
     private ThermalCamera() { }
@@ -84,6 +103,11 @@ final class ThermalCamera {
     int width() { return width; }
     int height() { return height; }
     boolean heatValid() { return heatValid; }
+
+    void beginSample(ThermalProfile nextProfile) {
+        profile = nextProfile;
+        sampleSequence = (sampleSequence + 1) & 4095;
+    }
 
     boolean captureColor(int source, int w, int h) {
         int draw = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
@@ -301,6 +325,16 @@ final class ThermalCamera {
         heatValid=false; particlesValid=false;
     }
 
+    void destroy() {
+        if (framebuffer != 0) ThermalFramebuffers.delete(framebuffer);
+        if (heatTexture != 0) GL11.glDeleteTextures(heatTexture);
+        if (sceneTexture != 0) GL11.glDeleteTextures(sceneTexture);
+        if (particleTexture != 0) GL11.glDeleteTextures(particleTexture);
+        framebuffer = 0; heatTexture = 0; sceneTexture = 0; particleTexture = 0;
+        width = 0; height = 0; heatValid = false; depthPrepared = false; particlesValid = false;
+        ThermalFramebuffers.destroyDepth();
+    }
+
     private static int texture(int w, int h, int filter) {
         int id=GL11.glGenTextures(); GL11.glBindTexture(GL11.GL_TEXTURE_2D,id);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER,filter);
@@ -333,7 +367,7 @@ final class ThermalCamera {
         if (vertex != 0) GL20.glDeleteShader(vertex);
         if (fragment != 0) GL20.glDeleteShader(fragment);
         if (program != 0) {
-            String[] names = new String[] {"sceneTexture", "heatMask", "sceneDepth", "resolution", "sun", "flirEnabled", "thermalDisplay", "modelDisplay", "binocularDisplay", "vehicleDisplay", "sourceAspect", "modelMagnification", "particles", "particlesValid"};
+            String[] names = new String[] {"sceneTexture", "heatMask", "sceneDepth", "resolution", "sun", "flirEnabled", "thermalDisplay", "modelDisplay", "binocularDisplay", "vehicleDisplay", "sourceAspect", "modelMagnification", "particles", "particlesValid", "grain", "contrast", "sensitivity", "bloomStrength", "sensorGamma", "sampleSeed", "palette"};
             for (int i=0; i<names.length; i++) uniforms[i]=GL20.glGetUniformLocation(program,names[i]);
         }
         int pv=compile(GL20.GL_VERTEX_SHADER,PARTICLE_VERTEX), pf=compile(GL20.GL_FRAGMENT_SHADER,PARTICLE_FRAGMENT);
@@ -375,5 +409,9 @@ final class ThermalCamera {
         GL20.glUniform1f(uniforms[9],vehicle ? 1 : 0); GL20.glUniform1f(uniforms[10],aspect);
         GL20.glUniform1f(uniforms[11],magnification);
         GL20.glUniform1i(uniforms[12],3); GL20.glUniform1f(uniforms[13],particlesValid ? 1 : 0);
+        GL20.glUniform1f(uniforms[14],profile.grain); GL20.glUniform1f(uniforms[15],profile.contrast);
+        GL20.glUniform1f(uniforms[16],profile.sensitivity); GL20.glUniform1f(uniforms[17],profile.bloom);
+        GL20.glUniform1f(uniforms[18],profile.gamma); GL20.glUniform1f(uniforms[19],sampleSequence);
+        GL20.glUniform1f(uniforms[20],profile.palette);
     }
 }

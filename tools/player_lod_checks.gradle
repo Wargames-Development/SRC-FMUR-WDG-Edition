@@ -36,6 +36,7 @@ gradle.projectsEvaluated {
         main = 'com.flansmod.client.ThermalGpuChecks'
         if (p.hasProperty('mchrRuntime')) args p.property('mchrRuntime')
         if (p.hasProperty('dhRuntime')) systemProperty 'fmur.checks.dhRuntime', p.property('dhRuntime')
+        if (p.hasProperty('angelicaRuntime')) systemProperty 'fmur.checks.angelicaRuntime', p.property('angelicaRuntime')
         doFirst {
             if (!p.hasProperty('lwjglNatives')) throw new GradleException('Supply -PlwjglNatives=<LWJGL 2 natives directory>')
             jvmArgs '-Djava.library.path=' + p.property('lwjglNatives')

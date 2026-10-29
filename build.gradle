@@ -14,8 +14,9 @@ apply plugin: 'forge'
 
 group = "com.hfr"
 archivesBaseName = jarBaseName
-def branchSuffix = project.hasProperty("branch") ? "-${project.branch}" : ""
-version = "${modMainVersion}.${modSubVersion}.${modPatchVersion}_X${modBuildNumber}${branchSuffix}"
+def versionPrefix = "${modMainVersion}.${modSubVersion}.${modPatchVersion}_X"
+def branchSuffix = project.hasProperty('branch') && project.branch && project.branch != 'dev' ? "-${project.branch}" : ''
+version = "${versionPrefix}${modBuildNumber}${branchSuffix}"
 
 compileJava.options.encoding = 'UTF-8'
 sourceCompatibility = targetCompatibility = '1.8'
@@ -37,6 +38,8 @@ minecraft {
 }
 
 repositories {
+    maven { url = 'https://nexus.gtnewhorizons.com/repository/public/' }
+    maven { url = 'https://maven.wagyourtail.xyz/releases/' }
     maven {
         name = 'ModMaven'
         url = 'https://modmaven.dev'
@@ -50,6 +53,18 @@ repositories {
 dependencies {
     // Use the MCP-mapped WGCore dev jar for local compilation and runs.
     compile fileTree(dir: 'lib', include: ['*.jar'], exclude: ['WGCore-2.7.5_X211.jar'])
+    // Always ship our optional runtime adapter; compile dependencies are never bundled.
+    if (project.hasProperty('angelicaCompileJar')) {
+        def cameraAngelicaJar = file(project.property('angelicaCompileJar'))
+        compileOnly files(cameraAngelicaJar)
+        compileOnly fileTree(dir: new File(cameraAngelicaJar.parentFile.parentFile, 'falsepattern'),
+                includes: ['org.joml-joml-*.jar', 'it.unimi.dsi-fastutil-*.jar', '*jvmdowngrader-java-api-*-8.jar'])
+    } else {
+        compileOnly 'com.github.GTNewHorizons:Angelica:2.2.14@jar'
+        compileOnly 'org.joml:joml:1.10.8@jar'
+        compileOnly 'it.unimi.dsi:fastutil:8.5.18@jar'
+        compileOnly 'xyz.wagyourtail.jvmdowngrader:jvmdowngrader-java-api:1.3.5:downgraded-8@jar'
+    }
 
     implementation 'codechicken:CodeChickenCore:1.7.10-1.0.4.29:dev'
     compileOnly 'codechicken:CodeChickenCore:1.7.10-1.0.4.29:src'
@@ -63,6 +78,8 @@ dependencies {
     implementation "li.cil.oc:OpenComputers:MC1.7.10-1.5.+:api"
     compileOnly "inventorytweaks:InventoryTweaks:1.59-dev:deobf"
 }
+
+sourceSets.main.java.srcDir 'src/angelica/java'
 
 processResources {
     inputs.property "version", project.version
@@ -89,4 +106,64 @@ jar {
     baseName = "${jarBaseName}-${project.version}"
     version = null // prevents double versioning like -1.8.3_X83
     destinationDir = file("build/libs")
+    doLast {
+        def cameraJar = new java.util.zip.ZipFile(archivePath)
+        try {
+            ['com/flansmod/client/compat/AngelicaCameraTerrain.class',
+             'com/flansmod/client/compat/AngelicaCameraTerrain$CameraChunkRenderer.class'].each { required ->
+                if (cameraJar.getEntry(required) == null)
+                    throw new GradleException("Missing PiP renderer adapter in ${archivePath}: ${required}")
+            }
+        } finally { cameraJar.close() }
+    }
+}
+
+// ForgeGradle normally remaps only assemble/build. A directly requested jar must also be installable.
+jar.finalizedBy 'reobf'
+reobf.doLast {
+    def runtimeJar = new java.util.zip.ZipFile(jar.archivePath)
+    try {
+        def stream = runtimeJar.getInputStream(runtimeJar.getEntry('com/flansmod/common/BlockFlansWorkbench.class'))
+        def workbench = new org.objectweb.asm.tree.ClassNode()
+        try {
+            new org.objectweb.asm.ClassReader(stream).accept(workbench,
+                    org.objectweb.asm.ClassReader.SKIP_DEBUG | org.objectweb.asm.ClassReader.SKIP_FRAMES)
+        } finally { stream.close() }
+        def instructions = workbench.methods.collectMany { it.instructions.toArray().toList() }
+        def materialMapped = instructions.any { it instanceof org.objectweb.asm.tree.FieldInsnNode &&
+                it.owner == 'net/minecraft/block/material/Material' && it.name == 'field_151573_f' }
+        def hardnessMapped = instructions.any { it instanceof org.objectweb.asm.tree.MethodInsnNode && it.name == 'func_149711_c' }
+        def overrideMapped = workbench.methods.any { it.name == 'func_149666_a' }
+        if (!materialMapped || !hardnessMapped || !overrideMapped) {
+            throw new GradleException("Runtime mapping verification failed for ${jar.archivePath}; do not install this jar")
+        }
+    } finally { runtimeJar.close() }
+}
+
+def nextBuildNumber = null
+gradle.taskGraph.whenReady { graph ->
+    // Select the version before source replacement and resource input checks run.
+    // An explicit number remains available for reproducible builds.
+    if (!gradle.startParameter.dryRun && !gradle.startParameter.projectProperties.containsKey('modBuildNumber') &&
+            graph.hasTask(jar) && graph.hasTask(reobf) && jar.enabled && reobf.enabled) {
+        nextBuildNumber = Math.addExact(project.modBuildNumber.toInteger(), 1)
+        project.version = "${versionPrefix}${nextBuildNumber}${branchSuffix}"
+        jar.baseName = "${jarBaseName}-${project.version}"
+        sourceMainJava.replace '@VERSION@', project.version
+        processResources.inputs.property 'version', project.version
+    }
+}
+
+gradle.buildFinished { result ->
+    // Failed or skipped packaging must not consume a number, including failures after reobf.
+    if (nextBuildNumber != null && result.failure == null &&
+            jar.state.executed && !jar.state.skipped && reobf.state.executed && !reobf.state.skipped) {
+        def propertiesFile = file('gradle.properties')
+        def content = propertiesFile.getText('UTF-8')
+        if (!(content =~ /(?m)^modBuildNumber=[^\r\n]*/).find())
+            throw new GradleException('Missing modBuildNumber in gradle.properties')
+        propertiesFile.setText(content.replaceFirst(/(?m)^modBuildNumber=[^\r\n]*/,
+                "modBuildNumber=${nextBuildNumber}"), 'UTF-8')
+        logger.lifecycle("Saved successful build number X${nextBuildNumber}")
+    }
 }
