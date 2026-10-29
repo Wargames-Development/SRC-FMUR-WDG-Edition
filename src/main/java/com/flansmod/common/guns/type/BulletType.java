@@ -692,6 +692,45 @@ public class BulletType extends ShootableType {
                 + (name == null ? "" : name)).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 
+    /** Size multiplier for the cosmetic block impact decal. Unknown rounds keep the old size. */
+    public float getBulletHoleScale() {
+        String identifier = getNormalizedCaliberIdentifier();
+        if (isExtraLargeCaliber()) {
+            return 2.4F;
+        }
+        if (isLargeCaliber()) {
+            return identifier.contains("145") ? 2.1F : 1.8F;
+        }
+        if (isPistolCaliber() || identifier.contains("50magnum")) {
+            if (identifier.contains("22lr")) {
+                return 0.7F;
+            }
+            if (identifier.contains("57x28") || identifier.contains("46x30")) {
+                return 0.8F;
+            }
+            if (identifier.contains("44mag") || identifier.contains("45acp")
+                    || identifier.contains("50ae") || identifier.contains("50magnum")) {
+                return 1.05F;
+            }
+            return 0.9F;
+        }
+        if (identifier.contains("12gauge") || identifier.contains("12ga")) {
+            return 1.45F;
+        }
+        if (identifier.contains("338")) {
+            return 1.35F;
+        }
+        if (identifier.contains("762") || identifier.contains("308")
+                || identifier.contains("3006") || identifier.contains("300blk")) {
+            return 1.2F;
+        }
+        if (identifier.contains("65creed") || identifier.contains("65grendel")
+                || identifier.contains("68spc")) {
+            return 1.1F;
+        }
+        return identifier.contains("545") ? 0.95F : 1F;
+    }
+
     /**
      * Pitch for the shared distant gun report. The source recording represents
      * 5.56 mm at 1.0; progressively heavier cartridges shift it downward.

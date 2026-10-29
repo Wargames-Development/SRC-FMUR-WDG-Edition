@@ -1,0 +1,3 @@
+newmtl VHS2_Custom
+Kd 1 1 1
+map_Kd VHS2_Custom.png

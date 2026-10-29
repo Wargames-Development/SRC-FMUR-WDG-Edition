@@ -1,0 +1,12 @@
+Model Information:
+* title:	HS Produkt VHS-2 Rifle
+* source:	https://sketchfab.com/3d-models/hs-produkt-vhs-2-rifle-ac28660865054dc19fbd77d3c5a1941f
+* author:	TacticalGlaceon (https://sketchfab.com/TacticalGlaceon)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "HS Produkt VHS-2 Rifle" (https://sketchfab.com/3d-models/hs-produkt-vhs-2-rifle-ac28660865054dc19fbd77d3c5a1941f) by TacticalGlaceon (https://sketchfab.com/TacticalGlaceon) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+FMUR adaptation also uses the existing BFMC Gun Pack HK416 iron-sight geometry and texture strip.

@@ -3,6 +3,9 @@ package com.flansmod.client.model;
 import com.flansmod.client.FlansModClient;
 import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.client.ThermalScopeEffect;
+import com.flansmod.client.model.NewTapArmor.ModelGhillieBase;
+import com.flansmod.client.model.BFMCpack.ModelSketchfabGun;
+import com.flansmod.client.model.BFMCpack.ModelDragunovSVD;
 import com.flansmod.client.model.animation.gltf.GLTFAnimationController;
 import com.flansmod.client.model.animation.gltf.model.EnumAnimationPart;
 import com.flansmod.client.tmt.ModelRendererTurbo;
@@ -10,6 +13,7 @@ import com.flansmod.common.FlansMod;
 import com.flansmod.common.PlayerData;
 import com.flansmod.common.PlayerHandler;
 import com.flansmod.common.guns.EnumFireMode;
+import com.flansmod.common.guns.EnumAttachmentType;
 import com.flansmod.common.guns.IScope;
 import com.flansmod.common.guns.item.ItemBullet;
 import com.flansmod.common.guns.item.ItemGun;
@@ -275,7 +279,9 @@ public class RenderGun implements IItemRenderer {
                     GL11.glRotatef((4.5F + model.adsRotateZ) * actualZoomProgress, 0F, 0F, 1F);
 
                     //瞄准偏移
-                    GL11.glTranslatef((model.crouchZoom - model.zoomOffset) * actualZoomProgress, (model.zoomOffsetY - 0.03F) * actualZoomProgress, model.zoomOffsetZ * actualZoomProgress);
+                    float sightedOffsetY = model instanceof ModelSketchfabGun && gunType.getScope(item) != null
+                            ? ((ModelSketchfabGun) model).sightedZoomOffsetY : 0F;
+                    GL11.glTranslatef((model.crouchZoom - model.zoomOffset) * actualZoomProgress, (model.zoomOffsetY + sightedOffsetY - 0.03F) * actualZoomProgress, model.zoomOffsetZ * actualZoomProgress);
 
                     //跳跃偏移
                     GL11.glTranslatef(0, 0.005F * actualSpringProgress, 0F);
@@ -1536,7 +1542,10 @@ public class RenderGun implements IItemRenderer {
         Paintjob paintjob = attachment.getPaintjob(stack.getItemDamage());
         renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(paintjob));
         GL11.glTranslatef(model.x * type.modelScale, model.y * type.modelScale, model.z * type.modelScale);
-        GL11.glScalef(attachment.modelScale, attachment.modelScale, attachment.modelScale);
+        float attachmentScale = attachment.modelScale;
+        if (attachment.type == EnumAttachmentType.sights && type.model instanceof ModelSketchfabGun)
+            attachmentScale *= type.model instanceof ModelDragunovSVD ? 0.4F : 0.65F;
+        GL11.glScalef(attachmentScale, attachmentScale, attachmentScale);
     }
 
     private void postRenderAttachment(AttachmentType attachment, ItemStack stack, float f, ItemRenderType type) {
@@ -1602,6 +1611,8 @@ public class RenderGun implements IItemRenderer {
 			}
 
 			float attachmentScale = attachment.modelScale / 16F;
+			if (model instanceof ModelSketchfabGun && attachment.type == EnumAttachmentType.sights)
+				attachmentScale *= model instanceof ModelDragunovSVD ? 0.4F : 0.65F;
 			lensX = alignmentX + model.scopeAttachPoint.x * gunType.modelScale
 					+ attachment.pictureInPictureX * attachmentScale;
 			lensY = alignmentY + model.scopeAttachPoint.y * gunType.modelScale
@@ -1880,7 +1891,7 @@ public class RenderGun implements IItemRenderer {
 
             GL11.glScalef(model.leftArmScale.x, model.leftArmScale.y, model.leftArmScale.z);
             modelBipedMain.bipedLeftArm.offsetY = 0F;
-            if (!model.leftHandAmmo) {
+            if (!model.leftHandAmmo || (model.leftHandAmmoReloadOnly && !anim.reloading)) {
                 modelBipedMain.bipedLeftArm.render(0.0625F);
                 renderFirstPersonArmour(player, false);
             }
@@ -1956,7 +1967,7 @@ public class RenderGun implements IItemRenderer {
 
         GL11.glScalef(model.leftArmScale.x, model.leftArmScale.y, model.leftArmScale.z);
         modelBipedMain.bipedLeftArm.offsetY = 0F;
-        if (model.leftHandAmmo) {
+        if (model.leftHandAmmo && (!model.leftHandAmmoReloadOnly || anim.reloading)) {
             modelBipedMain.bipedLeftArm.render(0.0625F);
             renderFirstPersonArmour(player, false);
         }
@@ -1984,7 +1995,14 @@ public class RenderGun implements IItemRenderer {
             }
             renderEngine.bindTexture(armour.getArmorTextureLocation());
             GL11.glColor4f(1F, 1F, 1F, 1F);
-            if (parts != null && parts.length > 0) {
+            if (model instanceof ModelGhillieBase) {
+                GL11.glPushMatrix();
+                GL11.glScalef(armour.type.modelScale, armour.type.modelScale, armour.type.modelScale);
+                ((ModelGhillieBase) model).renderFirstPersonSleeve(right,
+                        right ? firstPersonArmModel.bipedRightArm : firstPersonArmModel.bipedLeftArm,
+                        0.0625F);
+                GL11.glPopMatrix();
+            } else if (parts != null && parts.length > 0) {
                 GL11.glPushMatrix();
                 GL11.glScalef(armour.type.modelScale, armour.type.modelScale, armour.type.modelScale);
                 model.render(parts, right ? firstPersonArmModel.bipedRightArm : firstPersonArmModel.bipedLeftArm,

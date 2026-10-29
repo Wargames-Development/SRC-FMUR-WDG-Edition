@@ -1,0 +1,26 @@
+Name Triple Action .50 BMG Round
+ShortName tripleAction50BMG
+Description Single .50 BMG round for the Triple Action Thunder
+Icon atbullet
+Model cvts.MGBullet
+Texture Yellow
+Colour 255 255 255
+MaxStackSize 16
+RoundsPerItem 1
+FallSpeed 2
+DamageVsLiving 1
+DamageVsVehicles 1.75
+DamageVsPlanes 1.75
+Explosion 0
+ExplodeOnImpact False
+Fuse 0
+Fire 0
+BreaksGlass True
+HitBoxSize 0.1
+FlakParticlesCrack 40
+FlakParticlesDiff 0.7
+SmokeTrail True
+Tracer False
+ShootHeadMultiplier 2.0
+ShootArmMultiplier 0.8
+ShootLegMultiplier 0.8

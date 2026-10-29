@@ -94,6 +94,7 @@ public class FlansModClient extends FlansMod {
      * 是否禁用步兵第三人称
      */
     public static boolean disableThirdPerson = true;
+    public static boolean isOperator;
     /**
      * 鼠标控制开关上的延时器(操控模式间切换有延时)
      */
@@ -275,6 +276,7 @@ public class FlansModClient extends FlansMod {
         }
 
         if (minecraft.thePlayer == null || minecraft.theWorld == null) {
+            isOperator = false;
             restoreScopedMouseSensitivity();
             return;
         }
@@ -283,7 +285,7 @@ public class FlansModClient extends FlansMod {
             minecraft.displayGuiScreen(new GuiDriveableController((IControllable) minecraft.thePlayer.ridingEntity));
 
         //禁止步兵切换第三人称
-        if (disableThirdPerson) {
+        if (disableThirdPerson && !isOperator) {
             if (minecraft.gameSettings.thirdPersonView != 0 && minecraft.thePlayer.ridingEntity == null && !isBulletTrackingActive) {
                 minecraft.thePlayer.addChatComponentMessage(new ChatComponentText("Third-person view is disabled for infantry!"));
                 minecraft.gameSettings.thirdPersonView = 0;

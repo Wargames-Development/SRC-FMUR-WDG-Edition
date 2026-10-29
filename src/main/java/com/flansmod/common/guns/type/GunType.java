@@ -92,6 +92,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * The list of bullet types that can be used in this gun
      */
     public List<ShootableType> ammo = new ArrayList<>();
+    public boolean showAmmoHud = true;
     public boolean hideCompatibleAmmo = false;
     /**
      * Whether the player can press the reload key (default R) to reload this gun
@@ -475,6 +476,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * If this is true, then all attachments are allowed. Otherwise, the list is checked.
      */
     public boolean allowAllAttachments = false;
+    /** Permanent scope supplied by the gun definition; resolved after content packs load. */
+    public String fixedScopeName;
     public boolean allowLaserPointerAttachments = true;
     public boolean disallowBarrelAttachments = false;
     /**
@@ -648,6 +651,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 allowRearm = Boolean.parseBoolean(split[1].toLowerCase());
             else if (split[0].equals("UseHeatSystem"))
                 useHeatSystem = Boolean.parseBoolean(split[1]);
+            else if (split[0].equals("ShowAmmoHud"))
+                showAmmoHud = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("MaxHeat"))
                 maxHeat = Math.max(1F, Float.parseFloat(split[1]));
             else if (split[0].equals("HeatPerShot"))
@@ -1034,6 +1039,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 //Attachment settings
             else if (split[0].equals("AllowAllAttachments"))
                 allowAllAttachments = Boolean.parseBoolean(split[1]);
+            else if (split[0].equals("FixedScope"))
+                fixedScopeName = split[1];
             else if (split[0].equals("AllowLaserPointerAttachments"))
                 allowLaserPointerAttachments = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("DisallowBarrelAttachments"))
@@ -1747,6 +1754,10 @@ public class GunType extends PaintableType implements IScope, IMarkable {
     }
 
     public ItemStack getScopeItemStack(ItemStack gun) {
+        if (fixedScopeName != null) {
+            AttachmentType fixed = AttachmentType.getAttachment(fixedScopeName);
+            if (fixed != null && fixed.item != null) return new ItemStack(fixed.item);
+        }
         return getAttachmentItemStack(gun, "scope");
     }
 
@@ -1785,6 +1796,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         if (gun == null || !(gun.getItem() instanceof ItemGun)) {
             return null;
         }
+        if ("scope".equals(name) && fixedScopeName != null)
+            return AttachmentType.getAttachment(fixedScopeName);
         checkForTags(gun);
         AttachmentType attachment = AttachmentType.getFromNBT(gun.stackTagCompound.getCompoundTag("attachments").getCompoundTag(name));
         if (attachment != null && ((!allowLaserPointerAttachments && attachment.isLaserPointer)

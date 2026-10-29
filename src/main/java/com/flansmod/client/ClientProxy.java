@@ -480,7 +480,8 @@ public class ClientProxy extends CommonProxy {
         World theWorld = mc.theWorld;
         if (mc.renderViewEntity != null && mc.effectRenderer != null) {
             if (p_72726_1_.equals("flansmod.bullethole")) {
-                BulletHoleDecalRenderer.addBulletHole(p_72726_2_, p_72726_4_, p_72726_6_, p_72726_8_, p_72726_10_, p_72726_12_);
+                BulletHoleDecalRenderer.addBulletHole(p_72726_2_, p_72726_4_, p_72726_6_,
+                        p_72726_8_, p_72726_10_, p_72726_12_, scale);
                 return null;
             }
             if (p_72726_1_.equals("flansmod.blasterscorch")) {

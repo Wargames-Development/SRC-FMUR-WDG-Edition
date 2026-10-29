@@ -4,6 +4,7 @@ import com.flansmod.client.gui.GuiDriveableController;
 import com.flansmod.client.gui.GuiTeamScores;
 import com.flansmod.client.model.RenderFlag;
 import com.flansmod.client.model.RenderGun;
+import com.flansmod.client.model.GunAnimations;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.PlayerData;
 import com.flansmod.common.PlayerHandler;
@@ -54,6 +55,7 @@ import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
+import net.minecraftforge.client.IItemRenderer;
 import net.minecraftforge.common.ForgeHooks;
 import net.minecraftforge.common.MinecraftForge;
 import org.lwjgl.input.Keyboard;
@@ -579,7 +581,7 @@ public class TickHandlerClient {
                 if (stack != null && stack.getItem() instanceof ItemGun) {
                     ItemGun gunItem = (ItemGun) stack.getItem();
                     GunType gunType = gunItem.type;
-                    if (!gunType.useHeatSystem)
+                    if (!gunType.useHeatSystem && gunType.showAmmoHud && !gunType.ammo.isEmpty())
                         renderAmmoHud(mc, stack, gunItem, gunType, i, j);
 
                     //Render secondary gun

@@ -170,8 +170,6 @@ public final class ThermalScopeEffect {
     private static boolean shaderUnavailable;
     private static boolean colorPictureInPictureActiveLastFrame;
     private static int colorPictureInPictureFrame;
-    private static boolean thermalPictureInPictureActiveLastFrame;
-    private static int thermalPictureInPictureFrame;
     private static boolean scopedHeatDepthPrepared;
     private static final FloatBuffer scopedHeatProjection = BufferUtils.createFloatBuffer(16);
     private static final FloatBuffer scopedHeatModelView = BufferUtils.createFloatBuffer(16);
@@ -193,8 +191,6 @@ public final class ThermalScopeEffect {
         // normal color PiP. Rendering this camera at RenderTick START lets its narrow
         // frustum consume/publish terrain visibility before the real camera renders.
         if (isColorPictureInPictureDisplay()) {
-            thermalPictureInPictureActiveLastFrame = false;
-            thermalPictureInPictureFrame = 0;
             return;
         }
 
@@ -202,19 +198,6 @@ public final class ThermalScopeEffect {
                 || mc.renderViewEntity == null || !GLContext.getCapabilities().OpenGL20
                 || !OpenGlHelper.isFramebufferEnabled()) {
             modelLensValid = false;
-            thermalPictureInPictureActiveLastFrame = false;
-            thermalPictureInPictureFrame = 0;
-            return;
-        }
-
-        boolean sourceSizeChanged = sceneWidth != mc.displayWidth
-                || sceneHeight != mc.displayHeight;
-        boolean renderThisFrame = !thermalPictureInPictureActiveLastFrame
-                || !modelLensValid || sourceSizeChanged
-                || (thermalPictureInPictureFrame & 1) == 0;
-        thermalPictureInPictureActiveLastFrame = true;
-        thermalPictureInPictureFrame++;
-        if (!renderThisFrame) {
             return;
         }
 
@@ -223,7 +206,6 @@ public final class ThermalScopeEffect {
         // second camera happens to run after a muzzle flash or camera movement.
         if (modelLensValid
                 && ScopeRenderCompatibility.shouldDeferColorPictureInPictureRender()) {
-            thermalPictureInPictureFrame--;
             return;
         }
 

@@ -1890,6 +1890,18 @@ public class ModelRendererTurbo extends ModelRenderer {
         copyTo(verts, poly, true);
     }
 
+    /** Expands model-space bounds without exposing the mutable vertex array. */
+    public void includeVertexBounds(float[] bounds) {
+        for (PositionTextureVertex vertex : vertices) {
+            bounds[0] = Math.min(bounds[0], (float) vertex.vector3D.xCoord + rotationPointX);
+            bounds[1] = Math.max(bounds[1], (float) vertex.vector3D.xCoord + rotationPointX);
+            bounds[2] = Math.min(bounds[2], (float) vertex.vector3D.yCoord + rotationPointY);
+            bounds[3] = Math.max(bounds[3], (float) vertex.vector3D.yCoord + rotationPointY);
+            bounds[4] = Math.min(bounds[4], (float) vertex.vector3D.zCoord + rotationPointZ);
+            bounds[5] = Math.max(bounds[5], (float) vertex.vector3D.zCoord + rotationPointZ);
+        }
+    }
+
     public void copyTo(PositionTextureVertex[] verts, TexturedPolygon[] poly, boolean copyGroup) {
         batchGeometryChecked = false;
         vertices = Arrays.copyOf(vertices, vertices.length + verts.length);

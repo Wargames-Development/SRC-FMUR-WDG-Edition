@@ -1,0 +1,42 @@
+Name Barrett SSRS
+ShortName sketchBarrettSSRS
+Description 30mm grenade launcher
+Icon BarrettSSRS
+Colour 255 255 255
+Ammo sketch30mmGrenade
+ReloadTime 85
+TacticalReloadTime 70
+Damage 2
+NumBullets 1
+BulletSpeed 12
+Accuracy 0.75
+AimingSpreadConstant 0.75
+AimTimeConstant 0.55
+ShootDelay 12
+Mode SemiAuto
+Recoil 8
+RecoilAngle -30
+RecoilDistance 1
+RandomRecoilRange 2
+DecreaseRecoil 2
+ShootSound qlg10a_f
+ReloadSound gp30_r
+ReloadSoundRange 5
+GunSoundRange 60
+EmptyClickSound emptyclick
+Scope None
+ZoomLevel 1
+FOVZoomLevel 1.25
+Deployable False
+Model BFMCpack.BarrettSSRS
+ModelScale 1.15
+Texture BarrettSSRS
+3rdModel BFMCpack.BarrettSSRS
+3rdModelScale 1.15
+3rdTexture BarrettSSRS
+AllowAllAttachments True
+AllowAttachments holo reflex
+AllowScopeAttachments true
+AllowBarrelAttachments true
+AllowGadgetAttachments true
+AllowAccessoryAttachments true

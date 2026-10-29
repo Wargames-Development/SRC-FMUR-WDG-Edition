@@ -1,0 +1,18 @@
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    def output = root.file("${root.buildDir}/vhs2-check/classes")
+    def compileTool = root.task('compileVHS2GeometryTool', type: JavaCompile) {
+        source = root.fileTree('tools/vhs2') { include '*.java' }
+        classpath = root.sourceSets.main.runtimeClasspath
+        destinationDir = output
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+        options.encoding = 'UTF-8'
+    }
+    root.task('checkVHS2Geometry', type: JavaExec,
+            dependsOn: [root.tasks.compileJava, compileTool]) {
+        classpath = root.files(output) + root.sourceSets.main.runtimeClasspath
+        main = 'VHS2GeometryCheck'
+        args root.file("${root.buildDir}/vhs2-check").absolutePath
+    }
+}

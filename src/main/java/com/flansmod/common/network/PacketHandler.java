@@ -212,6 +212,7 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketB
         registerServerPacket(PacketSetPreferredAmmo.class);
         registerServerPacket(PacketGetPlayerClasses.class);
         registerClientPacket(PacketSendPlayerClasses.class);
+        registerClientPacket(PacketZZOpStatus.class);
     }
 
     /**

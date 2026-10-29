@@ -1,0 +1,11 @@
+Model Information:
+* title:	Low-poly Dragunov SVD
+* source:	https://sketchfab.com/3d-models/low-poly-dragunov-svd-79216d567ce34644a3f3f0cd4bc8e80a
+* author:	veightyfive (https://sketchfab.com/veightyfive)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Low-poly Dragunov SVD" (https://sketchfab.com/3d-models/low-poly-dragunov-svd-79216d567ce34644a3f3f0cd4bc8e80a) by veightyfive (https://sketchfab.com/veightyfive) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

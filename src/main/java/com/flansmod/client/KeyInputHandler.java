@@ -2,8 +2,10 @@ package com.flansmod.client;
 
 import com.flansmod.api.IControllable;
 import com.flansmod.client.gui.GuiModOptions;
+import com.flansmod.client.gui.GuiInspectGun;
 import com.flansmod.client.gui.GuiNightVisionSettings;
 import com.flansmod.client.gui.GuiSelectAmmo;
+import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.eventhandlers.EnumBFMCKeyType;
 import com.flansmod.common.guns.FlashlightState;
@@ -40,7 +42,7 @@ public class KeyInputHandler {
     public static KeyBinding debugKey = new KeyBinding("Debug", Keyboard.KEY_F10, "FMUR General");
     public static KeyBinding reloadModelsKey = new KeyBinding("Reload Models", Keyboard.KEY_F9, "FMUR General");
     public static KeyBinding optionsKey = new KeyBinding("Mod Settings", Keyboard.KEY_SEMICOLON, "FMUR General");
-    public static KeyBinding modelDebugKey = new KeyBinding("Toggle Model Debug Mode", Keyboard.KEY_I, "FMUR General");
+    public static KeyBinding modelDebugKey = new KeyBinding("Toggle Model Debug Mode", Keyboard.KEY_F8, "FMUR General");
     public static KeyBinding nightVisionGogglesKey = new KeyBinding("Raise / Lower Night Vision Goggles", Keyboard.KEY_N, "FMUR Equipment");
     public static KeyBinding nightVisionSettingsKey = new KeyBinding("Night Vision Settings", Keyboard.KEY_NONE, "FMUR Equipment");
     //=============================================================================================================================================
@@ -59,6 +61,7 @@ public class KeyInputHandler {
     public static KeyBinding flareKey = new KeyBinding("Launch Flare", Keyboard.KEY_V, "FMUR Vehicle");
     //=============================================================================================================================================
     public static KeyBinding reloadKey = new KeyBinding("Reload", Keyboard.KEY_R, "FMUR Guns");
+    public static KeyBinding inspectGunKey = new KeyBinding("Inspect Gun", Keyboard.KEY_I, "FMUR Guns");
     public static KeyBinding selectPreferredAmmo = new KeyBinding("Select Ammo Load Priority", Keyboard.KEY_P, "FMUR Guns");
     public static KeyBinding gunModeKey = new KeyBinding("Toggle Fire Mode", Keyboard.KEY_V, "FMUR Guns");
     //public static KeyBinding stableSightKey = new KeyBinding("Stabilize Sight", Keyboard.KEY_LSHIFT, "FMUR 枪械");
@@ -97,6 +100,7 @@ public class KeyInputHandler {
         ClientRegistry.registerKeyBinding(gunKey);
         ClientRegistry.registerKeyBinding(controlSwitchKey);
         ClientRegistry.registerKeyBinding(reloadKey);
+        ClientRegistry.registerKeyBinding(inspectGunKey);
         ClientRegistry.registerKeyBinding(selectPreferredAmmo);
         ClientRegistry.registerKeyBinding(gunModeKey);
 //        ClientRegistry.registerKeyBinding(teamsMenuKey);
@@ -135,6 +139,15 @@ public class KeyInputHandler {
 
         EntityPlayer player = mc.thePlayer; // 玩家
         Entity ridingEntity = player.ridingEntity; // 玩家正在骑乘的载具
+
+        if (inspectGunKey.isPressed()) {
+            ItemStack held = player == null ? null : player.getHeldItem();
+            if (held != null && held.getItem() instanceof ItemGun
+                    && ((ItemGun) held.getItem()).type.model != null) {
+                mc.displayGuiScreen(new GuiInspectGun(held));
+            }
+            return;
+        }
 
         if (nightVisionSettingsKey.isPressed()) {
             mc.displayGuiScreen(new GuiNightVisionSettings());
@@ -203,7 +216,13 @@ public class KeyInputHandler {
             return;
         }
         if (selectPreferredAmmo.isPressed() && FlansModClient.shootTime(false) <= 0) {
-            mc.displayGuiScreen(new GuiSelectAmmo());
+            ItemStack held = mc.thePlayer == null ? null : mc.thePlayer.getHeldItem();
+            if (held != null && held.getItem() instanceof ItemGun) {
+                ItemGun gun = (ItemGun) held.getItem();
+                if (gun.type.ammo.size() > 1) {
+                    mc.displayGuiScreen(new GuiSelectAmmo());
+                }
+            }
             return;
         }
         if (gunModeKey.isPressed()) {

@@ -1,0 +1,54 @@
+Name HS Produkt VHS-2
+ShortName sketchVHS2
+Description 5.56x45mm bullpup rifle
+Icon VHS2_Custom
+Colour 255 255 255
+Ammo 556x45100rddrum
+Ammo 556x45100rddrumTracer
+Ammo 556x4525rdmag
+Ammo 556x4525rdmagTracer
+Ammo 556x4530rdmag
+Ammo 556x4530rdmagGreenTracer
+Ammo 556x4530rdmagTracer
+Ammo 556x4535rdmag
+Ammo 556x4535rdmagGreenTracer
+Ammo 556x4540rdmag
+Ammo 556x4540rdmagTracer
+ReloadTime 55
+TacticalReloadTime 40
+Damage 7
+BulletSpeed 35
+Accuracy 0.4
+AimingSpreadConstant 0.4
+AimTimeConstant 0.61
+RoundsPerMin 700
+Mode FullAuto SemiAuto Burst
+Recoil 2.0
+RandomRecoilRange 0.2
+RandomRecoilYawRange 0.8
+DecreaseRecoil 1.0
+DecreaseRecoilYaw 1.25
+RecoilShakeDistance 0.3
+MoveSpeedModifier 1
+ShootSound sa58_f
+ReloadSound scarh_r
+ReloadSoundRange 5
+GunSoundRange 100
+EmptyClickSound emptyclick
+Scope None
+ZoomLevel 1
+FOVZoomLevel 1.25
+Deployable False
+Model BFMCpack.VHS2
+ModelScale 1.0
+Texture VHS2_Custom
+3rdModel BFMCpack.VHS2
+3rdModelScale 1.0
+3rdTexture VHS2_Custom
+AllowAllAttachments True
+AllowAttachments holo reflex acogta31 kx3 silencer verticalgrip afg
+AllowScopeAttachments true
+AllowBarrelAttachments true
+AllowGripAttachments true
+AllowGadgetAttachments true
+AllowAccessoryAttachments true

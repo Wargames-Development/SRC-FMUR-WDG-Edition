@@ -1,0 +1,49 @@
+Name Triple Action Thunder
+ShortName tripleActionThunder
+Description Single-shot .50 BMG pistol with extreme recoil
+Icon TripleActionThunder
+Colour 255 255 255
+
+Ammo tripleAction50BMG
+LoadIntoGun 1
+ReloadTime 55
+TacticalReloadTime 40
+Damage 24
+NumBullets 1
+BulletSpeed 26
+Accuracy 0.3
+AimingSpreadConstant 0.3
+AimTimeConstant 0.55
+ShootDelay 6
+Mode SemiAuto
+
+Recoil 24
+RecoilAngle -120
+RecoilDistance 1.2
+RecoilDistanceHipFire 1.2
+RecoilShakeDistance 2.5
+RandomRecoilRange 4.5
+RandomRecoilYawRange 4.2
+DecreaseRecoil 2
+DecreaseRecoilYaw 2
+
+ShootSound deagle_f
+ReloadSound mk23_r
+ReloadSoundRange 5
+GunSoundRange 100
+EmptyClickSound emptyclick
+Scope None
+ZoomLevel 1.0
+FOVZoomLevel 1.2
+OneHanded False
+Deployable False
+MoveSpeedModifier 0.97
+CanAIUse False
+
+Model BFMCpack.TripleActionThunder
+ModelScale 1.0
+Texture TripleActionThunder
+3rdModel BFMCpack.TripleActionThunder
+3rdModelScale 1.0
+3rdTexture TripleActionThunder
+AllowAllAttachments False

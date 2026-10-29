@@ -1,0 +1,11 @@
+Model Information:
+* title:	Triple Action Thunder
+* source:	https://sketchfab.com/3d-models/triple-action-thunder-1b4737243e8b4f1ab12f9ae5d2bdf9fa
+* author:	Ri-Ri (https://sketchfab.com/Ri-Ri)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Triple Action Thunder" (https://sketchfab.com/3d-models/triple-action-thunder-1b4737243e8b4f1ab12f9ae5d2bdf9fa) by Ri-Ri (https://sketchfab.com/Ri-Ri) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

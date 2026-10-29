@@ -39,14 +39,15 @@ public class GuiSelectAmmo extends GuiScreen {
         guiTop = (height - ySize) / 2;
         guiTop2 = 10;
         buttonList.clear();
+        ammoForThisGun.clear();
         if (mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemGun) {
             ItemGun itemGun = (ItemGun) mc.thePlayer.getHeldItem().getItem();
             for (ShootableType shootableType : itemGun.type.ammo) {
                 ammoForThisGun.add(shootableType);
             }
             for (int i = 0; i < ammoForThisGun.size(); i++) {
-                int x = i > 5 ? 70 : 20;
-                int y = i > 5 ? i - 6 : i;
+                int x = 20 + 50 * (i / 6);
+                int y = i % 6;
                 buttonList.add(new GuiButton(i + 1, (guiLeft + x), guiTop2 + 10 + (y + 1) * 30, 20, 20, String.valueOf(i + 1)));
             }
         }
@@ -115,8 +116,8 @@ public class GuiSelectAmmo extends GuiScreen {
         GL11.glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
         GL11.glEnable(GL11.GL_NORMALIZE);
         for (int i = 0; i < ammoForThisGun.size(); i++) {
-            int x = i > 5 ? 95 : 45;
-            int y = i > 5 ? i - 6 : i;
+            int x = 45 + 50 * (i / 6);
+            int y = i % 6;
             drawSlotInventory(Minecraft.getMinecraft().fontRenderer, new ItemStack(ammoForThisGun.get(i).item), (guiLeft + x), guiTop2 + 10 + (y + 1) * 30);
 //            mc.fontRenderer.drawString(String.valueOf(0), (guiLeft + x)+10, (guiTop2 + 10 + (y + 1) * 30)+5,0xFFFFFF);
         }

@@ -357,6 +357,22 @@ public class ModelGhillieBase extends ModelCustomArmour {
         to.rotateAngleZ = from.rotateAngleZ;
     }
 
+    /** The first-person gun renderer has already drawn the player's skin arm. */
+    public void renderFirstPersonSleeve(boolean right, ModelRenderer playerArm, float scale) {
+        ModelRenderer sleeve = right ? rightarm_ghillie : leftarm_ghillie;
+        GL11.glPushMatrix();
+        try {
+            GL11.glTranslatef(playerArm.rotationPointX * scale,
+                    playerArm.rotationPointY * scale, playerArm.rotationPointZ * scale);
+            GL11.glRotatef(playerArm.rotateAngleY * 57.29578F, 0F, 1F, 0F);
+            GL11.glRotatef(playerArm.rotateAngleZ * 57.29578F, 0F, 0F, 1F);
+            GL11.glRotatef(playerArm.rotateAngleX * 57.29578F, 1F, 0F, 0F);
+            sleeve.render(scale);
+        } finally {
+            GL11.glPopMatrix();
+        }
+    }
+
     public void setRotationAngle(ModelRenderer modelRenderer, float x, float y, float z) {
         modelRenderer.rotateAngleX = x;
         modelRenderer.rotateAngleY = y;

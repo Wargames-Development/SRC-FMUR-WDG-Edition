@@ -1,0 +1,31 @@
+Name 30mm Grenade Drum
+ShortName sketch30mmGrenade
+Description Six 30mm high-explosive grenades for Barrett SSRS
+Icon Sketch30mmGrenade
+Colour 255 255 255
+MaxStackSize 4
+RoundsPerItem 6
+FallSpeed 1.5
+Damage 25
+DamageVsLiving 25
+DamageVsVehicles 15
+DamageVsPlanes 15
+NumBullets 1
+Spread 0
+Explosion 1.8
+ExplosionPower 1.2
+ExplodeOnImpact True
+Fuse 200
+Fire 0
+BreaksGlass True
+HitBoxSize 0.2
+FlakParticles 50
+HitSound 40mm_grenade
+HitSoundRange 50
+HitSoundEnable True
+SmokeTrail True
+Model mw.RoundGrenade
+Texture gl3
+TrailParticles True
+TrailParticleType cloud
+Tracer False

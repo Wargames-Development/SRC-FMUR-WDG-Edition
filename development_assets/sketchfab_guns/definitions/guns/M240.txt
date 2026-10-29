@@ -1,0 +1,44 @@
+Name M240
+ShortName sketchM240
+Description 7.62x51mm belt-fed machine gun
+Icon M240
+Colour 255 255 255
+Ammo 762x51100rdbox
+Ammo 762x51100rdboxTracer
+Ammo 762x51100rdexbox
+Ammo 762x51100rdexboxTracer
+ReloadTime 100
+TacticalReloadTime 85
+Damage 8
+BulletSpeed 28
+Accuracy 0.6
+AimingSpreadConstant 0.15
+AimTimeConstant 0.7
+RoundsPerMin 750
+Mode FullAuto
+Recoil 3
+RandomRecoilRange 0.8
+DecreaseRecoil 1
+ShootSound mg3_f
+ReloadSound mg3_r
+ReloadSoundRange 5
+GunSoundRange 100
+EmptyClickSound emptyclick
+Scope None
+ZoomLevel 1
+FOVZoomLevel 1.25
+Deployable False
+MoveSpeedModifier 0.9
+Model BFMCpack.M240
+ModelScale 1.2
+Texture M240
+3rdModel BFMCpack.M240
+3rdModelScale 1.2
+3rdTexture M240
+AllowAllAttachments True
+AllowAttachments m145 holo
+AllowScopeAttachments true
+AllowBarrelAttachments true
+AllowGripAttachments true
+AllowGadgetAttachments true
+AllowAccessoryAttachments true

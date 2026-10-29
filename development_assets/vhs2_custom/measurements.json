@@ -1,0 +1,248 @@
+{
+  "triangles": 9567,
+  "objects": 90,
+  "parts": [
+    {
+      "name": "UpperReciever",
+      "source": 610,
+      "triangles": 377
+    },
+    {
+      "name": "Body",
+      "source": 823,
+      "triangles": 510
+    },
+    {
+      "name": "Rail",
+      "source": 2126,
+      "triangles": 722
+    },
+    {
+      "name": "LowerRecieverBackpart",
+      "source": 508,
+      "triangles": 242
+    },
+    {
+      "name": "LowerRecieverFrontpart",
+      "source": 542,
+      "triangles": 255
+    },
+    {
+      "name": "Handguard",
+      "source": 1644,
+      "triangles": 1017
+    },
+    {
+      "name": "Barrel",
+      "source": 78,
+      "triangles": 25
+    },
+    {
+      "name": "Barrel muzzle",
+      "source": 1424,
+      "triangles": 484
+    },
+    {
+      "name": "Cheekrest",
+      "source": 368,
+      "triangles": 176
+    },
+    {
+      "name": "BottomRail",
+      "source": 594,
+      "triangles": 200
+    },
+    {
+      "name": "Siderails",
+      "source": 1188,
+      "triangles": 402
+    },
+    {
+      "name": "Grip",
+      "source": 2058,
+      "triangles": 1274
+    },
+    {
+      "name": "Magwell",
+      "source": 170,
+      "triangles": 81
+    },
+    {
+      "name": "EjectionCovers",
+      "source": 224,
+      "triangles": 107
+    },
+    {
+      "name": "StockBottom",
+      "source": 92,
+      "triangles": 44
+    },
+    {
+      "name": "Triggerguard",
+      "source": 144,
+      "triangles": 68
+    },
+    {
+      "name": "DustCover",
+      "source": 774,
+      "triangles": 370
+    },
+    {
+      "name": "Magazine_Low",
+      "source": 1248,
+      "triangles": 770
+    },
+    {
+      "name": "StockFront",
+      "source": 804,
+      "triangles": 498
+    },
+    {
+      "name": "StockAdjuster",
+      "source": 262,
+      "triangles": 124
+    },
+    {
+      "name": "ChargingHandleGrip",
+      "source": 388,
+      "triangles": 186
+    },
+    {
+      "name": "ChargingHandleCarrier",
+      "source": 92,
+      "triangles": 44
+    },
+    {
+      "name": "ChargingHandleSwivel",
+      "source": 92,
+      "triangles": 44
+    },
+    {
+      "name": "ChargingHandleBit",
+      "source": 32,
+      "triangles": 14
+    },
+    {
+      "name": "ChargingHandleBack",
+      "source": 108,
+      "triangles": 50
+    },
+    {
+      "name": "FireSelector",
+      "source": 252,
+      "triangles": 120
+    },
+    {
+      "name": "GasBlock",
+      "source": 152,
+      "triangles": 72
+    },
+    {
+      "name": "CircleDetailThing",
+      "source": 596,
+      "triangles": 118
+    },
+    {
+      "name": "PlusScrew",
+      "source": 360,
+      "triangles": 72
+    },
+    {
+      "name": "PlusScrew001",
+      "source": 360,
+      "triangles": 72
+    },
+    {
+      "name": "PlusScrew002",
+      "source": 360,
+      "triangles": 72
+    },
+    {
+      "name": "PlusScrew003",
+      "source": 360,
+      "triangles": 72
+    },
+    {
+      "name": "PlusScrew004",
+      "source": 360,
+      "triangles": 72
+    },
+    {
+      "name": "Trigger",
+      "source": 64,
+      "triangles": 30
+    },
+    {
+      "name": "CirclePin",
+      "source": 172,
+      "triangles": 34
+    },
+    {
+      "name": "MagReleasePaddle",
+      "source": 96,
+      "triangles": 46
+    },
+    {
+      "name": "BoltRelease",
+      "source": 104,
+      "triangles": 48
+    },
+    {
+      "name": "CirclePin001",
+      "source": 172,
+      "triangles": 34
+    },
+    {
+      "name": "CirclePin002",
+      "source": 172,
+      "triangles": 34
+    }
+  ],
+  "anchors": {
+    "scope": [
+      1.7,
+      0,
+      6.78
+    ],
+    "grip": [
+      7.1,
+      0,
+      3.46
+    ],
+    "barrel": [
+      10.48,
+      0,
+      4.5
+    ],
+    "gadget": [
+      7.0,
+      -1.134,
+      4.36
+    ],
+    "accessory": [
+      5.7,
+      -1.134,
+      4.36
+    ],
+    "casing": [
+      -2.8,
+      1.0395,
+      4.7
+    ]
+  },
+  "length": 22.8,
+  "m4a1_length": 23.4,
+  "famas_length": 22.8,
+  "texture": [
+    2048,
+    2048
+  ],
+  "sight_height": 7.33,
+  "sight_base": 6.66,
+  "rear_sight_x": -2.4,
+  "sight_width_scale": 1.0,
+  "sight_width": 1.2,
+  "body_width_scale": 1.35,
+  "rail_width": 1.2,
+  "runtime_forward_offset": 1.5
+}

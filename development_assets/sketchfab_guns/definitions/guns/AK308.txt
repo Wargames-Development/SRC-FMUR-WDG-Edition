@@ -1,0 +1,57 @@
+Name AK-308
+ShortName sketchAK308
+Description 7.62x51mm battle rifle
+Icon AK308
+Colour 255 255 255
+Ammo 762x5110rdmag
+Ammo 762x5110rdmagGreenTracer
+Ammo 762x5110rdmagTracer
+Ammo 762x5120rdmag
+Ammo 762x5120rdmagGreenTracer
+Ammo 762x5120rdmagTracer
+Ammo 762x5125rdmag
+Ammo 762x5125rdmagGreenTracer
+Ammo 762x5125rdmagTracer
+Ammo 762x5130rdmag
+Ammo 762x5130rdmagTracer
+Ammo 762x515rdmag
+Ammo 762x515rdmagGreenTracer
+Ammo 762x515rdmagTracer
+Ammo 762x51highlight5rdmag
+Ammo 762x51highlight5rdmagGreenTracer
+Ammo 762x51highlight5rdmagTracer
+ReloadTime 65
+TacticalReloadTime 50
+Damage 8.5
+BulletSpeed 32
+Accuracy 0.4
+AimingSpreadConstant 0.2
+AimTimeConstant 0.6
+RoundsPerMin 650
+Mode FullAuto SemiAuto
+Recoil 3.5
+RandomRecoilRange 0.7
+DecreaseRecoil 1.4
+ShootSound sa58_f
+ReloadSound scarh_r
+ReloadSoundRange 5
+GunSoundRange 100
+EmptyClickSound emptyclick
+Scope None
+ZoomLevel 1
+FOVZoomLevel 1.25
+Deployable False
+Model BFMCpack.AK308
+ModelScale 1.15
+Texture AK308
+3rdModel BFMCpack.AK308
+3rdModelScale 1.15
+3rdTexture AK308
+AllowAllAttachments True
+AllowAttachments holo reflex acogta31 kx5 dmrsilencer verticalgrip afg
+AllowScopeAttachments true
+AllowBarrelAttachments true
+AllowGripAttachments true
+AllowGadgetAttachments true
+AllowAccessoryAttachments true
+AllowStockAttachments true

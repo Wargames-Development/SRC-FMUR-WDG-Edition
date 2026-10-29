@@ -1,0 +1,11 @@
+Model Information:
+* title:	Barrett SSRS
+* source:	https://sketchfab.com/3d-models/barrett-ssrs-951380fb0b6c443c9677370460223dc0
+* author:	Dartan (https://sketchfab.com/D4rtan)
+
+Model License:
+* license type:	CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/)
+* requirements:	Author must be credited. No commercial use. Modified versions must have the same license.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Barrett SSRS" (https://sketchfab.com/3d-models/barrett-ssrs-951380fb0b6c443c9677370460223dc0) by Dartan (https://sketchfab.com/D4rtan) licensed under CC-BY-NC-SA-4.0 (http://creativecommons.org/licenses/by-nc-sa/4.0/)

@@ -1513,7 +1513,8 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                             FlansMod.getPacketHandler().sendToAllAround(new PacketParticle(type.internalProjectile
                                             ? "flansmod.blasterscorch" : "flansmod.bullethole",
                                             hitVec.xCoord, hitVec.yCoord, hitVec.zCoord,
-                                            normal[0], normal[1], normal[2], 1.0F),
+                                            normal[0], normal[1], normal[2],
+                                            type.internalProjectile ? 1.0F : type.getBulletHoleScale()),
                                     hitVec.xCoord, hitVec.yCoord, hitVec.zCoord, 64F, dimension);
                         }
                         if (type.internalProjectile && (!metalImpact || rand.nextBoolean())) {

@@ -21,11 +21,21 @@ public class BulletHoleDecalRenderer {
     }
 
     public static void addBulletHole(double x, double y, double z, double nx, double ny, double nz,
+            float sizeMultiplier) {
+        addBulletHole(x, y, z, nx, ny, nz, false, sizeMultiplier);
+    }
+
+    public static void addBulletHole(double x, double y, double z, double nx, double ny, double nz,
             boolean blasterScorch) {
+        addBulletHole(x, y, z, nx, ny, nz, blasterScorch, 1F);
+    }
+
+    private static void addBulletHole(double x, double y, double z, double nx, double ny, double nz,
+            boolean blasterScorch, float sizeMultiplier) {
         if (DECALS.size() >= MAX_DECALS) {
             DECALS.remove(0);
         }
-        DECALS.add(new BulletHoleDecal(x, y, z, nx, ny, nz, blasterScorch));
+        DECALS.add(new BulletHoleDecal(x, y, z, nx, ny, nz, blasterScorch, sizeMultiplier));
     }
 
     public static void tick() {
@@ -109,14 +119,17 @@ public class BulletHoleDecalRenderer {
         private int age;
 
         private BulletHoleDecal(double x, double y, double z, double nx, double ny, double nz,
-                boolean blasterScorch) {
+                boolean blasterScorch, float sizeMultiplier) {
             face = getFace(nx, ny, nz);
             double offset = 0.010D;
             this.x = x + nx * offset;
             this.y = y + ny * offset;
             this.z = z + nz * offset;
             rotation = (float) (Math.random() * Math.PI * 2D);
-            scale = (0.048F + (float) Math.random() * 0.018F) * (blasterScorch ? 1.45F : 1F);
+            float multiplier = Float.isNaN(sizeMultiplier) || Float.isInfinite(sizeMultiplier)
+                    ? 1F : Math.max(0.5F, Math.min(3F, sizeMultiplier));
+            scale = (0.048F + (float) Math.random() * 0.018F)
+                    * (blasterScorch ? 1.45F : multiplier);
             this.blasterScorch = blasterScorch;
             for (int i = 0; i < POINT_COUNT; i++) {
                 radius[i] = 0.55F + (float) Math.random() * 0.62F;

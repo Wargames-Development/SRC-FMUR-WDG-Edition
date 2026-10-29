@@ -1,0 +1,42 @@
+Name Dragunov SVD
+ShortName sketchDragunovSVD
+Description 7.62x54mm designated marksman rifle
+Icon DragunovSVD
+Colour 255 255 255
+Ammo 762x5410rdmag
+Ammo 762x5410rdmagGreenTracer
+Ammo 762x545rdmag
+Ammo 762x545rdmagGreenTracer
+Ammo 762x54highlight5rdmag
+Ammo 762x54highlight5rdmagGreenTracer
+ReloadTime 70
+TacticalReloadTime 50
+Damage 12.5
+BulletSpeed 25
+Accuracy 0.4
+AimingSpreadConstant 0.2
+AimTimeConstant 0.65
+ShootDelay 10
+Mode SemiAuto
+Recoil 6
+RandomRecoilRange 1.5
+DecreaseRecoil 2
+ShootSound qbu85_f
+ReloadSound qbu85_r
+ReloadSoundRange 5
+GunSoundRange 100
+EmptyClickSound emptyclick
+Scope None
+ZoomLevel 1
+FOVZoomLevel 1.25
+Deployable False
+Model BFMCpack.DragunovSVD
+ModelScale 1.35
+Texture DragunovSVD
+3rdModel BFMCpack.DragunovSVD
+3rdModelScale 1.35
+3rdTexture DragunovSVD
+AllowAllAttachments False
+FixedScope pso1
+AllowScopeAttachments false
+AllowBarrelAttachments false

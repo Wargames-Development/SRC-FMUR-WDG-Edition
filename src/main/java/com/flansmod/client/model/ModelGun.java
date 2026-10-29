@@ -87,6 +87,7 @@ public class ModelGun extends ModelBase {
     public Vector3f stagedleftArmReloadRot = new Vector3f(0, 0, 0);
     public boolean rightHandAmmo = false;
     public boolean leftHandAmmo = false;
+    public boolean leftHandAmmoReloadOnly = false;
     /**
      * Recoil and slide based parameters
      */

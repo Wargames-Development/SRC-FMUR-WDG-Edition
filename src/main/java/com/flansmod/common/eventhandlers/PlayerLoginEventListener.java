@@ -4,11 +4,13 @@ package com.flansmod.common.eventhandlers;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.network.PacketModConfig;
 import com.flansmod.common.network.PacketRequestScreenshot;
+import com.flansmod.common.network.PacketZZOpStatus;
 import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod.EventHandler;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent.PlayerLoggedInEvent;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.ChatComponentText;
 
 
@@ -26,6 +28,8 @@ public class PlayerLoginEventListener {
 			return;
 		final EntityPlayerMP player = (EntityPlayerMP) event.player;
 		FlansMod.packetHandler.sendTo(new PacketModConfig(), player);
+		FlansMod.packetHandler.sendTo(new PacketZZOpStatus(
+				MinecraftServer.getServer().getConfigurationManager().func_152596_g(player.getGameProfile())), player);
 		if(!FlansMod.enableScreenShot) {
 			return;
 		}
