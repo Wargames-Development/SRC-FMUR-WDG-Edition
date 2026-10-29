@@ -133,6 +133,7 @@ public class FlansMod {
     public static boolean armsEnable = true;
     public static boolean casingEnable = true;
     public static float scopeSensitivityMultiplier = 1.33F;
+    public static int pipRenderingMode = 0;
     public static boolean crosshairEnable = false;
     public static boolean realisticRecoil = false;
     public static boolean enableSightDownwardMovement = true;
@@ -151,6 +152,7 @@ public class FlansMod {
     public static File flanDir;
     public static final float soundRange = 50F;
     public static float driveableUpdateRange = 400F;
+    public static int playerLodDistance = 512;
     public static final int numPlayerSnapshots = 20;
     public static int armourEnchantability = 0;
     public static boolean kickNonMatchingHashes = false;
@@ -930,6 +932,8 @@ public class FlansMod {
         showDistanceInKillMessage = configFile.getBoolean("ShowDistanceInKillMessage", "Gameplay Settings (synced)", showDistanceInKillMessage, "List distance between killer and killed in kill message.");
         driveableHitboxes = configFile.getBoolean("Driveable hitboxes", "Gameplay Settings (synced)", driveableHitboxes, "Make a hitbox for the main driveable entity.");
         driveableUpdateRange = configFile.getFloat("Driveable update range", "Gameplay Settings (synced)", driveableUpdateRange, 0, 1000, "Range in blocks for vehicles and planes to be updated.");
+        playerLodDistance = configFile.getInt("Player LOD distance", "Player LOD", 512, 0, 1024,
+                "Server-authoritative distant player range in blocks. 0 disables player LODs. Requires matching FMUR clients; WGMap supplies distant terrain masking.");
         reloadOnRightClick = configFile.getBoolean("Reload on right click", "Gameplay Settings (synced)", reloadOnRightClick, "Whether to reload a gun using right click, forces use of R.");
         defaultADSSpreadMultiplier = configFile.getFloat("Default ADS Spread Modifier", "Gameplay Settings (synced)", defaultADSSpreadMultiplier, 0, 10, "Modifier for spread when the player is aiming.");
         defaultADSSpreadMultiplierShotgun = configFile.getFloat("Default ADS Spread Modifier (Shotguns)", "Gameplay Settings (synced)", defaultADSSpreadMultiplierShotgun, 0, 10, "Modifier for spread when the player is aiming. (Multishot guns only).");
@@ -943,6 +947,7 @@ public class FlansMod {
         armsEnable = configFile.getBoolean("Enable Arms", Configuration.CATEGORY_GENERAL, armsEnable, "Enable arms rendering");
         casingEnable = configFile.getBoolean("Enable casings", Configuration.CATEGORY_GENERAL, casingEnable, "Enable bullet casing ejections");
         scopeSensitivityMultiplier = configFile.getFloat("Scope Sensitivity Multiplier", Configuration.CATEGORY_GENERAL, scopeSensitivityMultiplier, 0.1F, 4.0F, "Multiplier for mouse sensitivity while looking through magnified scopes. 1.0 preserves the previous sensitivity; 1.33 is 33% faster.");
+        pipRenderingMode = configFile.getInt("PiP Rendering Mode", Configuration.CATEGORY_GENERAL, 0, 0, 2, "0: Automatic, 1: Performance (lightweight), 2: Quality (supported shader camera, with lightweight fallback).");
         hdHitCrosshair = configFile.getBoolean("Enable HD hit marker", Configuration.CATEGORY_GENERAL, hdHitCrosshair, "");
         addAllPaintjobsToCreative = configFile.getBoolean("Add All Paintjobs To Creative", Configuration.CATEGORY_GENERAL, addAllPaintjobsToCreative, "Whether to list all available paintjobs in the Creative menu");
         fancyCrosshair = configFile.getBoolean("Fancy Crosshair", Configuration.CATEGORY_GENERAL, fancyCrosshair, "Change colour of crosshair based on hit. (Red = no penetration, green = full damage, light blue = headshot. Overrides normal colour settings.");
@@ -1002,6 +1007,7 @@ public class FlansMod {
         armsEnable = configFile.getBoolean("Enable Arms", Configuration.CATEGORY_GENERAL, armsEnable, "Enable arms rendering");
         casingEnable = configFile.getBoolean("Enable casings", Configuration.CATEGORY_GENERAL, casingEnable, "Enable bullet casing ejections");
         scopeSensitivityMultiplier = configFile.getFloat("Scope Sensitivity Multiplier", Configuration.CATEGORY_GENERAL, scopeSensitivityMultiplier, 0.1F, 4.0F, "Multiplier for mouse sensitivity while looking through magnified scopes. 1.0 preserves the previous sensitivity; 1.33 is 33% faster.");
+        pipRenderingMode = configFile.getInt("PiP Rendering Mode", Configuration.CATEGORY_GENERAL, 0, 0, 2, "0: Automatic, 1: Performance (lightweight), 2: Quality (supported shader camera, with lightweight fallback).");
         hdHitCrosshair = configFile.getBoolean("Enable HD hit marker", Configuration.CATEGORY_GENERAL, hdHitCrosshair, "");
         addAllPaintjobsToCreative = configFile.getBoolean("Add All Paintjobs To Creative", Configuration.CATEGORY_GENERAL, addAllPaintjobsToCreative, "Whether to list all available paintjobs in the Creative menu");
         fancyCrosshair = configFile.getBoolean("Fancy Crosshair", Configuration.CATEGORY_GENERAL, fancyCrosshair, "Change colour of crosshair based on hit. (Red = no penetration, green = full damage, light blue = headshot. Overrides normal colour settings.");

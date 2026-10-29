@@ -34,6 +34,14 @@ public class ModelCNVDT extends ModelAttachment {
     }
 
     private void renderThermalLens() {
+        final float centerY = 0.25F;
+        final float radius = 0.15F;
+        final float lensZ = -0.535F;
+        if (ThermalScopeEffect.isModelLensActive()) {
+            ThermalScopeEffect.captureModelLensGeometry(0F, centerY, lensZ,
+                    -1F, 0F, 0F, 0F, 1F, 0F, radius);
+            if (ThermalScopeEffect.usesPostCompositeModelLens()) return;
+        }
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         try {
             GL11.glDisable(GL11.GL_LIGHTING);
@@ -53,9 +61,6 @@ public class ModelCNVDT extends ModelAttachment {
                 GL11.glColor4f(0.04F, 0.07F, 0.06F, 1F);
             }
 
-            final float centerY = 0.25F;
-            final float radius = 0.15F;
-            final float lensZ = -0.535F;
             GL11.glBegin(GL11.GL_TRIANGLE_FAN);
             GL11.glTexCoord2f(0.5F, 0.5F);
             GL11.glVertex3f(0F, centerY, lensZ);

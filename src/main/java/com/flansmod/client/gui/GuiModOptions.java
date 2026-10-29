@@ -3,6 +3,7 @@ package com.flansmod.client.gui;
 import com.flansmod.client.AimType;
 import com.flansmod.client.FlanMouseButton;
 import com.flansmod.client.FlansModClient;
+import com.flansmod.client.CameraRenderManager;
 import com.flansmod.client.TickHandlerClient;
 import com.flansmod.common.FlansMod;
 import cpw.mods.fml.client.config.GuiSlider;
@@ -98,6 +99,9 @@ public class GuiModOptions extends GuiScreen implements GuiSlider.ISlider {
             case 17:
                 TickHandlerClient.showKillMessages = !TickHandlerClient.showKillMessages;
                 break;
+            case 19:
+                FlansMod.pipRenderingMode = (FlansMod.pipRenderingMode + 1) % 3;
+                break;
             default:
                 return;
         }
@@ -173,6 +177,9 @@ public class GuiModOptions extends GuiScreen implements GuiSlider.ISlider {
                 case 17:
                     entry.button.displayString = "Kill Messages: " + (TickHandlerClient.showKillMessages ? "Show" : "Hide");
                     break;
+                case 19:
+                    entry.button.displayString = "PiP Rendering Mode: " + CameraRenderManager.modeName();
+                    break;
                 default:
                     break;
             }
@@ -187,6 +194,7 @@ public class GuiModOptions extends GuiScreen implements GuiSlider.ISlider {
     public void onGuiClosed() {
         FlansMod.configFile.get(Configuration.CATEGORY_GENERAL,
                 "Scope Sensitivity Multiplier", 1.33D).set(FlansMod.scopeSensitivityMultiplier);
+        FlansMod.configFile.get(Configuration.CATEGORY_GENERAL, "PiP Rendering Mode", 0).set(FlansMod.pipRenderingMode);
         FlansMod.configFile.save();
     }
 
@@ -208,6 +216,7 @@ public class GuiModOptions extends GuiScreen implements GuiSlider.ISlider {
             addButton(new GuiButton(0, 0, 0, buttonWidth, 20, ""));
             addButton(new GuiButton(1, 0, 0, buttonWidth, 20, ""));
             addButton(new GuiButton(2, 0, 0, buttonWidth, 20, ""));
+            addButton(new GuiButton(19, 0, 0, buttonWidth, 20, ""));
             addSlider(SCOPE_SENSITIVITY_ID, "Scope Sensitivity: ", 10, 400,
                     FlansMod.scopeSensitivityMultiplier * 100, false, "%");
             addButton(new GuiButton(3, 0, 0, buttonWidth, 20, ""));

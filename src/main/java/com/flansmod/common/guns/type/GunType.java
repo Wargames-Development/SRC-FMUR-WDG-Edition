@@ -7,6 +7,7 @@ import com.flansmod.common.guns.EnumFireMode;
 import com.flansmod.common.guns.EnumSecondaryFunction;
 import com.flansmod.common.guns.IMarkable;
 import com.flansmod.common.guns.IScope;
+import com.flansmod.common.guns.ThermalProfile;
 import com.flansmod.common.guns.item.ItemBullet;
 import com.flansmod.common.guns.item.ItemGrenade;
 import com.flansmod.common.guns.item.ItemGun;
@@ -429,6 +430,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
     public boolean allowNightVision = false;
     /** Gives this gun's built-in scope the client-side FLIR display. */
     public boolean hasThermalVision = false;
+    public ThermalProfile thermalProfile = ThermalProfile.DEFAULT;
     /** Render a magnified view on the built-in scope lens. */
     public boolean pictureInPicture = false;
     /** Built-in scope rear lens centre and radius in post-flip model pixels. */
@@ -865,6 +867,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 allowNightVision = Boolean.parseBoolean(split[1]);
             } else if (split[0].equals("HasThermalVision")) {
                 hasThermalVision = Boolean.parseBoolean(split[1]);
+            } else if (ThermalProfile.isField(split[0])) {
+                thermalProfile = thermalProfile.with(split[0], String.join(" ", java.util.Arrays.copyOfRange(split, 1, split.length)));
             } else if (split[0].equals("PictureInPicture")) {
                 pictureInPicture = true;
                 pictureInPictureX = Float.parseFloat(split[1]);

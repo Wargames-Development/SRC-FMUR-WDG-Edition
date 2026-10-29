@@ -280,6 +280,8 @@ public class ModelGun extends ModelBase {
      * 瞄准时枪械模型在z轴的偏移
      */
     public float zoomOffsetZ = 0F;
+    /** Apparent integral PiP diameter relative to the model's existing ADS pose. */
+    public float scopedLensScale = 1F;
     /** Additional per-model ADS rotation around the screen-facing Z axis. */
     public float adsRotateZ = 0F;
     public boolean fancyStance = false;

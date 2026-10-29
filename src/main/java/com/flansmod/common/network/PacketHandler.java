@@ -206,6 +206,7 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketB
         registerBidirectionalPacket(PacketZPlayerEquipmentSync.class);
         // This name sorts after every existing packet, preserving all established IDs.
         registerClientPacket(PacketZPlayerHitEffect.class);
+        registerClientPacket(PacketZPlayerLod.class);
         registerBidirectionalPacket(PacketHashSend.class);
         registerClientPacket(PacketMuzzleFlash.class);
         registerClientPacket(PacketHitMarker.class);

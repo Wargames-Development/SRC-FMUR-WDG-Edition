@@ -42,6 +42,7 @@ public class CommonTickHandler
 		{
 			TeamsManager.getInstance().tick();
 			FlansMod.playerHandler.serverTick();
+			com.flansmod.common.playerlod.PlayerLodServer.tick();
 			FlansMod.ticker++;
 			break;
 		}		

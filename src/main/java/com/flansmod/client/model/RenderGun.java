@@ -1665,7 +1665,8 @@ public class RenderGun implements IItemRenderer {
 		float eyeRadius = (yRadius + zRadius) * 0.5F;
 		// Perspective size is projectionScale * radius / distance. Pick the distance
 		// from the physical lens radius so differently scaled optics appear consistent.
-		float targetEyeZ = preserveLensDepth ? eyeZ : -Math.max(0.052F,
+		float targetEyeZ = preserveLensDepth
+				? eyeZ / Math.max(0.1F, model.scopedLensScale) : -Math.max(0.052F,
 				Math.abs(PROJECTION_BUFFER.get(5)) * eyeRadius / PIP_TARGET_LENS_NDC_RADIUS);
 
 		float determinant = m0 * (m5 * m10 - m9 * m6)
@@ -1707,12 +1708,12 @@ public class RenderGun implements IItemRenderer {
 	private void renderPictureInPictureLens(float lensX, float lensY, float lensZ,
 			float lensRadius, float scale) {
 
+		ThermalScopeEffect.capturePostCompositeModelLensGeometry(
+				lensX, lensY, lensZ, lensRadius, scale);
 		int lensTexture = ThermalScopeEffect.getModelLensTexture();
 		if (lensTexture < 0) {
 			return;
 		}
-		ThermalScopeEffect.capturePostCompositeModelLensGeometry(
-				lensX, lensY, lensZ, lensRadius, scale);
 
 		// The same aperture filters primary HUD markers and positions the late
 		// shader compositor, which follows the physical optic during ADS alignment.
