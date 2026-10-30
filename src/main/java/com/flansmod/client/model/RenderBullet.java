@@ -4,11 +4,9 @@ import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.common.guns.EntityBullet;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.ModelBase;
-import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.potion.Potion;
 import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
 
@@ -17,14 +15,7 @@ import java.util.WeakHashMap;
 
 public class RenderBullet extends Render
 {
-	private static final float NIGHT_VISION_BRIGHTNESS_MULTIPLIER = 1.35F;
 	private static final double MAX_HANDHELD_VISUAL_CORRECTION = 3D;
-	private static final ResourceLocation RED_TRACER_TEXTURE =
-			new ResourceLocation("flansmod", "particle/FMTracerRed.png");
-	private static final ResourceLocation GREEN_TRACER_TEXTURE =
-			new ResourceLocation("flansmod", "particle/FMTracerGreen.png");
-	private static final ResourceLocation BLUE_TRACER_TEXTURE =
-			new ResourceLocation("flansmod", "particle/FMTracerBlue.png");
 	private final Map<EntityBullet, VisualOriginCorrection> visualOriginCorrections =
 			new WeakHashMap<EntityBullet, VisualOriginCorrection>();
 
@@ -119,132 +110,14 @@ public class RenderBullet extends Render
 		}
 	}
 
-	/**
-	 * Render the gameplay tracer directly on the synchronized bullet entity.
-	 */
+	/** Draw the synchronized bullet with the same client-only API used by vehicle tracers. */
 	private void renderTracerGlow(EntityBullet bullet, float partialTicks)
 	{
 		if(!bullet.type.tracer || !bullet.hasTracerReachedVisibleDistance())
 			return;
-
-		double speed = Math.sqrt(bullet.motionX * bullet.motionX
-				+ bullet.motionY * bullet.motionY
-				+ bullet.motionZ * bullet.motionZ);
-		if(speed < 0.001D)
-			return;
-
-		double directionX = bullet.motionX / speed;
-		double directionY = bullet.motionY / speed;
-		double directionZ = bullet.motionZ / speed;
-		float tracerScale = bullet.type.tracerScale;
-		double length = Math.max(0.45D, Math.min(3.25D, speed * 1.35D)) * tracerScale;
-		Minecraft minecraft = Minecraft.getMinecraft();
-		float nightVisionBrightness = minecraft.thePlayer != null
-				&& minecraft.thePlayer.isPotionActive(Potion.nightVision)
-				? NIGHT_VISION_BRIGHTNESS_MULTIPLIER : 1F;
-		if(minecraft.gameSettings.thirdPersonView == 0 && minecraft.thePlayer != null)
-		{
-			double bulletX = bullet.lastTickPosX + (bullet.posX - bullet.lastTickPosX) * partialTicks;
-			double bulletY = bullet.lastTickPosY + (bullet.posY - bullet.lastTickPosY) * partialTicks;
-			double bulletZ = bullet.lastTickPosZ + (bullet.posZ - bullet.lastTickPosZ) * partialTicks;
-			double eyeX = minecraft.thePlayer.lastTickPosX
-					+ (minecraft.thePlayer.posX - minecraft.thePlayer.lastTickPosX) * partialTicks;
-			double eyeY = minecraft.thePlayer.lastTickPosY
-					+ (minecraft.thePlayer.posY - minecraft.thePlayer.lastTickPosY) * partialTicks
-					+ minecraft.thePlayer.getEyeHeight();
-			double eyeZ = minecraft.thePlayer.lastTickPosZ
-					+ (minecraft.thePlayer.posZ - minecraft.thePlayer.lastTickPosZ) * partialTicks;
-			double distanceToEye = Math.sqrt((bulletX - eyeX) * (bulletX - eyeX)
-					+ (bulletY - eyeY) * (bulletY - eyeY)
-					+ (bulletZ - eyeZ) * (bulletZ - eyeZ));
-			length = Math.min(length, Math.max(0D, distanceToEye - 0.35D));
-		}
-
-		double tailX = -directionX * length;
-		double tailY = -directionY * length;
-		double tailZ = -directionZ * length;
-		boolean greenTracer = bullet.type.greenTracer;
-		boolean blueTracer = bullet.type.blueTracer;
-		float glowRed = blueTracer || greenTracer ? 0F : 1F;
-		float glowGreen = blueTracer ? 0.35F : (greenTracer ? 1F : 0F);
-		float glowBlue = blueTracer ? 1F : 0F;
-		float accentRed = blueTracer ? 0.08F : (greenTracer ? 0.04F : 1F);
-		float coreGreen = blueTracer ? 0.72F : (greenTracer ? 1F : 0.04F);
-		float coreBlue = blueTracer ? 1F : 0.01F;
-
-		GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
-		try
-		{
-			// Shader packs still run their entity program here. Keep texturing enabled and
-			// submit complete vertex data instead of raw untextured immediate-mode lines.
-			GL11.glEnable(GL11.GL_TEXTURE_2D);
-			GL11.glDisable(GL11.GL_LIGHTING);
-			GL11.glDisable(GL11.GL_ALPHA_TEST);
-			GL11.glDisable(GL11.GL_CULL_FACE);
-			GL11.glEnable(GL11.GL_DEPTH_TEST);
-			GL11.glDepthMask(false);
-			GL11.glEnable(GL11.GL_BLEND);
-			GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
-			GL11.glEnable(GL11.GL_LINE_SMOOTH);
-			GL11.glHint(GL11.GL_LINE_SMOOTH_HINT, GL11.GL_NICEST);
-			minecraft.renderEngine.bindTexture(blueTracer ? BLUE_TRACER_TEXTURE
-					: (greenTracer ? GREEN_TRACER_TEXTURE : RED_TRACER_TEXTURE));
-
-			if(length > 0.05D)
-			{
-				drawTracerLine(tailX, tailY, tailZ, 11F * tracerScale,
-						glowRed, glowGreen, glowBlue, scaledAlpha(0.10F, nightVisionBrightness));
-				drawTracerLine(tailX, tailY, tailZ, 6F * tracerScale,
-						blueTracer ? 0.02F : (greenTracer ? 0.015F : 1F),
-						blueTracer ? 0.55F : (greenTracer ? 1F : 0.015F), glowBlue,
-						scaledAlpha(0.24F, nightVisionBrightness));
-				drawTracerLine(tailX, tailY, tailZ, 2.25F * tracerScale,
-						accentRed, coreGreen, coreBlue, 1F);
-			}
-
-			GL11.glEnable(GL11.GL_POINT_SMOOTH);
-			GL11.glHint(GL11.GL_POINT_SMOOTH_HINT, GL11.GL_NICEST);
-			drawTracerPoint(9F * tracerScale, glowRed, glowGreen, glowBlue,
-					scaledAlpha(0.16F, nightVisionBrightness));
-			drawTracerPoint(3.5F * tracerScale, accentRed, coreGreen, coreBlue, 1F);
-		}
-		finally
-		{
-			GL11.glPopAttrib();
-			GL11.glColor4f(1F, 1F, 1F, 1F);
-			bindEntityTexture(bullet);
-		}
-	}
-
-	private float scaledAlpha(float alpha, float multiplier)
-	{
-		return Math.min(1F, alpha * multiplier);
-	}
-
-	private void drawTracerLine(double tailX, double tailY, double tailZ,
-			float width, float red, float green, float blue, float alpha)
-	{
-		Tessellator tessellator = Tessellator.instance;
-		GL11.glLineWidth(width);
-		tessellator.startDrawing(GL11.GL_LINES);
-		tessellator.setBrightness(15728880);
-		tessellator.setColorRGBA_F(red, green, blue, alpha);
-		tessellator.setNormal(0F, 1F, 0F);
-		tessellator.addVertexWithUV(tailX, tailY, tailZ, 0.5D, 0.5D);
-		tessellator.addVertexWithUV(0D, 0D, 0D, 0.5D, 0.5D);
-		tessellator.draw();
-	}
-
-	private void drawTracerPoint(float size, float red, float green, float blue, float alpha)
-	{
-		Tessellator tessellator = Tessellator.instance;
-		GL11.glPointSize(size);
-		tessellator.startDrawing(GL11.GL_POINTS);
-		tessellator.setBrightness(15728880);
-		tessellator.setColorRGBA_F(red, green, blue, alpha);
-		tessellator.setNormal(0F, 1F, 0F);
-		tessellator.addVertexWithUV(0D, 0D, 0D, 0.5D, 0.5D);
-		tessellator.draw();
+		com.flansmod.client.TracerRenderApi.render(bullet, partialTicks,
+				bullet.motionX, bullet.motionY, bullet.motionZ, bullet.type.tracerScale,
+				bullet.type.greenTracer, bullet.type.blueTracer);
 	}
 
 	@Override
