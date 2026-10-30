@@ -192,6 +192,10 @@ public class BulletType extends ShootableType {
     public float penetratingPower = 1F;
     public float penetratingDamageLoss = 0.8F;
     public float penetratingSpeedLoss = 0.9F;
+    // Opt-in for heavy rifle ammunition; ordinary rounds keep their existing collision rules.
+    public float stonePenetrationChance = 0F;
+    public float stonePenetrationDamageRetention = 0.5F;
+    public float stonePenetrationSpeedRetention = 0.3F;
     public int penetratingBlockMaxNum = 2;
 
     public float playerPenetrationEffectOnDamage = 0F;
@@ -582,6 +586,15 @@ public class BulletType extends ShootableType {
                 case "PenetratingBlockMaxNum":
                     penetratingBlockMaxNum = Integer.parseInt(split[1]);
                     break;
+                case "StonePenetrationChance":
+                    stonePenetrationChance = readRetention(split[1]);
+                    break;
+                case "StonePenetrationDamageRetention":
+                    stonePenetrationDamageRetention = readRetention(split[1]);
+                    break;
+                case "StonePenetrationSpeedRetention":
+                    stonePenetrationSpeedRetention = readRetention(split[1]);
+                    break;
                 case "EnableAirburst":
                     enableAirburst = Boolean.parseBoolean(split[1]);
                     break;
@@ -636,6 +649,14 @@ public class BulletType extends ShootableType {
             inferredPistolCaliber = inferred;
         }
         return inferredPistolCaliber;
+    }
+
+    private static float readRetention(String value) {
+        float retention = Float.parseFloat(value);
+        if (Float.isNaN(retention) || Float.isInfinite(retention) || retention < 0F || retention > 1F) {
+            throw new IllegalArgumentException("Penetration values must be finite and between 0 and 1");
+        }
+        return retention;
     }
 
     /**

@@ -19,7 +19,7 @@ public class ModelX400 extends ModelAttachment //Same as Filename
 
     public ModelX400() //Same as Filename
     {
-        attachmentModel = new ModelRendererTurbo[159];
+        attachmentModel = new ModelRendererTurbo[158];
         attachmentModel[0] = new ModelRendererTurbo(this, 1, 1, textureX, textureY); // Import
         attachmentModel[1] = new ModelRendererTurbo(this, 17, 1, textureX, textureY); // Import
         attachmentModel[2] = new ModelRendererTurbo(this, 25, 1, textureX, textureY); // Import
@@ -178,7 +178,6 @@ public class ModelX400 extends ModelAttachment //Same as Filename
         attachmentModel[155] = new ModelRendererTurbo(this, 113, 81, textureX, textureY); // Import
         attachmentModel[156] = new ModelRendererTurbo(this, 121, 81, textureX, textureY); // Import
         attachmentModel[157] = new ModelRendererTurbo(this, 1, 89, textureX, textureY); // Import
-        attachmentModel[158] = new ModelRendererTurbo(this, 1, 93, textureX, textureY); // Import
 
         attachmentModel[0].addShapeBox(0F, 0F, 0F, 5, 1, 1, 0F, -0.5F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.5F, -0.5F, 0.0F, 0.5F, -0.25F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0F, -0.25F, -0.5F, 0F); // Import
         attachmentModel[0].setRotationPoint(-3F, -1F, -3F);
@@ -654,10 +653,6 @@ public class ModelX400 extends ModelAttachment //Same as Filename
         attachmentModel[157].addShapeBox(0F, 0F, 0F, 2, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.125F, -0.5F, 0.0F, 0.25F, 0.375F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, -0.25F, 0.0F, 0.0F, -1.0F, 0.5F); // Import
         attachmentModel[157].setRotationPoint(5F, 3.5F, -2F);
 
-        attachmentModel[158].addShapeBox(0F, 0F, 0F, 80, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 400.0F, 70.0F, 70.0F, 400.0F, 70.0F, 70.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 400.0F, 70.0F, 70.0F, 400.0F, 70.0F, 70.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[158].setRotationPoint(6F, 3.1F, -0.75F);
-        attachmentModel[158].rotateAngleX = 1.012291F;
-        attachmentModel[158].glow = true;
 
         flipAll();
     }

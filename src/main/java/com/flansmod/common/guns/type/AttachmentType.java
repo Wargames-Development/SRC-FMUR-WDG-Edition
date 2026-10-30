@@ -35,6 +35,17 @@ public class AttachmentType extends PaintableType implements IScope
 	public float flashlightRange = 10F;
 	/** Flashlight strength between 0 and 15 */
 	public int flashlightStrength = 12;
+	/** Cone half-angle in degrees; rendered without modifying world lighting. */
+	public float flashlightConeAngle = 34F;
+	public float laserRange = 128F;
+	public float laserBrightness = 2F;
+	public int laserBeams = 1;
+	public float laserSpacing = 0.08F;
+	public float laserDotScale = 1F;
+	/** RGB components in the range 0..1. */
+	public float laserRed = 1F, laserGreen = 0F, laserBlue = 0F;
+	/** Applies to this attachment's flashlight and laser. */
+	public boolean infrared = false;
 	/** If true, disable the muzzle flash model */
 	public boolean disableMuzzleFlash = false;
 	
@@ -229,6 +240,25 @@ public class AttachmentType extends PaintableType implements IScope
 				flashlightRange = Float.parseFloat(split[1]);
 			else if(split[0].equals("FlashlightStrength"))
 				flashlightStrength = Integer.parseInt(split[1]);
+			else if(split[0].equals("FlashlightConeAngle"))
+				flashlightConeAngle = Float.parseFloat(split[1]);
+			else if(split[0].equals("LaserRange"))
+				laserRange = Float.parseFloat(split[1]);
+			else if(split[0].equals("LaserBrightness"))
+				laserBrightness = Float.parseFloat(split[1]);
+			else if(split[0].equals("LaserBeams"))
+				laserBeams = Integer.parseInt(split[1]) == 3 ? 3 : 1;
+			else if(split[0].equals("LaserSpacing"))
+				laserSpacing = Float.parseFloat(split[1]);
+			else if(split[0].equals("LaserDotScale"))
+				laserDotScale = Float.parseFloat(split[1]);
+			else if(split[0].equals("LaserColor")) {
+				laserRed = Float.parseFloat(split[1]);
+				laserGreen = Float.parseFloat(split[2]);
+				laserBlue = Float.parseFloat(split[3]);
+			}
+			else if(split[0].equals("Infrared"))
+				infrared = Boolean.parseBoolean(split[1]);
 			//Mode override
 			else if(split[0].equals("ModeOverride"))
 				modeOverride = EnumFireMode.getFireMode(split[1]);

@@ -15,6 +15,10 @@ import org.lwjgl.opengl.GL11;
 
 public class ModelGhillieBase extends ModelCustomArmour {
     private final int part;
+    private final ModelRenderer faceVeil;
+    private final ModelRenderer faceWeave;
+    private final ModelRenderer leftCuff;
+    private final ModelRenderer rightCuff;
     private final ModelRenderer hood;
     private final ModelRenderer head_r1;
     private final ModelRenderer head_r2;
@@ -51,6 +55,32 @@ public class ModelGhillieBase extends ModelCustomArmour {
         this.part = part;
         textureWidth = 115;
         textureHeight = 115;
+
+        // Two cloth halves meet in front of the nose and slope back toward the hood.
+        faceVeil = new ModelRenderer(this);
+        faceWeave = new ModelRenderer(this);
+        faceVeil.setRotationPoint(0F, 0F, -5.55F);
+        faceWeave.setRotationPoint(0F, 0F, -5.55F);
+        for (int side = -1; side <= 1; side += 2) {
+            float startX = side < 0 ? -4F : 0F;
+            ModelRenderer clothHalf = new ModelRenderer(this);
+            ModelRenderer weaveHalf = new ModelRenderer(this);
+            clothHalf.rotateAngleY = weaveHalf.rotateAngleY = -side * 0.31415927F;
+            clothHalf.addBox(startX, -7F, 0F, 4, 7, 0, 0.02F);
+            for (int column = 0; column <= 8; column++) {
+                weaveHalf.addBox(startX + column * 0.5F, -7F, -0.05F, 0, 7, 0, 0.025F);
+            }
+            for (int row = 0; row <= 14; row++) {
+                weaveHalf.addBox(startX, -7F + row * 0.5F, -0.05F, 4, 0, 0, 0.025F);
+            }
+            faceVeil.addChild(clothHalf);
+            faceWeave.addChild(weaveHalf);
+        }
+        // Bridge the transparent wrist band and overlap the existing glove on every side.
+        leftCuff = new ModelRenderer(this);
+        leftCuff.addBox(-1F, 5.5F, -2F, 4, 3, 4, 0.2F);
+        rightCuff = new ModelRenderer(this);
+        rightCuff.addBox(-3F, 5.5F, -2F, 4, 3, 4, 0.2F);
 
         hood = new ModelRenderer(this);
         hood.setRotationPoint(0.0F, 0.0F, 0.0F);
@@ -325,6 +355,19 @@ public class ModelGhillieBase extends ModelCustomArmour {
                 bipedHead.showModel = true;
                 bipedHead.isHidden = false;
                 bipedHead.render(f5);
+                GL11.glPushMatrix();
+                try {
+                    bipedHead.postRender(f5);
+                    // Extend each angled outer edge by about 0.25 model pixels without moving the seam.
+                    GL11.glScalef(1.066F, 1F, 1F);
+                    boolean snow = "tapSnowGhillieHood".equals(type.shortName);
+                    renderCloth(faceVeil, f5, snow ? 0.84F : 0.38F,
+                            snow ? 0.86F : 0.45F, snow ? 0.81F : 0.27F);
+                    renderCloth(faceWeave, f5, snow ? 0.62F : 0.24F,
+                            snow ? 0.65F : 0.30F, snow ? 0.59F : 0.16F);
+                } finally {
+                    GL11.glPopMatrix();
+                }
             }
             if (part == 1) {
                 bipedBody.showModel = true;
@@ -340,6 +383,8 @@ public class ModelGhillieBase extends ModelCustomArmour {
                 bipedBody.render(f5);
                 bipedLeftArm.render(f5);
                 bipedRightArm.render(f5);
+                renderCuffOnArm(bipedLeftArm, leftCuff, f5);
+                renderCuffOnArm(bipedRightArm, rightCuff, f5);
                 bipedLeftLeg.render(f5);
                 bipedRightLeg.render(f5);
             }
@@ -368,8 +413,37 @@ public class ModelGhillieBase extends ModelCustomArmour {
             GL11.glRotatef(playerArm.rotateAngleZ * 57.29578F, 0F, 0F, 1F);
             GL11.glRotatef(playerArm.rotateAngleX * 57.29578F, 1F, 0F, 0F);
             sleeve.render(scale);
+            renderCuff(right ? rightCuff : leftCuff, scale);
         } finally {
             GL11.glPopMatrix();
+        }
+    }
+
+    private void renderCuffOnArm(ModelRenderer arm, ModelRenderer cuff, float scale) {
+        GL11.glPushMatrix();
+        try {
+            arm.postRender(scale);
+            renderCuff(cuff, scale);
+        } finally {
+            GL11.glPopMatrix();
+        }
+    }
+
+    private void renderCuff(ModelRenderer cuff, float scale) {
+        boolean snow = type != null && "tapSnowGhillieSuit".equals(type.shortName);
+        renderCloth(cuff, scale, snow ? 0.69F : 0.25F,
+                snow ? 0.70F : 0.29F, snow ? 0.65F : 0.16F);
+    }
+
+    private void renderCloth(ModelRenderer cloth, float scale, float red, float green, float blue) {
+        // These small model-native panels need no new pack texture or UV migration.
+        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT);
+        try {
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glColor4f(red, green, blue, 1F);
+            cloth.render(scale);
+        } finally {
+            GL11.glPopAttrib();
         }
     }
 

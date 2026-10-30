@@ -19,7 +19,7 @@ public class Model5MWLaser extends ModelAttachment //Same as Filename
 
     public Model5MWLaser() //Same as Filename
     {
-        attachmentModel = new ModelRendererTurbo[67];
+        attachmentModel = new ModelRendererTurbo[65];
         attachmentModel[0] = new ModelRendererTurbo(this, 1, 1, textureX, textureY); // Import
         attachmentModel[1] = new ModelRendererTurbo(this, 33, 1, textureX, textureY); // Import
         attachmentModel[2] = new ModelRendererTurbo(this, 65, 1, textureX, textureY); // Import
@@ -57,36 +57,34 @@ public class Model5MWLaser extends ModelAttachment //Same as Filename
         attachmentModel[34] = new ModelRendererTurbo(this, 9, 41, textureX, textureY); // Import
         attachmentModel[35] = new ModelRendererTurbo(this, 25, 41, textureX, textureY); // Import
         attachmentModel[36] = new ModelRendererTurbo(this, 41, 41, textureX, textureY); // Import
-        attachmentModel[37] = new ModelRendererTurbo(this, 57, 41, textureX, textureY); // Import
-        attachmentModel[38] = new ModelRendererTurbo(this, 1, 49, textureX, textureY); // Import
-        attachmentModel[39] = new ModelRendererTurbo(this, 73, 49, textureX, textureY); // Import
-        attachmentModel[40] = new ModelRendererTurbo(this, 81, 49, textureX, textureY); // Import
-        attachmentModel[41] = new ModelRendererTurbo(this, 1, 57, textureX, textureY); // Import
-        attachmentModel[42] = new ModelRendererTurbo(this, 41, 57, textureX, textureY); // Import
-        attachmentModel[43] = new ModelRendererTurbo(this, 105, 49, textureX, textureY); // Import
-        attachmentModel[44] = new ModelRendererTurbo(this, 89, 57, textureX, textureY); // Import
-        attachmentModel[45] = new ModelRendererTurbo(this, 89, 65, textureX, textureY); // Import
-        attachmentModel[46] = new ModelRendererTurbo(this, 113, 49, textureX, textureY); // Import
-        attachmentModel[47] = new ModelRendererTurbo(this, 121, 49, textureX, textureY); // Import
-        attachmentModel[48] = new ModelRendererTurbo(this, 113, 57, textureX, textureY); // Import
-        attachmentModel[49] = new ModelRendererTurbo(this, 113, 65, textureX, textureY); // Import
-        attachmentModel[50] = new ModelRendererTurbo(this, 1, 73, textureX, textureY); // Import
-        attachmentModel[51] = new ModelRendererTurbo(this, 9, 73, textureX, textureY); // Import
-        attachmentModel[52] = new ModelRendererTurbo(this, 81, 57, textureX, textureY); // Import
-        attachmentModel[53] = new ModelRendererTurbo(this, 17, 73, textureX, textureY); // Import
-        attachmentModel[54] = new ModelRendererTurbo(this, 25, 73, textureX, textureY); // Import
-        attachmentModel[55] = new ModelRendererTurbo(this, 33, 73, textureX, textureY); // Import
-        attachmentModel[56] = new ModelRendererTurbo(this, 41, 73, textureX, textureY); // Import
-        attachmentModel[57] = new ModelRendererTurbo(this, 57, 73, textureX, textureY); // Import
-        attachmentModel[58] = new ModelRendererTurbo(this, 73, 73, textureX, textureY); // Import
-        attachmentModel[59] = new ModelRendererTurbo(this, 97, 73, textureX, textureY); // Import
-        attachmentModel[60] = new ModelRendererTurbo(this, 81, 65, textureX, textureY); // Import
-        attachmentModel[61] = new ModelRendererTurbo(this, 105, 73, textureX, textureY); // Import
-        attachmentModel[62] = new ModelRendererTurbo(this, 121, 73, textureX, textureY); // Import
-        attachmentModel[63] = new ModelRendererTurbo(this, 1, 81, textureX, textureY); // Import
-        attachmentModel[64] = new ModelRendererTurbo(this, 9, 81, textureX, textureY); // Import
-        attachmentModel[65] = new ModelRendererTurbo(this, 17, 81, textureX, textureY); // Import
-        attachmentModel[66] = new ModelRendererTurbo(this, 25, 81, textureX, textureY); // Import
+        attachmentModel[37] = new ModelRendererTurbo(this, 73, 49, textureX, textureY); // Import
+        attachmentModel[38] = new ModelRendererTurbo(this, 81, 49, textureX, textureY); // Import
+        attachmentModel[39] = new ModelRendererTurbo(this, 1, 57, textureX, textureY); // Import
+        attachmentModel[40] = new ModelRendererTurbo(this, 41, 57, textureX, textureY); // Import
+        attachmentModel[41] = new ModelRendererTurbo(this, 105, 49, textureX, textureY); // Import
+        attachmentModel[42] = new ModelRendererTurbo(this, 89, 57, textureX, textureY); // Import
+        attachmentModel[43] = new ModelRendererTurbo(this, 89, 65, textureX, textureY); // Import
+        attachmentModel[44] = new ModelRendererTurbo(this, 113, 49, textureX, textureY); // Import
+        attachmentModel[45] = new ModelRendererTurbo(this, 121, 49, textureX, textureY); // Import
+        attachmentModel[46] = new ModelRendererTurbo(this, 113, 57, textureX, textureY); // Import
+        attachmentModel[47] = new ModelRendererTurbo(this, 113, 65, textureX, textureY); // Import
+        attachmentModel[48] = new ModelRendererTurbo(this, 1, 73, textureX, textureY); // Import
+        attachmentModel[49] = new ModelRendererTurbo(this, 9, 73, textureX, textureY); // Import
+        attachmentModel[50] = new ModelRendererTurbo(this, 81, 57, textureX, textureY); // Import
+        attachmentModel[51] = new ModelRendererTurbo(this, 17, 73, textureX, textureY); // Import
+        attachmentModel[52] = new ModelRendererTurbo(this, 25, 73, textureX, textureY); // Import
+        attachmentModel[53] = new ModelRendererTurbo(this, 33, 73, textureX, textureY); // Import
+        attachmentModel[54] = new ModelRendererTurbo(this, 41, 73, textureX, textureY); // Import
+        attachmentModel[55] = new ModelRendererTurbo(this, 57, 73, textureX, textureY); // Import
+        attachmentModel[56] = new ModelRendererTurbo(this, 73, 73, textureX, textureY); // Import
+        attachmentModel[57] = new ModelRendererTurbo(this, 97, 73, textureX, textureY); // Import
+        attachmentModel[58] = new ModelRendererTurbo(this, 81, 65, textureX, textureY); // Import
+        attachmentModel[59] = new ModelRendererTurbo(this, 105, 73, textureX, textureY); // Import
+        attachmentModel[60] = new ModelRendererTurbo(this, 121, 73, textureX, textureY); // Import
+        attachmentModel[61] = new ModelRendererTurbo(this, 1, 81, textureX, textureY); // Import
+        attachmentModel[62] = new ModelRendererTurbo(this, 9, 81, textureX, textureY); // Import
+        attachmentModel[63] = new ModelRendererTurbo(this, 17, 81, textureX, textureY); // Import
+        attachmentModel[64] = new ModelRendererTurbo(this, 25, 81, textureX, textureY); // Import
 
         attachmentModel[0].addShapeBox(0F, -1F, -3F, 12, 8, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
         attachmentModel[0].setRotationPoint(-6F, -3F, 4F);
@@ -204,95 +202,91 @@ public class Model5MWLaser extends ModelAttachment //Same as Filename
         attachmentModel[36].addShapeBox(0F, 6.5F, -2F, 3, 3, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
         attachmentModel[36].setRotationPoint(-3F, -3F, 2F);
 
-        attachmentModel[37].addShapeBox(0F, 0F, 0F, 33, 2, 0, 0F, 0F, 0.0F, 0.0F, 250F, 0.0F, 0.0F, 250F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 250F, 0.0F, 0.0F, 250F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[37].setRotationPoint(10F, -5.5F, 3.5F);
 
-        attachmentModel[38].addShapeBox(0F, 1F, -1F, 33, 0, 2, 0F, 0.0F, 0.0F, 0.0F, 250F, 0.0F, 0.0F, 250F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 250F, 0.0F, 0.0F, 250F, 0.0F, 0.0F, 0F, 0.0F, 0.0F); // Import
-        attachmentModel[38].setRotationPoint(10F, -5.5F, 3.5F);
 
-        attachmentModel[39].addShapeBox(0F, 5F, -8F, 1, 3, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[39].setRotationPoint(-7F, -3F, 14F);
+        attachmentModel[37].addShapeBox(0F, 5F, -8F, 1, 3, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[37].setRotationPoint(-7F, -3F, 14F);
 
-        attachmentModel[40].addShapeBox(0F, -2.5F, -3.5F, 7, 2, 1, 0F, 0.0F, 0.0F, 0.0F, -3.5F, 0.0F, 0.0F, -3.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -3.5F, 0.0F, 0.0F, -3.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[40].setRotationPoint(9F, -3F, 8F);
+        attachmentModel[38].addShapeBox(0F, -2.5F, -3.5F, 7, 2, 1, 0F, 0.0F, 0.0F, 0.0F, -3.5F, 0.0F, 0.0F, -3.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -3.5F, 0.0F, 0.0F, -3.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[38].setRotationPoint(9F, -3F, 8F);
 
-        attachmentModel[41].addShapeBox(0F, -3F, -7F, 16, 6, 2, 0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[41].setRotationPoint(-7F, -3F, 11F);
+        attachmentModel[39].addShapeBox(0F, -3F, -7F, 16, 6, 2, 0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[39].setRotationPoint(-7F, -3F, 11F);
 
-        attachmentModel[42].addShapeBox(0F, 3F, -6F, 17, 6, 3, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F); // Import
-        attachmentModel[42].setRotationPoint(-8F, -3F, 8F);
+        attachmentModel[40].addShapeBox(0F, 3F, -6F, 17, 6, 3, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F); // Import
+        attachmentModel[40].setRotationPoint(-8F, -3F, 8F);
 
-        attachmentModel[43].addShapeBox(3F, 2.5F, -8F, 1, 7, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.0F, 1.0F, 1.0F, -2.0F, 0.0F, 0.0F, -0.5F, 0.0F); // Import
-        attachmentModel[43].setRotationPoint(-2.5F, -3F, 14F);
+        attachmentModel[41].addShapeBox(3F, 2.5F, -8F, 1, 7, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.0F, 1.0F, 1.0F, -2.0F, 0.0F, 0.0F, -0.5F, 0.0F); // Import
+        attachmentModel[41].setRotationPoint(-2.5F, -3F, 14F);
 
-        attachmentModel[44].addShapeBox(4F, 2.5F, -7F, 7, 5, 1, 0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 2.0F, 0.0F, 0.5F, 2.0F, 0.0F, 0.5F, 0.0F, 1.0F, -1.0F, 0.0F, 1.0F); // Import
-        attachmentModel[44].setRotationPoint(-2.5F, -3F, 12F);
+        attachmentModel[42].addShapeBox(4F, 2.5F, -7F, 7, 5, 1, 0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 2.0F, 0.0F, 0.5F, 2.0F, 0.0F, 0.5F, 0.0F, 1.0F, -1.0F, 0.0F, 1.0F); // Import
+        attachmentModel[42].setRotationPoint(-2.5F, -3F, 12F);
 
-        attachmentModel[45].addShapeBox(4F, 6F, -3F, 7, 3, 1, 0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.5F, -0.5F, 0.0F, 0.5F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F); // Import
+        attachmentModel[43].addShapeBox(4F, 6F, -3F, 7, 3, 1, 0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.5F, -0.5F, 0.0F, 0.5F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F); // Import
+        attachmentModel[43].setRotationPoint(-2.5F, -3F, 4F);
+
+        attachmentModel[44].addShapeBox(10.5F, 1.7F, -5.5F, 1, 1, 1, 0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F); // Import
+        attachmentModel[44].setRotationPoint(-2F, -3F, 9F);
+
+        attachmentModel[45].addShapeBox(3F, 6F, -3F, 1, 4, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
         attachmentModel[45].setRotationPoint(-2.5F, -3F, 4F);
 
-        attachmentModel[46].addShapeBox(10.5F, 1.7F, -5.5F, 1, 1, 1, 0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F); // Import
-        attachmentModel[46].setRotationPoint(-2F, -3F, 9F);
+        attachmentModel[46].addShapeBox(0F, -2.5F, -9F, 2, 1, 2, 0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, -0.25F, 0.0F, -2.0F, 0.5F, 0.0F, -2.0F, 0.5F, 0.0F, 0.0F, -0.25F, 0.0F); // Import
+        attachmentModel[46].setRotationPoint(3F, -3F, 15F);
 
-        attachmentModel[47].addShapeBox(3F, 6F, -3F, 1, 4, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[47].setRotationPoint(-2.5F, -3F, 4F);
+        attachmentModel[47].addShapeBox(0F, -2.5F, -9F, 2, 1, 2, 0F, -2.0F, 0.0F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, -2.0F, 0.0F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, -0.25F, -0.75F); // Import
+        attachmentModel[47].setRotationPoint(-1F, -3F, 15F);
 
-        attachmentModel[48].addShapeBox(0F, -2.5F, -9F, 2, 1, 2, 0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, -0.25F, 0.0F, -2.0F, 0.5F, 0.0F, -2.0F, 0.5F, 0.0F, 0.0F, -0.25F, 0.0F); // Import
-        attachmentModel[48].setRotationPoint(3F, -3F, 15F);
+        attachmentModel[48].addShapeBox(0F, -5F, -5.25F, 2, 2, 1, 0F, 0.0F, 0.0F, -0.25F, -2.0F, 0.0F, 0.5F, 0.0F, -0.75F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.25F, -2.0F, 0.0F, 0.5F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[48].setRotationPoint(3F, -3F, 9F);
 
-        attachmentModel[49].addShapeBox(0F, -2.5F, -9F, 2, 1, 2, 0F, -2.0F, 0.0F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, -2.0F, 0.0F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, -0.25F, -0.75F); // Import
-        attachmentModel[49].setRotationPoint(-1F, -3F, 15F);
+        attachmentModel[49].addShapeBox(0F, -5F, -5.75F, 2, 2, 1, 0F, 0.0F, -0.75F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.25F, -2.0F, 0.0F, 0.5F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.25F, -2.0F, 0.0F, 0.5F); // Import
+        attachmentModel[49].setRotationPoint(-1F, -3F, 9F);
 
-        attachmentModel[50].addShapeBox(0F, -5F, -5.25F, 2, 2, 1, 0F, 0.0F, 0.0F, -0.25F, -2.0F, 0.0F, 0.5F, 0.0F, -0.75F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.25F, -2.0F, 0.0F, 0.5F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[50].setRotationPoint(3F, -3F, 9F);
+        attachmentModel[50].addShapeBox(0F, -2F, -8F, 2, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[50].setRotationPoint(1F, -3F, 14F);
 
-        attachmentModel[51].addShapeBox(0F, -5F, -5.75F, 2, 2, 1, 0F, 0.0F, -0.75F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.25F, -2.0F, 0.0F, 0.5F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.25F, -2.0F, 0.0F, 0.5F); // Import
-        attachmentModel[51].setRotationPoint(-1F, -3F, 9F);
+        attachmentModel[51].addShapeBox(0F, -2.75F, -8F, 2, 1, 1, 0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F, 0.0F); // Import
+        attachmentModel[51].setRotationPoint(1F, -3F, 14F);
 
-        attachmentModel[52].addShapeBox(0F, -2F, -8F, 2, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[52].setRotationPoint(1F, -3F, 14F);
+        attachmentModel[52].addShapeBox(0F, -4F, 4.25F, 2, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.75F, 0.0F, -0.25F, -0.75F, 0.0F, -0.25F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.75F, 0.0F, -0.25F, -0.75F, 0.0F, -0.25F); // Import
+        attachmentModel[52].setRotationPoint(1F, -3F, 0F);
 
-        attachmentModel[53].addShapeBox(0F, -2.75F, -8F, 2, 1, 1, 0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F, 0.0F); // Import
-        attachmentModel[53].setRotationPoint(1F, -3F, 14F);
+        attachmentModel[53].addShapeBox(0F, -4F, 5.25F, 2, 1, 1, 0F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[53].setRotationPoint(1F, -3F, -2F);
 
-        attachmentModel[54].addShapeBox(0F, -4F, 4.25F, 2, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.75F, 0.0F, -0.25F, -0.75F, 0.0F, -0.25F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.75F, 0.0F, -0.25F, -0.75F, 0.0F, -0.25F); // Import
-        attachmentModel[54].setRotationPoint(1F, -3F, 0F);
+        attachmentModel[54].addShapeBox(0F, -3.75F, 7.5F, 2, 1, 2, 0F, 0.0F, 0.0F, 0.25F, 0.0F, 0.0F, 0.25F, -0.75F, 0.0F, -1.5F, -0.75F, 0.0F, -1.5F, 0.0F, 0.75F, -2.0F, 0.0F, 0.75F, -2.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F); // Import
+        attachmentModel[54].setRotationPoint(1F, -3F, -3F);
 
-        attachmentModel[55].addShapeBox(0F, -4F, 5.25F, 2, 1, 1, 0F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[55].setRotationPoint(1F, -3F, -2F);
+        attachmentModel[55].addShapeBox(0F, 5.7F, 8.7F, 2, 2, 2, 0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F); // Import
+        attachmentModel[55].setRotationPoint(6F, -3F, -3F);
 
-        attachmentModel[56].addShapeBox(0F, -3.75F, 7.5F, 2, 1, 2, 0F, 0.0F, 0.0F, 0.25F, 0.0F, 0.0F, 0.25F, -0.75F, 0.0F, -1.5F, -0.75F, 0.0F, -1.5F, 0.0F, 0.75F, -2.0F, 0.0F, 0.75F, -2.0F, -0.75F, 0.0F, 0.0F, -0.75F, 0.0F, 0.0F); // Import
-        attachmentModel[56].setRotationPoint(1F, -3F, -3F);
+        attachmentModel[56].addShapeBox(0F, 3F, -7F, 8, 6, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F); // Import
+        attachmentModel[56].setRotationPoint(-8F, -3F, 12F);
 
-        attachmentModel[57].addShapeBox(0F, 5.7F, 8.7F, 2, 2, 2, 0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F); // Import
-        attachmentModel[57].setRotationPoint(6F, -3F, -3F);
+        attachmentModel[57].addShapeBox(0F, 6.2F, 8.7F, 2, 1, 1, 0F, 0.0F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[57].setRotationPoint(7F, -3F, -2F);
 
-        attachmentModel[58].addShapeBox(0F, 3F, -7F, 8, 6, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.5F, 0.0F); // Import
-        attachmentModel[58].setRotationPoint(-8F, -3F, 12F);
+        attachmentModel[58].addShapeBox(0F, 6.2F, 9.2F, 1, 1, 2, 0F, 0.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, -0.5F, 0.0F, 1.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[58].setRotationPoint(9F, -3F, -4F);
 
-        attachmentModel[59].addShapeBox(0F, 6.2F, 8.7F, 2, 1, 1, 0F, 0.0F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[59].setRotationPoint(7F, -3F, -2F);
+        attachmentModel[59].addShapeBox(0F, 5.7F, 2.3F, 2, 2, 2, 0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F); // Import
+        attachmentModel[59].setRotationPoint(6F, -3F, -2F);
 
-        attachmentModel[60].addShapeBox(0F, 6.2F, 9.2F, 1, 1, 2, 0F, 0.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, -0.5F, 0.0F, 1.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[60].setRotationPoint(9F, -3F, -4F);
+        attachmentModel[60].addShapeBox(0F, 6.2F, 3.3F, 2, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F); // Import
+        attachmentModel[60].setRotationPoint(7F, -3F, -3F);
 
-        attachmentModel[61].addShapeBox(0F, 5.7F, 2.3F, 2, 2, 2, 0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F, -1.0F, 0.0F, 0.0F, -1.0F, 0.0F, 0.0F, 0.0F, -1.0F, 0.0F); // Import
-        attachmentModel[61].setRotationPoint(6F, -3F, -2F);
+        attachmentModel[61].addShapeBox(0F, 6.2F, 2.8F, 1, 1, 1, 0F, 0.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[61].setRotationPoint(9F, -3F, -2F);
 
-        attachmentModel[62].addShapeBox(0F, 6.2F, 3.3F, 2, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F); // Import
-        attachmentModel[62].setRotationPoint(7F, -3F, -3F);
+        attachmentModel[62].addShapeBox(0F, -2F, -7F, 2, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F); // Import
+        attachmentModel[62].setRotationPoint(10F, -3F, 8F);
 
-        attachmentModel[63].addShapeBox(0F, 6.2F, 2.8F, 1, 1, 1, 0F, 0.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[63].setRotationPoint(9F, -3F, -2F);
+        attachmentModel[63].addShapeBox(0F, -2F, -3F, 2, 1, 1, 0F, 0.5F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[63].setRotationPoint(10F, -3F, 8F);
 
-        attachmentModel[64].addShapeBox(0F, -2F, -7F, 2, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F); // Import
-        attachmentModel[64].setRotationPoint(10F, -3F, 8F);
-
-        attachmentModel[65].addShapeBox(0F, -2F, -3F, 2, 1, 1, 0F, 0.5F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F, -0.5F, 0.5F, 0.0F, -0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[65].setRotationPoint(10F, -3F, 8F);
-
-        attachmentModel[66].addShapeBox(0F, -1.75F, -5F, 1, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[66].setRotationPoint(-9F, -3F, 8F);
+        attachmentModel[64].addShapeBox(0F, -1.75F, -5F, 1, 1, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
+        attachmentModel[64].setRotationPoint(-9F, -3F, 8F);
 
         flipAll();
     }

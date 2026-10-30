@@ -6,7 +6,7 @@ import com.flansmod.common.guns.type.GunType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
-/** Server-owned, per-gun flashlight state shared through the gun ItemStack NBT. */
+/** Server-owned, per-gun flashlight/laser state shared through the gun ItemStack NBT. */
 public final class FlashlightState {
     private static final String ENABLED_TAG = "FMURFlashlightOn";
 
@@ -19,7 +19,7 @@ public final class FlashlightState {
         }
         GunType gunType = ((ItemGun)stack.getItem()).type;
         for (AttachmentType attachment : gunType.getCurrentAttachments(stack)) {
-            if (attachment != null && attachment.flashlight) {
+            if (attachment != null && (attachment.flashlight || attachment.isLaserPointer)) {
                 return true;
             }
         }
@@ -27,8 +27,19 @@ public final class FlashlightState {
     }
 
     public static boolean isEnabled(ItemStack stack) {
-        return hasFlashlight(stack) && stack.hasTagCompound()
-                && stack.getTagCompound().getBoolean(ENABLED_TAG);
+        // Old and newly assembled guns default on; preserve an explicit player toggle.
+        return hasFlashlight(stack) && (!stack.hasTagCompound()
+                || !stack.getTagCompound().hasKey(ENABLED_TAG)
+                || stack.getTagCompound().getBoolean(ENABLED_TAG));
+    }
+
+    public static boolean hasEnabledLaser(ItemStack stack) {
+        if (!isEnabled(stack)) return false;
+        GunType gunType = ((ItemGun) stack.getItem()).type;
+        for (AttachmentType attachment : gunType.getCurrentAttachments(stack)) {
+            if (attachment != null && attachment.isLaserPointer) return true;
+        }
+        return false;
     }
 
     public static void setEnabled(ItemStack stack, boolean enabled) {

@@ -19,7 +19,7 @@ public class ModelFlashLight extends ModelAttachment //Same as Filename
 
     public ModelFlashLight() //Same as Filename
     {
-        attachmentModel = new ModelRendererTurbo[57];
+        attachmentModel = new ModelRendererTurbo[46];
         attachmentModel[0] = new ModelRendererTurbo(this, 1, 1, textureX, textureY); // Import
         attachmentModel[1] = new ModelRendererTurbo(this, 25, 1, textureX, textureY); // Import
         attachmentModel[2] = new ModelRendererTurbo(this, 57, 1, textureX, textureY); // Import
@@ -66,17 +66,6 @@ public class ModelFlashLight extends ModelAttachment //Same as Filename
         attachmentModel[43] = new ModelRendererTurbo(this, 65, 9, textureX, textureY); // Import
         attachmentModel[44] = new ModelRendererTurbo(this, 169, 9, textureX, textureY); // Import
         attachmentModel[45] = new ModelRendererTurbo(this, 185, 9, textureX, textureY); // Import
-        attachmentModel[46] = new ModelRendererTurbo(this, 6, 25, textureX, textureY); // Import
-        attachmentModel[47] = new ModelRendererTurbo(this, 23, 24, textureX, textureY); // Import
-        attachmentModel[48] = new ModelRendererTurbo(this, 23, 24, textureX, textureY); // Import
-        attachmentModel[49] = new ModelRendererTurbo(this, 3, 66, textureX, textureY); // Box 49
-        attachmentModel[50] = new ModelRendererTurbo(this, 3, 86, textureX, textureY); // Box 49
-        attachmentModel[51] = new ModelRendererTurbo(this, 3, 126, textureX, textureY); // Box 49
-        attachmentModel[52] = new ModelRendererTurbo(this, 3, 76, textureX, textureY); // Box 49
-        attachmentModel[53] = new ModelRendererTurbo(this, 3, 96, textureX, textureY); // Box 49
-        attachmentModel[54] = new ModelRendererTurbo(this, 3, 136, textureX, textureY); // Box 49
-        attachmentModel[55] = new ModelRendererTurbo(this, 3, 116, textureX, textureY); // Box 49
-        attachmentModel[56] = new ModelRendererTurbo(this, 3, 106, textureX, textureY); // Box 49
 
         attachmentModel[0].addShapeBox(0F, 0F, 0F, 10, 8, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -1F, 0.0F, 0.0F, -1F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -1F, 0.0F, 0.0F, -1F, 0.0F); // Import
         attachmentModel[0].setRotationPoint(-5F, -4F, 1F);
@@ -216,60 +205,16 @@ public class ModelFlashLight extends ModelAttachment //Same as Filename
         attachmentModel[45].addShapeBox(0F, 0F, 0F, 3, 3, 1, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
         attachmentModel[45].setRotationPoint(-1.5F, 3.5F, 0F);
 
-        attachmentModel[46].addShapeBox(0F, 0F, 0F, 1, 5, 3, 0F, 0.0F, 0.0F, 0.0F, -0.8F, 0.0F, 0.0F, -0.8F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, -0.8F, 0.0F, 0.0F, -0.8F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[46].setRotationPoint(10F, -2.5F, 6.5F);
-        attachmentModel[46].rotateAngleZ = 0.01745329F;
-        attachmentModel[46].glow = true;
 
-        attachmentModel[47].addShapeBox(0F, 0F, 0F, 1, 3, 1, 0F, 0.0F, 1F, 0.0F, -0.8F, 1F, 0.0F, -0.8F, 0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1F, 0.0F, -0.8F, 1F, 0.0F, -0.8F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F); // Import
-        attachmentModel[47].setRotationPoint(10F, -1.5F, 9.5F);
-        attachmentModel[47].rotateAngleZ = 0.01745329F;
-        attachmentModel[47].glow = true;
 
-        attachmentModel[48].addShapeBox(0F, 0F, 0F, 1, 3, 1, 0F, 0F, 0F, 0F, -0.8F, 0F, 0F, -0.8F, 1F, 0F, 0F, 1F, 0F, 0F, 0F, 0F, -0.8F, 0F, 0F, -0.8F, 1F, 0F, 0F, 1F, 0F); // Import
-        attachmentModel[48].setRotationPoint(10F, -1.5F, 5.5F);
-        attachmentModel[48].rotateAngleZ = 0.01745329F;
-        attachmentModel[48].glow = true;
 
-        attachmentModel[49].addShapeBox(0F, 0F, 0F, 190, 2, 1, 0F, 0F, 0F, 0F, 0F, 30F, 10F, 0F, 30F, 11F, 0F, 0F, 1F, 0F, -2F, 0F, 0F, -32F, 10F, 0F, -32F, 11F, 0F, -2F, 1F); // Box 49
-        attachmentModel[49].setRotationPoint(10F, -2.5F, 7F);
-        attachmentModel[49].rotateAngleY = -0.06981317F;
-        attachmentModel[49].glow = true;
 
-        attachmentModel[50].addShapeBox(0F, 0F, 0F, 190, 2, 1, 0F, 0F, 0F, -1F, 0F, 10F, -31F, 0F, 10F, 30F, 0F, 0F, 0F, 0F, 0F, -1F, 0F, 10F, -31F, 0F, 10F, 30F, 0F, 0F, 0F); // Box 49
-        attachmentModel[50].setRotationPoint(10F, -1F, 9.5F);
-        attachmentModel[50].rotateAngleY = -0.06981317F;
-        attachmentModel[50].glow = true;
 
-        attachmentModel[51].addShapeBox(0F, 0F, 0F, 190, 2, 1, 0F, 0F, 0F, 0F, 0F, 10F, 30F, 0F, 10F, -31F, 0F, 0F, -1F, 0F, 0F, 0F, 0F, 10F, 30F, 0F, 10F, -31F, 0F, 0F, -1F); // Box 49
-        attachmentModel[51].setRotationPoint(10F, -1F, 5.5F);
-        attachmentModel[51].rotateAngleY = -0.06981317F;
-        attachmentModel[51].glow = true;
 
-        attachmentModel[52].addShapeBox(0F, 0F, 0F, 190, 2, 1, 0F, 0F, -0.5F, 0.5F, 0F, 29.5F, -9.5F, 0F, 29.5F, 8.5F, 0F, -0.5F, -1.5F, 0F, 0F, -1F, 0F, -10F, -31F, 0F, -10F, 30F, 0F, 0F, 0F); // Box 49
-        attachmentModel[52].setRotationPoint(10F, -3F, 9.5F);
-        attachmentModel[52].rotateAngleY = -0.06981317F;
-        attachmentModel[52].glow = true;
 
-        attachmentModel[53].addShapeBox(0F, 0F, 0F, 190, 2, 1, 0F, 0F, 0F, -1F, 0F, -10F, -31F, 0F, -10F, 30F, 0F, 0F, 0F, 0F, -0.5F, 0.5F, 0F, 29.5F, -9.5F, 0F, 29.5F, 8.5F, 0F, -0.5F, -1.5F); // Box 49
-        attachmentModel[53].setRotationPoint(10F, 1F, 9.5F);
-        attachmentModel[53].rotateAngleY = -0.06981317F;
-        attachmentModel[53].glow = true;
 
-        attachmentModel[54].addShapeBox(0F, 0F, 0F, 190, 2, 1, 0F, 0F, -0.5F, -1.5F, 0F, 29.5F, 8.5F, 0F, 29.5F, -9.5F, 0F, -0.5F, 0.5F, 0F, 0F, 0F, 0F, -10F, 30F, 0F, -10F, -31F, 0F, 0F, -1F); // Box 49
-        attachmentModel[54].setRotationPoint(10F, -3F, 5.5F);
-        attachmentModel[54].rotateAngleY = -0.06981317F;
-        attachmentModel[54].glow = true;
 
-        attachmentModel[55].addShapeBox(0F, 0F, 0F, 190, 2, 1, 0F, 0F, 0F, 0F, 0F, -10F, 30F, 0F, -10F, -31F, 0F, 0F, -1F, 0F, -0.5F, -1.5F, 0F, 29.5F, 8.5F, 0F, 29.5F, -9.5F, 0F, -0.5F, 0.5F); // Box 49
-        attachmentModel[55].setRotationPoint(10F, 1F, 5.5F);
-        attachmentModel[55].rotateAngleY = -0.06981317F;
-        attachmentModel[55].glow = true;
 
-        attachmentModel[56].addShapeBox(0F, 0F, 0F, 190, 2, 1, 0F, 0F, -2F, 0F, 0F, -32F, 10F, 0F, -32F, 11F, 0F, -2F, 1F, 0F, 0F, 0F, 0F, 30F, 10F, 0F, 30F, 11F, 0F, 0F, 1F); // Box 49
-        attachmentModel[56].setRotationPoint(10F, 0.5F, 7F);
-        attachmentModel[56].rotateAngleY = -0.06981317F;
-        attachmentModel[56].glow = true;
 
 
         flipAll();

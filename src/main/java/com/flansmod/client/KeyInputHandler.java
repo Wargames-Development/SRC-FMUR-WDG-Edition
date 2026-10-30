@@ -66,7 +66,9 @@ public class KeyInputHandler {
     public static KeyBinding gunModeKey = new KeyBinding("Toggle Fire Mode", Keyboard.KEY_V, "FMUR Guns");
     //public static KeyBinding stableSightKey = new KeyBinding("Stabilize Sight", Keyboard.KEY_LSHIFT, "FMUR 枪械");
     public static KeyBinding secondaryKey = new KeyBinding("Switch Underbarrel Weapon", Keyboard.KEY_T, "FMUR Guns");
-    public static KeyBinding lightSwitchKey = new KeyBinding("Toggle Flashlight/Laser", Keyboard.KEY_T, "FMUR Guns");
+    public static KeyBinding lightSwitchKey = new KeyBinding("Toggle Flashlight/Laser", Keyboard.KEY_G, "FMUR Guns");
+    private static boolean lightKeyChecked;
+
     public static KeyBinding zoomSwitchKey = new KeyBinding("Switch Scope Magnification", Keyboard.KEY_Z, "FMUR Guns");
     public static KeyBinding thermalScopeKey = new KeyBinding("Toggle FLIR Mode", Keyboard.KEY_H, "FMUR Guns");
     public static KeyBinding coSightSwitchKey = new KeyBinding("Toggle Co-Sight", Keyboard.KEY_C, "FMUR Guns");
@@ -129,6 +131,19 @@ public class KeyInputHandler {
         ClientRegistry.registerKeyBinding(menuKey);
         ClientRegistry.registerKeyBinding(f10Key);
         ClientRegistry.registerKeyBinding(tauntKey);
+    }
+
+    public static void checkLightKeyBinding(Minecraft minecraft) {
+        if (lightKeyChecked || minecraft.thePlayer == null) return;
+        lightKeyChecked = true;
+        // Migrate only the old default when it conflicts with chat or the underbarrel key.
+        if (lightSwitchKey.getKeyCode() == Keyboard.KEY_T
+                && (minecraft.gameSettings.keyBindChat.getKeyCode() == Keyboard.KEY_T
+                || secondaryKey.getKeyCode() == Keyboard.KEY_T)) {
+            lightSwitchKey.setKeyCode(Keyboard.KEY_G);
+            KeyBinding.resetKeyBindingArrayAndHash();
+            minecraft.gameSettings.saveOptions();
+        }
     }
 
     @SubscribeEvent

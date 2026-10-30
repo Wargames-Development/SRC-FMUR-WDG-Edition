@@ -1,0 +1,19 @@
+Name IR Laser
+ShortName irlaser
+Icon 1mwlaser
+Description Infrared laser visible only through active night vision
+Texture 1MWLaser
+Model BFMCpack.1MWLaser
+ModelScale 0.1
+AttachmentType gadget
+MeleeDamageMultiplier 1.0
+DamageMultiplier 1.0
+SpreadMultiplier 0.92
+RecoilMultiplier 1.0
+RecoilYawMultiplier 1.0
+BulletSpeedMultiplier 1.0
+ReloadTimeMultiplier 1.0
+IsLaserPointer True
+Infrared True
+LaserBrightness 4
+LaserColor 0.65 1 0.65

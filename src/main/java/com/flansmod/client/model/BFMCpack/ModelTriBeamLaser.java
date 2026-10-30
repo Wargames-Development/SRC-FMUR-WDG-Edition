@@ -19,7 +19,7 @@ public class ModelTriBeamLaser extends ModelAttachment //Same as Filename
 
     public ModelTriBeamLaser() //Same as Filename
     {
-        attachmentModel = new ModelRendererTurbo[81];
+        attachmentModel = new ModelRendererTurbo[78];
         attachmentModel[0] = new ModelRendererTurbo(this, 1, 1, textureX, textureY); // Import
         attachmentModel[1] = new ModelRendererTurbo(this, 49, 1, textureX, textureY); // Import
         attachmentModel[2] = new ModelRendererTurbo(this, 73, 1, textureX, textureY); // Import
@@ -98,9 +98,6 @@ public class ModelTriBeamLaser extends ModelAttachment //Same as Filename
         attachmentModel[75] = new ModelRendererTurbo(this, 177, 49, textureX, textureY); // Import
         attachmentModel[76] = new ModelRendererTurbo(this, 185, 49, textureX, textureY); // Import
         attachmentModel[77] = new ModelRendererTurbo(this, 193, 49, textureX, textureY); // Import
-        attachmentModel[78] = new ModelRendererTurbo(this, 2, 70, textureX, textureY); // Box 0
-        attachmentModel[79] = new ModelRendererTurbo(this, 2, 70, textureX, textureY); // Box 0
-        attachmentModel[80] = new ModelRendererTurbo(this, 2, 70, textureX, textureY); // Box 0
 
         attachmentModel[0].addShapeBox(0F, 0F, 0F, 19, 4, 7, 0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, 0.5F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.5F, 0.0F); // Import
         attachmentModel[0].setRotationPoint(-9.5F, 1F, -3.5F);
@@ -336,17 +333,8 @@ public class ModelTriBeamLaser extends ModelAttachment //Same as Filename
         attachmentModel[77].addShapeBox(0F, 0F, 0F, 1, 2, 1, 0F, 0.0F, -1.5F, 0.0F, 0.0F, -1.5F, 0.0F, 0.0F, -1.5F, 0.0F, 0.0F, -1.5F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F, 0.0F); // Import
         attachmentModel[77].setRotationPoint(1.2F, 7F, 3.35F);
 
-        attachmentModel[78].addShapeBox(0F, 0F, 0F, 1, 1, 1, 0F, 0F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 0F, -0.4F, -0.4F, 0F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 0F, -0.4F, -0.4F); // Box 0
-        attachmentModel[78].setRotationPoint(10F, 3.5F, -0.7F);
-        attachmentModel[78].rotateAngleX = 0.78539816F;
 
-        attachmentModel[79].addShapeBox(0F, 0F, 0F, 1, 1, 1, 0F, 0F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 0F, -0.4F, -0.4F, 0F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 0F, -0.4F, -0.4F); // Box 0
-        attachmentModel[79].setRotationPoint(10F, 4.5F, -1.2F);
-        attachmentModel[79].rotateAngleX = 0.78539816F;
 
-        attachmentModel[80].addShapeBox(0F, 0F, 0F, 1, 1, 1, 0F, 0F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 0F, -0.4F, -0.4F, 0F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 200F, -0.4F, -0.4F, 0F, -0.4F, -0.4F); // Box 0
-        attachmentModel[80].setRotationPoint(10F, 4.5F, -0.2F);
-        attachmentModel[80].rotateAngleX = 0.78539816F;
 
 
         flipAll();

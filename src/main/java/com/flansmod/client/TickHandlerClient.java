@@ -16,7 +16,6 @@ import com.flansmod.common.guns.FlashlightState;
 import com.flansmod.common.guns.item.ItemGrenade;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.item.ItemShootable;
-import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketTeamInfo;
@@ -48,7 +47,6 @@ import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.MouseHelper;
-import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.EnumSkyBlock;
 import net.minecraftforge.client.event.MouseEvent;
@@ -112,7 +110,7 @@ public class TickHandlerClient {
     public static float crosshairR = 1.0F;
     public static float crosshairG = 1.0F;
     public static float crosshairB = 1.0F;
-    public static float crosshairA = 1.0F;
+    public static float crosshairA = 0.2F;
     public static float dotR = 1.0F;
     public static float dotG = 0.0F;
     public static float dotB = 0.0F;
@@ -327,6 +325,11 @@ public class TickHandlerClient {
     public void eventHandler(RenderGameOverlayEvent event) {
         Minecraft mc = Minecraft.getMinecraft();
         if (event.type == ElementType.CROSSHAIRS && mc.thePlayer != null
+                && FlashlightState.hasEnabledLaser(mc.thePlayer.getHeldItem())) {
+            event.setCanceled(true);
+            return;
+        }
+        if (event.type == ElementType.CROSSHAIRS && mc.thePlayer != null
                 && mc.thePlayer.getHeldItem() != null
                 && mc.thePlayer.getHeldItem().getItem() instanceof ItemGun
                 && NightVisionGogglesEffect.getIntensity(mc, event.partialTicks) > 0.001F) {
@@ -496,7 +499,8 @@ public class TickHandlerClient {
                     ItemGun gun = (ItemGun) mc.thePlayer.getCurrentEquippedItem().getItem();
                     //冲刺时准心
                     if (mc.thePlayer.isSprinting()) {
-                        if (enableSprintCrossHair && !gun.type.hideCrosshair) {
+                        if (enableSprintCrossHair && !gun.type.hideCrosshair
+                                && !FlashlightState.hasEnabledLaser(mc.thePlayer.getHeldItem())) {
 
                             FlansModClient.minecraft.entityRenderer.setupOverlayRendering();
                             GL11.glEnable(3042 /* GL_BLEND */);
@@ -1029,6 +1033,7 @@ public class TickHandlerClient {
 
     private static void renderHipFireCrosshair(Minecraft minecraft, ItemGun gun,
                                                 int screenWidth, int screenHeight) {
+        if (FlashlightState.hasEnabledLaser(minecraft.thePlayer.getHeldItem())) return;
         minecraft.entityRenderer.setupOverlayRendering();
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_DEPTH_TEST);
@@ -1161,6 +1166,7 @@ public class TickHandlerClient {
         NightVisionGogglesBrightness.endFrame(Minecraft.getMinecraft());
         BulletHoleDecalRenderer.render(event);
         TracerRicochetRenderer.render(event);
+        AttachmentLightRenderer.render(event);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -1238,10 +1244,11 @@ public class TickHandlerClient {
     }
 
     /**
-     * Handle flashlight block light override
+     * Handle client ticks and remaining projectile/vehicle block light overrides.
      */
     public void clientTickStart(Minecraft mc) {
         enforceGammaLimit(mc);
+        KeyInputHandler.checkLightKeyBinding(mc);
         MCHeliExplosionCompat.clientTick();
         updateMuzzleFlashLights(mc);
         updateBallisticNearMiss(mc);
@@ -1277,59 +1284,6 @@ public class TickHandlerClient {
             }
             //Clear the list
             blockLightOverrides.clear();
-
-            //Find all flashlights
-            for (Object obj : mc.theWorld.playerEntities) {
-                EntityPlayer player = (EntityPlayer) obj;
-                ItemStack currentHeldItem = player.getCurrentEquippedItem();
-                if (currentHeldItem != null && currentHeldItem.getItem() instanceof ItemGun
-                        && FlashlightState.isEnabled(currentHeldItem)) {
-                    GunType type = ((ItemGun) currentHeldItem.getItem()).type;
-                    for (AttachmentType attachment : type.getCurrentAttachments(currentHeldItem))
-                        if (attachment != null && attachment.flashlight) {
-                            for (int i = 0; i < 2; i++) {
-                                MovingObjectPosition ray = player.rayTrace(attachment.flashlightRange / 2F * (i + 1), 1F);
-                                if (ray != null) {
-                                    int x = ray.blockX;
-                                    int y = ray.blockY;
-                                    int z = ray.blockZ;
-                                    int side = ray.sideHit;
-                                    switch (side) {
-                                        case 0:
-                                            y--;
-                                            break;
-                                        case 1:
-                                            y++;
-                                            break;
-                                        case 2:
-                                            z--;
-                                            break;
-                                        case 3:
-                                            z++;
-                                            break;
-                                        case 4:
-                                            x--;
-                                            break;
-                                        case 5:
-                                            x++;
-                                            break;
-                                    }
-                                    blockLightOverrides.add(new Vector3i(x, y, z));
-                                    mc.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z,
-                                            Math.max(mc.theWorld.getSavedLightValue(
-                                                    EnumSkyBlock.Block, x, y, z),
-                                                    attachment.flashlightStrength));
-                                    mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y + 1, z);
-                                    mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y - 1, z);
-                                    mc.theWorld.updateLightByType(EnumSkyBlock.Block, x + 1, y, z);
-                                    mc.theWorld.updateLightByType(EnumSkyBlock.Block, x - 1, y, z);
-                                    mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y, z + 1);
-                                    mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y, z - 1);
-                                }
-                            }
-                        }
-                }
-            }
 
             for (Object obj : mc.theWorld.loadedEntityList) {
                 if (obj instanceof EntityShootable) {

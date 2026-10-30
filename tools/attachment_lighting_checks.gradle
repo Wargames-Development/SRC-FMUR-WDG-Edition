@@ -1,0 +1,26 @@
+// Headless regression check using the project's existing Forge runtime.
+gradle.projectsEvaluated {
+    def p = gradle.rootProject
+    def compileChecks = p.tasks.create('compileAttachmentLightingChecks', JavaCompile) {
+        dependsOn p.tasks.compileJava
+        source = p.fileTree('tools/attachment_lighting_checks') { include '**/*.java' }
+        classpath = p.sourceSets.main.runtimeClasspath
+        destinationDir = p.file('build/attachment-lighting-checks')
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+    p.tasks.create('attachmentLightingChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.client.AttachmentLightingChecks'
+    }
+    p.tasks.create('attachmentLightingGpuChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.client.AttachmentLightingGpuChecks'
+        doFirst {
+            if (!p.hasProperty('lwjglNatives')) throw new GradleException('Supply -PlwjglNatives=<LWJGL 2 natives directory>')
+            jvmArgs '-Djava.library.path=' + p.property('lwjglNatives')
+        }
+    }
+}

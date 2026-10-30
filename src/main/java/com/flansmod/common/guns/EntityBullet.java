@@ -1225,6 +1225,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         }
 
         //We hit something
+        float remainingHitLimit = 1F;
+        float stoneSpeedRetention = 1F;
+        Vec3 stoneMovementEnd = null;
         if (!hits.isEmpty()) {
             //Sort the hits according to the intercept position
             Collections.sort(hits);
@@ -1235,6 +1238,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
             //处理子弹撞击列表
             for (BulletHit bulletHit : hits) {
+
+                // Hits were traced at the incoming speed. A stone hit shortens this tick's travel.
+                if (bulletHit.intersectTime > remainingHitLimit) {
+                    break;
+                }
 
                 BulletHitEvent bulletHitEvent = new BulletHitEvent(this, bulletHit);
                 MinecraftForge.EVENT_BUS.post(bulletHitEvent);
@@ -1524,12 +1532,28 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
                     if (penetrationBlockCount < type.penetratingBlockMaxNum) {
                         float penetrationCost = getBlockPenetrationCost(block, mat);
+                        // Roll only on the server, and exclude bedrock / reinforced hard materials.
+                        boolean stonePenetration = !worldObj.isRemote && mat == Material.rock
+                                && !type.explodeOnImpact && type.stonePenetrationChance > 0F
+                                && type.stonePenetrationSpeedRetention > 0F
+                                && penetratingPower > 0.75F
+                                && block.getBlockHardness(worldObj, xTile, yTile, zTile) >= 0F
+                                && block.getBlockHardness(worldObj, xTile, yTile, zTile) <= 2F
+                                && rand.nextFloat() < type.stonePenetrationChance;
+                        if (stonePenetration) {
+                            penetrationCost = 0.75F;
+                        }
 
                         //如果击中可穿透方块
                         if (penetrationCost >= 0F && penetratingPower > penetrationCost) {
 
                             penetratingPower -= penetrationCost;
-                            damage *= type.penetratingDamageLoss;
+                            damage *= stonePenetration ? type.stonePenetrationDamageRetention : type.penetratingDamageLoss;
+                            if (stonePenetration) {
+                                remainingHitLimit = bulletHit.intersectTime
+                                        + (remainingHitLimit - bulletHit.intersectTime) * type.stonePenetrationSpeedRetention;
+                                stoneSpeedRetention *= type.stonePenetrationSpeedRetention;
+                            }
                             if (!worldObj.isRemote && mat != Material.glass) {
                                 FlansMod.proxy.playBlockBreakSound(xTile, yTile, zTile, block, this.dimension);
                             }
@@ -1739,6 +1763,15 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 			}
 		}
 		*/
+
+        if (stoneSpeedRetention < 1F) {
+            // Keep collision positions in the original trace's coordinates until all hits are resolved.
+            stoneMovementEnd = Vec3.createVectorHelper(posX + motionX * remainingHitLimit,
+                    posY + motionY * remainingHitLimit, posZ + motionZ * remainingHitLimit);
+            motionX *= stoneSpeedRetention;
+            motionY *= stoneSpeedRetention;
+            motionZ *= stoneSpeedRetention;
+        }
 
         //Movement dampening variables
         float drag = type.dragInAir;
@@ -2044,7 +2077,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         //posX += motionX;
         //posY += motionY;
         //posZ += motionZ;
-        setPosition(posX + motionX, posY + motionY, posZ + motionZ);
+        if (stoneMovementEnd != null && !isDead) {
+            setPosition(stoneMovementEnd.xCoord, stoneMovementEnd.yCoord, stoneMovementEnd.zCoord);
+        } else {
+            setPosition(posX + motionX, posY + motionY, posZ + motionZ);
+        }
 
         //Recalculate the angles from the new motion
         float motionXZ = MathHelper.sqrt_double(motionX * motionX + motionZ * motionZ);

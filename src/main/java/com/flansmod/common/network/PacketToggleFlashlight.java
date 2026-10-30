@@ -11,6 +11,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.ChatComponentText;
 
 /** Synchronises a held gun's flashlight state to every client in the dimension. */
 public class PacketToggleFlashlight extends PacketBase {
@@ -50,9 +51,6 @@ public class PacketToggleFlashlight extends PacketBase {
             return;
 
         boolean authoritativeState = enabled;
-        if (FlashlightState.isEnabled(heldGun) == authoritativeState)
-            return;
-
         FlashlightState.setEnabled(heldGun, authoritativeState);
         player.inventory.markDirty();
         player.inventoryContainer.detectAndSendChanges();
@@ -73,6 +71,8 @@ public class PacketToggleFlashlight extends PacketBase {
         }
         if (playerEntityId == clientPlayer.getEntityId()) {
             FlansModClient.isFlashLight = enabled;
+            clientPlayer.addChatComponentMessage(new ChatComponentText(
+                    "Flashlight / laser: " + (enabled ? "ON" : "OFF")));
         }
     }
 }

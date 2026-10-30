@@ -23,6 +23,8 @@ public class ModelAttachment extends ModelBase
 	public float recoilAngle = -5F;
 	/** Offset the flash model if enabled */
 	public Vector3f attachmentFlashOffset = new Vector3f(0F, 0F, 0F);
+	/** Laser emitter in model pixels after flipAll; null for models without an emitter socket. */
+	public Vector3f laserEmitter;
 
 	/** 组合镜 */
 	public float coSightRenderOffset = 0.0F;

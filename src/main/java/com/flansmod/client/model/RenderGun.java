@@ -1,6 +1,7 @@
 package com.flansmod.client.model;
 
 import com.flansmod.client.FlansModClient;
+import com.flansmod.client.AttachmentLightRenderer;
 import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.client.ThermalScopeEffect;
 import com.flansmod.client.model.NewTapArmor.ModelGhillieBase;
@@ -77,6 +78,9 @@ public class RenderGun implements IItemRenderer {
     private static TextureManager renderEngine;
     private final ModelBiped firstPersonArmModel = new ModelBiped(0.0F);
     private float effectiveReloadAnimationProgress;
+    private EntityLivingBase attachmentOwner;
+    private ItemStack renderedGun;
+    private float renderedLaserPose;
 
     public static Random rand = new Random();
 
@@ -111,6 +115,12 @@ public class RenderGun implements IItemRenderer {
 
     @Override
     public void renderItem(ItemRenderType type, ItemStack item, Object... data) {
+        EntityLivingBase previousOwner = attachmentOwner;
+        ItemStack previousGun = renderedGun;
+        float previousLaserPose = renderedLaserPose;
+        attachmentOwner = data.length > 1 && data[1] instanceof EntityLivingBase
+                ? (EntityLivingBase) data[1] : null;
+        try {
         // Avoid any broken cases by returning
         if (!(item.getItem() instanceof ItemGun))
             return;
@@ -155,6 +165,11 @@ public class RenderGun implements IItemRenderer {
                 }
 
             }
+        }
+        } finally {
+            attachmentOwner = previousOwner;
+            renderedGun = previousGun;
+            renderedLaserPose = previousLaserPose;
         }
     }
 
@@ -507,6 +522,7 @@ public class RenderGun implements IItemRenderer {
      * call this
      */
     public void renderGun(ItemStack item, GunType gunType, float f, ModelGun model, GunAnimations animations, float reloadRotate, ItemRenderType rtype) {
+        renderedGun = item;
 
         // Make sure we actually have the renderEngine
         if (renderEngine == null)
@@ -517,6 +533,16 @@ public class RenderGun implements IItemRenderer {
         // If we have no animation variables, use defaults
         if (animations == null)
             animations = GunAnimations.defaults;
+
+        float reloadProgress = animations.lastReloadAnimationProgress
+                + (animations.reloadAnimationProgress - animations.lastReloadAnimationProgress) * smoothing;
+        float reloadPose = animations.reloading ? Math.max(reloadRotate,
+                Math.min(reloadProgress / Math.max(0.05F, model.tiltGunTime),
+                        (1F - reloadProgress) / Math.max(0.05F, model.untiltGunTime))) : 0F;
+        float movementPose = rtype == ItemRenderType.EQUIPPED_FIRST_PERSON
+                ? Math.max(actualStanceProgress, actualSpringProgress)
+                : attachmentOwner != null && attachmentOwner.isSprinting() ? 1F : 0F;
+        renderedLaserPose = MathHelper.clamp_float(Math.max(movementPose, reloadPose), 0F, 1F);
 
         // Get all the attachments that we may need to render
         AttachmentType scopeAttachment = gunType.getScope(item);
@@ -1552,6 +1578,9 @@ public class RenderGun implements IItemRenderer {
         Paintjob paintjob = attachment.getPaintjob(stack.getItemDamage());
         ModelAttachment model = attachment.model;
         if (model != null) {
+            if (type == ItemRenderType.EQUIPPED || type == ItemRenderType.EQUIPPED_FIRST_PERSON)
+                AttachmentLightRenderer.renderEmitter(attachment, model, renderedGun, attachmentOwner, f,
+                        type == ItemRenderType.EQUIPPED_FIRST_PERSON, renderedLaserPose, smoothing);
             if(zoomProgress > 0.8F) {
                 renderZDepthModel(model, f, type);
                 model.renderAttachment(f);
