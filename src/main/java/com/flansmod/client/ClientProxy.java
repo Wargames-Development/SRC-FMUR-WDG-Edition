@@ -8,6 +8,7 @@ import com.flansmod.client.particle.*;
 import com.flansmod.common.CommonProxy;
 import com.flansmod.common.ContentManager;
 import com.flansmod.common.FlansMod;
+import net.minecraft.item.ItemStack;
 import com.flansmod.common.TileEntityGunsmithStation;
 import com.flansmod.common.driveables.*;
 import com.flansmod.common.driveables.mechas.EntityMecha;
@@ -70,6 +71,12 @@ public class ClientProxy extends CommonProxy {
     public List<File> contentPacks;
 
     @Override
+    public void onGrenadeThrown(EntityPlayer player, ItemStack stack) {
+        if (player == Minecraft.getMinecraft().thePlayer && grenadeRenderer != null)
+            grenadeRenderer.startThrow(player, stack);
+    }
+
+    @Override
     public void load() {
         new FlansModClient().load();
         gunRenderer = new RenderGun();
@@ -95,6 +102,7 @@ public class ClientProxy extends CommonProxy {
             MinecraftForgeClient.registerItemRenderer(mechaType.item, mechaRenderer);
 
         MinecraftForgeClient.registerItemRenderer(Item.getItemFromBlock(FlansMod.workbench), gunsmithStationRenderer);
+        MinecraftForgeClient.registerItemRenderer(FlansMod.handheldFlashlight, new RenderHandheldFlashlight());
 
         FMLCommonHandler.instance().bus().register(new KeyInputHandler());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(new PlayerEquipmentClientHandler());

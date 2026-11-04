@@ -5,6 +5,7 @@ import com.flansmod.common.guns.EntityBullet;
 import com.flansmod.common.guns.EntityGrenade;
 import com.flansmod.common.guns.EntityMG;
 import com.flansmod.common.guns.item.ItemGun;
+import com.flansmod.common.guns.item.ItemGrenade;
 import com.flansmod.common.guns.raytracing.PlayerSnapshot;
 import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.network.PacketReload;
@@ -60,6 +61,8 @@ public class PlayerData {
 	public EntityMG mountingGun;
 	/** Tickers to stop shooting too fast */
 	public float shootTimeRight, shootTimeLeft;
+	private ItemStack pendingGrenade;
+	private int grenadeReleaseTicks, grenadeSlot, grenadeDimension;
 	/** Stops player shooting immediately after swapping weapons */
 	public int shootClickDelay;
 	/** True if this player is shooting */
@@ -153,6 +156,8 @@ public class PlayerData {
 
 		if (shootTimeLeft > 0)
 			shootTimeLeft--;
+		if (!player.worldObj.isRemote)
+			tickGrenadeThrow(player);
 
 		if (!player.worldObj.isRemote) {
 			for (ItemStack inventoryStack : player.inventory.mainInventory)
@@ -192,6 +197,40 @@ public class PlayerData {
 		System.arraycopy(snapshots, 0, snapshots, 1, snapshots.length - 2 + 1);
 		//Take new snapshot
 		snapshots[0] = new PlayerSnapshot(player);
+	}
+
+	public void startGrenadeThrow(EntityPlayer player, ItemStack stack) {
+		if (player.worldObj.isRemote || pendingGrenade != null) return;
+		// Vanilla copies the held stack after processing a use-item packet.
+		// Keep a value snapshot and validate against the live inventory at release.
+		pendingGrenade = stack.copy();
+		grenadeSlot = player.inventory.currentItem;
+		grenadeDimension = player.dimension;
+		grenadeReleaseTicks = ItemGrenade.THROW_RELEASE_TICKS;
+	}
+
+	private void tickGrenadeThrow(EntityPlayer player) {
+		if (pendingGrenade == null) return;
+		if (!player.isEntityAlive() || player.ridingEntity != null || player.dimension != grenadeDimension
+				|| player.inventory.currentItem != grenadeSlot || !ItemStack.areItemStacksEqual(player.getHeldItem(), pendingGrenade)
+				|| pendingGrenade.stackSize <= 0 || !(pendingGrenade.getItem() instanceof ItemGrenade)) {
+			pendingGrenade = null;
+			return;
+		}
+		grenadeReleaseTicks--;
+		// Broadcast once from the server, at the free hand's pin-pull gesture.
+		if (grenadeReleaseTicks == ItemGrenade.THROW_RELEASE_TICKS - ItemGrenade.THROW_PIN_PULL_TICKS)
+			player.worldObj.playSoundAtEntity(player, "flansmod:grenade_pinpull", 1F, 1F);
+		if (grenadeReleaseTicks > 0) return;
+		ItemStack stack = player.getHeldItem();
+		pendingGrenade = null;
+		ItemGrenade item = (ItemGrenade) stack.getItem();
+		if (item.type.canThrow) {
+			item.releaseThrow(stack, player.worldObj, player, this);
+			player.worldObj.playSoundAtEntity(player, "flansmod:grenade_throw", 1F, 1F);
+			if (stack.stackSize <= 0) player.inventory.setInventorySlotContents(grenadeSlot, null);
+			player.inventory.markDirty();
+		}
 	}
 
 	public void startReload(ItemStack gunStack, float reloadTime, int reloadCount, boolean left, boolean forceReload,
@@ -331,6 +370,7 @@ public class PlayerData {
 
 	/** Clear transient weapon state before a server-side loadout replacement. */
 	public void resetWeaponState(EntityPlayer player) {
+		pendingGrenade = null;
 		if (reloadRight != null)
 			clearReload(reloadRight, findReloadStack(player, reloadRight), false);
 		if (reloadLeft != null)
@@ -406,6 +446,7 @@ public class PlayerData {
 	}
 
 	public void playerKilled() {
+		pendingGrenade = null;
 		mountingGun = null;
 		stopShooting();
 		snapshots = new PlayerSnapshot[FlansMod.numPlayerSnapshots];

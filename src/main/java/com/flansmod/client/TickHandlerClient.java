@@ -69,7 +69,7 @@ import java.util.Random;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class TickHandlerClient {
-    private static final float MAX_ALLOWED_GAMMA = 0.5F;
+    private static final float MAX_ALLOWED_GAMMA = 1F;
     public static final ResourceLocation offHand = new ResourceLocation("flansmod", "gui/offHand.png");
     public static final ResourceLocation aps = new ResourceLocation("flansmod", "gui/aps.png");
     public static final ResourceLocation tvm = new ResourceLocation("flansmod", "gui/TVM.png");
@@ -93,6 +93,7 @@ public class TickHandlerClient {
     private static final double EXPLOSION_SHAKE_RANGE_POWER = 0.75D;
     private static final float MCHELI_EXPLOSION_SHAKE_MAX_DEGREES = 12F;
     private static final float VANILLA_EXPLOSION_TINNITUS_RANGE = 10F;
+    private static net.minecraft.client.audio.ISound activeTinnitus;
     private static long shotShakeStartNanos = Long.MIN_VALUE;
     private static long shotShakeDurationNanos = SHOT_SHAKE_DURATION_NANOS;
     private static float shotShakePitchAmplitude;
@@ -190,9 +191,20 @@ public class TickHandlerClient {
                 distance, explosionSize, getExplosionScreenShakeRange(explosionSize)));
         if(distance <= VANILLA_EXPLOSION_TINNITUS_RANGE)
         {
-            Minecraft.getMinecraft().getSoundHandler().playSound(PositionedSoundRecord.func_147673_a(
+            playTinnitus(PositionedSoundRecord.func_147673_a(
                     FlansModResourceHandler.getSound("flash")));
         }
+    }
+
+    public static void playTinnitus(net.minecraft.client.audio.ISound sound) {
+        playTinnitus(Minecraft.getMinecraft().getSoundHandler(), sound);
+    }
+
+    static synchronized void playTinnitus(net.minecraft.client.audio.SoundHandler handler,
+                                          net.minecraft.client.audio.ISound sound) {
+        if (activeTinnitus != null && handler.isSoundPlaying(activeTinnitus)) return;
+        activeTinnitus = sound;
+        handler.playSound(sound);
     }
 
     private static float getExplosionScreenShakeRange(float explosionSize) {
@@ -1023,6 +1035,10 @@ public class TickHandlerClient {
                                                  double size) {
         double x = (screenWidth - size) / 2D;
         double y = (screenHeight - size) / 2D;
+        if (RenderGun.hasModelReticle(FlansModClient.currentScope)) {
+            x += RenderGun.dotReticleX * screenWidth / 2D;
+            y -= RenderGun.dotReticleY * screenHeight / 2D;
+        }
         tessellator.startDrawingQuads();
         tessellator.addVertexWithUV(x, y + size, -90D, 0D, 1D);
         tessellator.addVertexWithUV(x + size, y + size, -90D, 1D, 1D);
@@ -1158,6 +1174,13 @@ public class TickHandlerClient {
     }
 
     @SubscribeEvent
+    public void renderGrenadeHands(net.minecraftforge.client.event.RenderHandEvent event) {
+        if (ClientProxy.grenadeRenderer != null
+                && ClientProxy.grenadeRenderer.renderThrowHands(Minecraft.getMinecraft()))
+            event.setCanceled(true);
+    }
+
+    @SubscribeEvent
     public void renderWorldLast(RenderWorldLastEvent event) {
         if (ThermalScopeEffect.isRenderingScopedWorld()) {
             return;
@@ -1185,6 +1208,7 @@ public class TickHandlerClient {
     public void renderTick(TickEvent.RenderTickEvent event) {
         switch (event.phase) {
             case START:
+                RenderGun.beginReticleFrame();
                 ThermalScopeEffect.beginModelLensFrame();
                 NightVisionGogglesBrightness.beginFrame(Minecraft.getMinecraft());
                 RenderGun.smoothing = event.renderTickTime;
@@ -1248,6 +1272,7 @@ public class TickHandlerClient {
      */
     public void clientTickStart(Minecraft mc) {
         enforceGammaLimit(mc);
+        if (ClientProxy.grenadeRenderer != null) ClientProxy.grenadeRenderer.tick(mc);
         KeyInputHandler.checkLightKeyBinding(mc);
         MCHeliExplosionCompat.clientTick();
         updateMuzzleFlashLights(mc);

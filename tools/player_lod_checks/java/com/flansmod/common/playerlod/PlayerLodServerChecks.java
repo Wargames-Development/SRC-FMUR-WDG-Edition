@@ -26,7 +26,60 @@ public final class PlayerLodServerChecks {
             violations.addAll(inspect("com/flansmod/common/playerlod/" + name, null));
         if (!violations.isEmpty()) throw new AssertionError("Dedicated-server LOD references: " + violations);
         visibilityPolicy();
-        System.out.println("PASS: all five LOD server/data classes avoid client-only Minecraft members; inherited-call negative control and six visibility-policy scenarios checked.");
+        profileClassLoaderBoundary();
+        System.out.println("PASS: all five LOD server/data classes avoid client-only Minecraft members; inherited-call negative control, six visibility-policy scenarios and split-Guava profile copying checked.");
+    }
+
+    private static void profileClassLoaderBoundary() throws Exception {
+        ClassLoader split = new ClassLoader(PlayerLodServerChecks.class.getClassLoader()) {
+            @Override protected synchronized Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+                if (!name.equals("com.google.common.collect.Multimap")
+                        && !name.equals("com.flansmod.common.playerlod.PlayerLodSnapshot$Appearance")
+                        && !name.equals(ProfileCopyControl.class.getName())) return super.loadClass(name, resolve);
+                Class<?> result = findLoadedClass(name);
+                if (result == null) {
+                    try (InputStream in = getParent().getResourceAsStream(name.replace('.', '/') + ".class")) {
+                        if (in == null) throw new ClassNotFoundException(name);
+                        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+                        byte[] buffer = new byte[4096];
+                        int count;
+                        while ((count = in.read(buffer)) != -1) bytes.write(buffer, 0, count);
+                        byte[] code = bytes.toByteArray();
+                        result = defineClass(name, code, 0, code.length);
+                    } catch (java.io.IOException failure) { throw new ClassNotFoundException(name, failure); }
+                }
+                if (resolve) resolveClass(result);
+                return result;
+            }
+        };
+        split.loadClass("com.google.common.collect.Multimap");
+        com.mojang.authlib.GameProfile source = new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "Source");
+        com.mojang.authlib.GameProfile target = new com.mojang.authlib.GameProfile(source.getId(), "Target");
+        source.getProperties().put("textures", new com.mojang.authlib.properties.Property("textures", "signed", "signature"));
+        source.getProperties().put("textures", new com.mojang.authlib.properties.Property("textures", "unsigned"));
+        boolean reproduced = false;
+        try {
+            split.loadClass(ProfileCopyControl.class.getName()).getMethod("copy",
+                    source.getClass(), target.getClass()).invoke(null, source, target);
+        } catch (java.lang.reflect.InvocationTargetException failure) {
+            if (!(failure.getCause() instanceof LinkageError)) throw failure;
+            reproduced = true;
+        }
+        if (!reproduced) throw new AssertionError("Split-Guava negative control did not reproduce the login crash");
+        java.lang.reflect.Method copy = split.loadClass("com.flansmod.common.playerlod.PlayerLodSnapshot$Appearance")
+                .getDeclaredMethod("copyProfileProperties", source.getClass(), target.getClass());
+        copy.setAccessible(true);
+        copy.invoke(null, source, target);
+        if (target.getProperties().size() != 2 || !target.getProperties().equals(source.getProperties()))
+            throw new AssertionError("Profile properties/signatures changed across class loaders");
+        target.getProperties().clear();
+        if (source.getProperties().size() != 2) throw new AssertionError("Copied profile shares mutable membership");
+    }
+
+    public static final class ProfileCopyControl {
+        public static void copy(com.mojang.authlib.GameProfile source, com.mojang.authlib.GameProfile target) {
+            target.getProperties().putAll(source.getProperties());
+        }
     }
 
     private static void visibilityPolicy() throws Exception {

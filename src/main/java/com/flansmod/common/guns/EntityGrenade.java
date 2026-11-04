@@ -30,6 +30,7 @@ import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
+import cpw.mods.fml.common.registry.IThrowableEntity;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
@@ -58,13 +59,14 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 
-public class EntityGrenade extends EntityShootable implements IEntityAdditionalSpawnData, ILockable {
+public class EntityGrenade extends EntityShootable implements IEntityAdditionalSpawnData, IThrowableEntity, ILockable {
 
     public GrenadeType type;
     /**
      * The entity that threw them
      */
     public EntityLivingBase thrower;
+    private int throwerEntityId;
     /**
      * This is to avoid players grenades teamkilling after they switch team
      */
@@ -136,7 +138,11 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
         if (type.spinWhenThrown) {
             angularVelocity = new Vector3f(0F, 0F, 10F);
         }
-        if (type.throwSound != null) {
+        // The pack's grenade / <team>_grenade sounds are spoken callouts.
+        // Keep physical effects such as pin pulls, syringes and supply deployment.
+        if (type.throwSound != null && !type.throwSound.isEmpty()
+                && !type.throwSound.equalsIgnoreCase("grenade")
+                && !type.throwSound.toLowerCase(java.util.Locale.ROOT).endsWith("_grenade")) {
             if(t instanceof EntityPlayer && type.teamThrowSound && t.getTeam() != null) {
                 PacketPlaySound.sendSoundPacket(posX, posY, posZ, FlansMod.soundRange, dimension, t.getTeam().getRegisteredName().toLowerCase() + "_" + type.throwSound, type.distortSound);
             } else {
@@ -150,6 +156,17 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
     }
 
     @Override
+    public Entity getThrower() {
+        return thrower;
+    }
+
+    @Override
+    public void setThrower(Entity entity) {
+        thrower = entity instanceof EntityLivingBase ? (EntityLivingBase) entity : null;
+        if (entity != null) throwerEntityId = entity.getEntityId();
+    }
+
+    @Override
     public void onUpdate() {
         super.onUpdate();
 
@@ -159,9 +176,15 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
             return;
         }
         if (thrower == null) {
-            FlansMod.log("EntityGrenade.onUpdate() Error: Grenade thrower is null (" + this + ")");
-            setDead();
-            return;
+            if (worldObj.isRemote) {
+                // Entity tracking can deliver the grenade before its thrower.
+                setThrower(worldObj.getEntityByID(throwerEntityId));
+                if (thrower == null) return;
+            } else {
+                FlansMod.log("EntityGrenade.onUpdate() Error: Grenade thrower is null (" + this + ")");
+                setDead();
+                return;
+            }
         }
 
         if (motionTime > 0)
@@ -1041,22 +1064,17 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
     @Override
     public void readSpawnData(ByteBuf data) {
         type = GrenadeType.getGrenade(ByteBufUtils.readUTF8String(data));
-        int entityID = data.readInt();
-        Entity ent = worldObj.getEntityByID(entityID);
-        if (ent instanceof EntityLivingBase) {
-            thrower = (EntityLivingBase) ent;
-        } else {
-            FlansMod.log("Thrower is not an EntityLivingBase!");
-            if (FlansMod.DEBUG) {
-                FlansMod.log("Entity ID " + entityID);
-            }
-            thrower = null;
-        }
+        throwerEntityId = data.readInt();
+        Entity ent = worldObj.getEntityByID(throwerEntityId);
+        if (ent instanceof EntityLivingBase) setThrower(ent);
+        else if (thrower != null && thrower.getEntityId() != throwerEntityId) thrower = null;
 
         setRotation(data.readFloat(), data.readFloat());
         prevRotationYaw = rotationYaw;
         prevRotationPitch = rotationPitch;
         axes.setAngles(rotationYaw, rotationPitch, 0F);
+        if (type == null) { setDead(); return; }
+        setSize(type.hitBoxSize, type.hitBoxSize);
         if (type.spinWhenThrown)
             angularVelocity = new Vector3f(0F, 0F, 10F);
     }

@@ -11,4 +11,4 @@ Texture X400
 ModelScale 0.2
 Infrared True
 FlashlightRange 32
-FlashlightConeAngle 34
+FlashlightConeAngle 50

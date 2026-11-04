@@ -36,6 +36,7 @@ import com.flansmod.common.teams.*;
 import com.flansmod.common.tileentity.TileEntityAmbientWarSound;
 import com.flansmod.common.tools.EntityParachute;
 import com.flansmod.common.tools.ItemTool;
+import com.flansmod.common.tools.ItemHandheldFlashlight;
 import com.flansmod.common.tools.ToolType;
 import com.flansmod.common.types.EnumType;
 import com.flansmod.common.types.IGunboxDescriptionable;
@@ -210,6 +211,7 @@ public class FlansMod {
     public static ItemNightVisionGoggles nightVisionGogglesWhitePhosphor;
     public static ItemNightVisionGoggles nightVisionGogglesBlack;
     public static ItemNightVisionGoggles nightVisionGogglesWhitePhosphorBlack;
+    public static ItemHandheldFlashlight handheldFlashlight;
     public static ArrayList<BlockGunBox> gunBoxBlocks = new ArrayList<>();
     public static ArrayList<ItemBullet> bulletItems = new ArrayList<>();
     public static ArrayList<ItemGun> gunItems = new ArrayList<>();
@@ -354,6 +356,9 @@ public class FlansMod {
                 ItemNightVisionGoggles.PhosphorType.PVS14_WHITE_BLACK), "pvs14_wp_black", MODID);
         GameRegistry.registerItem(new ItemNightVisionGoggles(
                 ItemNightVisionGoggles.PhosphorType.PVS14_AMBER_BLACK), "pvs14_amber_black", MODID);
+
+        handheldFlashlight = new ItemHandheldFlashlight();
+        GameRegistry.registerItem(handheldFlashlight, "handheld_flashlight", MODID);
 
         flag = ItemCompat.setUnlocalizedName(new ItemFlagpole(), "flagpole");
         GameRegistry.registerItem(flag, "flagpole", MODID);
@@ -522,7 +527,7 @@ public class FlansMod {
         EntityRegistry.registerGlobalEntityID(EntityBullet.class, "Bullet", EntityRegistry.findGlobalUniqueEntityId());
         EntityRegistry.registerModEntity(EntityBullet.class, "Bullet", 96, this, 500, 5, false);
         EntityRegistry.registerGlobalEntityID(EntityGrenade.class, "Grenade", EntityRegistry.findGlobalUniqueEntityId());
-        EntityRegistry.registerModEntity(EntityGrenade.class, "Grenade", 100, this, 120, 100, true);
+        EntityRegistry.registerModEntity(EntityGrenade.class, "Grenade", 100, this, 120, 5, true);
         EntityRegistry.registerGlobalEntityID(EntityCLOSMissile.class, "CLOSMissile", EntityRegistry.findGlobalUniqueEntityId());
         EntityRegistry.registerModEntity(EntityCLOSMissile.class, "CLOSMissile", 107, this, 500, 2, true);
         //Register MGs and AA guns

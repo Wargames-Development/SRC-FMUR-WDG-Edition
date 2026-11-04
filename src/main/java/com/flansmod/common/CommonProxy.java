@@ -32,6 +32,8 @@ import java.util.HashMap;
 import java.util.List;
 
 public class CommonProxy {
+    public void onGrenadeThrown(EntityPlayer player, ItemStack stack) { }
+
     /**
      * Returns the list of content pack files, and on the client, adds the content pack resources and models to the classpath
      *

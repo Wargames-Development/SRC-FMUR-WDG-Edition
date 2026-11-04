@@ -2,7 +2,6 @@ package com.flansmod.client.model;
 
 import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.common.guns.EntityAAGun;
-import com.flansmod.utils.RenderUtils;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
@@ -44,13 +43,6 @@ public class RenderAAGun extends Render
 		}
 		GL11.glPopMatrix();
 
-		if (aa.type != null && aa.placer != null) {
-			if(!aa.placer.isOnSameTeam(renderManager.livingPlayer)) {
-				RenderUtils.renderNameTag(aa, d, d1 - 0.5 , d2, "§c" + aa.type.name, 8, this.renderManager);
-			} else {
-				RenderUtils.renderNameTag(aa, d, d1 - 0.5 , d2, aa.type.name, 64, this.renderManager);
-			}
-		}
 	}
 
 	@Override

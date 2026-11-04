@@ -137,13 +137,20 @@ public final class PlayerLodSnapshot {
 
         public Appearance(EntityPlayerMP player) {
             profile = new GameProfile(player.getUniqueID(), player.getCommandSenderName());
-            profile.getProperties().putAll(player.getGameProfile().getProperties());
+            copyProfileProperties(player.getGameProfile(), profile);
             for (int i = 0; i < 5; i++) equipment[i] = copy(player.getEquipmentInSlot(i));
             PlayerData data = PlayerHandler.getPlayerData(player);
             if (data.offHandGunSlot > 0 && data.offHandGunSlot <= player.inventory.getSizeInventory())
                 equipment[5] = copy(player.inventory.getStackInSlot(data.offHandGunSlot - 1));
             equipment[6] = copy(PlayerEquipmentInventory.getStack(player, 0));
             equipment[7] = copy(PlayerEquipmentInventory.getStack(player, 1));
+        }
+
+        private static void copyProfileProperties(GameProfile source, GameProfile target) {
+            // Authlib and mod code can see different Guava classes in Forge's dev
+            // launcher. Cross that boundary through JDK collections, not Multimap.
+            for (java.util.Map.Entry<String, Property> entry : source.getProperties().entries())
+                target.getProperties().put(entry.getKey(), entry.getValue());
         }
 
         private Appearance(ByteBuf in, UUID uuid) {

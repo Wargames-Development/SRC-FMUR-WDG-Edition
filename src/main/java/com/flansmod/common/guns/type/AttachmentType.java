@@ -36,7 +36,7 @@ public class AttachmentType extends PaintableType implements IScope
 	/** Flashlight strength between 0 and 15 */
 	public int flashlightStrength = 12;
 	/** Cone half-angle in degrees; rendered without modifying world lighting. */
-	public float flashlightConeAngle = 34F;
+	public float flashlightConeAngle = 50F;
 	public float laserRange = 128F;
 	public float laserBrightness = 2F;
 	public int laserBeams = 1;

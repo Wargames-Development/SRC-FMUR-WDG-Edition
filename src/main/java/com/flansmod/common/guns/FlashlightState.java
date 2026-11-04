@@ -3,6 +3,7 @@ package com.flansmod.common.guns;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
+import com.flansmod.common.tools.ItemHandheldFlashlight;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 
@@ -14,6 +15,7 @@ public final class FlashlightState {
     }
 
     public static boolean hasFlashlight(ItemStack stack) {
+        if (stack != null && stack.getItem() instanceof ItemHandheldFlashlight) return true;
         if (stack == null || !(stack.getItem() instanceof ItemGun)) {
             return false;
         }
@@ -34,7 +36,7 @@ public final class FlashlightState {
     }
 
     public static boolean hasEnabledLaser(ItemStack stack) {
-        if (!isEnabled(stack)) return false;
+        if (!isEnabled(stack) || !(stack.getItem() instanceof ItemGun)) return false;
         GunType gunType = ((ItemGun) stack.getItem()).type;
         for (AttachmentType attachment : gunType.getCurrentAttachments(stack)) {
             if (attachment != null && attachment.isLaserPointer) return true;

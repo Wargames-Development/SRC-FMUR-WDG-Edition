@@ -38,7 +38,9 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData, 
     private boolean isDown;
     private final ItemStack[] storedInventory = new ItemStack[54];
     private boolean inventoryReleased;
-    private int shotCount;
+    public static final float MAX_HEALTH = 20F;
+    private float lastDamage;
+    public int hurtTime;
     private long expiresAtMillis;
 
     public EntityCorpse(World world) {
@@ -80,20 +82,32 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData, 
     @Override
     protected void entityInit() {
         dataWatcher.addObject(2, (byte) 0);
+        for (int slot = 0; slot < 4; slot++) dataWatcher.addObjectByDataType(10 + slot, 5);
+        dataWatcher.addObject(14, Float.valueOf(MAX_HEALTH));
     }
 
     @Override
     public void onUpdate() {
         super.onUpdate();
+        if (hurtTime > 0) hurtTime--;
+        if (!worldObj.isRemote && hurtResistantTime > 0) hurtResistantTime--;
 
-        if (!worldObj.isRemote && System.currentTimeMillis() >= expiresAtMillis) {
+        if (!worldObj.isRemote) {
+            for (int slot = 0; slot < 4; slot++) {
+                ItemStack armour = getStackInSlot(36 + slot);
+                if (!ItemStack.areItemStacksEqual(armour, dataWatcher.getWatchableObjectItemStack(10 + slot)))
+                    dataWatcher.updateObject(10 + slot, ItemStack.copyItemStack(armour));
+            }
+        }
+
+        if (!worldObj.isRemote && (getHealth() <= 0F || System.currentTimeMillis() >= expiresAtMillis)) {
             expireAndDropInventory();
             return;
         }
 
-        motionY -= 9.81D / 400D;
-        motionX *= 0.5D;
-        motionZ *= 0.5D;
+        // Corpses can fall, but damage/explosion impulses must not launch them.
+        motionY = Math.min(0D, motionY) - 9.81D / 400D;
+        motionX = motionZ = 0D;
         moveEntity(motionX, motionY, motionZ);
     }
 
@@ -120,7 +134,9 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData, 
             if (stack != null && slot >= 0 && slot < storedInventory.length) storedInventory[slot] = stack;
         }
         inventoryReleased = nbt.getBoolean("InventoryReleased");
-        shotCount = nbt.getInteger("ShotCount");
+        float health = nbt.hasKey("Health") ? nbt.getFloat("Health")
+                : MAX_HEALTH * (1F - Math.min(3, Math.max(0, nbt.getInteger("ShotCount"))) / 3F);
+        dataWatcher.updateObject(14, Float.isFinite(health) ? Math.max(0F, Math.min(MAX_HEALTH, health)) : MAX_HEALTH);
         expiresAtMillis = nbt.hasKey("ExpiresAtMillis") ? nbt.getLong("ExpiresAtMillis")
                 : System.currentTimeMillis() + Math.max(1, FlansMod.corpseLifetimeSeconds) * 1000L;
 
@@ -161,7 +177,7 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData, 
         }
         nbt.setTag("StoredInventory", inventoryTags);
         nbt.setBoolean("InventoryReleased", inventoryReleased);
-        nbt.setInteger("ShotCount", shotCount);
+        nbt.setFloat("Health", getHealth());
         nbt.setLong("ExpiresAtMillis", expiresAtMillis);
 
         nbt.setFloat("HeadRotationX", headRotationX);
@@ -198,10 +214,39 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData, 
 
     @Override
     public boolean attackEntityFrom(DamageSource source, float amount) {
-        if (worldObj.isRemote || isDead || amount <= 0.0F || source == null
-                || !(source.getSourceOfDamage() instanceof com.flansmod.common.guns.EntityBullet)) return false;
-        if (++shotCount >= 3) expireAndDropInventory();
+        if (worldObj.isRemote || isDead || !Float.isFinite(amount) || amount <= 0F
+                || source == null || isEntityInvulnerable()) return false;
+        float damage = amount;
+        boolean freshHit = hurtResistantTime <= 10;
+        if (!freshHit) {
+            if (amount <= lastDamage) return false;
+            damage -= lastDamage;
+        } else {
+            hurtResistantTime = 20;
+            hurtTime = 10;
+            setBeenAttacked();
+            worldObj.setEntityState(this, (byte) 2);
+        }
+        lastDamage = amount;
+        dataWatcher.updateObject(14, Math.max(0F, getHealth() - damage));
+        if (getHealth() <= 0F) expireAndDropInventory();
         return true;
+    }
+
+    public float getHealth() {
+        return dataWatcher.getWatchableObjectFloat(14);
+    }
+
+    @Override
+    public void addVelocity(double x, double y, double z) {
+        // Keep external entity knockback from moving the corpse.
+    }
+
+    @Override
+    @cpw.mods.fml.relauncher.SideOnly(cpw.mods.fml.relauncher.Side.CLIENT)
+    public void handleHealthUpdate(byte state) {
+        if (state == 2) hurtTime = 10;
+        else super.handleHealthUpdate(state);
     }
 
     @Override
@@ -319,6 +364,11 @@ public class EntityCorpse extends Entity implements IEntityAdditionalSpawnData, 
         rightLegRotationY = additionalData.readFloat();
         rightLegRotationZ = additionalData.readFloat();
         isDown = additionalData.readBoolean();
+    }
+
+    public ItemStack getCorpseArmour(int slot) {
+        if (slot < 0 || slot >= 4) return null;
+        return worldObj.isRemote ? dataWatcher.getWatchableObjectItemStack(10 + slot) : getStackInSlot(36 + slot);
     }
 
     public EntityPlayer getOwner() {

@@ -11,6 +11,14 @@
     "category": "player",
     "sounds": ["flansmod:fireswitch"]
   },
+  "grenade_pinpull": {
+    "category": "player",
+    "sounds": ["flansmod:grenade_pinpull"]
+  },
+  "grenade_throw": {
+    "category": "player",
+    "sounds": ["flansmod:grenade_throw"]
+  },
   "target_hit": {
     "category": "player",
     "sounds": ["flansmod:target_hit"]

@@ -1,6 +1,7 @@
 package com.flansmod.common.network;
 
 import com.flansmod.client.AmbientWarSoundManager;
+import com.flansmod.client.TickHandlerClient;
 import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.guns.type.BulletType;
@@ -265,7 +266,9 @@ public class PacketPlaySound extends PacketBase
 				&& !acceptExplosionSound(posX, posY, posZ))
 			return;
 		float playbackVolume = volume > 0F ? volume : silenced ? 5F : 10F;
-		FMLClientHandler.instance().getClient().getSoundHandler().playSound(new PositionedSoundRecord(FlansModResourceHandler.getSound(sound), playbackVolume, pitch * (distort ? 1.0F / (rand.nextFloat() * 0.4F + 0.8F) : 1.0F) * (silenced ? 2F : 1F), posX, posY, posZ));
+		PositionedSoundRecord record = new PositionedSoundRecord(FlansModResourceHandler.getSound(sound), playbackVolume, pitch * (distort ? 1.0F / (rand.nextFloat() * 0.4F + 0.8F) : 1.0F) * (silenced ? 2F : 1F), posX, posY, posZ);
+		if ("flash".equalsIgnoreCase(sound)) TickHandlerClient.playTinnitus(record);
+		else FMLClientHandler.instance().getClient().getSoundHandler().playSound(record);
 	}
 
 }

@@ -2,6 +2,7 @@ package com.flansmod.client;
 
 import com.flansmod.common.FlansMod;
 import java.nio.FloatBuffer;
+import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import net.minecraft.util.Vec3;
 import net.minecraft.util.AxisAlignedBB;
@@ -22,9 +23,11 @@ final class FlashlightProjection {
             + "uniform sampler2D depthMap, shadowMap; uniform mat4 inverseView;\n"
             + "uniform vec4 viewport; uniform vec3 origin, forward, right, up;\n"
             + "uniform float spread, range, strength, checkShadow;\n"
+            + "uniform vec2 depthTransform;\n"
             + "uniform float laser, spotRadius, brightness; uniform vec3 boundsMin, boundsMax, laserColor;\n"
             + "void main(){ vec2 uv=(gl_FragCoord.xy-viewport.xy)/viewport.zw;\n"
             + " float depth=texture2D(depthMap,uv).r; if(depth>=0.999999) discard;\n"
+            + " gl_FragDepth=depthTransform.x*depth+depthTransform.y;\n"
             + " vec4 p=inverseView*vec4(uv*2.0-1.0,depth*2.0-1.0,1.0);\n"
             + " vec3 delta=p.xyz/p.w-origin; float along=dot(delta,forward);\n"
             + " if(laser>0.5){ vec3 surface=p.xyz/p.w;\n"
@@ -46,11 +49,30 @@ final class FlashlightProjection {
             + " gl_FragColor=vec4(vec3(1.0,0.96,0.85),light); }\n";
     private static final IntBuffer VIEWPORT = BufferUtils.createIntBuffer(16);
     private static final FloatBuffer MATRIX = BufferUtils.createFloatBuffer(16);
-    private static final FloatBuffer SHADOW = BufferUtils.createFloatBuffer(81);
+    // Angelica redirects glTexSubImage2D but has no FloatBuffer overload.
+    // Keep float precision while using its supported ByteBuffer entry point.
+    private static final ByteBuffer SHADOW = BufferUtils.createByteBuffer(81 * 4);
+    private static final FloatBuffer SHADOW_FLOATS = SHADOW.asFloatBuffer();
     private static int program, depthTexture, shadowTexture, width, height;
     private static boolean failed, ready;
+    private static float depthScale = 1F, depthBias;
+
+    static void setDepthTransform(float scale, float bias) {
+        depthScale = scale;
+        depthBias = bias;
+    }
+
+    static float transformDepth(float ndc) {
+        return ndc * depthScale + depthBias;
+    }
+
+    private static void depthUniform() {
+        GL20.glUniform2f(GL20.glGetUniformLocation(program, "depthTransform"),
+                depthScale, (1F + depthBias - depthScale) * 0.5F);
+    }
 
     static void begin(Matrix4f clip) {
+        setDepthTransform(1F, 0F);
         ready = false;
         if (failed || !GLContext.getCapabilities().OpenGL20) return;
         int oldProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
@@ -81,7 +103,7 @@ final class FlashlightProjection {
             GL20.glUniform1i(GL20.glGetUniformLocation(program, "depthMap"), 0);
             GL20.glUniform1i(GL20.glGetUniformLocation(program, "shadowMap"), 1);
             ready = true;
-        } catch (RuntimeException failure) {
+        } catch (RuntimeException | LinkageError failure) {
             failed = true;
             FlansMod.logger.error("Flashlight depth projection unavailable; using surface mesh.", failure);
         } finally {
@@ -97,10 +119,13 @@ final class FlashlightProjection {
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         try {
             GL20.glUseProgram(program);
+            depthUniform();
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, depthTexture);
             if (shadow) {
-                SHADOW.clear(); SHADOW.put(depths); SHADOW.flip();
+                SHADOW.clear();
+                SHADOW_FLOATS.clear();
+                SHADOW_FLOATS.put(depths);
                 GL13.glActiveTexture(GL13.GL_TEXTURE1);
                 GL11.glBindTexture(GL11.GL_TEXTURE_2D, shadowTexture);
                 GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0, 9, 9, GL11.GL_LUMINANCE, GL11.GL_FLOAT, SHADOW);
@@ -109,7 +134,10 @@ final class FlashlightProjection {
             scalar("spread", spread); scalar("range", range); scalar("strength", strength);
             scalar("laser", 0F);
             scalar("checkShadow", shadow ? 1F : 0F);
-            GL11.glDisable(GL11.GL_DEPTH_TEST);
+            // The saved depth describes the world before the hand pass. Reject
+            // pixels now covered by the gun instead of lighting its silhouette.
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glDepthFunc(GL11.GL_LEQUAL);
             GL11.glDepthMask(false);
             GL11.glDisable(GL11.GL_ALPHA_TEST);
             GL11.glDisable(GL11.GL_CULL_FACE);
@@ -121,6 +149,11 @@ final class FlashlightProjection {
             GL11.glVertex2f(1F, 1F); GL11.glVertex2f(-1F, 1F);
             GL11.glEnd();
             return true;
+        } catch (RuntimeException | LinkageError failure) {
+            failed = true;
+            ready = false;
+            FlansMod.logger.error("Flashlight depth projection unavailable; using surface mesh.", failure);
+            return false;
         } finally {
             GL20.glUseProgram(previous);
             GL11.glPopAttrib();
@@ -151,6 +184,7 @@ final class FlashlightProjection {
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         try {
             GL20.glUseProgram(program);
+            depthUniform();
             GL13.glActiveTexture(GL13.GL_TEXTURE0); GL11.glBindTexture(GL11.GL_TEXTURE_2D, depthTexture);
             vector("origin", origin); vector("forward", direction);
             vector("boundsMin", Vec3.createVectorHelper(bounds.minX, bounds.minY, bounds.minZ));
@@ -159,7 +193,7 @@ final class FlashlightProjection {
             scalar("laser", 1F); scalar("spotRadius", radius); scalar("brightness", brightness);
             GL11.glEnable(GL11.GL_SCISSOR_TEST);
             GL11.glScissor(VIEWPORT.get(0) + x, VIEWPORT.get(1) + y, w, h);
-            GL11.glDisable(GL11.GL_DEPTH_TEST); GL11.glDepthMask(false);
+            GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDepthFunc(GL11.GL_LEQUAL); GL11.glDepthMask(false);
             GL11.glDisable(GL11.GL_ALPHA_TEST); GL11.glDisable(GL11.GL_CULL_FACE);
             GL11.glDisable(GL11.GL_POLYGON_OFFSET_FILL);
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE);
@@ -167,6 +201,11 @@ final class FlashlightProjection {
             GL11.glVertex2f(-1F, -1F); GL11.glVertex2f(1F, -1F);
             GL11.glVertex2f(1F, 1F); GL11.glVertex2f(-1F, 1F); GL11.glEnd();
             return true;
+        } catch (RuntimeException | LinkageError failure) {
+            failed = true;
+            ready = false;
+            FlansMod.logger.error("Laser depth projection unavailable; using surface mesh.", failure);
+            return false;
         } finally {
             GL20.glUseProgram(previous); GL11.glPopAttrib();
         }

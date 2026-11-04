@@ -11,9 +11,8 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.ChatComponentText;
 
-/** Synchronises a held gun's flashlight state to every client in the dimension. */
+/** Synchronises a held item's flashlight state to every client in the dimension. */
 public class PacketToggleFlashlight extends PacketBase {
     private int playerEntityId = -1;
     private boolean enabled;
@@ -46,12 +45,16 @@ public class PacketToggleFlashlight extends PacketBase {
 
     @Override
     public void handleServerSide(EntityPlayerMP player) {
-        ItemStack heldGun = player.getCurrentEquippedItem();
-        if (!FlashlightState.hasFlashlight(heldGun))
+        ItemStack heldItem = player.getCurrentEquippedItem();
+        if (!player.isEntityAlive() || !FlashlightState.hasFlashlight(heldItem))
             return;
 
         boolean authoritativeState = enabled;
-        FlashlightState.setEnabled(heldGun, authoritativeState);
+        if (FlashlightState.isEnabled(heldItem) == authoritativeState) return;
+        FlashlightState.setEnabled(heldItem, authoritativeState);
+        FlansMod.getPacketHandler().sendToAllAround(new PacketPlaySound(
+                player.posX, player.posY, player.posZ, "fireswitch", false, false, 1.15F, 0.6F),
+                player.posX, player.posY, player.posZ, 12F, player.dimension);
         player.inventory.markDirty();
         player.inventoryContainer.detectAndSendChanges();
         FlansMod.getPacketHandler().sendToDimension(
@@ -64,15 +67,13 @@ public class PacketToggleFlashlight extends PacketBase {
     public void handleClientSide(EntityPlayer clientPlayer) {
         Entity entity = clientPlayer.worldObj.getEntityByID(playerEntityId);
         if (entity instanceof EntityPlayer) {
-            ItemStack heldGun = ((EntityPlayer)entity).getCurrentEquippedItem();
-            if (heldGun != null) {
-                FlashlightState.setEnabled(heldGun, enabled);
+            ItemStack heldItem = ((EntityPlayer)entity).getCurrentEquippedItem();
+            if (heldItem != null) {
+                FlashlightState.setEnabled(heldItem, enabled);
             }
         }
         if (playerEntityId == clientPlayer.getEntityId()) {
             FlansModClient.isFlashLight = enabled;
-            clientPlayer.addChatComponentMessage(new ChatComponentText(
-                    "Flashlight / laser: " + (enabled ? "ON" : "OFF")));
         }
     }
 }

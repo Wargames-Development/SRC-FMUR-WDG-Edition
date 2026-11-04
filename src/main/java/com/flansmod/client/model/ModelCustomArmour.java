@@ -32,7 +32,7 @@ public class ModelCustomArmour extends ModelBiped {
         try {
             GL11.glScalef(type.modelScale, type.modelScale, type.modelScale);
             isSneak = entity.isSneaking();
-            ItemStack itemstack = ((EntityLivingBase) entity).getEquipmentInSlot(0);
+            ItemStack itemstack = entity instanceof EntityLivingBase ? ((EntityLivingBase) entity).getEquipmentInSlot(0) : null;
             heldItemRight = itemstack != null ? 1 : 0;
 
             aimedBow = false;
@@ -72,6 +72,13 @@ public class ModelCustomArmour extends ModelBiped {
             ModelRendererTurbo.endRenderBatch();
             GL11.glPopMatrix();
         }
+    }
+
+    @Override
+    public void setRotationAngles(float limb, float amount, float age, float yaw, float pitch, float scale, Entity entity) {
+        super.setRotationAngles(limb, amount, age, yaw, pitch, scale, entity);
+        if (entity instanceof com.flansmod.common.mob.EntityCorpse)
+            com.flansmod.common.mob.RenderCorpse.applyPose(this, (com.flansmod.common.mob.EntityCorpse) entity);
     }
 
     public void render(ModelRendererTurbo[] models, ModelRenderer bodyPart, float f5, float scale) {

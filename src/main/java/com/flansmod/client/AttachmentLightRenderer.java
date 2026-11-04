@@ -3,7 +3,9 @@ package com.flansmod.client;
 import com.flansmod.common.guns.FlashlightState;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.type.AttachmentType;
+import com.flansmod.common.tools.ItemHandheldFlashlight;
 import com.flansmod.client.model.ModelAttachment;
+import com.flansmod.client.model.RenderHandheldFlashlight;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.util.Map;
@@ -47,11 +49,13 @@ public final class AttachmentLightRenderer {
     private static final Matrix4f WORLD_CLIP = new Matrix4f();
     private static final Matrix4f WORLD_PROJECTION = new Matrix4f();
     private static final Map<AttachmentType, Vec3> HAND_ORIGINS = new IdentityHashMap<>();
-    private static final Map<EntityPlayer, Emitter> EMITTERS = new WeakHashMap<>();
+    private static final Map<EntityPlayer, Map<AttachmentType, Emitter>> EMITTERS = new WeakHashMap<>();
     private static Vec3 cameraPosition;
+    private static Vec3 handheldEyeOrigin;
     private static World renderedWorld;
     private static boolean projectionPrepared;
     private static float renderPartial;
+    private static boolean nightVisionActive;
 
     private AttachmentLightRenderer() {
     }
@@ -62,6 +66,7 @@ public final class AttachmentLightRenderer {
         if (mc.theWorld == null || mc.thePlayer == null || camera == null) return;
         if (renderedWorld != mc.theWorld) { EMITTERS.clear(); renderedWorld = mc.theWorld; }
         HAND_ORIGINS.clear();
+        handheldEyeOrigin = null;
         renderPartial = event.partialTicks;
         projectionPrepared = false;
         cameraPosition = Vec3.createVectorHelper(
@@ -74,6 +79,7 @@ public final class AttachmentLightRenderer {
         boolean nightVision = NightVisionGogglesEffect.getIntensity(mc, event.partialTicks) > 0.99F
                 || mc.thePlayer.isPotionActive(Potion.nightVision)
                 || FlansModClient.currentScope != null && hasNightVisionScope(mc.thePlayer);
+        nightVisionActive = nightVision;
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         GL11.glPushMatrix();
         try {
@@ -119,6 +125,7 @@ public final class AttachmentLightRenderer {
     }
 
     private static int renderPlayer(EntityPlayer player, float partial, boolean nightVision, int budget) {
+        Minecraft mc = Minecraft.getMinecraft();
         ItemStack stack = player.getCurrentEquippedItem();
         if (player.isDead || !FlashlightState.isEnabled(stack)) return 0;
         // Forge 1.7.10 uses different default eye heights for local, remote and server players.
@@ -131,11 +138,39 @@ public final class AttachmentLightRenderer {
         double yaw = (player.prevRotationYaw + (player.rotationYaw - player.prevRotationYaw) * partial) * Math.PI / 180D;
         Vec3 right = Vec3.createVectorHelper(Math.cos(yaw), 0D, Math.sin(yaw));
         Vec3 up = forward.crossProduct(right).normalize();
+        if (stack.getItem() instanceof ItemHandheldFlashlight) {
+            if (budget <= 0) return 0;
+            if (player == mc.thePlayer && mc.gameSettings.thirdPersonView == 0) {
+                handheldEyeOrigin = origin;
+                prepareProjection();
+                return 1;
+            }
+            Vec3 muzzle = origin.addVector(
+                    right.xCoord * RenderHandheldFlashlight.HAND_X + forward.xCoord * RenderHandheldFlashlight.EMITTER_FORWARD + up.xCoord * RenderHandheldFlashlight.EMITTER_UP,
+                    right.yCoord * RenderHandheldFlashlight.HAND_X + forward.yCoord * RenderHandheldFlashlight.EMITTER_FORWARD + up.yCoord * RenderHandheldFlashlight.EMITTER_UP,
+                    right.zCoord * RenderHandheldFlashlight.HAND_X + forward.zCoord * RenderHandheldFlashlight.EMITTER_FORWARD + up.zCoord * RenderHandheldFlashlight.EMITTER_UP);
+            Emitter emitter = emitter(player, null);
+            if (emitter != null && emitter.stack == stack && System.nanoTime() - emitter.time <= 200000000L) {
+                Matrix4f inverse = Matrix4f.invert(WORLD_CLIP, null);
+                if (inverse != null) {
+                    Vec3 start = unproject(inverse, emitter.clip), tip = unproject(inverse, emitter.forwardClip);
+                    if (start != null && tip != null) { muzzle = start; forward = directionBetween(start, tip); }
+                }
+            }
+            if (traceBetween(player.worldObj, origin, muzzle) != null) return 1;
+            right = Vec3.createVectorHelper(forward.zCoord, 0D, -forward.xCoord);
+            if (right.lengthVector() < 0.00001D) right = Vec3.createVectorHelper(1D, 0D, 0D);
+            right = right.normalize(); up = forward.crossProduct(right).normalize();
+            drawFlashlight(player, muzzle, forward, right, up, 32F, 50F, 15);
+            return 1;
+        }
         int lights = 0;
         for (AttachmentType attachment : ((ItemGun) stack.getItem()).type.getCurrentAttachments(stack)) {
             if (attachment == null || attachment.infrared && !nightVision) continue;
+            boolean handModel = attachment.model != null && player == mc.thePlayer && mc.gameSettings.thirdPersonView == 0;
             if (attachment.isLaserPointer) {
-                int beams = attachment.laserBeams == 3 ? 3 : 1;
+                // The hand pass expands tri-beams around the captured attachment socket.
+                int beams = !handModel && attachment.laserBeams == 3 ? 3 : 1;
                 for (int beam = 0; beam < beams; beam++) {
                     Vec3 beamOrigin = beams == 1 ? origin : triangleOrigin(origin, right, up, beam,
                             bounded(attachment.laserSpacing, 0.08F, 0.02F, 0.25F));
@@ -143,7 +178,25 @@ public final class AttachmentLightRenderer {
                 }
             }
             if (attachment.flashlight && lights < budget) {
-                drawFlashlight(player, attachment, origin, forward, right, up);
+                if (handModel) {
+                    HAND_ORIGINS.put(attachment, origin);
+                    prepareProjection();
+                } else {
+                    Vec3 muzzle = origin, direction = forward;
+                    Emitter emitter = emitter(player, attachment);
+                    if (attachment.model != null && emitter != null && emitter.attachment == attachment
+                            && emitter.stack == stack && System.nanoTime() - emitter.time <= 200000000L) {
+                        Matrix4f inverse = Matrix4f.invert(WORLD_CLIP, null);
+                        if (inverse != null) {
+                            Vec3 start = unproject(inverse, emitter.clip), tip = unproject(inverse, emitter.forwardClip);
+                            if (start != null && tip != null) {
+                                muzzle = start;
+                                direction = laserDirection(start, origin, forward, directionBetween(start, tip), emitter.pose);
+                            }
+                        }
+                    }
+                    drawPosedFlashlight(player, attachment, muzzle, direction);
+                }
                 lights++;
             }
         }
@@ -205,11 +258,13 @@ public final class AttachmentLightRenderer {
     }
 
     private static void drawLaser(EntityPlayer player, AttachmentType light, Vec3 origin, Vec3 forward, Vec3 right) {
+        if (light.infrared && !nightVisionActive) return;
         float range = bounded(light.laserRange, 128F, 1F, 128F);
         float r = bounded(light.laserRed, 1F, 0F, 1F);
         float g = bounded(light.laserGreen, 0F, 0F, 1F);
         float b = bounded(light.laserBlue, 0F, 0F, 1F);
-        boolean socket = light.infrared && light.model != null && light.model.laserEmitter != null;
+        // Visible and IR lasers share the gun pose; NV only controls beam visibility.
+        boolean socket = light.model != null;
         Minecraft mc = Minecraft.getMinecraft();
         if (socket && player == mc.thePlayer && mc.gameSettings.thirdPersonView == 0) {
             HAND_ORIGINS.put(light, origin);
@@ -220,7 +275,7 @@ public final class AttachmentLightRenderer {
                 forward.yCoord * 0.45D - 0.20D, forward.zCoord * 0.45D + right.zCoord * 0.22D);
         Vec3 direction = forward;
         if (socket) {
-            Emitter emitter = EMITTERS.get(player);
+            Emitter emitter = emitter(player, light);
             if (emitter == null || emitter.attachment != light || emitter.stack != player.getHeldItem()
                     || System.nanoTime() - emitter.time > 200000000L) return;
             Matrix4f inverse = Matrix4f.invert(WORLD_CLIP, null);
@@ -235,7 +290,7 @@ public final class AttachmentLightRenderer {
         MovingObjectPosition hit = traceLaser(player.worldObj, player, rayOrigin,
                 rayOrigin.addVector(direction.xCoord * range, direction.yCoord * range, direction.zCoord * range), renderPartial);
         drawSpot(light, hit, rayOrigin, direction, r, g, b);
-        if (light.infrared) {
+        if (nightVisionActive) {
             // Let scene depth stop the beam on actual skin, including gaps between animated limbs.
             Vec3 end = rayOrigin.addVector(direction.xCoord * range, direction.yCoord * range, direction.zCoord * range);
             MovingObjectPosition obstruction = traceBetween(player.worldObj, muzzle, end);
@@ -344,10 +399,25 @@ public final class AttachmentLightRenderer {
                 hit.hitVec.zCoord + NZ[side] * 0.003D + (side < 2 ? v : side >= 4 ? u : 0D));
     }
 
+    private static void drawPosedFlashlight(EntityPlayer player, AttachmentType light, Vec3 origin, Vec3 forward) {
+        if (light != null && light.infrared && !nightVisionActive) return;
+        Vec3 right = Vec3.createVectorHelper(forward.zCoord, 0D, -forward.xCoord);
+        if (right.lengthVector() < 0.00001D) right = Vec3.createVectorHelper(1D, 0D, 0D);
+        right = right.normalize();
+        if (light == null) drawFlashlight(player, origin, forward, right, forward.crossProduct(right).normalize(), 32F, 50F, 15);
+        else drawFlashlight(player, light, origin, forward, right, forward.crossProduct(right).normalize());
+    }
+
     private static void drawFlashlight(EntityPlayer player, AttachmentType light, Vec3 origin,
                                       Vec3 forward, Vec3 right, Vec3 up) {
-        float range = bounded(light.flashlightRange, 10F, 1F, 64F);
-        double spread = Math.tan(Math.toRadians(bounded(light.flashlightConeAngle, 34F, 3F, 40F)));
+        drawFlashlight(player, origin, forward, right, up, light.flashlightRange,
+                light.flashlightConeAngle, light.flashlightStrength);
+    }
+
+    private static void drawFlashlight(EntityPlayer player, Vec3 origin, Vec3 forward, Vec3 right, Vec3 up,
+                                       float lightRange, float angle, int strength) {
+        float range = bounded(lightRange, 10F, 1F, 64F);
+        double spread = Math.tan(Math.toRadians(bounded(angle, 50F, 3F, 65F)));
         for (int y = 0; y < GRID; y++) {
             for (int x = 0; x < GRID; x++) {
                 int index = y * GRID + x;
@@ -369,7 +439,7 @@ public final class AttachmentLightRenderer {
                     double rangeFade = Math.min(1D, Math.max(0D, (range - distance) / (range * 0.2D)));
                     ALPHA[index] = (float) ((1D - Math.min(1D, radiusSq)) * (1D - radiusSq)
                             * rangeFade / (1D + distance * distance / 225D) * Math.sqrt(incidence))
-                            * Math.max(0, Math.min(15, light.flashlightStrength)) / 15F;
+                            * Math.max(0, Math.min(15, strength)) / 15F;
                 }
             }
         }
@@ -380,7 +450,7 @@ public final class AttachmentLightRenderer {
         Vec3 relativeOrigin = Vec3.createVectorHelper(origin.xCoord - cameraPosition.xCoord,
                 origin.yCoord - cameraPosition.yCoord, origin.zCoord - cameraPosition.zCoord);
         if (FlashlightProjection.draw(relativeOrigin, forward, right, up, (float) spread, range,
-                Math.max(0, Math.min(15, light.flashlightStrength)) / 15F, DEPTHS, needsShadow)) return;
+                Math.max(0, Math.min(15, strength)) / 15F, DEPTHS, needsShadow)) return;
         Tessellator tess = Tessellator.instance;
         tess.startDrawing(GL11.GL_TRIANGLES);
         tess.setBrightness(15728880);
@@ -424,22 +494,53 @@ public final class AttachmentLightRenderer {
         Matrix4f result = new Matrix4f(); result.load(MATRIX_BUFFER); return result;
     }
 
+    /** Called at the handheld OBJ's complete transform, including bobbing and model scale. */
+    public static void renderHandheldEmitter(EntityPlayer player, boolean firstPerson) {
+        ItemStack held = player.getHeldItem();
+        if (held == null || !(held.getItem() instanceof ItemHandheldFlashlight) || !FlashlightState.isEnabled(held)
+                || ThermalScopeEffect.isRenderingScopedWorld()) return;
+        Matrix4f view = matrix(GL11.GL_MODELVIEW_MATRIX), projection = matrix(GL11.GL_PROJECTION_MATRIX);
+        // The supplied model's lens centre is (0, .125, -.625), facing -Z.
+        Vector4f eye = Matrix4f.transform(view, new Vector4f(0F, 0.125F, -0.625F, 1F), null);
+        Vector4f tipEye = Matrix4f.transform(view, new Vector4f(0F, 0.125F, -1.625F, 1F), null);
+        if (!firstPerson) {
+            Map<AttachmentType, Emitter> emitters = EMITTERS.get(player);
+            if (emitters == null) { emitters = new IdentityHashMap<>(); EMITTERS.put(player, emitters); }
+            emitters.put(null, new Emitter(null, held, Matrix4f.transform(projection, eye, null),
+                    Matrix4f.transform(projection, tipEye, null), 1F));
+            return;
+        }
+        if (handheldEyeOrigin == null || cameraPosition == null || renderedWorld != player.worldObj) return;
+        Matrix4f inverse = Matrix4f.invert(WORLD_CLIP, null);
+        Vector4f start = handClip(eye, projection), tip = handClip(tipEye, projection);
+        if (inverse == null || start == null || tip == null || start.w <= 0.05F) return;
+        Vec3 muzzle = unproject(inverse, start), end = unproject(inverse, tip);
+        if (muzzle == null || end == null || traceBetween(player.worldObj, handheldEyeOrigin, muzzle) != null) return;
+        drawHandFlashlight(player, null, muzzle, directionBetween(muzzle, end));
+    }
+
     /** Called inside the attachment's complete pose/scale transform, before its housing draws. */
     public static void renderEmitter(AttachmentType attachment, ModelAttachment model, ItemStack gun,
                                      EntityLivingBase owner, float scale, boolean firstPerson, float pose, float partial) {
-        if (!(owner instanceof EntityPlayer) || model.laserEmitter == null || !attachment.infrared
-                || !attachment.isLaserPointer || !FlashlightState.isEnabled(gun)
+        if (!(owner instanceof EntityPlayer) || attachment.infrared && !nightVisionActive
+                || !attachment.isLaserPointer && !attachment.flashlight || !FlashlightState.isEnabled(gun)
                 || gun != ((EntityPlayer) owner).getHeldItem()
                 || ThermalScopeEffect.isRenderingScopedWorld()) return;
         Matrix4f view = matrix(GL11.GL_MODELVIEW_MATRIX);
         Matrix4f projection = matrix(GL11.GL_PROJECTION_MATRIX);
-        Vector4f socket = new Vector4f(model.laserEmitter.x * scale, model.laserEmitter.y * scale,
-                model.laserEmitter.z * scale, 1F);
+        Vector4f socket = model.laserEmitter == null ? new Vector4f(0F, 0F, 0F, 1F)
+                : new Vector4f(model.laserEmitter.x * scale, model.laserEmitter.y * scale,
+                        model.laserEmitter.z * scale, 1F);
         Vector4f eye = Matrix4f.transform(view, socket, null);
         Vector4f start = Matrix4f.transform(projection, eye, null);
         Vector4f tipEye = Matrix4f.transform(view, new Vector4f(socket.x + scale, socket.y, socket.z, 1F), null);
         if (!firstPerson) {
-            EMITTERS.put((EntityPlayer) owner, new Emitter(attachment, gun, start,
+            Map<AttachmentType, Emitter> emitters = EMITTERS.get(owner);
+            if (emitters == null) {
+                emitters = new IdentityHashMap<>();
+                EMITTERS.put((EntityPlayer) owner, emitters);
+            }
+            emitters.put(attachment, new Emitter(attachment, gun, start,
                     Matrix4f.transform(projection, tipEye, null), pose));
             return;
         }
@@ -453,27 +554,90 @@ public final class AttachmentLightRenderer {
         if (muzzle == null || tipWorld == null || traceBetween(owner.worldObj, eyeOrigin, muzzle) != null) return;
         Vec3 direction = laserDirection(muzzle, eyeOrigin, owner.getLook(partial),
                 directionBetween(muzzle, tipWorld), pose);
-        float range = bounded(attachment.laserRange, 128F, 1F, 128F);
-        Vec3 target = muzzle.addVector(direction.xCoord * range, direction.yCoord * range, direction.zCoord * range);
-        MovingObjectPosition hit = traceLaser(owner.worldObj, owner, muzzle, target, partial);
-        MovingObjectPosition blockHit = traceBetween(owner.worldObj, muzzle, target);
-        if (blockHit != null) target = blockHit.hitVec;
-        Vector4f end = Matrix4f.transform(WORLD_CLIP, new Vector4f(
-                (float) (target.xCoord - cameraPosition.xCoord),
-                (float) (target.yCoord - cameraPosition.yCoord),
-                (float) (target.zCoord - cameraPosition.zCoord), 1F), null);
-        // A lowered/reloading gun can point behind the camera. Clip the straight segment at the near plane.
-        if (end.w < 0.05F) {
-            float t = (start.w - 0.05F) / (start.w - end.w);
-            end = new Vector4f(start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t,
-                    start.z + (end.z - start.z) * t, 0.05F);
+        if (attachment.flashlight) drawHandFlashlight((EntityPlayer) owner, attachment, muzzle, direction);
+        if (!attachment.isLaserPointer) return;
+        Vec3 baseMuzzle = muzzle;
+        Vec3 right = Vec3.createVectorHelper(direction.zCoord, 0D, -direction.xCoord);
+        if (right.lengthVector() < 0.00001D) right = Vec3.createVectorHelper(1D, 0D, 0D);
+        right = right.normalize();
+        Vec3 up = direction.crossProduct(right).normalize();
+        int beams = attachment.laserBeams == 3 ? 3 : 1;
+        for (int beam = 0; beam < beams; beam++) {
+            muzzle = beams == 1 ? baseMuzzle : triangleOrigin(baseMuzzle, right, up, beam,
+                    bounded(attachment.laserSpacing, 0.08F, 0.02F, 0.25F));
+            start = projectWorld(muzzle);
+            if (start.w <= 0.05F) continue;
+            float range = bounded(attachment.laserRange, 128F, 1F, 128F);
+            Vec3 target = muzzle.addVector(direction.xCoord * range, direction.yCoord * range, direction.zCoord * range);
+            MovingObjectPosition hit = traceLaser(owner.worldObj, owner, muzzle, target, partial);
+            MovingObjectPosition blockHit = traceBetween(owner.worldObj, muzzle, target);
+            if (blockHit != null) target = blockHit.hitVec;
+            Vector4f end = projectWorld(target);
+            // A lowered/reloading gun can point behind the camera. Clip the straight segment at the near plane.
+            if (end.w < 0.05F) {
+                float t = (start.w - 0.05F) / (start.w - end.w);
+                end = new Vector4f(start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t,
+                        start.z + (end.z - start.z) * t, 0.05F);
+            }
+            start = new Vector4f(start.x / start.w, start.y / start.w, start.z / start.w, 1F);
+            end = new Vector4f(end.x / end.w, end.y / end.w, end.z / end.w, 1F);
+            float r = bounded(attachment.laserRed, 1F, 0F, 1F);
+            float g = bounded(attachment.laserGreen, 0F, 0F, 1F);
+            float b = bounded(attachment.laserBlue, 0F, 0F, 1F);
+            drawHandLaser(start, end, r, g, b, attachment, hit, muzzle, direction);
         }
-        start = new Vector4f(start.x / start.w, start.y / start.w, start.z / start.w, 1F);
-        end = new Vector4f(end.x / end.w, end.y / end.w, end.z / end.w, 1F);
-        float r = bounded(attachment.laserRed, 1F, 0F, 1F);
-        float g = bounded(attachment.laserGreen, 0F, 0F, 1F);
-        float b = bounded(attachment.laserBlue, 0F, 0F, 1F);
-        drawHandLaser(start, end, r, g, b, attachment, hit, muzzle, direction);
+    }
+
+    private static Vector4f projectWorld(Vec3 point) {
+        return Matrix4f.transform(WORLD_CLIP, new Vector4f(
+                (float) (point.xCoord - cameraPosition.xCoord),
+                (float) (point.yCoord - cameraPosition.yCoord),
+                (float) (point.zCoord - cameraPosition.zCoord), 1F), null);
+    }
+
+    private static void drawHandFlashlight(EntityPlayer player, AttachmentType light, Vec3 muzzle, Vec3 direction) {
+        Matrix4f depthClip = beginHandDepthProjection();
+        int matrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+        boolean shaders = GLContext.getCapabilities().OpenGL20;
+        int previousProgram = shaders ? GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) : 0;
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix();
+        MATRIX_BUFFER.clear(); depthClip.store(MATRIX_BUFFER); MATRIX_BUFFER.flip();
+        GL11.glLoadMatrix(MATRIX_BUFFER);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix(); GL11.glLoadIdentity();
+        try {
+            if (shaders) GL20.glUseProgram(0);
+            GL11.glTranslated(-cameraPosition.xCoord, -cameraPosition.yCoord, -cameraPosition.zCoord);
+            OpenGlHelper.setActiveTexture(OpenGlHelper.lightmapTexUnit); GL11.glDisable(GL11.GL_TEXTURE_2D);
+            OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit); GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glDisable(GL11.GL_LIGHTING); GL11.glDisable(GL11.GL_FOG);
+            GL11.glDisable(GL11.GL_CULL_FACE); GL11.glDisable(GL11.GL_ALPHA_TEST);
+            GL11.glDepthMask(false); GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDepthRange(0D, 1D);
+            GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+            drawPosedFlashlight(player, light, muzzle, direction);
+        } finally {
+            FlashlightProjection.setDepthTransform(1F, 0F);
+            if (shaders) GL20.glUseProgram(previousProgram);
+            GL11.glPopMatrix(); GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();
+            GL11.glPopAttrib(); GL11.glMatrixMode(matrixMode);
+        }
+    }
+
+    private static Matrix4f beginHandDepthProjection() {
+        Matrix4f hand = matrix(GL11.GL_PROJECTION_MATRIX);
+        float scale = 1F, bias = 0F;
+        if (Math.abs(WORLD_PROJECTION.m32) > 0.000001F && Math.abs(hand.m32) > 0.000001F) {
+            // Match the close-up optic near plane without changing world-space XY.
+            scale = hand.m32 / WORLD_PROJECTION.m32;
+            bias = scale * WORLD_PROJECTION.m22 - hand.m22;
+        }
+        FlashlightProjection.setDepthTransform(scale, bias);
+        Matrix4f clip = new Matrix4f(WORLD_CLIP);
+        clip.m02 = scale * WORLD_CLIP.m02 + bias * WORLD_CLIP.m03;
+        clip.m12 = scale * WORLD_CLIP.m12 + bias * WORLD_CLIP.m13;
+        clip.m22 = scale * WORLD_CLIP.m22 + bias * WORLD_CLIP.m23;
+        clip.m32 = scale * WORLD_CLIP.m32 + bias * WORLD_CLIP.m33;
+        return clip;
     }
 
     private static Vector4f handClip(Vector4f eye, Matrix4f projection) {
@@ -489,6 +653,10 @@ public final class AttachmentLightRenderer {
 
     private static void drawHandLaser(Vector4f start, Vector4f end, float r, float g, float b,
                                       AttachmentType attachment, MovingObjectPosition hit, Vec3 muzzle, Vec3 direction) {
+        if (attachment != null && attachment.infrared && !nightVisionActive) return;
+        Matrix4f depthClip = beginHandDepthProjection();
+        start = new Vector4f(start.x, start.y, FlashlightProjection.transformDepth(start.z), start.w);
+        end = new Vector4f(end.x, end.y, FlashlightProjection.transformDepth(end.z), end.w);
         GL11.glGetInteger(GL11.GL_VIEWPORT, VIEWPORT_BUFFER);
         boolean shaders = GLContext.getCapabilities().OpenGL20;
         int previousProgram = shaders ? GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) : 0;
@@ -503,8 +671,11 @@ public final class AttachmentLightRenderer {
             GL11.glDisable(GL11.GL_ALPHA_TEST); GL11.glDisable(GL11.GL_CULL_FACE);
             GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDepthMask(false); GL11.glDepthRange(0D, 1D);
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+            // Gradient discs have transparent rim vertices; flat shading makes the
+            // entire fan transparent when inherited from the first-person item pass.
+            GL11.glShadeModel(GL11.GL_SMOOTH);
             if (hit != null) {
-                MATRIX_BUFFER.clear(); WORLD_CLIP.store(MATRIX_BUFFER); MATRIX_BUFFER.flip();
+                MATRIX_BUFFER.clear(); depthClip.store(MATRIX_BUFFER); MATRIX_BUFFER.flip();
                 GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadMatrix(MATRIX_BUFFER);
                 GL11.glMatrixMode(GL11.GL_MODELVIEW);
                 GL11.glTranslated(-cameraPosition.xCoord, -cameraPosition.yCoord, -cameraPosition.zCoord);
@@ -512,10 +683,13 @@ public final class AttachmentLightRenderer {
                 GL11.glLoadIdentity(); GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity();
                 GL11.glMatrixMode(GL11.GL_MODELVIEW);
             }
-            clipRibbon(start, end, 3F, r, g, b, 0.25F);
-            clipRibbon(start, end, 0.9F, Math.min(1F, r + 0.3F), Math.min(1F, g + 0.3F),
-                    Math.min(1F, b + 0.3F), 0.9F);
+            if (attachment == null || nightVisionActive) {
+                clipRibbon(start, end, 3F, r, g, b, 0.25F);
+                clipRibbon(start, end, 0.9F, Math.min(1F, r + 0.3F), Math.min(1F, g + 0.3F),
+                        Math.min(1F, b + 0.3F), 0.9F);
+            }
         } finally {
+            FlashlightProjection.setDepthTransform(1F, 0F);
             if (shaders) GL20.glUseProgram(previousProgram);
             GL11.glPopMatrix(); GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();
             GL11.glPopAttrib();
@@ -536,6 +710,11 @@ public final class AttachmentLightRenderer {
         tess.addVertex(end.x + sx, end.y + sy, end.z);
         tess.addVertex(end.x - sx, end.y - sy, end.z);
         tess.draw();
+    }
+
+    private static Emitter emitter(EntityPlayer player, AttachmentType attachment) {
+        Map<AttachmentType, Emitter> emitters = EMITTERS.get(player);
+        return emitters == null ? null : emitters.get(attachment);
     }
 
     private static final class Emitter {

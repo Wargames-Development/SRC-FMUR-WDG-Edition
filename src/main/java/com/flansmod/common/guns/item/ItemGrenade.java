@@ -32,6 +32,9 @@ import java.util.Objects;
 
 public class ItemGrenade extends ItemShootable implements IFlanItem
 {
+	public static final int THROW_ANIMATION_TICKS = 40;
+	public static final int THROW_PIN_PULL_TICKS = 4;
+	public static final int THROW_RELEASE_TICKS = 20;
 	public GrenadeType type;
 	
 	public ItemGrenade(GrenadeType t) 
@@ -139,36 +142,46 @@ public class ItemGrenade extends ItemShootable implements IFlanItem
 		}
 		PlayerData data = PlayerHandler.getPlayerData(player, world.isRemote ? Side.CLIENT : Side.SERVER);
 		//If can throw grenade
-		if(type.canThrow && data != null && data.shootTimeRight <= 0 && data.shootTimeLeft <= 0)
+		if(type.canThrow && player.isEntityAlive() && data != null && data.shootTimeRight <= 0 && data.shootTimeLeft <= 0)
 		{
 			//Delay the next throw / weapon fire / whatnot
-			data.shootTimeRight = type.throwDelay;
-			//Create a new grenade entity
-			EntityGrenade grenade = new EntityGrenade(world, type, player);
-			//Spawn the entity server side
-			if(!world.isRemote)
-				world.spawnEntityInWorld(grenade);
-			//If this can be remotely detonated, add it to the players detonate list
-			if(type.remote)
-				data.remoteExplosives.add(grenade);
-			//Consume an item
-			if(!player.capabilities.isCreativeMode)
-				stack.stackSize--;
-			//Drop an item upon throwing if necessary
-			if(type.dropItemOnThrow != null)
-			{
-				String itemName = type.dropItemOnDetonate;
-				int damage = 0;
-				if (itemName.contains("."))
-				{
-					damage = Integer.parseInt(itemName.split("\\.")[1]);
-					itemName = itemName.split("\\.")[0];
-				}
-				ItemStack dropStack = InfoType.getRecipeElement(itemName, damage);
-				world.spawnEntityInWorld(new EntityItem(world, player.posX, player.posY, player.posZ, dropStack));
-			}
+			// Shared client prediction and server enforcement, including slot changes.
+			data.shootTimeRight = Math.max(type.throwDelay, THROW_ANIMATION_TICKS);
+			FlansMod.proxy.onGrenadeThrown(player, stack);
+			if (!world.isRemote)
+				data.startGrenadeThrow(player, stack);
 		}
 		return stack;
+	}
+
+	/** Called after the server validates the held stack at the animation's release tick. */
+	public void releaseThrow(ItemStack stack, World world, EntityPlayer player, PlayerData data)
+	{
+		if (world.isRemote) return;
+		//Create a new grenade entity
+		EntityGrenade grenade = new EntityGrenade(world, type, player);
+		//Spawn the entity server side
+		if(!world.isRemote)
+			world.spawnEntityInWorld(grenade);
+		//If this can be remotely detonated, add it to the players detonate list
+		if(type.remote)
+			data.remoteExplosives.add(grenade);
+		//Consume an item
+		if(!player.capabilities.isCreativeMode)
+			stack.stackSize--;
+		//Drop an item upon throwing if necessary
+		if(type.dropItemOnThrow != null)
+		{
+			String itemName = type.dropItemOnDetonate;
+			int damage = 0;
+			if (itemName.contains("."))
+			{
+				damage = Integer.parseInt(itemName.split("\\.")[1]);
+				itemName = itemName.split("\\.")[0];
+			}
+			ItemStack dropStack = InfoType.getRecipeElement(itemName, damage);
+			world.spawnEntityInWorld(new EntityItem(world, player.posX, player.posY, player.posZ, dropStack));
+		}
 	}
 	
 	@Override

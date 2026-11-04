@@ -10,4 +10,4 @@ Model BFMCpack.X400
 Texture X400
 ModelScale 0.2
 FlashlightRange 32
-FlashlightConeAngle 34
+FlashlightConeAngle 50

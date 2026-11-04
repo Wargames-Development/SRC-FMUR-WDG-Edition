@@ -45,6 +45,8 @@ import net.minecraftforge.client.IItemRenderer;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
+import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector4f;
 
 import java.nio.FloatBuffer;
 import java.util.Random;
@@ -81,6 +83,18 @@ public class RenderGun implements IItemRenderer {
     private EntityLivingBase attachmentOwner;
     private ItemStack renderedGun;
     private float renderedLaserPose;
+    private Matrix4f dotSwayDelta;
+    private static IScope dotReticleScope;
+    public static float dotReticleX, dotReticleY;
+
+    public static void beginReticleFrame() {
+        dotReticleScope = null;
+        dotReticleX = dotReticleY = 0F;
+    }
+
+    public static boolean hasModelReticle(IScope scope) {
+        return scope != null && scope == dotReticleScope;
+    }
 
     public static Random rand = new Random();
 
@@ -239,6 +253,7 @@ public class RenderGun implements IItemRenderer {
                 }
                 case EQUIPPED_FIRST_PERSON: {
                     IScope scope = gunType.getCurrentScope(item);
+                    dotSwayDelta = null;
 
                     // 如果完全开镜，就停止渲染枪械
                     if (FlansModClient.zoomProgress > 0.9F && scope.hasZoomOverlay()
@@ -264,7 +279,7 @@ public class RenderGun implements IItemRenderer {
                         mouseOffsetY *= 5.0F;
                     } else if (ThermalScopeEffect.usesModelScopeLens(FlansModClient.currentScope)
                             || FlansModClient.currentScope.getDotOverlayTexture() != null) {
-                        // Keep the optic housing around the screen-centred overlay reticle.
+                        // Keep ADS movement small for close-up optic housings.
                         mouseOffsetX = MathHelper.clamp_float(mouseOffsetX,
                                 -ADS_SIGHT_SWAY_LIMIT_DEGREES, ADS_SIGHT_SWAY_LIMIT_DEGREES);
                         mouseOffsetY = MathHelper.clamp_float(mouseOffsetY,
@@ -310,8 +325,25 @@ public class RenderGun implements IItemRenderer {
                     GL11.glTranslatef(rand * 0.01F, rand * 0.01F, rand * 0.01F);
 
                     //应用鼠标偏移
+                    Matrix4f beforeSway = null;
+                    if (!offHand && scope == FlansModClient.currentScope
+                            && scope.getDotOverlayTexture() != null
+                            && !ThermalScopeEffect.usesModelScopeLens(scope)) {
+                        MODELVIEW_BUFFER.clear();
+                        GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, MODELVIEW_BUFFER);
+                        beforeSway = new Matrix4f();
+                        beforeSway.load(MODELVIEW_BUFFER);
+                        beforeSway = Matrix4f.invert(beforeSway, beforeSway);
+                    }
                     GL11.glRotatef(mouseOffsetX, 0.0F, 1.0F, 0.0F);
                     GL11.glRotatef(mouseOffsetY, 0.0F, 0.0F, 1.0F);
+                    if (beforeSway != null) {
+                        MODELVIEW_BUFFER.clear();
+                        GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, MODELVIEW_BUFFER);
+                        dotSwayDelta = new Matrix4f();
+                        dotSwayDelta.load(MODELVIEW_BUFFER);
+                        Matrix4f.mul(dotSwayDelta, beforeSway, dotSwayDelta);
+                    }
 
                     if (animations.meleeAnimationProgress > 0 && animations.meleeAnimationProgress < gunType.meleePath.size()) {
                         Vector3f meleePos = gunType.meleePath.get(animations.meleeAnimationProgress);
@@ -677,6 +709,9 @@ public class RenderGun implements IItemRenderer {
                         model.gunOffsetZ * actualZoomProgress / 16.0F
                 );
             }
+        if (rtype == ItemRenderType.EQUIPPED_FIRST_PERSON && dotSwayDelta != null) {
+            captureDotReticle(gunType, model, gunType.getCurrentScope(item));
+        }
         // Render the gun and default attachment models
         GL11.glPushMatrix();
         {
@@ -1349,6 +1384,34 @@ public class RenderGun implements IItemRenderer {
         }
     }
 
+    private void captureDotReticle(GunType gunType, ModelGun model, IScope scope) {
+        MODELVIEW_BUFFER.clear();
+        PROJECTION_BUFFER.clear();
+        GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, MODELVIEW_BUFFER);
+        GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX, PROJECTION_BUFFER);
+        Matrix4f view = new Matrix4f();
+        view.load(MODELVIEW_BUFFER);
+        Matrix4f projection = new Matrix4f();
+        projection.load(PROJECTION_BUFFER);
+        Vector3f mount = model.scopeAttachPoint;
+        Vector4f eye = Matrix4f.transform(view, new Vector4f(
+                mount == null ? 0F : mount.x * gunType.modelScale,
+                mount == null ? 0F : mount.y * gunType.modelScale,
+                mount == null ? 0F : mount.z * gunType.modelScale, 1F), null);
+        Matrix4f inverse = Matrix4f.invert(dotSwayDelta, null);
+        if (inverse == null) return;
+        eye = Matrix4f.transform(inverse, eye, eye);
+        if (eye.z >= -ADS_SCOPE_NEAR_PLANE) return;
+        // Existing packs align the neutral reticle to screen centre. Move that point
+        // with the housing at the optic mount's depth, preserving authored zeroing.
+        Vector4f point = Matrix4f.transform(dotSwayDelta, new Vector4f(0F, 0F, eye.z, 1F), null);
+        point = Matrix4f.transform(projection, point, point);
+        if (point.w <= 0F) return;
+        dotReticleX = point.x / point.w;
+        dotReticleY = point.y / point.w;
+        dotReticleScope = scope;
+    }
+
     /**
      * Lower only the near plane used while drawing a retained first-person scope
      * model. The world has already rendered, and the projection is restored before
@@ -1807,21 +1870,16 @@ public class RenderGun implements IItemRenderer {
         }
 
         boolean primaryColorOnly = ShaderRenderCompat.beginPrimaryColorOnly();
-        if (!primaryColorOnly) {
-            // No MRT shader pass is active. Preserve the original z-depth behavior.
-            model.renderZDepthModel(f);
-            return;
-        }
-
         GL11.glPushAttrib(GL11.GL_DEPTH_BUFFER_BIT);
         try {
-            // Shader packs use world depth for fog, water and horizon effects.
-            // Keep the lens visible without replacing that world depth.
+            // This is translucent lens geometry, not the solid optic housing.
+            // Preserve the view through the glass for attachment lights/lasers,
+            // as well as shader-pack fog, water and horizon effects.
             GL11.glDepthMask(false);
             model.renderZDepthModel(f);
         } finally {
             GL11.glPopAttrib();
-            ShaderRenderCompat.endPrimaryColorOnly(true);
+            ShaderRenderCompat.endPrimaryColorOnly(primaryColorOnly);
         }
     }
 
