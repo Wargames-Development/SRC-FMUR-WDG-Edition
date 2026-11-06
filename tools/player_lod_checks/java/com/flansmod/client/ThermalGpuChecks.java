@@ -28,6 +28,9 @@ public final class ThermalGpuChecks {
             cameraIntegration();
             binocularCoverage();
             lateLensComposition();
+            nightVisionLensComposition();
+            if (System.getProperty("fmur.checks.hitmarkerRuntime") != null)
+                hitmarkerLensComposition(System.getProperty("fmur.checks.hitmarkerRuntime"));
             cameraGeometry();
             cameraSun();
             cameraWeather();
@@ -37,10 +40,13 @@ public final class ThermalGpuChecks {
             distantNightLighting();
             sensorLightmap();
             cachedSensorDisplay();
+            refreshRateOverlay();
             profileEffects();
             particleOcclusion();
             emissiveParticles();
             primaryApertureIsolation();
+            scopeMarkers();
+            scopeWaypoints();
             m40LensSize();
             entityReplayIsolation();
             if (System.getProperty("fmur.checks.dhRuntime") != null)
@@ -269,6 +275,169 @@ public final class ThermalGpuChecks {
         }
     }
 
+    private static void nightVisionLensComposition() throws Exception {
+        sun.misc.Unsafe allocator=(sun.misc.Unsafe)field(sun.misc.Unsafe.class,"theUnsafe").get(null);
+        net.minecraft.client.Minecraft mc=(net.minecraft.client.Minecraft)allocator.allocateInstance(net.minecraft.client.Minecraft.class);
+        mc.displayWidth=SIZE;mc.displayHeight=SIZE;
+        mc.gameSettings=new net.minecraft.client.settings.GameSettings();
+        field(net.minecraft.client.Minecraft.class,"mcLanguageManager").set(mc,
+                new net.minecraft.client.resources.LanguageManager(null,"en_US"));
+        mc.entityRenderer=(OverlayRenderer)allocator.allocateInstance(OverlayRenderer.class);
+        mc.thePlayer=(net.minecraft.client.entity.EntityClientPlayerMP)allocator.allocateInstance(net.minecraft.client.entity.EntityClientPlayerMP.class);
+        java.util.Map<String,net.minecraftforge.common.IExtendedEntityProperties> properties=new java.util.HashMap<>();
+        field(net.minecraft.entity.Entity.class,"extendedProperties").set(mc.thePlayer,properties);
+        java.lang.reflect.Constructor<com.flansmod.common.teams.PlayerEquipmentInventory> constructor=
+                com.flansmod.common.teams.PlayerEquipmentInventory.class.getDeclaredConstructor(net.minecraft.entity.player.EntityPlayer.class);
+        constructor.setAccessible(true);
+        com.flansmod.common.teams.PlayerEquipmentInventory equipment=constructor.newInstance(mc.thePlayer);
+        properties.put(com.flansmod.common.teams.PlayerEquipmentInventory.PROPERTY_KEY,equipment);
+        float previousGamma=field(NightVisionGogglesBrightness.class,"nightVisionGamma").getFloat(null);
+        NightVisionGogglesBrightness.setGamma(12F);
+        int output=fbo(),lens=texture(64,128,192,255);
+        float[] x=(float[])field(ThermalScopeEffect.class,"postCompositeLensNdcX").get(null);
+        float[] y=(float[])field(ThermalScopeEffect.class,"postCompositeLensNdcY").get(null);
+        int[][] samples={{64,64},{110,98}};
+        try {
+            for(com.flansmod.common.teams.ItemNightVisionGoggles.PhosphorType profile:
+                    com.flansmod.common.teams.ItemNightVisionGoggles.PhosphorType.values()) {
+                com.flansmod.common.teams.ItemNightVisionGoggles goggles=(com.flansmod.common.teams.ItemNightVisionGoggles)
+                        allocator.allocateInstance(com.flansmod.common.teams.ItemNightVisionGoggles.class);
+                field(com.flansmod.common.teams.ItemNightVisionGoggles.class,"phosphorType").set(goggles,profile);
+                goggles.setMaxStackSize(1);
+                field(net.minecraft.item.Item.class,"delegate").set(goggles,
+                        new cpw.mods.fml.common.registry.RegistryDelegate.Delegate<net.minecraft.item.Item>(goggles,net.minecraft.item.Item.class));
+                net.minecraft.item.ItemStack stack=new net.minecraft.item.ItemStack(goggles);
+                com.flansmod.common.teams.ItemNightVisionGoggles.setLowered(stack,true);
+                equipment.setSyncedContents(stack,null);
+                float intensity=NightVisionGogglesEffect.getIntensity(mc,1F);
+                check(intensity==1F,"Lowered goggles enable the late lens: "+profile);
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);GL11.glViewport(0,0,SIZE,SIZE);
+                GL11.glColorMask(true,true,true,true);GL11.glDisable(GL11.GL_SCISSOR_TEST);
+                GL11.glClearColor(64/255F,128/255F,192/255F,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+                NightVisionGogglesEffect.renderBeforeHud(mc,intensity);
+                NightVisionGogglesEffect.renderAfterHud(mc,intensity);
+                int[][] expected=new int[samples.length][3];
+                for(int i=0;i<samples.length;i++) {
+                    ByteBuffer p=pixel(samples[i][0],samples[i][1]);
+                    for(int channel=0;channel<3;channel++)expected[i][channel]=p.get(channel)&255;
+                }
+                GL11.glClearColor(0,0,0,0);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+                // Offset/wide aperture distinguishes screen-space tubes from lens-local tubes.
+                x[0]=0.35F;y[0]=0;
+                for(int i=0;i<=32;i++){x[i+1]=x[0]+(float)Math.cos(i*Math.PI/16)*0.9F;y[i+1]=(float)Math.sin(i*Math.PI/16)*0.9F;}
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,0);GL13.glActiveTexture(GL13.GL_TEXTURE3);
+                ThermalScopeEffect.renderLensImage(output,SIZE,SIZE,SIZE,SIZE,lens,true,mc,intensity);
+                check(GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING)==0
+                        && GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE)==GL13.GL_TEXTURE3
+                        && GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)==0,"NVG lens restores framebuffer, sampler and program");
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);
+                for(int i=0;i<samples.length;i++) {
+                    ByteBuffer p=pixel(samples[i][0],samples[i][1]);
+                    for(int channel=0;channel<3;channel++)check(Math.abs((p.get(channel)&255)-expected[i][channel])<=8,
+                            "Late lens matches primary NVG tint/mask at sample "+i+", channel "+channel+": "+profile);
+                }
+                check((pixel(4,4).get(3)&255)==0,"NVGs do not expand the lens aperture");
+                com.flansmod.common.teams.ItemNightVisionGoggles.setLowered(stack,false);
+                intensity=NightVisionGogglesEffect.getIntensity(mc,1F);
+                check(intensity==0F,"Raised goggles disable late lens NVGs immediately");
+                ThermalScopeEffect.renderLensImage(output,SIZE,SIZE,SIZE,SIZE,lens,true,mc,intensity);
+                ByteBuffer p=pixel(64,64);
+                check((p.get(0)&255)==64 && (p.get(1)&255)==128 && (p.get(2)&255)==192,"Reused lens texture returns to normal color");
+            }
+            check(GL11.glGetError()==GL11.GL_NO_ERROR,"NVG lens has no GL errors");
+        } finally {
+            field(NightVisionGogglesBrightness.class,"nightVisionGamma").setFloat(null,previousGamma);
+            GL20.glUseProgram(0);GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,0);
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);GL11.glDeleteTextures(lens);GL30.glDeleteFramebuffers(output);
+        }
+    }
+
+    private static void hitmarkerLensComposition(String runtime) throws Exception {
+        sun.misc.Unsafe allocator=(sun.misc.Unsafe)field(sun.misc.Unsafe.class,"theUnsafe").get(null);
+        net.minecraft.client.Minecraft mc=(net.minecraft.client.Minecraft)allocator.allocateInstance(net.minecraft.client.Minecraft.class);
+        mc.displayWidth=SIZE;mc.displayHeight=SIZE;mc.gameSettings=new net.minecraft.client.settings.GameSettings();
+        field(net.minecraft.client.Minecraft.class,"mcLanguageManager").set(mc,
+                new net.minecraft.client.resources.LanguageManager(null,"en_US"));
+        mc.entityRenderer=(OverlayRenderer)allocator.allocateInstance(OverlayRenderer.class);
+        mc.thePlayer=(net.minecraft.client.entity.EntityClientPlayerMP)allocator.allocateInstance(net.minecraft.client.entity.EntityClientPlayerMP.class);
+        field(net.minecraft.entity.Entity.class,"extendedProperties").set(mc.thePlayer,new java.util.HashMap<>());
+        mc.theWorld=(net.minecraft.client.multiplayer.WorldClient)allocator.allocateInstance(net.minecraft.client.multiplayer.WorldClient.class);
+        Field singleton=field(net.minecraft.client.Minecraft.class,"theMinecraft");Object previous=singleton.get(null);
+        float previousGamma=field(NightVisionGogglesBrightness.class,"nightVisionGamma").getFloat(null);
+        NightVisionGogglesBrightness.setGamma(12F);
+        int output=fbo(),lens=texture(32,64,96,255),sprite=texture(255,255,255,255),depth=GL30.glGenRenderbuffers();
+        GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER,depth);
+        GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER,GL14.GL_DEPTH_COMPONENT24,SIZE,SIZE);
+        GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER,GL30.GL_DEPTH_ATTACHMENT,GL30.GL_RENDERBUFFER,depth);
+        GL11.glDepthMask(true);GL11.glClearDepth(0.37);GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+        float[] x=(float[])field(ThermalScopeEffect.class,"postCompositeLensNdcX").get(null);
+        float[] y=(float[])field(ThermalScopeEffect.class,"postCompositeLensNdcY").get(null);
+        mc.renderEngine=new ParticleTextures(sprite);
+        try (URLClassLoader loader=new URLClassLoader(new java.net.URL[]{Paths.get(runtime).toUri().toURL()},ThermalGpuChecks.class.getClassLoader())) {
+            singleton.set(null,mc);
+            Class<?> type=loader.loadClass("com.hitmarkerplus.client.HitmarkerOverlay");
+            Object overlay=type.newInstance();
+            Method tick=type.getMethod("onRenderTick",cpw.mods.fml.common.gameevent.TickEvent.RenderTickEvent.class);
+            Method hud=type.getMethod("onRenderOverlay",net.minecraftforge.client.event.RenderGameOverlayEvent.Post.class);
+            Method show=type.getMethod("show",boolean.class);
+            check(tick.getAnnotation(cpw.mods.fml.common.eventhandler.SubscribeEvent.class).priority()
+                    ==cpw.mods.fml.common.eventhandler.EventPriority.LOWEST,"Hitmarkers run after FMUR's normal-priority lens compositor");
+            net.minecraftforge.client.event.RenderGameOverlayEvent.Post hudEvent=new net.minecraftforge.client.event.RenderGameOverlayEvent.Post(
+                    new net.minecraftforge.client.event.RenderGameOverlayEvent(0,new net.minecraft.client.gui.ScaledResolution(mc,SIZE,SIZE),0,0),
+                    net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType.ALL);
+            cpw.mods.fml.common.gameevent.TickEvent.RenderTickEvent start=new cpw.mods.fml.common.gameevent.TickEvent.RenderTickEvent(
+                    cpw.mods.fml.common.gameevent.TickEvent.Phase.START,0);
+            cpw.mods.fml.common.gameevent.TickEvent.RenderTickEvent end=new cpw.mods.fml.common.gameevent.TickEvent.RenderTickEvent(
+                    cpw.mods.fml.common.gameevent.TickEvent.Phase.END,0);
+            for(boolean nightVision:new boolean[]{false,true}) for(boolean headshot:new boolean[]{false,true}) {
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);GL11.glColorMask(true,true,true,true);
+                GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glClearColor(0,0,0,0);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+                show.invoke(null,headshot);hud.invoke(overlay,hudEvent);tick.invoke(overlay,start);
+                check((pixel(64,64).get(3)&255)==0,"Gameplay hitmarker skips the early HUD and render-tick START");
+                x[0]=0;y[0]=0;
+                for(int i=0;i<=32;i++){x[i+1]=(float)Math.cos(i*Math.PI/16)*0.7F;y[i+1]=(float)Math.sin(i*Math.PI/16)*0.7F;}
+                ThermalScopeEffect.renderLensImage(output,SIZE,SIZE,SIZE,SIZE,lens,true,mc,nightVision?1:0);
+                // Both color and already-resolved thermal feeds pass through this same compositor.
+                int program=field(ThermalScopeEffect.class,"colorLensShaderProgram").getInt(null);
+                GL20.glUseProgram(program);GL13.glActiveTexture(GL13.GL_TEXTURE3);
+                GL11.glEnable(GL11.GL_FOG);GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glScissor(0,0,1,1);
+                GL11.glColorMask(false,false,false,false);
+                show.invoke(null,headshot);tick.invoke(overlay,end);
+                ByteBuffer p=pixel(64,64);
+                check((p.get(0)&255)>180 && (headshot?(p.get(1)&255)<100:(p.get(1)&255)>180),
+                        "Confirmed hit stays visible with its HUD color over the late lens/NVGs; headshot="+headshot);
+                check(GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)==program
+                        && GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE)==GL13.GL_TEXTURE3
+                        && GL11.glIsEnabled(GL11.GL_FOG) && GL11.glIsEnabled(GL11.GL_SCISSOR_TEST),"Hitmarker restores inherited shader, sampler and clipping state");
+                check((pixel(4,4).get(3)&255)==0,"Hitmarker does not repaint outside its own HUD glyph");
+                FloatBuffer sampledDepth=BufferUtils.createFloatBuffer(1);
+                GL11.glReadPixels(64,64,1,1,GL11.GL_DEPTH_COMPONENT,GL11.GL_FLOAT,sampledDepth);
+                check(Math.abs(sampledDepth.get(0)-0.37F)<0.0001F,"Late hitmarker leaves primary scene depth intact");
+                GL20.glUseProgram(0);GL13.glActiveTexture(GL13.GL_TEXTURE0);
+                GL11.glDisable(GL11.GL_FOG);GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glColorMask(true,true,true,true);
+                GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);mc.gameSettings.hideGUI=true;tick.invoke(overlay,end);
+                check((pixel(64,64).get(3)&255)==0,"F1 continues hiding hitmarkers");mc.gameSettings.hideGUI=false;
+                field(type,"lastTriggerMs").setLong(null,System.currentTimeMillis()-1000);tick.invoke(overlay,end);
+                check((pixel(64,64).get(3)&255)==0,"Expired hitmarkers are not retained by cached scope frames");
+            }
+            mc.currentScreen=new net.minecraft.client.gui.GuiChat();show.invoke(null,false);hud.invoke(overlay,hudEvent);
+            int before=pixel(64,64).get(0)&255;check(before>180,"Chat retains the original HUD-layer hitmarker");
+            tick.invoke(overlay,end);check((pixel(64,64).get(0)&255)==before,"Open screens do not draw hitmarkers twice");
+            mc.currentScreen=null;field(type,"lastTriggerMs").setLong(null,System.currentTimeMillis()-1000);
+            RateFont font=(RateFont)allocator.allocateInstance(RateFont.class);mc.fontRenderer=font;
+            type.getMethod("showKillDistance",int.class).invoke(null,120);tick.invoke(overlay,end);
+            check(font.label!=null && font.label.endsWith("120 blocks"),"Kill-distance text survives independently of the expired hitmarker");
+            font.label=null;field(type,"lastKillDistanceMs").setLong(null,System.currentTimeMillis()-3000);tick.invoke(overlay,end);
+            check(font.label==null,"Kill-distance text retains its existing expiry");
+            check(GL11.glGetError()==GL11.GL_NO_ERROR,"Actual HitmarkerPlus late overlay has no GL errors");
+        } finally {
+            singleton.set(null,previous);field(NightVisionGogglesBrightness.class,"nightVisionGamma").setFloat(null,previousGamma);
+            GL20.glUseProgram(0);GL13.glActiveTexture(GL13.GL_TEXTURE0);GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,0);
+            GL11.glDisable(GL11.GL_FOG);GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glColorMask(true,true,true,true);
+            GL11.glDeleteTextures(lens);GL11.glDeleteTextures(sprite);GL30.glDeleteFramebuffers(output);GL30.glDeleteRenderbuffers(depth);
+        }
+    }
+
     private static void cachedSensorDisplay() throws Exception {
         sun.misc.Unsafe allocator=(sun.misc.Unsafe)field(sun.misc.Unsafe.class,"theUnsafe").get(null);
         net.minecraft.client.Minecraft mc=(net.minecraft.client.Minecraft)allocator.allocateInstance(net.minecraft.client.Minecraft.class);
@@ -315,6 +484,62 @@ public final class ThermalGpuChecks {
             field(ThermalScopeEffect.class,"sensorDisplayValid").setBoolean(null,false);
             if(source!=null)source.deleteFramebuffer();
             singleton.set(null,previousClient);
+        }
+    }
+
+    private static void refreshRateOverlay() throws Exception {
+        sun.misc.Unsafe allocator=(sun.misc.Unsafe)field(sun.misc.Unsafe.class,"theUnsafe").get(null);
+        net.minecraft.client.Minecraft mc=(net.minecraft.client.Minecraft)allocator.allocateInstance(net.minecraft.client.Minecraft.class);
+        RateFont font=(RateFont)allocator.allocateInstance(RateFont.class);
+        mc.fontRenderer=font;mc.gameSettings=new net.minecraft.client.settings.GameSettings();
+        mc.displayWidth=SIZE;mc.displayHeight=SIZE;
+        field(net.minecraft.client.Minecraft.class,"mcLanguageManager").set(mc,
+                new net.minecraft.client.resources.LanguageManager(null,"en_US"));
+        Object previousProfile=field(ThermalRenderApi.class,"vehicleProfile").get(null);
+        Method labelMethod=ThermalScopeEffect.class.getDeclaredMethod("refreshRateLabel",com.flansmod.common.guns.ThermalProfile.class);
+        labelMethod.setAccessible(true);
+        int output=fbo();
+        try {
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);
+            GL11.glViewport(0,0,SIZE,SIZE);
+            for (String fps : new String[]{"25","60","15"}) {
+                ThermalRenderApi.registerVehicleProfile(() -> java.util.Collections.singletonMap("ThermalMaxFPS",fps));
+                GL11.glColorMask(true,true,true,true);GL11.glClearColor(0,0,0,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+                GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glScissor(0,0,0,0);
+                GL11.glColorMask(false,false,false,false);
+                GL13.glActiveTexture(GL13.GL_TEXTURE3);
+                GL11.glMatrixMode(GL11.GL_PROJECTION);
+                String label=(String)labelMethod.invoke(null,ThermalRenderApi.vehicleSensorProfile());
+                ThermalScopeEffect.drawRefreshRate(mc,label,4,4,SIZE,SIZE);
+                check((fps+"Hz").equals(font.label),"Vehicle overlay reads resolved device rate "+fps);
+                check(font.x==4 && font.y==4,"Vehicle rate is at top left");
+                check((pixel(5,SIZE-5).get(0)&255)>240,"Late rate survives inherited clipping/color mask");
+                check(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST),"Rate restores clipping state");
+                check(GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE)==GL13.GL_TEXTURE3,"Rate restores active sampler");
+                check(GL11.glGetInteger(GL11.GL_MATRIX_MODE)==GL11.GL_PROJECTION,"Rate restores matrix mode");
+                check(GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING)==output,"Rate preserves output framebuffer");
+            }
+            check(GL11.glGetError()==GL11.GL_NO_ERROR,"Rate overlay has no GL errors");
+        } finally {
+            field(ThermalRenderApi.class,"vehicleProfile").set(null,previousProfile);
+            field(ThermalRenderApi.class,"lastVehicleProfile").set(null,null);
+            GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glColorMask(true,true,true,true);
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,0);GL30.glDeleteFramebuffers(output);
+        }
+    }
+
+    public static final class RateFont extends net.minecraft.client.gui.FontRenderer {
+        String label;int x,y;
+        private RateFont() { super(null,null,null,false); }
+        @Override public int getStringWidth(String text) { return text.length()*6; }
+        @Override public int drawStringWithShadow(String text,int left,int top,int color) {
+            label=text;x=left;y=top;
+            GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glColor4f(1,1,1,1);
+            GL11.glBegin(GL11.GL_QUADS);
+            GL11.glVertex2f(left,top);GL11.glVertex2f(left+8,top);
+            GL11.glVertex2f(left+8,top+8);GL11.glVertex2f(left,top+8);GL11.glEnd();
+            return left+8;
         }
     }
 
@@ -1017,6 +1242,78 @@ public final class ThermalGpuChecks {
             ThermalRenderApi.renderHeat(0,() -> ThermalScopeEffect.captureModelLensGeometry(0,0,-1,1,0,0,0,1,0,0.1F));
             check(valid.getBoolean(null) && x[0]==0.125F,"Heat target's held optic preserves primary aperture");
         } finally { valid.setBoolean(null,oldValid);nested.setBoolean(null,oldNested);x[0]=oldX; }
+    }
+
+    private static void scopeMarkers() throws Exception {
+        Class<?> compat=MCHeliScopeMarkerCompat.class;
+        String[] names={"checked","available","positionsField","markedIdsField"};
+        Object[] saved=new Object[names.length];
+        for(int i=0;i<names.length;i++)saved[i]=field(compat,names[i]).get(null);
+        java.util.ArrayList<Object> primary=new java.util.ArrayList<Object>();primary.add(new Object());
+        java.util.HashSet<Integer> ids=new java.util.HashSet<Integer>();ids.add(7);
+        MarkerFixture.positions=primary;MarkerFixture.ids=ids;
+        try {
+            field(compat,"checked").setBoolean(null,true);field(compat,"available").setBoolean(null,true);
+            field(compat,"positionsField").set(null,MarkerFixture.class.getField("positions"));
+            field(compat,"markedIdsField").set(null,MarkerFixture.class.getField("ids"));
+            MCHeliScopeMarkerCompat.beginScopedMarkers();
+            check(MarkerFixture.positions!=primary && MarkerFixture.ids!=ids,"Scope owns independent marker projections and IDs");
+            check(MarkerFixture.ids.add(7) && !MarkerFixture.ids.add(7),"Scene and heat replays share scoped dedup IDs");
+            MarkerFixture.positions.add(new Object());
+            MCHeliScopeMarkerCompat.beginScopedMarkers();
+            check(MarkerFixture.positions.size()==1 && MarkerFixture.ids.contains(7),"Nested replay retains the scope's deduplication and single triangle");
+            MCHeliScopeMarkerCompat.endScopedMarkers();
+            check(MarkerFixture.positions==primary && MarkerFixture.ids==ids,"Primary marker collections restored after scope");
+            check(primary.size()==1 && ids.contains(7),"Scoped replay preserves the primary HUD's marker and deduplication");
+            MCHeliScopeMarkerCompat.beginScopedMarkers();
+            check(MarkerFixture.positions.isEmpty() && MarkerFixture.ids.isEmpty(),"Next camera sample starts with fresh markers");
+        } finally {
+            MCHeliScopeMarkerCompat.endScopedMarkers();
+            for(int i=0;i<names.length;i++)field(compat,names[i]).set(null,saved[i]);
+        }
+    }
+
+    public static final class MarkerFixture {
+        public static java.util.ArrayList<Object> positions;
+        public static java.util.HashSet<Integer> ids;
+    }
+
+    private static void scopeWaypoints() throws Exception {
+        Field checked=field(WGMapScopeCompat.class,"checked"),renderer=field(WGMapScopeCompat.class,"renderWaypoints");
+        Object oldRenderer=renderer.get(null);boolean oldChecked=checked.getBoolean(null);
+        int output=fbo();
+        try {
+            checked.setBoolean(null,true);renderer.set(null,ThermalGpuChecks.class.getMethod("drawScopeWaypoint",Float.TYPE));
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);GL11.glViewport(0,0,SIZE,SIZE);
+            GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();
+            GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glDepthMask(true);GL11.glColorMask(true,true,true,true);
+            GL11.glClearColor(0,0,0,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+            GL13.glActiveTexture(GL13.GL_TEXTURE1);GL11.glEnable(GL11.GL_TEXTURE_2D);
+            waypointDraws=0;WGMapScopeCompat.renderWaypoints(0.375F);
+            check(waypointDraws==1,"Scope waypoint renderer runs exactly once with camera partial ticks");
+            check((pixel(64,64).get(1)&255)>240,"Waypoint is visible in the scope framebuffer");
+            check(GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE)==GL13.GL_TEXTURE1 && GL11.glIsEnabled(GL11.GL_TEXTURE_2D),
+                    "Waypoint replay restores caller lightmap and active texture");
+            check(GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK),"Waypoint replay restores depth writes");
+            check(GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING)==output,"Waypoint replay preserves scope framebuffer");
+            FloatBuffer matrix=BufferUtils.createFloatBuffer(16);GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX,matrix);
+            check(matrix.get(12)==0 && matrix.get(0)==1,"Waypoint replay restores camera matrices");
+            renderer.set(null,null);WGMapScopeCompat.renderWaypoints(0.375F);
+            check(waypointDraws==1,"Absent optional waypoint provider is a no-op");
+        } finally {
+            checked.setBoolean(null,oldChecked);renderer.set(null,oldRenderer);
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,0);GL30.glDeleteFramebuffers(output);
+            GL13.glActiveTexture(GL13.GL_TEXTURE1);GL11.glDisable(GL11.GL_TEXTURE_2D);GL13.glActiveTexture(GL13.GL_TEXTURE0);
+        }
+    }
+
+    private static int waypointDraws;
+    public static void drawScopeWaypoint(float partialTicks) {
+        check(partialTicks==0.375F,"Waypoint renderer receives the scope sample time");waypointDraws++;
+        check(!GL11.glIsEnabled(GL11.GL_LIGHTING) && !GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK),"Waypoint replay is unlit without changing scene depth");
+        GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glDisable(GL11.GL_BLEND);GL11.glColor4f(0,1,0,1);
+        quad(1,0);GL11.glTranslatef(0.25F,0,0);
     }
 
     private static void m40LensSize() throws Exception {
