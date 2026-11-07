@@ -70,21 +70,23 @@ final class ThermalCamera {
             + " gl_FragColor=vec4(mix(scene,sensor,window),1.0);\n"
             + "}\n";
     private static final String PARTICLE_VERTEX = "#version 120\n"
+            + CameraParticles.DEPTH_VERTEX
             + "varying vec2 uv; varying vec4 color; varying float emissive,temperature,glow;\n"
             // Block-light 240 is the native emissive value used by explosion
             // sprites (including vanilla's packed brightness 240). Sky light alone
             // must not turn outdoor smoke into a heat source.
-            + "void main(){gl_Position=ftransform();uv=gl_MultiTexCoord0.xy;color=gl_Color;"
+            + "void main(){cameraPosition();uv=gl_MultiTexCoord0.xy;color=gl_Color;"
             + "emissive=step(239.0,gl_MultiTexCoord1.x);float smoke=step(240.5,gl_MultiTexCoord1.x);"
             + "temperature=mix(1.0,clamp((gl_MultiTexCoord1.x-241.0)/14.0,0.0,1.0),smoke);"
             + "glow=emissive*(1.0-smoke);}\n";
     private static final String PARTICLE_FRAGMENT = "#version 120\n"
+            + CameraParticles.DEPTH_FRAGMENT
             + "uniform sampler2D particleTexture; varying vec2 uv; varying vec4 color; varying float emissive,temperature,glow;\n"
             + "void main(){vec4 p=texture2D(particleTexture,uv)*color;"
             // R blends the particle over white-hot; G multiplies exact transmittance.
             // Both straight-alpha and premultiplied particle blending preserve G.
             + "float heat=mix(dot(p.rgb,vec3(0.2126,0.7152,0.0722))*0.68,temperature*p.a,emissive);"
-            + "gl_FragColor=vec4(heat,0.0,glow*p.a,p.a);}\n";
+            + "cameraDepth();gl_FragColor=vec4(heat,0.0,glow*p.a,p.a);}\n";
 
     private final FloatBuffer projection = BufferUtils.createFloatBuffer(16);
     private final FloatBuffer modelview = BufferUtils.createFloatBuffer(16);
@@ -201,7 +203,7 @@ final class ThermalCamera {
     void renderParticles(final Runnable particles) {
         if (!ensureShader()) return;
         renderGeometry(new Runnable() {
-            @Override public void run() { ThermalRenderApi.renderParticles(particles); }
+            @Override public void run() { ThermalRenderApi.renderParticles(particles, true); }
         },true);
     }
 
@@ -333,6 +335,7 @@ final class ThermalCamera {
         framebuffer = 0; heatTexture = 0; sceneTexture = 0; particleTexture = 0;
         width = 0; height = 0; heatValid = false; depthPrepared = false; particlesValid = false;
         ThermalFramebuffers.destroyDepth();
+        CameraParticles.destroy();
     }
 
     private static int texture(int w, int h, int filter) {
