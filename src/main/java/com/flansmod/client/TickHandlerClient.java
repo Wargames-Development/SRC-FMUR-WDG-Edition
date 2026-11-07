@@ -1132,7 +1132,7 @@ public class TickHandlerClient {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void filterScopeMarkers(RenderGameOverlayEvent.Pre event) {
         if (event.type == ElementType.HELMET) {
-            MCHeliScopeMarkerCompat.hidePrimaryMarkersInsideLens(Minecraft.getMinecraft());
+            MCHeliScopeMarkerCompat.hidePrimaryMarkersBehindScope(Minecraft.getMinecraft());
         }
     }
 
@@ -1229,7 +1229,8 @@ public class TickHandlerClient {
                     ThermalScopeEffect.prepareColorPictureInPictureFrame(
                             minecraft, event.renderTickTime);
                     restoreShotScreenShake(minecraft);
-                    ThermalScopeEffect.renderPostCompositeModelLens(minecraft);
+                    ThermalScopeEffect.renderPostCompositeModelLens(minecraft, event.renderTickTime);
+                    ThermalScopeEffect.renderRefreshRate(minecraft);
                 } finally {
                     // A failed/aborted PiP pass must never leave its temporary recoil
                     // contribution on the real player camera.

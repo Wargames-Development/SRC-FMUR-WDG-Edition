@@ -130,6 +130,8 @@ final class MCHeliScopeMarkerCompat {
     }
 
     static void renderMarkers(Minecraft minecraft) {
+        // Fullscreen sensors already contain their own camera's markers.
+        if (ThermalScopeEffect.replacesPrimaryScene(minecraft)) return;
         renderMarkers(minecraft, minecraft.displayWidth, minecraft.displayHeight, minecraft.displayWidth, minecraft.displayHeight);
     }
 
@@ -220,13 +222,20 @@ final class MCHeliScopeMarkerCompat {
         }
     }
 
-    static void hidePrimaryMarkersInsideLens(Minecraft minecraft) {
-        if (!ThermalScopeEffect.isModelLensActive() || primaryPositions != null || !isAvailable()) {
+    static void hidePrimaryMarkersBehindScope(Minecraft minecraft) {
+        boolean fullscreen = ThermalScopeEffect.replacesPrimaryScene(minecraft);
+        if ((!fullscreen && !ThermalScopeEffect.isModelLensActive()) || primaryPositions != null || !isAvailable()) {
             return;
         }
         try {
             ArrayList<?> positions = (ArrayList<?>)positionsField.get(null);
             if (positions == null) {
+                return;
+            }
+            if (fullscreen) {
+                // MCHR's normal HELMET HUD must not overlay the sampled camera.
+                // Keep its ID set intact so later primary replays cannot re-add glyphs.
+                positions.clear();
                 return;
             }
             int scale = new ScaledResolution(minecraft,

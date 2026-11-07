@@ -56,6 +56,7 @@ public class PacketKillMessage extends PacketBase
 	@Override
 	public void handleServerSide(EntityPlayerMP playerEntity) 
 	{
+        if (com.flansmod.common.wgc.CombatBridge.ownsTracking()) return;
 		FlansMod.log("Player kill Killer: " + killerName + " Killed " + killedName + " using: " + killedBy.shortName + " Headshot: " + headshot);
 		FlansMod.log("Distance " + distance);
 	}

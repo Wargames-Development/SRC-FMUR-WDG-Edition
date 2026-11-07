@@ -85,13 +85,17 @@ public final class NightVisionGogglesEffect {
             "    float coarseGrain = temporalNoise(vec3(floor(gl_FragCoord.xy / 2.0), animationFrame + 93.0)) - 0.5;\n" +
             "    float grainStrength = mix(0.0675, 0.0225, smoothstep(0.04, 0.70, light));\n" +
             "    intensified += fineGrain * grainStrength + coarseGrain * 0.018;\n" +
-            "    float distanceToTube = tubeDistance(uv, aspect);\n" +
+            // Late PiP samples lens UVs, but goggles remain fixed to the screen.
+            "    vec2 tubeUv = renderPass == 2 ? gl_FragCoord.xy / resolution : uv;\n" +
+            "    float distanceToTube = tubeDistance(tubeUv, aspect);\n" +
             "    float lensFalloff = 1.0 - 0.43 * smoothstep(0.05, 0.39, distanceToTube);\n" +
             "    vec3 phosphorColor = mix(vec3(0.13, 0.57, 0.245), vec3(0.56, 0.76, 0.86), whiteProfile);\n" +
             "    phosphorColor = mix(phosphorColor, vec3(1.0, 0.58, 0.12), amberPhosphor);\n" +
             "    vec3 phosphor = intensified * phosphorColor;\n" +
             "    phosphor *= lensFalloff;\n" +
-            "    gl_FragColor = vec4(mix(scene, clamp(phosphor, 0.0, 1.0), intensity), 1.0);\n" +
+            "    vec3 color = mix(scene, clamp(phosphor, 0.0, 1.0), intensity);\n" +
+            "    if (renderPass == 2) color *= 1.0 - smoothstep(0.32, 0.405, distanceToTube) * intensity;\n" +
+            "    gl_FragColor = vec4(color, 1.0);\n" +
             "}\n";
 
     private static int shaderProgram = -1;
@@ -197,6 +201,13 @@ public final class NightVisionGogglesEffect {
             GL20.glUseProgram(0);
             GL11.glPopAttrib();
         }
+    }
+
+    /** The late lens replaces pixels already processed by both NVG HUD passes. */
+    static boolean bindScopeLens(Minecraft minecraft, float intensity) {
+        if (!ensureShader()) return false;
+        useShader(minecraft, intensity, 2);
+        return true;
     }
 
     private static boolean ensureShader() {

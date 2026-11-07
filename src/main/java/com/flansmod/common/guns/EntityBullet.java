@@ -1411,8 +1411,10 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                             living.arrowHitTimer++;
                             living.hurtResistantTime = living.maxHurtResistantTime / 2;
                         }
-                        if (type.setEntitiesOnFire)
+                        if (type.setEntitiesOnFire) {
                             entityHit.entity.setFire(type.setEntitiesOnFireTime);
+                            com.flansmod.common.wgc.CombatBridge.ignite(entityHit.entity, this, type.setEntitiesOnFireTime);
+                        }
                     }
 
                     penetratingPower -= 1F;
