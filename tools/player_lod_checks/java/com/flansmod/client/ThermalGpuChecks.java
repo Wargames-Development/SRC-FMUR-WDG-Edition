@@ -14,6 +14,7 @@ import org.lwjgl.util.glu.GLU;
 public final class ThermalGpuChecks {
     private static final int SIZE = 128;
     private static int checks;
+    private static int displayTarget;
 
     public static void main(String[] args) throws Exception {
         ThermalSensorChecks.main(new String[0]);
@@ -22,6 +23,18 @@ public final class ThermalGpuChecks {
             context.makeCurrent();
             net.minecraft.client.renderer.OpenGlHelper.defaultTexUnit=GL13.GL_TEXTURE0;
             net.minecraft.client.renderer.OpenGlHelper.lightmapTexUnit=GL13.GL_TEXTURE1;
+            if (args.length > 0 && "--camera-particles".equals(args[0])) {
+                // macOS pbuffers can lack a usable default framebuffer.
+                displayTarget=fbo();
+                cameraParticles();
+                particleOcclusion();
+                emissiveParticles();
+                nightVisionLensComposition();
+                check(GL11.glGetError()==GL11.GL_NO_ERROR,"Focused particle checks leave no GL errors");
+                GL30.glDeleteFramebuffers(displayTarget);displayTarget=0;
+                System.out.println("PASS: " + checks + " camera particle depth, heat, smoke and NVG checks.");
+                return;
+            }
             for (int backend = 0; backend < 3; backend++)
                 for (int format : new int[] {GL14.GL_DEPTH_COMPONENT24, GL30.GL_DEPTH24_STENCIL8, GL30.GL_DEPTH_COMPONENT32F})
                     copyDepth(backend,format);
@@ -37,6 +50,7 @@ public final class ThermalGpuChecks {
             if (System.getProperty("fmur.checks.angelicaRuntime") != null)
                 irisTerrainCorrection(System.getProperty("fmur.checks.angelicaRuntime"));
             distantCameraGeometry();
+            cameraParticles();
             distantNightLighting();
             sensorLightmap();
             cachedSensorDisplay();
@@ -1085,6 +1099,76 @@ public final class ThermalGpuChecks {
         }
     }
 
+    private static void cameraParticles() throws Exception {
+        sun.misc.Unsafe allocator=(sun.misc.Unsafe)field(sun.misc.Unsafe.class,"theUnsafe").get(null);
+        net.minecraft.client.Minecraft mc=(net.minecraft.client.Minecraft)allocator.allocateInstance(net.minecraft.client.Minecraft.class);
+        mc.gameSettings=new net.minecraft.client.settings.GameSettings();mc.gameSettings.renderDistanceChunks=8;
+        Field singleton=field(net.minecraft.client.Minecraft.class,"theMinecraft");Object previous=singleton.get(null);
+        int output=fbo(),depth=GL30.glGenRenderbuffers(),white=texture(255,255,255,255);
+        GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER,depth);
+        GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER,GL14.GL_DEPTH_COMPONENT24,SIZE,SIZE);
+        GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER,GL30.GL_DEPTH_ATTACHMENT,GL30.GL_RENDERBUFFER,depth);
+        ThermalCamera camera=ThermalCamera.INSTANCE;
+        final Method distantScope,distantHeat;
+        if(Boolean.getBoolean("fmur.checks.dhCamera")) {
+            Class<?> distant=Class.forName("com.seibel.distanthorizons.forge17.effects.DistantSmokeRenderer");
+            distantScope=distant.getDeclaredMethod("isCameraParticlePass");distantScope.setAccessible(true);
+            distantHeat=distant.getDeclaredMethod("isCameraThermalMask");distantHeat.setAccessible(true);
+        } else {distantScope=null;distantHeat=null;}
+        try {
+            singleton.set(null,mc);
+            GL13.glActiveTexture(GL13.GL_TEXTURE1);GL11.glBindTexture(GL11.GL_TEXTURE_2D,white);
+            GL11.glMatrixMode(GL11.GL_TEXTURE);GL11.glLoadIdentity();GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);
+            for(final float distance:new float[]{64,640,3200}) for(boolean thermal:new boolean[]{false,true})
+                for(boolean covered:new boolean[]{false,true}) {
+                    GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);GL20.glUseProgram(0);
+                    GL13.glActiveTexture(GL13.GL_TEXTURE1);GL11.glBindTexture(GL11.GL_TEXTURE_2D,white);
+                    GL13.glActiveTexture(GL13.GL_TEXTURE0);
+                    GL11.glViewport(0,0,SIZE,SIZE);GL11.glColorMask(true,true,true,true);GL11.glDepthMask(true);
+                    GL11.glDisable(GL11.GL_BLEND);GL11.glDisable(GL11.GL_ALPHA_TEST);GL11.glDisable(GL11.GL_CULL_FACE);
+                    GL11.glEnable(GL11.GL_DEPTH_TEST);GL11.glDepthFunc(GL11.GL_LEQUAL);
+                    GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GLU.gluPerspective(70,1,0.1F,128);
+                    FloatBuffer p=BufferUtils.createFloatBuffer(16);GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX,p);
+                    GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();
+                    GL11.glClearColor(0.12F,0.12F,0.12F,1);
+                    GL11.glClearDepth(covered ? mapped(p,distance*0.9,112) : 1);
+                    GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);
+                    Runnable draw=() -> {
+                        check(ThermalRenderApi.isParticlePass(),"Camera particle scope active");
+                        if(distantScope!=null) try {
+                            check(Boolean.TRUE.equals(distantScope.invoke(null)),"Actual DH bridge isolates camera particles");
+                            check(Boolean.valueOf(thermal).equals(distantHeat.invoke(null)),"Actual DH bridge receives colour/thermal mask mode");
+                        } catch(ReflectiveOperationException failure) {throw new AssertionError(failure);}
+                        GL11.glBindTexture(GL11.GL_TEXTURE_2D,white);GL11.glColor4f(1,1,1,1);
+                        GL13.glMultiTexCoord2f(GL13.GL_TEXTURE1,240,240);quad(distance*0.15,-distance);
+                    };
+                    if(thermal) {
+                        check(camera.prepareDepth(output,SIZE,SIZE),"Distant particle thermal depth capture");
+                        camera.captureColor(output,SIZE,SIZE);camera.projectSun(0,0,-1,0);camera.renderHeat(() -> {});
+                        camera.renderParticles(draw);display(camera,true);
+                    } else {
+                        ThermalRenderApi.renderParticles(draw);
+                        check(GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)==0,"Colour particle program restored");
+                        check(GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING)==output,"Colour particle target unchanged");
+                    }
+                    int level=pixel(64,64).get(0)&255;
+                    check(covered ? level<100 : level>240,"Camera particles retain colour/heat and terrain occlusion at "+distance+"m thermal="+thermal+" covered="+covered+" level="+level);
+                    check(!ThermalRenderApi.isParticlePass(),"Camera particle scope resets");
+                }
+            try {ThermalRenderApi.renderParticles(() -> {throw new IllegalArgumentException("camera fixture");});}
+            catch(IllegalArgumentException expected) {
+                check(!ThermalRenderApi.isParticlePass(),"Failed colour particle scope resets");
+                check(GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)==0,"Failed colour particle draw restores shader");
+            }
+            check(GL11.glGetError()==GL11.GL_NO_ERROR,"Distant particle materials produce no GL errors");
+        } finally {
+            singleton.set(null,previous);GL20.glUseProgram(0);GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,0);
+            GL30.glDeleteFramebuffers(output);GL30.glDeleteRenderbuffers(depth);GL11.glDeleteTextures(white);
+            GL13.glMultiTexCoord2f(GL13.GL_TEXTURE1,0,0);GL13.glActiveTexture(GL13.GL_TEXTURE0);
+        }
+    }
+
     private static void particleOcclusion() throws Exception {
         ThermalCamera camera=ThermalCamera.INSTANCE;
         int source=fbo(), depth=GL30.glGenRenderbuffers();
@@ -1618,7 +1702,7 @@ public final class ThermalGpuChecks {
         @Override public void bindTexture(net.minecraft.util.ResourceLocation location){last=location;GL11.glBindTexture(GL11.GL_TEXTURE_2D,texture);}
     }
     private static void display(ThermalCamera camera,boolean thermal) {
-        ThermalFramebuffers.bind(GL30.GL_FRAMEBUFFER,0);GL11.glViewport(0,0,SIZE,SIZE);
+        ThermalFramebuffers.bind(GL30.GL_FRAMEBUFFER,displayTarget);GL11.glViewport(0,0,SIZE,SIZE);
         GL11.glColorMask(true,true,true,true);GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glDisable(GL11.GL_STENCIL_TEST);
         GL11.glDisable(GL11.GL_DEPTH_TEST);GL11.glDisable(GL11.GL_BLEND);GL11.glDisable(GL11.GL_ALPHA_TEST);GL11.glDisable(GL11.GL_CULL_FACE);
         GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(-1,1,-1,1,-1,1);

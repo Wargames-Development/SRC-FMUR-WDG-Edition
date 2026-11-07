@@ -34,6 +34,7 @@ gradle.projectsEvaluated {
         dependsOn compileChecks
         classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
         main = 'com.flansmod.client.ThermalGpuChecks'
+        if (p.hasProperty('cameraParticlesOnly')) args '--camera-particles'
         if (p.hasProperty('mchrRuntime')) args p.property('mchrRuntime')
         if (p.hasProperty('dhRuntime')) systemProperty 'fmur.checks.dhRuntime', p.property('dhRuntime')
         if (p.hasProperty('angelicaRuntime')) systemProperty 'fmur.checks.angelicaRuntime', p.property('angelicaRuntime')

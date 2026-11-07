@@ -101,9 +101,13 @@ public final class ThermalRenderApi {
     public static boolean isParticlePass() { return particlePass; }
 
     static void renderParticles(Runnable particles) {
+        renderParticles(particles, false);
+    }
+
+    static void renderParticles(Runnable particles, boolean thermalMask) {
         if (particlePass) throw new IllegalStateException("Recursive thermal particles");
         particlePass = true;
-        try { particles.run(); }
+        try { CameraParticles.render(particles, thermalMask); }
         finally { particlePass = false; }
     }
     static boolean isVehicleCameraActive() { return vehicleCamera != null && vehicleCamera.getAsBoolean(); }
