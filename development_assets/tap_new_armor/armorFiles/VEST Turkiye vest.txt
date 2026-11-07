@@ -1,0 +1,15 @@
+Name Improved Outer Tactical Vest (M2008)
+ShortName IOTVtrk
+Icon taparmor_IOTVtrk
+Colour 255 255 255
+Type Pants
+Defence 0.05
+Model NewArmor.TurkishModernBodyArmor
+ArmourTexture SkinTurkishModern
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 300
+backArmor 300
+Durability 50
+ModelScale 1.05
+Description Turkish Body Armour_Year: 2008_M2008 Pattern

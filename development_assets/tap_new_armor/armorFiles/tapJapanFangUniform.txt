@@ -1,4 +1,4 @@
-Name Japanese Fang Uniform
+Name Uniform (Fang)
 ShortName tapJapanFangUniform
 Icon taparmor_tapJapanFangUniform
 Colour 255 255 255

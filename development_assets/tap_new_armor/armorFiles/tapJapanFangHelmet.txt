@@ -1,4 +1,4 @@
-Name Japanese Fang M1 Helmet
+Name M1 Helmet (Fang)
 ShortName tapJapanFangHelmet
 Icon taparmor_tapJapanFangHelmet
 Colour 255 255 255

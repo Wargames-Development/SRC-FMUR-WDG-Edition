@@ -6,7 +6,6 @@ import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.client.ThermalScopeEffect;
 import com.flansmod.client.model.NewTapArmor.ModelGhillieBase;
 import com.flansmod.client.model.BFMCpack.ModelSketchfabGun;
-import com.flansmod.client.model.BFMCpack.ModelDragunovSVD;
 import com.flansmod.client.model.animation.gltf.GLTFAnimationController;
 import com.flansmod.client.model.animation.gltf.model.EnumAnimationPart;
 import com.flansmod.client.tmt.ModelRendererTurbo;
@@ -233,7 +232,8 @@ public class RenderGun implements IItemRenderer {
                         GL11.glRotatef(35F, 0F, 0F, 1F);
                         GL11.glRotatef(-5F, 0F, 1F, 0F);
                         GL11.glTranslatef(0.75F, -0.22F, -0.08F);
-                        GL11.glScalef(1F, 1F, -1F);
+                        if (model.mirrorThirdPerson)
+                            GL11.glScalef(1F, 1F, -1F);
                     }
                     GL11.glTranslatef(model.thirdPersonOffset.x, model.thirdPersonOffset.y, model.thirdPersonOffset.z);
                     renderGun(item, gunType, f, model, animations, reloadRotate, type);
@@ -1633,7 +1633,7 @@ public class RenderGun implements IItemRenderer {
         GL11.glTranslatef(model.x * type.modelScale, model.y * type.modelScale, model.z * type.modelScale);
         float attachmentScale = attachment.modelScale;
         if (attachment.type == EnumAttachmentType.sights && type.model instanceof ModelSketchfabGun)
-            attachmentScale *= type.model instanceof ModelDragunovSVD ? 0.4F : 0.65F;
+            attachmentScale *= 0.65F;
         GL11.glScalef(attachmentScale, attachmentScale, attachmentScale);
     }
 
@@ -1704,7 +1704,7 @@ public class RenderGun implements IItemRenderer {
 
 			float attachmentScale = attachment.modelScale / 16F;
 			if (model instanceof ModelSketchfabGun && attachment.type == EnumAttachmentType.sights)
-				attachmentScale *= model instanceof ModelDragunovSVD ? 0.4F : 0.65F;
+				attachmentScale *= 0.65F;
 			lensX = alignmentX + model.scopeAttachPoint.x * gunType.modelScale
 					+ attachment.pictureInPictureX * attachmentScale;
 			lensY = alignmentY + model.scopeAttachPoint.y * gunType.modelScale
@@ -2083,29 +2083,40 @@ public class RenderGun implements IItemRenderer {
             }
             renderEngine.bindTexture(armour.getArmorTextureLocation());
             GL11.glColor4f(1F, 1F, 1F, 1F);
-            if (model instanceof ModelGhillieBase) {
-                GL11.glPushMatrix();
-                GL11.glScalef(armour.type.modelScale, armour.type.modelScale, armour.type.modelScale);
-                ((ModelGhillieBase) model).renderFirstPersonSleeve(right,
-                        right ? firstPersonArmModel.bipedRightArm : firstPersonArmModel.bipedLeftArm,
-                        0.0625F);
-                GL11.glPopMatrix();
-            } else if (parts != null && parts.length > 0) {
-                GL11.glPushMatrix();
-                GL11.glScalef(armour.type.modelScale, armour.type.modelScale, armour.type.modelScale);
-                model.render(parts, right ? firstPersonArmModel.bipedRightArm : firstPersonArmModel.bipedLeftArm,
-                        0.0625F, armour.type.modelScale);
-                GL11.glPopMatrix();
-            } else {
-                float x = arm.rotateAngleX, y = arm.rotateAngleY, z = arm.rotateAngleZ;
-                arm.rotateAngleX = arm.rotateAngleY = arm.rotateAngleZ = 0F;
-                GL11.glPushMatrix();
-                GL11.glScalef(armour.type.modelScale, armour.type.modelScale, armour.type.modelScale);
-                arm.render(0.0625F);
-                GL11.glPopMatrix();
-                arm.rotateAngleX = x;
-                arm.rotateAngleY = y;
-                arm.rotateAngleZ = z;
+            GL11.glPushAttrib(GL11.GL_POLYGON_BIT);
+            try {
+                if (slot == 1) {
+                    // Vest shoulders can share a plane with uniform sleeves (notably CADPAT).
+                    // Bias only this outer layer without changing its shape or the gun's depth state.
+                    GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
+                    GL11.glPolygonOffset(-1F, -1F);
+                }
+                if (model instanceof ModelGhillieBase) {
+                    GL11.glPushMatrix();
+                    GL11.glScalef(armour.type.modelScale, armour.type.modelScale, armour.type.modelScale);
+                    ((ModelGhillieBase) model).renderFirstPersonSleeve(right,
+                            right ? firstPersonArmModel.bipedRightArm : firstPersonArmModel.bipedLeftArm,
+                            0.0625F);
+                    GL11.glPopMatrix();
+                } else if (parts != null && parts.length > 0) {
+                    GL11.glPushMatrix();
+                    GL11.glScalef(armour.type.modelScale, armour.type.modelScale, armour.type.modelScale);
+                    model.render(parts, right ? firstPersonArmModel.bipedRightArm : firstPersonArmModel.bipedLeftArm,
+                            0.0625F, armour.type.modelScale);
+                    GL11.glPopMatrix();
+                } else {
+                    float x = arm.rotateAngleX, y = arm.rotateAngleY, z = arm.rotateAngleZ;
+                    arm.rotateAngleX = arm.rotateAngleY = arm.rotateAngleZ = 0F;
+                    GL11.glPushMatrix();
+                    GL11.glScalef(armour.type.modelScale, armour.type.modelScale, armour.type.modelScale);
+                    arm.render(0.0625F);
+                    GL11.glPopMatrix();
+                    arm.rotateAngleX = x;
+                    arm.rotateAngleY = y;
+                    arm.rotateAngleZ = z;
+                }
+            } finally {
+                GL11.glPopAttrib();
             }
         }
         renderEngine.bindTexture(Minecraft.getMinecraft().thePlayer.getLocationSkin());

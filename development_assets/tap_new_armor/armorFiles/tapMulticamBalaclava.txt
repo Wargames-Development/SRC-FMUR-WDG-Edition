@@ -1,0 +1,9 @@
+Name OCP Balaclava
+ShortName tapMulticamBalaclava
+Icon taparmor_tapMulticamBalaclava
+Colour 255 255 255
+Type Face
+Defence 0.0
+Model NewArmor.BalaclavaEye
+ArmourTexture SkinTapNewBalaclavaMulticam
+Description Operational Camouflage Pattern

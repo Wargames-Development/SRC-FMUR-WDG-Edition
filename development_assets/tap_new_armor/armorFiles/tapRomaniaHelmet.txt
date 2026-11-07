@@ -1,4 +1,4 @@
-Name Romanian M2017 Helmet
+Name Combat Helmet (M2017)
 ShortName tapRomaniaHelmet
 Icon taparmor_tapRomaniaHelmet
 Colour 255 255 255

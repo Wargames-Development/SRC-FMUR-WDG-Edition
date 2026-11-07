@@ -1,4 +1,4 @@
-Name South Korean Uniform
+Name Uniform (Granite B)
 ShortName tapKorea45Uniform
 Icon taparmor_tapKorea45Uniform
 Colour 255 255 255
@@ -11,4 +11,4 @@ KnockbackModifier 0.8
 bodyArmor 100
 armArmor 100
 ModelScale 1.05
-Description South Korean Battle Dress_Year: Unknown_Digital Camouflage
+Description South Korean Battle Dress_Year: Unknown_Granite B

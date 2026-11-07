@@ -1,4 +1,4 @@
-Name Croatian Modern Vest
+Name Body Armour (CROPAT Woodland)
 ShortName tapCroatiaVest
 Icon taparmor_tapCroatiaVest
 Colour 255 255 255
@@ -12,4 +12,4 @@ bodyArmor 300
 backArmor 300
 Durability 50
 ModelScale 1.05
-Description Croatian Body Armour_Year: Unknown_Croatian Woodland
+Description Croatian Body Armour_Year: Unknown_CROPAT Woodland

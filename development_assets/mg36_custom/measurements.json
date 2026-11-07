@@ -1,0 +1,44 @@
+{
+  "triangles": 9215,
+  "groups": 5,
+  "source_faces_with_overlap": 621,
+  "anchors_blender": {
+    "scope": [
+      3.2,
+      0,
+      6.41
+    ],
+    "grip": [
+      11.5,
+      0,
+      3.4
+    ],
+    "barrel": [
+      16.3,
+      0,
+      4.5
+    ],
+    "gadget": [
+      12,
+      1.39,
+      4.25
+    ],
+    "accessory": [
+      10.8,
+      1.39,
+      4.25
+    ],
+    "casing": [
+      3,
+      -0.86,
+      4.6
+    ]
+  },
+  "sight_line_native_y": 7.12,
+  "rail_width": 1.2,
+  "model_scale": 1,
+  "atlas": [
+    1024,
+    1024
+  ]
+}

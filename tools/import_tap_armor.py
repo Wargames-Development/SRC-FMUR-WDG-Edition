@@ -63,44 +63,44 @@ SOURCES = {
 
 # Name, short name, model key, texture source, item kind, description.
 ITEMS = [
-    ("Estonian Helmet", "tapEstoniaT5Helmet", "EstoniaHelmet", "est_h", "helmet", "Estonian Combat Helmet_Year: Unknown_Estonian Woodland"),
-    ("Estonian Uniform", "tapEstoniaT5Uniform", "EstoniaUniform", "est_u", "uniform", "Estonian Battle Dress_Year: Unknown_Estonian Woodland"),
-    ("Estonian Vest", "tapEstoniaT5Vest", "EstoniaVest", "est_v", "vest", "Estonian Body Armour_Year: Unknown_Estonian Woodland"),
-    ("Estonian Snow Helmet", "tapEstoniaSnowHelmet", "EstoniaHelmet", "est_snow", "helmet", "Estonian Combat Helmet_Year: Unknown_Snow Digital"),
-    ("Estonian Snow Uniform", "tapEstoniaSnowUniform", "EstoniaUniform", "est_snow", "uniform", "Estonian Battle Dress_Year: Unknown_Snow Digital"),
-    ("Estonian Snow Vest", "tapEstoniaSnowVest", "EstoniaVest", "est_snow", "vest", "Estonian Body Armour_Year: Unknown_Snow Digital"),
-    ("South Korean Helmet", "tapKorea45Helmet", "KoreaHelmet", "kor_h", "helmet", "South Korean Combat Helmet_Year: Unknown_Digital Camouflage"),
-    ("South Korean Uniform", "tapKorea45Uniform", "KoreaUniform", "kor_u", "uniform", "South Korean Battle Dress_Year: Unknown_Digital Camouflage"),
-    ("South Korean Vest", "tapKorea45Vest", "KoreaVest", "kor_v", "vest", "South Korean Body Armour_Year: Unknown_Digital Camouflage"),
-    ("Japanese Fang M1 Helmet", "tapJapanFangHelmet", "JapanHelmet", "jpn_h", "helmet", "Japanese Combat Helmet_Year: 1941_Fang Camouflage"),
-    ("Japanese Fang Uniform", "tapJapanFangUniform", "JapanUniform", "jpn_u", "uniform", "Japanese Battle Dress_Year: Unknown_Fang Camouflage"),
-    ("Japanese Ballistic Combat Vest Mk1", "tapJapanVestMk1", "JapanVest", "jpn_v", "vest", "Japanese Body Armour_Year: Unknown_Woodland Camouflage"),
-    ("Croatian Modern Helmet", "tapCroatiaHelmet", "CroatiaHelmet", "cro_h", "helmet", "Croatian Combat Helmet_Year: Unknown_Croatian Woodland"),
-    ("Croatian Modern Uniform", "tapCroatiaUniform", "CroatiaUniform", "cro_u", "uniform", "Croatian Battle Dress_Year: Unknown_Croatian Woodland"),
-    ("Croatian Modern Vest", "tapCroatiaVest", "CroatiaVest", "cro_v", "vest", "Croatian Body Armour_Year: Unknown_Croatian Woodland"),
+    ("Combat Helmet (ESTDCU)", "tapEstoniaT5Helmet", "EstoniaHelmet", "est_h", "helmet", "Estonian Combat Helmet_Year: Unknown_ESTDCU"),
+    ("Uniform (ESTDCU)", "tapEstoniaT5Uniform", "EstoniaUniform", "est_u", "uniform", "Estonian Battle Dress_Year: Unknown_ESTDCU"),
+    ("Body Armour (ESTDCU)", "tapEstoniaT5Vest", "EstoniaVest", "est_v", "vest", "Estonian Body Armour_Year: Unknown_ESTDCU"),
+    ("Combat Helmet (Snow Digital)", "tapEstoniaSnowHelmet", "EstoniaHelmet", "est_snow", "helmet", "Estonian Combat Helmet_Year: Unknown_Snow Digital"),
+    ("Uniform (Snow Digital)", "tapEstoniaSnowUniform", "EstoniaUniform", "est_snow", "uniform", "Estonian Battle Dress_Year: Unknown_Snow Digital"),
+    ("Body Armour (Snow Digital)", "tapEstoniaSnowVest", "EstoniaVest", "est_snow", "vest", "Estonian Body Armour_Year: Unknown_Snow Digital"),
+    ("Combat Helmet (Granite B)", "tapKorea45Helmet", "KoreaHelmet", "kor_h", "helmet", "South Korean Combat Helmet_Year: Unknown_Granite B"),
+    ("Uniform (Granite B)", "tapKorea45Uniform", "KoreaUniform", "kor_u", "uniform", "South Korean Battle Dress_Year: Unknown_Granite B"),
+    ("Body Armour (Granite B)", "tapKorea45Vest", "KoreaVest", "kor_v", "vest", "South Korean Body Armour_Year: Unknown_Granite B"),
+    ("M1 Helmet (Fang)", "tapJapanFangHelmet", "JapanHelmet", "jpn_h", "helmet", "Japanese Combat Helmet_Year: 1941_Fang Camouflage"),
+    ("Uniform (Fang)", "tapJapanFangUniform", "JapanUniform", "jpn_u", "uniform", "Japanese Battle Dress_Year: Unknown_Fang Camouflage"),
+    ("Ballistic Combat Vest Mk1 (Woodland)", "tapJapanVestMk1", "JapanVest", "jpn_v", "vest", "Japanese Body Armour_Year: Unknown_Woodland Camouflage"),
+    ("Combat Helmet (CROPAT Woodland)", "tapCroatiaHelmet", "CroatiaHelmet", "cro_h", "helmet", "Croatian Combat Helmet_Year: Unknown_CROPAT Woodland"),
+    ("Uniform (CROPAT Woodland)", "tapCroatiaUniform", "CroatiaUniform", "cro_u", "uniform", "Croatian Battle Dress_Year: Unknown_CROPAT Woodland"),
+    ("Body Armour (CROPAT Woodland)", "tapCroatiaVest", "CroatiaVest", "cro_v", "vest", "Croatian Body Armour_Year: Unknown_CROPAT Woodland"),
     ("Operator FAST Helmet", "tapOperatorHelmet", "OperatorHelmet", "op_h", "helmet", "Operator Combat Helmet_Year: Unknown_Olive Drab"),
     ("Operator Outfit", "tapOperatorOutfit", "OperatorUniform", "op_u", "uniform", "Operator Battle Dress_Year: Unknown_Grey Tactical Fabric"),
     ("Operator Plate Carrier", "tapOperatorCarrier", "OperatorVest", "op_v", "vest", "Operator Body Armour_Year: Unknown_Olive Drab"),
-    ("Polish wz.93 PASGT Helmet", "tapPolandHelmet", "PolandHelmet", "pol_h", "helmet", "Polish Combat Helmet_Year: 1993_wz.93 Pantera"),
-    ("Polish wz.93 Uniform", "tapPolandUniform", "PolandUniform", "pol_u", "uniform", "Polish Battle Dress_Year: 1993_wz.93 Pantera"),
-    ("Polish wz.93 OCHRA Vest", "tapPolandVest", "PolandVest", "pol_v", "vest", "Polish Body Armour_Year: Unknown_wz.93 Pantera"),
-    ("Serbian Helmet", "tapSerbiaT5Helmet", "SerbiaHelmet", "ser_h", "helmet", "Serbian Combat Helmet_Year: Unknown_Serbian Woodland"),
-    ("Serbian Uniform", "tapSerbiaT5Uniform", "SerbiaUniform", "ser_u", "uniform", "Serbian Battle Dress_Year: Unknown_Serbian Woodland"),
-    ("Serbian Vest", "tapSerbiaT5Vest", "SerbiaVest", "ser_v", "vest", "Serbian Body Armour_Year: Unknown_Olive Drab"),
+    ("PASGT Helmet (wz.93 Pantera)", "tapPolandHelmet", "PolandHelmet", "pol_h", "helmet", "Polish Combat Helmet_Year: 1993_wz.93 Pantera"),
+    ("Uniform (wz.93 Pantera)", "tapPolandUniform", "PolandUniform", "pol_u", "uniform", "Polish Battle Dress_Year: 1993_wz.93 Pantera"),
+    ("OCHRA Vest (wz.93 Pantera)", "tapPolandVest", "PolandVest", "pol_v", "vest", "Polish Body Armour_Year: Unknown_wz.93 Pantera"),
+    ("Combat Helmet (M-10)", "tapSerbiaT5Helmet", "SerbiaHelmet", "ser_h", "helmet", "Serbian Combat Helmet_Year: Unknown_M-10 Digital"),
+    ("Uniform (M-10)", "tapSerbiaT5Uniform", "SerbiaUniform", "ser_u", "uniform", "Serbian Battle Dress_Year: Unknown_M-10 Digital"),
+    ("Body Armour (Olive Drab)", "tapSerbiaT5Vest", "SerbiaVest", "ser_v", "vest", "Serbian Body Armour_Year: Unknown_Olive Drab"),
     ("Phase II Clone Helmet", "tapClonePhase2Helmet", "CloneHelmet", "clone_h", "helmet", "Republic Combat Helmet_Year: Unknown_White Armour"),
     ("Phase II Clone Body Armour", "tapClonePhase2Body", "CloneBody", "clone_u", "uniform", "Republic Battle Armour_Year: Unknown_White Armour"),
-    ("Mexican Combat Helmet", "tapMexicoHelmet", "MexicoHelmet", "mex_h", "helmet", "Mexican Combat Helmet_Year: Unknown_Mexican Woodland"),
-    ("Mexican Combat Uniform", "tapMexicoUniform", "MexicoUniform", "mex_u", "uniform", "Mexican Battle Dress_Year: Unknown_Mexican Woodland"),
-    ("Mexican Combat Vest", "tapMexicoVest", "MexicoVest", "mex_v", "vest", "Mexican Body Armour_Year: Unknown_Mexican Woodland"),
-    ("Romanian M2017 Helmet", "tapRomaniaHelmet", "RomaniaHelmet", "rom_h", "helmet", "Romanian Combat Helmet_Year: 2017_M2017 Camouflage"),
-    ("Romanian M2017 Uniform", "tapRomaniaUniform", "RomaniaUniform", "rom_u", "uniform", "Romanian Battle Dress_Year: 2017_M2017 Camouflage"),
-    ("Romanian M2017 Vest", "tapRomaniaVest", "RomaniaVest", "rom_v", "vest", "Romanian Body Armour_Year: 2017_M2017 Camouflage"),
-    ("Danish M96 Helmet", "tapDenmarkHelmet", "DenmarkHelmet", "den_h", "helmet", "Danish Combat Helmet_Year: 1996_M84 Camouflage"),
-    ("Danish M84 Uniform", "tapDenmarkUniform", "DenmarkUniform", "den_u", "uniform", "Danish Battle Dress_Year: 1984_M84 Camouflage"),
-    ("Danish M00 Fragmentation Vest", "tapDenmarkVest", "DenmarkVest", "den_v", "vest", "Danish Fragmentation Vest_Year: 2000_M84 Camouflage"),
-    ("Belarusian VKBO Uniform", "tapBelarusUniform", "BelarusUniform", "bel_u", "uniform", "Belarusian Battle Dress_Year: Unknown_EMR Camouflage"),
-    ("Belarusian 6B13 Vest", "tapBelarusVest", "BelarusVest", "bel_v", "vest", "Belarusian Body Armour_Year: Unknown_EMR Camouflage"),
-    ("Russian Tanker Hat", "tapTankerHat", "TankerHat", "tank_h", "helmet", "Russian Tanker Hat_Year: Unknown_Black"),
+    ("Combat Helmet (Pixelado Selva)", "tapMexicoHelmet", "MexicoHelmet", "mex_h", "helmet", "Mexican Combat Helmet_Year: Unknown_Pixelado Selva"),
+    ("Uniform (Pixelado Selva)", "tapMexicoUniform", "MexicoUniform", "mex_u", "uniform", "Mexican Battle Dress_Year: Unknown_Pixelado Selva"),
+    ("Body Armour (Pixelado Selva)", "tapMexicoVest", "MexicoVest", "mex_v", "vest", "Mexican Body Armour_Year: Unknown_Pixelado Selva"),
+    ("Combat Helmet (M2017)", "tapRomaniaHelmet", "RomaniaHelmet", "rom_h", "helmet", "Romanian Combat Helmet_Year: 2017_M2017 Camouflage"),
+    ("Uniform (M2017)", "tapRomaniaUniform", "RomaniaUniform", "rom_u", "uniform", "Romanian Battle Dress_Year: 2017_M2017 Camouflage"),
+    ("Body Armour (M2017)", "tapRomaniaVest", "RomaniaVest", "rom_v", "vest", "Romanian Body Armour_Year: 2017_M2017 Camouflage"),
+    ("M96 Helmet (M84)", "tapDenmarkHelmet", "DenmarkHelmet", "den_h", "helmet", "Danish Combat Helmet_Year: 1996_M84 Camouflage"),
+    ("Uniform (M84)", "tapDenmarkUniform", "DenmarkUniform", "den_u", "uniform", "Danish Battle Dress_Year: 1984_M84 Camouflage"),
+    ("M00 Fragmentation Vest (M84)", "tapDenmarkVest", "DenmarkVest", "den_v", "vest", "Danish Fragmentation Vest_Year: 2000_M84 Camouflage"),
+    ("VKBO Uniform (EMR)", "tapBelarusUniform", "BelarusUniform", "bel_u", "uniform", "Belarusian Battle Dress_Year: Unknown_EMR Camouflage"),
+    ("6B13 Vest (EMR)", "tapBelarusVest", "BelarusVest", "bel_v", "vest", "Belarusian Body Armour_Year: Unknown_EMR Camouflage"),
+    ("Tanker Hat (Black)", "tapTankerHat", "TankerHat", "tank_h", "helmet", "Russian Tanker Hat_Year: Unknown_Black"),
     ("Ghillie Hood", "tapGhillieHood", "GhillieHelmet", "ghillie", "helmet", "Ghillie Hood_Year: Unknown_Woodland Camouflage"),
     ("Ghillie Suit", "tapGhillieSuit", "GhillieSuit", "ghillie", "uniform", "Ghillie Suit_Year: Unknown_Woodland Camouflage"),
     ("Snow Ghillie Hood", "tapSnowGhillieHood", "GhillieHelmet", "ghillie_snow", "helmet", "Snow Ghillie Hood_Year: Unknown_Snow Digital"),
@@ -425,7 +425,12 @@ def main():
     (OUTPUT / "assets" / "flansmod" / "armor" / "SkinTapNewCryv_2.png").unlink(missing_ok=True)
     lang = OUTPUT / "lang_additions" / "en_US.lang"
     lang.parent.mkdir(parents=True, exist_ok=True)
-    lang.write_text("".join(f"item.{short}.name={name}\n" for name, short, *_ in ITEMS), encoding="utf-8")
+    entries = []
+    for path in sorted((OUTPUT / "armorFiles").glob("*.txt")):
+        values = dict(line.split(None, 1) for line in path.read_text(encoding="utf-8").splitlines()
+                      if line.startswith(("Name ", "ShortName ")))
+        entries.append(f"item.{values['ShortName']}.name={values['Name']}\n")
+    lang.write_text("".join(entries), encoding="utf-8")
     print(f"Generated {len(MODELS)} armor model classes and {len(ITEMS)} armor definitions in {OUTPUT}")
 
 

@@ -1,4 +1,4 @@
-Name Serbian Vest
+Name Body Armour (Olive Drab)
 ShortName tapSerbiaT5Vest
 Icon taparmor_tapSerbiaT5Vest
 Colour 255 255 255

@@ -1,0 +1,14 @@
+Name Army Uniform (Olive Drab)
+ShortName NKBody
+Icon taparmor_NKBody
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewArmor.NorthKoreanUniform
+ArmourTexture SkinNK
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+
+Description North Korean Combat Jacket_Year: 1960_Olive Drab

@@ -1,4 +1,4 @@
-Name Polish wz.93 PASGT Helmet
+Name PASGT Helmet (wz.93 Pantera)
 ShortName tapPolandHelmet
 Icon taparmor_tapPolandHelmet
 Colour 255 255 255

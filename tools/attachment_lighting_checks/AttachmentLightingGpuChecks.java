@@ -34,7 +34,7 @@ public final class AttachmentLightingGpuChecks {
             checkCloseSightDepth();
             checkHandheldModel();
             System.out.println("PASS: GPU depth reconstruction, continuous light over depth steps, circular cutoff,"
-                    + " shadow rejection, gun occlusion, close-sight depth, translucent sight transmission, visible/IR laser modes, entity laser surface/bounds, resize, hand beam start, reticle sway, corpse armor pose, handheld OBJ/texture and GL state restoration");
+                    + " shadow rejection, gun occlusion, close-sight depth, translucent sight transmission, visible/IR laser modes, entity laser surface/bounds, resize, hand beam start, reticle sway, corpse armor pose, coplanar gun sleeve layers, handheld OBJ/texture and GL state restoration");
         } finally { context.destroy(); }
     }
 
@@ -367,6 +367,7 @@ public final class AttachmentLightingGpuChecks {
         java.lang.reflect.Field singleton = net.minecraft.client.Minecraft.class.getDeclaredField("theMinecraft");
         singleton.setAccessible(true); Object previous = singleton.get(null); singleton.set(null, mc);
         try {
+            checkGunArmourLayers(mc, allocator);
             checkWristAnchor(mc);
             com.flansmod.client.model.RenderHandheldFlashlight renderer = new com.flansmod.client.model.RenderHandheldFlashlight();
             java.lang.reflect.Field mesh = renderer.getClass().getDeclaredField("model"); mesh.setAccessible(true); mesh.set(renderer, model);
@@ -539,6 +540,118 @@ public final class AttachmentLightingGpuChecks {
         @Override public void bindTexture(net.minecraft.util.ResourceLocation location) {
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, net.minecraft.client.entity.AbstractClientPlayer.locationStevePng.equals(location)
                     ? skin : location != null && "skins/test.png".equals(location.getResourcePath()) ? grenade : texture);
+        }
+    }
+
+    private static void checkGunArmourLayers(net.minecraft.client.Minecraft mc, sun.misc.Unsafe allocator) throws Exception {
+        // These checks render armor without registering a running mod or its event handlers.
+        java.util.Map<String, Object> previousBlackboard = net.minecraft.launchwrapper.Launch.blackboard;
+        net.minecraft.launchwrapper.Launch.blackboard = new java.util.HashMap<>();
+        net.minecraft.launchwrapper.Launch.blackboard.put("fml.deobfuscatedEnvironment", true);
+        java.lang.reflect.Field loaderInstance = cpw.mods.fml.common.Loader.class.getDeclaredField("instance");
+        loaderInstance.setAccessible(true); Object previousLoader = loaderInstance.get(null);
+        loaderInstance.set(null, allocator.allocateInstance(cpw.mods.fml.common.Loader.class));
+        java.lang.reflect.Field forgeBus = net.minecraftforge.common.MinecraftForge.class.getDeclaredField("EVENT_BUS");
+        Object previousForgeBus = net.minecraftforge.common.MinecraftForge.EVENT_BUS;
+        Object busBase = allocator.staticFieldBase(forgeBus); long busOffset = allocator.staticFieldOffset(forgeBus);
+        allocator.putObject(busBase, busOffset, new RenderOnlyEventBus());
+        java.lang.reflect.Field fmlBus = cpw.mods.fml.common.FMLCommonHandler.class.getDeclaredField("eventBus");
+        fmlBus.setAccessible(true); Object previousFmlBus = fmlBus.get(cpw.mods.fml.common.FMLCommonHandler.instance());
+        fmlBus.set(cpw.mods.fml.common.FMLCommonHandler.instance(), new RenderOnlyEventBus());
+        com.flansmod.client.model.RenderGun renderer = new com.flansmod.client.model.RenderGun();
+        java.lang.reflect.Field textures = renderer.getClass().getDeclaredField("renderEngine");
+        textures.setAccessible(true); Object previousTextures = textures.get(null); textures.set(null, mc.renderEngine);
+        java.lang.reflect.Method render = renderer.getClass().getDeclaredMethod("renderFirstPersonArmour",
+                net.minecraft.entity.player.EntityPlayer.class, boolean.class);
+        render.setAccessible(true);
+        net.minecraft.item.ItemStack[] inventory = mc.thePlayer.inventory.armorInventory;
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        try {
+            GL11.glViewport(0, 0, SIZE, SIZE);
+            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity();
+            GL11.glOrtho(-1D, 1D, -1D, 1D, 0.1D, 10D);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadIdentity();
+            GL11.glDisable(GL11.GL_LIGHTING); GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glDisable(GL11.GL_ALPHA_TEST); GL11.glDisable(GL11.GL_BLEND);
+            GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDepthFunc(GL11.GL_LESS); GL11.glDepthMask(true);
+            // Coplanar shoulder/sleeve fixtures must render the outer layer on either arm.
+            inventory[2] = sleeveStack(allocator, false);
+            inventory[1] = sleeveStack(allocator, true);
+            for (boolean right : new boolean[] {true, false}) {
+                for (boolean offsetAlreadyEnabled : new boolean[] {false, true}) {
+                    GL11.glPolygonOffset(0.25F, 0.5F);
+                    if (offsetAlreadyEnabled) GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
+                    else GL11.glDisable(GL11.GL_POLYGON_OFFSET_FILL);
+                    GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+                    render.invoke(renderer, mc.thePlayer, right);
+                    ByteBuffer pixels = read(SIZE);
+                    int middle = (SIZE / 2 * SIZE + SIZE / 2) * 4;
+                    check((pixels.get(middle + 1) & 255) > 240 && (pixels.get(middle) & 255) < 10,
+                            "Coplanar vest shoulder lost to the uniform sleeve");
+                    check(GL11.glIsEnabled(GL11.GL_POLYGON_OFFSET_FILL) == offsetAlreadyEnabled,
+                            "Sleeve rendering leaked polygon-offset enable state");
+                    check(GL11.glGetFloat(GL11.GL_POLYGON_OFFSET_FACTOR) == 0.25F
+                                    && GL11.glGetFloat(GL11.GL_POLYGON_OFFSET_UNITS) == 0.5F,
+                            "Sleeve rendering leaked polygon-offset values");
+                    check(GL11.glGetInteger(GL11.GL_DEPTH_FUNC) == GL11.GL_LESS
+                                    && GL11.glIsEnabled(GL11.GL_DEPTH_TEST),
+                            "Sleeve rendering changed gun depth testing");
+                }
+            }
+            inventory[1] = null;
+            GL11.glDisable(GL11.GL_POLYGON_OFFSET_FILL);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+            render.invoke(renderer, mc.thePlayer, true);
+            check((read(SIZE).get((SIZE / 2 * SIZE + SIZE / 2) * 4) & 255) > 240,
+                    "Uniform sleeve disappeared without a vest");
+            inventory[2] = null; inventory[1] = sleeveStack(allocator, true);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+            render.invoke(renderer, mc.thePlayer, false);
+            check((read(SIZE).get((SIZE / 2 * SIZE + SIZE / 2) * 4 + 1) & 255) > 240,
+                    "Vest shoulder disappeared without a uniform");
+            check(GL11.glGetError() == GL11.GL_NO_ERROR, "Gun sleeve layers produced a GL error");
+        } finally {
+            inventory[1] = inventory[2] = null;
+            textures.set(null, previousTextures);
+            allocator.putObject(busBase, busOffset, previousForgeBus);
+            fmlBus.set(cpw.mods.fml.common.FMLCommonHandler.instance(), previousFmlBus);
+            net.minecraft.launchwrapper.Launch.blackboard = previousBlackboard;
+            loaderInstance.set(null, previousLoader);
+            GL11.glPopAttrib();
+        }
+    }
+
+    private static final class RenderOnlyEventBus extends cpw.mods.fml.common.eventhandler.EventBus {
+        @Override public void register(Object target) { }
+    }
+
+    private static net.minecraft.item.ItemStack sleeveStack(sun.misc.Unsafe allocator, boolean vest) throws Exception {
+        com.flansmod.common.teams.ArmourType type = (com.flansmod.common.teams.ArmourType)
+                allocator.allocateInstance(com.flansmod.common.teams.ArmourType.class);
+        type.modelScale = 1.05F;
+        type.model = new SleeveLayer(vest);
+        com.flansmod.common.teams.ItemTeamArmour item = (com.flansmod.common.teams.ItemTeamArmour)
+                allocator.allocateInstance(com.flansmod.common.teams.ItemTeamArmour.class);
+        item.type = type;
+        net.minecraft.item.ItemStack stack = new net.minecraft.item.ItemStack(item);
+        java.lang.reflect.Field delegate = stack.getClass().getDeclaredField("delegate"); delegate.setAccessible(true);
+        delegate.set(stack, new cpw.mods.fml.common.registry.RegistryDelegate.Delegate<net.minecraft.item.Item>(item, net.minecraft.item.Item.class));
+        return stack;
+    }
+
+    private static final class SleeveLayer extends com.flansmod.client.model.ModelCustomArmour {
+        private final boolean vest;
+        private SleeveLayer(boolean vest) {
+            this.vest = vest;
+            leftArmModel = rightArmModel = new com.flansmod.client.tmt.ModelRendererTurbo[1];
+        }
+        @Override public void render(com.flansmod.client.tmt.ModelRendererTurbo[] models,
+                net.minecraft.client.model.ModelRenderer arm, float scale, float modelScale) {
+            GL11.glColor3f(vest ? 0F : 1F, vest ? 1F : 0F, 0F);
+            GL11.glBegin(GL11.GL_QUADS);
+            GL11.glVertex3f(-0.5F, -0.5F, -2F); GL11.glVertex3f(0.5F, -0.5F, -2F);
+            GL11.glVertex3f(0.5F, 0.5F, -2F); GL11.glVertex3f(-0.5F, 0.5F, -2F);
+            GL11.glEnd();
         }
     }
 

@@ -1,0 +1,15 @@
+Name Combat Vest Mk1 (Tonghab)
+ShortName fragVestSORK
+Icon taparmor_fragVestSORK
+Colour 255 255 255
+Type Pants
+Defence 0.05
+Model NewArmor.ROK90sVest
+ArmourTexture SkinROK90
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 300
+backArmor 300
+Durability 55
+ModelScale 1.05
+Description Korean Flak Jacket_Year: 1990_Tonghab

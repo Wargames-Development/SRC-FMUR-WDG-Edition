@@ -1,4 +1,4 @@
-Name Danish M84 Uniform
+Name Uniform (M84)
 ShortName tapDenmarkUniform
 Icon taparmor_tapDenmarkUniform
 Colour 255 255 255

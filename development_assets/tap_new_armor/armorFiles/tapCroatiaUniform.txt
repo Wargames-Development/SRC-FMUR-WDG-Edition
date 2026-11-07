@@ -1,4 +1,4 @@
-Name Croatian Modern Uniform
+Name Uniform (CROPAT Woodland)
 ShortName tapCroatiaUniform
 Icon taparmor_tapCroatiaUniform
 Colour 255 255 255
@@ -11,4 +11,4 @@ KnockbackModifier 0.8
 bodyArmor 100
 armArmor 100
 ModelScale 1.05
-Description Croatian Battle Dress_Year: Unknown_Croatian Woodland
+Description Croatian Battle Dress_Year: Unknown_CROPAT Woodland

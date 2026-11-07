@@ -1,4 +1,4 @@
-Name Estonian Helmet
+Name Combat Helmet (ESTDCU)
 ShortName tapEstoniaT5Helmet
 Icon taparmor_tapEstoniaT5Helmet
 Colour 255 255 255
@@ -7,4 +7,4 @@ Defence 0.2
 Model NewTapArmor.EstoniaHelmet
 ArmourTexture SkinTapNewEsth
 headArmor 200
-Description Estonian Combat Helmet_Year: Unknown_Estonian Woodland
+Description Estonian Combat Helmet_Year: Unknown_ESTDCU

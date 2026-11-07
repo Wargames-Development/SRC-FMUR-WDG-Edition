@@ -520,7 +520,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
             if (ticksExisted > type.fuse && type.fuse > 0)
                 detonate();
             //If this grenade has a proximity trigger, check for living entities within it's range
-            if (type.livingProximityTrigger > 0 || type.driveableProximityTrigger > 0) {
+            if (!type.isMolotov() && (type.livingProximityTrigger > 0 || type.driveableProximityTrigger > 0)) {
                 float checkRadius = Math.max(type.livingProximityTrigger, type.driveableProximityTrigger);
                 List list = worldObj.getEntitiesWithinAABBExcludingEntity(this, boundingBox.expand(checkRadius, checkRadius, checkRadius));
                 for (Object obj : list) {
@@ -573,7 +573,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
             stuck = false;
 
         //Physics and motion (Don't move if stuck)
-        if (!stuck && !type.stickToThrower) {
+        if (!stuck && !type.stickToThrower && !(type.isMolotov() && detonated)) {
             prevRotationYaw = axes.getYaw();
             prevRotationPitch = axes.getPitch();
             prevRotationRoll = axes.getRoll();
@@ -586,12 +586,46 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
 
             //Raytrace the motion of this grenade
             MovingObjectPosition hit = worldObj.rayTraceBlocks(posVec.toVec3(), nextPosVec.toVec3());
+            // Break glass before deciding whether this impact should detonate or bounce.
+            // Retrace so a wall behind the window still stops the grenade this tick.
+            if (!worldObj.isRemote && type.breaksGlass && TeamsManager.canBreakGlass) {
+                for (int broken = 0; broken < 16 && hit != null && hit.typeOfHit == MovingObjectType.BLOCK; broken++) {
+                    Block glass = worldObj.getBlock(hit.blockX, hit.blockY, hit.blockZ);
+                    if (glass.getMaterial() != Material.glass
+                            || !worldObj.setBlockToAir(hit.blockX, hit.blockY, hit.blockZ)) break;
+                    FlansMod.proxy.playBlockBreakSound(hit.blockX, hit.blockY, hit.blockZ, glass, dimension);
+                    hit = worldObj.rayTraceBlocks(posVec.toVec3(), nextPosVec.toVec3());
+                }
+            }
+
+            // Molotovs burst on contact rather than using the pack's proximity trigger.
+            if (!worldObj.isRemote && type.isMolotov() && !detonated) {
+                MovingObjectPosition impact = hit != null && hit.typeOfHit == MovingObjectType.BLOCK
+                        && worldObj.getBlock(hit.blockX, hit.blockY, hit.blockZ).getMaterial().blocksMovement() ? hit : null;
+                double distance = impact == null ? Double.MAX_VALUE : posVec.toVec3().squareDistanceTo(impact.hitVec);
+                List entities = worldObj.getEntitiesWithinAABBExcludingEntity(this,
+                        boundingBox.addCoord(motionX, motionY, motionZ).expand(0.3D, 0.3D, 0.3D));
+                for (Object obj : entities) {
+                    Entity entity = (Entity) obj;
+                    if (!entity.canBeCollidedWith() || (entity == thrower && ticksExisted < 10)) continue;
+                    MovingObjectPosition entityHit = entity.boundingBox.expand(0.3D, 0.3D, 0.3D)
+                            .calculateIntercept(posVec.toVec3(), nextPosVec.toVec3());
+                    if (entityHit != null && posVec.toVec3().squareDistanceTo(entityHit.hitVec) < distance) {
+                        impact = entityHit;
+                        distance = posVec.toVec3().squareDistanceTo(entityHit.hitVec);
+                    }
+                }
+                if (impact != null) {
+                    setPosition(impact.hitVec.xCoord, impact.hitVec.yCoord, impact.hitVec.zCoord);
+                    detonate();
+                    if (detonated) {
+                        motionX = motionY = motionZ = 0;
+                        return;
+                    }
+                }
+            }
             //If we hit block
             if (hit != null && hit.typeOfHit == MovingObjectType.BLOCK && worldObj.getBlock(hit.blockX, hit.blockY, hit.blockZ).getMaterial().blocksMovement()) {
-                //Get the blockID and block material
-                Block block = worldObj.getBlock(hit.blockX, hit.blockY, hit.blockZ);
-                Material mat = block.getMaterial();
-
                 if (tickAfterFirstImpact == 0) tickAfterFirstImpact = 1;
                 tickAfterOnGround++;
 
@@ -602,12 +636,6 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
                 /** 允许召唤炮击 */
                 if (!worldObj.isRemote && type.enableCallArtillery && !artilleryCalled) {
                     canCallArtillery = true;
-                }
-
-                //If we hit glass and can break it, do so
-                else if (type.breaksGlass && mat == Material.glass && TeamsManager.canBreakGlass) {
-                    worldObj.setBlockToAir(hit.blockX, hit.blockY, hit.blockZ);
-                    FlansMod.proxy.playBlockBreakSound(hit.blockX, hit.blockY, hit.blockZ, block, this.dimension);
                 }
 
                 //If this grenade does not penetrate blocks, hit the block instead
@@ -917,7 +945,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
     }
 
 
-    private void igniteMolotovGround() {
+    private void igniteIncendiaryGround() {
         if (worldObj.isRemote || !TeamsManager.explosions) return;
         final int radius = 3;
         int centerX = MathHelper.floor_double(posX);
@@ -932,8 +960,9 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
                 if (!worldObj.blockExists(x, centerY, z)) continue;
                 for (int y = centerY + 1; y >= centerY - 2; y--) {
                     if (y <= 0 || y >= worldObj.getHeight()) continue;
+                    // Leaves lack a solid top face, but vanilla fire can burn above them.
                     if (worldObj.isAirBlock(x, y, z)
-                            && World.doesBlockHaveSolidTopSurface(worldObj, x, y - 1, z)
+                            && worldObj.getBlock(x, y - 1, z).getMaterial().blocksMovement()
                             && Blocks.fire.canPlaceBlockAt(worldObj, x, y, z)) {
                         candidates.add(new ChunkPosition(x, y, z));
                         break;
@@ -986,8 +1015,8 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
         }
 
         //Make fire
-        if (!worldObj.isRemote && type.isMolotov()) {
-            igniteMolotovGround();
+        if (!worldObj.isRemote && (type.isMolotov() || type.isIncendiary)) {
+            igniteIncendiaryGround();
         } else if (!worldObj.isRemote && type.fireRadius > 0.1F) {
             for (float i = -type.fireRadius; i < type.fireRadius; i++) {
                 for (float j = -type.fireRadius; j < type.fireRadius; j++) {

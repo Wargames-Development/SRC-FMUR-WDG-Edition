@@ -1,4 +1,4 @@
-Name Japanese Ballistic Combat Vest Mk1
+Name Ballistic Combat Vest Mk1 (Woodland)
 ShortName tapJapanVestMk1
 Icon taparmor_tapJapanVestMk1
 Colour 255 255 255

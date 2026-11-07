@@ -1,4 +1,4 @@
-Name Romanian M2017 Uniform
+Name Uniform (M2017)
 ShortName tapRomaniaUniform
 Icon taparmor_tapRomaniaUniform
 Colour 255 255 255

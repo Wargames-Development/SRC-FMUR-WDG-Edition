@@ -1,0 +1,10 @@
+Name PASGT Kevlar Helmet (No Cover)
+ShortName TYURKIYENUMERONEHELMET
+Icon taparmor_TYURKIYENUMERONEHELMET
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewArmor.PASGTHelmetNaked
+ArmourTexture SkinPASGTTurkish
+Description Turkish Combat Helmet_Year: 2008_No Cover
+headArmor 200

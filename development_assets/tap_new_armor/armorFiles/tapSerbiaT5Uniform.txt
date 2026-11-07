@@ -1,4 +1,4 @@
-Name Serbian Uniform
+Name Uniform (M-10)
 ShortName tapSerbiaT5Uniform
 Icon taparmor_tapSerbiaT5Uniform
 Colour 255 255 255
@@ -11,4 +11,4 @@ KnockbackModifier 0.8
 bodyArmor 100
 armArmor 100
 ModelScale 1.05
-Description Serbian Battle Dress_Year: Unknown_Serbian Woodland
+Description Serbian Battle Dress_Year: Unknown_M-10 Digital

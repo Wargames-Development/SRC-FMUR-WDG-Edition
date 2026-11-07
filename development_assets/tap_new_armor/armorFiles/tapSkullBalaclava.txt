@@ -1,0 +1,9 @@
+Name Skull Balaclava
+ShortName tapSkullBalaclava
+Icon taparmor_tapSkullBalaclava
+Colour 255 255 255
+Type Face
+Defence 0.0
+Model NewArmor.BalaclavaEye
+ArmourTexture SkinTapNewBalaclavaSkull
+Description Printed skull face

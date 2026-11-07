@@ -1,4 +1,4 @@
-Name Danish M00 Fragmentation Vest
+Name M00 Fragmentation Vest (M84)
 ShortName tapDenmarkVest
 Icon taparmor_tapDenmarkVest
 Colour 255 255 255

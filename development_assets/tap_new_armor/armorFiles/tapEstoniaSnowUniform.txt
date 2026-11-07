@@ -1,4 +1,4 @@
-Name Estonian Snow Uniform
+Name Uniform (Snow Digital)
 ShortName tapEstoniaSnowUniform
 Icon taparmor_tapEstoniaSnowUniform
 Colour 255 255 255

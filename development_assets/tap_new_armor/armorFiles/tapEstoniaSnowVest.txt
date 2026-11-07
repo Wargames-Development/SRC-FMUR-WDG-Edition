@@ -1,4 +1,4 @@
-Name Estonian Snow Vest
+Name Body Armour (Snow Digital)
 ShortName tapEstoniaSnowVest
 Icon taparmor_tapEstoniaSnowVest
 Colour 255 255 255

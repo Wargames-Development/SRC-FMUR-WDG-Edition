@@ -1,5 +1,6 @@
 """Install the converted guns into the existing BFMC Gun Pack development runtime."""
 
+from argparse import ArgumentParser
 from pathlib import Path
 import shutil
 
@@ -25,6 +26,16 @@ def append_language(source, destination):
     destination.write_text(current, encoding="utf-8")
 
 
+def install_dragunov():
+    definition = PACK / "guns" / "DragunovSVD.txt"
+    if not definition.is_file() or "ShortName sketchDragunovSVD" not in definition.read_text().splitlines():
+        raise RuntimeError("The existing BFMC Dragunov definition is missing")
+    custom = ROOT / "development_assets" / "dragunov_custom"
+    copy(custom / "DragunovSVD.png", PACK / "assets" / "flansmod" / "skins" / "DragunovSVD.png")
+    copy(custom / "DragunovSVD_icon.png", PACK / "assets" / "flansmod" / "textures" / "items" / "DragunovSVD.png")
+    copy(custom / "ATTRIBUTION.txt", PACK / "licenses" / "Sketchfab" / "DragunovSVD.txt")
+
+
 def install():
     if not PACK.is_dir() or not MODELS.is_dir():
         raise RuntimeError("The existing BFMC Gun Pack runtime is missing")
@@ -35,7 +46,7 @@ def install():
     language = PACK / "assets" / "flansmod" / "lang" / "en_US.lang"
     append_language(SOURCE / "definitions" / "lang" / "en_US.lang", language)
     for folder in (SOURCE / "game_ready").iterdir():
-        if not folder.is_dir():
+        if not folder.is_dir() or folder.name == "DragunovSVD":
             continue
         name = folder.name
         copy(folder / (name + ".obj"), MODELS / (name + ".obj"))
@@ -45,6 +56,7 @@ def install():
         copy(folder / (name + ".png"), PACK / "assets" / "flansmod" / "skins" / (name + ".png"))
         copy(folder / (name + "Icon.png"), PACK / "assets" / "flansmod" / "textures" / "items" / (name + ".png"))
         copy(folder / "license.txt", PACK / "licenses" / "Sketchfab" / (name + ".txt"))
+    install_dragunov()
     custom = ROOT / "development_assets" / "vhs2_custom"
     copy(custom / "VHS2_Custom.png", PACK / "assets" / "flansmod" / "skins" / "VHS2_Custom.png")
     copy(custom / "VHS2_Custom_Icon.png", PACK / "assets" / "flansmod" / "textures" / "items" / "VHS2_Custom.png")
@@ -81,5 +93,11 @@ def install():
 
 
 if __name__ == "__main__":
-    install()
-    print("Installed seven guns and their ammunition into BFMC Gun Pack")
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument("--dragunov-only", action="store_true", help="refresh the remodeled Dragunov's art")
+    if parser.parse_args().dragunov_only:
+        install_dragunov()
+        print("Installed the remodeled Dragunov atlas, icon, and attribution into BFMC Gun Pack")
+    else:
+        install()
+        print("Installed seven guns and their ammunition into BFMC Gun Pack")

@@ -1,4 +1,4 @@
-Name Belarusian 6B13 Vest
+Name 6B13 Vest (EMR)
 ShortName tapBelarusVest
 Icon taparmor_tapBelarusVest
 Colour 255 255 255

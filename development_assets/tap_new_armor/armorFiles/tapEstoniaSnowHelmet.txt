@@ -1,4 +1,4 @@
-Name Estonian Snow Helmet
+Name Combat Helmet (Snow Digital)
 ShortName tapEstoniaSnowHelmet
 Icon taparmor_tapEstoniaSnowHelmet
 Colour 255 255 255

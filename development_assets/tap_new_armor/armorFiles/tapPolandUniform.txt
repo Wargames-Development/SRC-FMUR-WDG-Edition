@@ -1,4 +1,4 @@
-Name Polish wz.93 Uniform
+Name Uniform (wz.93 Pantera)
 ShortName tapPolandUniform
 Icon taparmor_tapPolandUniform
 Colour 255 255 255

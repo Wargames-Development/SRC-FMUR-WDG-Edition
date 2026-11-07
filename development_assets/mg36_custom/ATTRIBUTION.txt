@@ -1,0 +1,20 @@
+FMUR G36 rifle conversion
+
+Derived from the existing BFMC Gun Pack MG36 model and diffuse texture in this
+repository's development runtime. Original runtime model: mpack.mg36TD
+(Modelmg36TD.class), original texture: assets/flansmod/skins/MG36.png.
+The supplied compiled model does not identify its original author or license.
+Existing pack credits and applicable source rights continue to apply; this file
+does not grant new rights to the inherited model or texture.
+
+FMUR adaptation retains the original receiver, stock, grip, handguard, controls
+and their UV islands. It adds a curved rifle magazine, barrel, muzzle, mounting
+rails and marked iron sights. The finish follows the BFMC pack charcoal palette.
+The default iron sights use the existing BFMC HK416 front and rear geometry
+and their original atlas strip, fitted to the G36 rail.
+This is an adaptation, not a claim of original authorship of the whole weapon.
+
+Attachment preview meshes/textures are the existing BFMC pack HOLO, VerticalGrip,
+5MWLaser and DarkZone KXFlashHider at their configured runtime scales.
+Attachment textures remain separate from the gun atlas; the editable Blender
+scene packs the existing pack images used by its hidden comparison objects.

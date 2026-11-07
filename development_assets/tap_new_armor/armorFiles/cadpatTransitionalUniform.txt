@@ -1,0 +1,14 @@
+Name M65 Uniform (CADPAT MT)
+ShortName cadpatTransitionalUniform
+Icon taparmor_cadpatTransitionalUniform
+Colour 255 255 255
+Type Chest
+Defence 0.3
+Model NewArmor.CanadaModernBody
+ArmourTexture SkinCanadianTransitional
+MoveSpeedModifier 1.0
+KnockbackModifier 0.8
+bodyArmor 100
+armArmor 100
+ModelScale 1.05
+Description Canadian Battle Dress Uniform_Year: 1997_CADPAT MT

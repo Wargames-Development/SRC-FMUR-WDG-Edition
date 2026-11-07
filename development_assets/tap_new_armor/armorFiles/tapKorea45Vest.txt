@@ -1,4 +1,4 @@
-Name South Korean Vest
+Name Body Armour (Granite B)
 ShortName tapKorea45Vest
 Icon taparmor_tapKorea45Vest
 Colour 255 255 255
@@ -12,4 +12,4 @@ bodyArmor 300
 backArmor 300
 Durability 50
 ModelScale 1.05
-Description South Korean Body Armour_Year: Unknown_Digital Camouflage
+Description South Korean Body Armour_Year: Unknown_Granite B

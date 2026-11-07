@@ -1,0 +1,10 @@
+Name CG634 Helmet (CADPAT MT)
+ShortName cadpatTransitionalHelmet
+Icon taparmor_cadpatTransitionalHelmet
+Colour 255 255 255
+Type Helmet
+Defence 0.2
+Model NewArmor.CanadaModernHelmet
+ArmourTexture SkinCanadianTransitional
+Description Canadian Combat Helmet_Year: 1997_CADPAT MT_Can Mount NVGS
+headArmor 200

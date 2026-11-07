@@ -1,4 +1,4 @@
-Name Danish M96 Helmet
+Name M96 Helmet (M84)
 ShortName tapDenmarkHelmet
 Icon taparmor_tapDenmarkHelmet
 Colour 255 255 255

@@ -1,4 +1,4 @@
-Name Belarusian VKBO Uniform
+Name VKBO Uniform (EMR)
 ShortName tapBelarusUniform
 Icon taparmor_tapBelarusUniform
 Colour 255 255 255

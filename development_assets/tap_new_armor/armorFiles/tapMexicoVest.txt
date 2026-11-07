@@ -1,4 +1,4 @@
-Name Mexican Combat Vest
+Name Body Armour (Pixelado Selva)
 ShortName tapMexicoVest
 Icon taparmor_tapMexicoVest
 Colour 255 255 255
@@ -12,4 +12,4 @@ bodyArmor 300
 backArmor 300
 Durability 50
 ModelScale 1.05
-Description Mexican Body Armour_Year: Unknown_Mexican Woodland
+Description Mexican Body Armour_Year: Unknown_Pixelado Selva

@@ -1,4 +1,4 @@
-Name Russian Tanker Hat
+Name Tanker Hat (Black)
 ShortName tapTankerHat
 Icon taparmor_tapTankerHat
 Colour 255 255 255

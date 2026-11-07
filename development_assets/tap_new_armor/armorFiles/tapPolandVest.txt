@@ -1,4 +1,4 @@
-Name Polish wz.93 OCHRA Vest
+Name OCHRA Vest (wz.93 Pantera)
 ShortName tapPolandVest
 Icon taparmor_tapPolandVest
 Colour 255 255 255

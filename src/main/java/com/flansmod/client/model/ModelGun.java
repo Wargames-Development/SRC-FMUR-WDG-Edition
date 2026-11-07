@@ -312,6 +312,7 @@ public class ModelGun extends ModelBase {
      * This offsets the render position for third person
      */
     public Vector3f thirdPersonOffset = new Vector3f();
+    public boolean mirrorThirdPerson = true;
     /**
      * This offsets the render position for item frames
      */

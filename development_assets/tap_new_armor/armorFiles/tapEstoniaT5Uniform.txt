@@ -1,4 +1,4 @@
-Name Estonian Uniform
+Name Uniform (ESTDCU)
 ShortName tapEstoniaT5Uniform
 Icon taparmor_tapEstoniaT5Uniform
 Colour 255 255 255
@@ -11,4 +11,4 @@ KnockbackModifier 0.8
 bodyArmor 100
 armArmor 100
 ModelScale 1.05
-Description Estonian Battle Dress_Year: Unknown_Estonian Woodland
+Description Estonian Battle Dress_Year: Unknown_ESTDCU

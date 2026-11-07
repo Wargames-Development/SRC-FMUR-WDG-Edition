@@ -1,4 +1,4 @@
-Name Romanian M2017 Vest
+Name Body Armour (M2017)
 ShortName tapRomaniaVest
 Icon taparmor_tapRomaniaVest
 Colour 255 255 255
