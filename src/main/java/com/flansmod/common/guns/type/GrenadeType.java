@@ -205,6 +205,10 @@ public class GrenadeType extends ShootableType
 	public boolean teamThrowSound = false;
 	public boolean isIncendiary = false;
 
+	public boolean isMolotov() {
+		return "molotov".equals(shortName);
+	}
+
 
 	public GrenadeType(TypeFile file)
 	{

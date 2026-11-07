@@ -9,11 +9,16 @@ import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.renderer.ItemRenderer;
+import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.entity.Entity;
+import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.world.World;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.IIcon;
 import net.minecraftforge.client.IItemRenderer;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.Project;
@@ -22,6 +27,7 @@ import java.nio.FloatBuffer;
 
 public class RenderGrenade extends Render implements IItemRenderer {
     private static final long THROW_DURATION_NANOS = ItemGrenade.THROW_ANIMATION_TICKS * 50000000L;
+    private static final ResourceLocation PARTICLE_TEXTURE = new ResourceLocation("textures/particle/particles.png");
     private long throwStarted;
     private EntityPlayer throwingPlayer;
     private World throwingWorld;
@@ -97,6 +103,8 @@ public class RenderGrenade extends Render implements IItemRenderer {
     }
 
     static void renderThrowPose(EntityPlayer player, float progress, ItemStack grenade) {
+        boolean molotov = grenade != null && grenade.getItem() instanceof ItemGrenade
+                && ((ItemGrenade) grenade.getItem()).type.isMolotov();
         float lift = smooth((progress - 0.25F) / 0.18F);
         float swing = smooth((progress - 0.43F) / 0.12F);
         float recover = smooth((progress - 0.55F) / 0.45F);
@@ -117,10 +125,16 @@ public class RenderGrenade extends Render implements IItemRenderer {
                     Minecraft.getMinecraft().renderEngine.bindTexture(FlansModResourceHandler.getTexture(type));
                     GL11.glColor4f(1F, 1F, 1F, 1F);
                     type.model.render(null, 0F, 0F, 0F, 0F, 0F, 0.0625F);
+                    if (molotov && progress >= ItemGrenade.THROW_PIN_PULL_TICKS / (float) ItemGrenade.THROW_ANIMATION_TICKS)
+                        renderRagFlame(progress);
                 } finally { GL11.glPopMatrix(); }
             }
         }
         FirstPersonHands.render(player, true, x, y, z, pitch, 15F);
+        if (molotov) {
+            renderMolotovLighter(player, progress);
+            return;
+        }
         // The free hand reaches the top of the grenade, pulls outward, then lowers.
         float reach = smooth(progress / 0.08F);
         float pull = smooth((progress - 0.08F) / 0.17F);
@@ -133,6 +147,82 @@ public class RenderGrenade extends Render implements IItemRenderer {
     private static float smooth(float value) {
         float t = Math.max(0F, Math.min(1F, value));
         return t * t * (3F - 2F * t);
+    }
+
+    private static void renderMolotovLighter(EntityPlayer player, float progress) {
+        float reach = smooth(progress / 0.08F);
+        float strike = smooth((progress - 0.08F) / 0.025F);
+        float withdraw = smooth((progress - 0.16F) / 0.15F);
+        float x = -0.18F + 0.34F * reach - 0.045F * strike - 0.36F * withdraw;
+        float y = -0.45F + 0.42F * reach - 0.035F * strike - 0.50F * withdraw;
+        float z = -0.85F - 0.11F * reach + 0.16F * withdraw;
+        FirstPersonHands.render(player, false, x, y, z, -55F + 15F * reach, -20F);
+        renderFlintAndSteel(x, y, z, strike * (1F - withdraw));
+    }
+
+    private static void renderFlintAndSteel(float x, float y, float z, float strike) {
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        GL11.glPushMatrix();
+        try {
+            Minecraft.getMinecraft().renderEngine.bindTexture(TextureMap.locationItemsTexture);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glEnable(GL11.GL_NORMALIZE);
+            GL11.glDisable(GL11.GL_CULL_FACE);
+            GL11.glColor4f(1F, 1F, 1F, 1F);
+            GL11.glTranslatef(x, y, z);
+            GL11.glRotatef(-20F - 15F * strike, 0F, 0F, 1F);
+            GL11.glRotatef(-15F, 1F, 0F, 0F);
+            GL11.glScalef(0.26F, 0.26F, 0.26F);
+            GL11.glTranslatef(-0.3F, -0.1F, 0F);
+            IIcon icon = Items.flint_and_steel.getIconFromDamage(0);
+            ItemRenderer.renderItemIn2D(Tessellator.instance, icon.getMaxU(), icon.getMinV(),
+                    icon.getMinU(), icon.getMaxV(), icon.getIconWidth(), icon.getIconHeight(), 0.0625F);
+        } finally {
+            GL11.glPopMatrix();
+            GL11.glPopAttrib();
+        }
+    }
+
+    private static void renderRagFlame(float progress) {
+        boolean primaryColorOnly = ShaderRenderCompat.beginPrimaryColorOnly();
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        GL11.glPushMatrix();
+        float brightnessX = OpenGlHelper.lastBrightnessX, brightnessY = OpenGlHelper.lastBrightnessY;
+        try {
+            Minecraft.getMinecraft().renderEngine.bindTexture(PARTICLE_TEXTURE);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glDisable(GL11.GL_LIGHTING);
+            GL11.glDisable(GL11.GL_CULL_FACE);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+            GL11.glDepthMask(false);
+            GL11.glColorMask(true, true, true, false);
+            GL11.glColor4f(1F, 1F, 1F, 1F);
+            // Match the rag in ModelMolotov after its OBJ scale and grip offset.
+            // Draw in the bottle's matrix so view bobbing and the windup cannot
+            // leave world-space particles floating behind the first-person hand.
+            GL11.glTranslatef(0F, 0.44F, 0.055F);
+            float size = 0.055F + 0.008F * (float) Math.sin(progress * 190F);
+            Tessellator tessellator = Tessellator.instance;
+            tessellator.startDrawingQuads();
+            tessellator.setBrightness(15728880);
+            tessellator.setColorRGBA_F(1F, 1F, 1F, 1F);
+            // Vanilla EntityFlameFX uses particle atlas cell 48.
+            for (int plane = 0; plane < 2; plane++) {
+                float dx = plane == 0 ? size : 0F;
+                float dz = plane == 0 ? 0F : size;
+                tessellator.addVertexWithUV(-dx, 0F, -dz, 0.0624375F, 0.2499375F);
+                tessellator.addVertexWithUV(dx, 0F, dz, 0F, 0.2499375F);
+                tessellator.addVertexWithUV(dx, size * 2F, dz, 0F, 0.1875F);
+                tessellator.addVertexWithUV(-dx, size * 2F, -dz, 0.0624375F, 0.1875F);
+            }
+            tessellator.draw();
+        } finally {
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, brightnessX, brightnessY);
+            GL11.glPopMatrix();
+            GL11.glPopAttrib();
+            ShaderRenderCompat.endPrimaryColorOnly(primaryColorOnly);
+        }
     }
 
     public RenderGrenade() {
@@ -229,6 +319,8 @@ public class RenderGrenade extends Render implements IItemRenderer {
                                 0F, -0.09F, 0.05F, -55F, 15F);
                         FirstPersonHands.render(Minecraft.getMinecraft().thePlayer, false,
                                 -0.5F, -0.18F, 0.15F, -55F, -20F);
+                        if (grenadeType.isMolotov())
+                            renderFlintAndSteel(-0.5F, -0.18F, 0.15F, 0F);
                         GL11.glScalef(0.85F, 0.85F, 0.85F);
                         break;
                     }

@@ -53,9 +53,12 @@ import net.minecraft.util.MathHelper;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.MovingObjectPosition.MovingObjectType;
 import net.minecraft.world.World;
+import net.minecraft.world.ChunkPosition;
+import net.minecraft.world.Explosion;
 import net.minecraftforge.common.MinecraftForge;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Random;
 
@@ -914,6 +917,49 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
     }
 
 
+    private void igniteMolotovGround() {
+        if (worldObj.isRemote || !TeamsManager.explosions) return;
+        final int radius = 3;
+        int centerX = MathHelper.floor_double(posX);
+        int centerY = MathHelper.floor_double(posY);
+        int centerZ = MathHelper.floor_double(posZ);
+        List<ChunkPosition> candidates = new ArrayList<>();
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (dx * dx + dz * dz > radius * radius) continue;
+                int x = centerX + dx, z = centerZ + dz;
+                // Never load neighbouring chunks for this small fire patch.
+                if (!worldObj.blockExists(x, centerY, z)) continue;
+                for (int y = centerY + 1; y >= centerY - 2; y--) {
+                    if (y <= 0 || y >= worldObj.getHeight()) continue;
+                    if (worldObj.isAirBlock(x, y, z)
+                            && World.doesBlockHaveSolidTopSurface(worldObj, x, y - 1, z)
+                            && Blocks.fire.canPlaceBlockAt(worldObj, x, y, z)) {
+                        candidates.add(new ChunkPosition(x, y, z));
+                        break;
+                    }
+                }
+            }
+        }
+        if (candidates.isEmpty()) return;
+
+        // Fire changes the world even though this grenade does not break blocks.
+        // Use the same attribution and per-position filtering as explosion damage.
+        Explosion fire = new Explosion(worldObj, this, posX, posY, posZ, radius);
+        fire.isFlaming = true;
+        Integrations.ExplosionResult permission = Integrations.evaluateExplosionWGC(
+                worldObj, Integrations.resolveActingEntity(thrower, this), fire,
+                posX, posY, posZ, "fmur:explosion", candidates);
+        if (permission == null || !permission.isExplosionAllowed() || !permission.isBlockDamageAllowed()) return;
+        List<ChunkPosition> allowed = permission.isFiltered() ? permission.getFilteredAffectedBlocks() : candidates;
+        for (ChunkPosition position : candidates) {
+            if (!allowed.contains(position) || rand.nextBoolean()) continue;
+            int x = position.chunkPosX, y = position.chunkPosY, z = position.chunkPosZ;
+            if (worldObj.isAirBlock(x, y, z) && Blocks.fire.canPlaceBlockAt(worldObj, x, y, z))
+                worldObj.setBlock(x, y, z, Blocks.fire, 0, 3);
+        }
+    }
+
     public void detonate() {
         //Do not detonate before grenade is primed
         if (ticksExisted < type.primeDelay)
@@ -940,7 +986,9 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
         }
 
         //Make fire
-        if (!worldObj.isRemote && type.fireRadius > 0.1F) {
+        if (!worldObj.isRemote && type.isMolotov()) {
+            igniteMolotovGround();
+        } else if (!worldObj.isRemote && type.fireRadius > 0.1F) {
             for (float i = -type.fireRadius; i < type.fireRadius; i++) {
                 for (float j = -type.fireRadius; j < type.fireRadius; j++) {
                     for (float k = -type.fireRadius; k < type.fireRadius; k++) {

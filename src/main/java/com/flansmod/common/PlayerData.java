@@ -218,9 +218,11 @@ public class PlayerData {
 			return;
 		}
 		grenadeReleaseTicks--;
-		// Broadcast once from the server, at the free hand's pin-pull gesture.
-		if (grenadeReleaseTicks == ItemGrenade.THROW_RELEASE_TICKS - ItemGrenade.THROW_PIN_PULL_TICKS)
-			player.worldObj.playSoundAtEntity(player, "flansmod:grenade_pinpull", 1F, 1F);
+		// Broadcast once from the server, at the free hand's preparation gesture.
+		if (grenadeReleaseTicks == ItemGrenade.THROW_RELEASE_TICKS - ItemGrenade.THROW_PIN_PULL_TICKS) {
+			boolean molotov = ((ItemGrenade) pendingGrenade.getItem()).type.isMolotov();
+			player.worldObj.playSoundAtEntity(player, molotov ? "fire.ignite" : "flansmod:grenade_pinpull", 1F, 1F);
+		}
 		if (grenadeReleaseTicks > 0) return;
 		ItemStack stack = player.getHeldItem();
 		pendingGrenade = null;
