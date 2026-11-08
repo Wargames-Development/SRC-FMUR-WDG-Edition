@@ -282,8 +282,13 @@ public class ModelGun extends ModelBase {
     public float zoomOffsetZ = 0F;
     /** Apparent integral PiP diameter relative to the model's existing ADS pose. */
     public float scopedLensScale = 1F;
+    public Vector3f firstPersonOffset;
     /** Additional per-model ADS rotation around the screen-facing Z axis. */
     public float adsRotateZ = 0F;
+    /** Optional correction from the normal ADS pose to the model's iron sight line. */
+    public Vector3f ironSightOffset;
+    public float ironSightPitch;
+    public float ironSightYaw;
     public boolean fancyStance = false;
     public Vector3f stanceTranslate = new Vector3f();
     public Vector3f stanceRotate = new Vector3f();

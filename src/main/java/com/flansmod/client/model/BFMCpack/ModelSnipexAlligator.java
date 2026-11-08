@@ -6,64 +6,47 @@ import com.flansmod.client.tmt.ModelRendererTurbo;
 import com.flansmod.common.vector.Vector3f;
 
 public class ModelSnipexAlligator extends ModelGun {
+    // Match the existing BFMC definition's ModelScale and TMT's 1/16 render scale.
+    private static final float MODEL_SCALE = 30F;
+    private static final float PACK_UNIT = 1F / (16F * MODEL_SCALE);
 
     public ModelSnipexAlligator() {
-        int textureX = 64;
-        int textureY = 64;
+        gunModel = loadPart("");
+        ammoModel = loadPart("_Magazine");
+        pumpModel = loadPart("_Bolt");
+        defaultBarrelModel = loadPart("_Brake");
 
-        gunModel = new ModelRendererTurbo[1];
-        ammoModel = new ModelRendererTurbo[1];
-        pumpModel = new ModelRendererTurbo[1];
-
-        gunModel[0] = new ModelRendererTurbo(this, 0, 0, textureX, textureY);
-        gunModel[0].addObj("/BFMCpack/SnipexAlligator.obj");
-        gunModel[0].setRotationPoint(0.75F, 0.15F, 0F);
-
-        ammoModel[0] = new ModelRendererTurbo(this, 0, 0, textureX, textureY);
-        ammoModel[0].addObj("/BFMCpack/SnipexAlligator_Magazine.obj");
-        ammoModel[0].setRotationPoint(0.75F, 0.15F, 0F);
-
-        pumpModel[0] = new ModelRendererTurbo(this, 0, 0, textureX, textureY);
-        pumpModel[0].addObj("/BFMCpack/SnipexAlligator_Bolt.obj");
-        pumpModel[0].setRotationPoint(0.75F, 0.15F, 0F);
-
-        // Blender exports height on OBJ Y, while the legacy TMT OBJ loader expects OBJ Z.
-        gunModel[0].rotateAngleX = 1.5707964F;
-        ammoModel[0].rotateAngleX = 1.5707964F;
-        pumpModel[0].rotateAngleX = 1.5707964F;
-
-        // Attachment points use rendered model coordinates (OBJ units divided by 16).
-        barrelAttachPoint = new Vector3f(1.84F / 16F, 0.20F / 16F, 0F);
-        scopeAttachPoint = new Vector3f(0.35F / 16F, 0.255F / 16F, 0F);
+        barrelAttachPoint = new Vector3f(40.790F * PACK_UNIT, 6.038F * PACK_UNIT, 0F);
+        scopeAttachPoint = new Vector3f(10.5F * PACK_UNIT, 7.619F * PACK_UNIT, 0F);
+        // The tracer length uses a 0.05 divisor floor inside the scaled gun pass.
+        flashScale = 0.05F / MODEL_SCALE;
+        muzzleFlashPoint = new Vector3f(barrelAttachPoint);
+        muzzleFlashPoint.scale(1F / flashScale);
+        defaultBarrelFlashPoint = new Vector3f((45.664F - 40.790F) * PACK_UNIT / flashScale, 0F, 0F);
+        mirrorThirdPerson = false;
 
         pumpDelayAfterReload = 60;
         pumpDelay = 10;
         pumpTime = 18;
-        pumpHandleDistance = 0.5F;
+        pumpHandleDistance = 4.3F * PACK_UNIT;
 
-        rightHandAmmo = false;
         leftHandAmmo = true;
-        rightHandBolt = true;
+        leftHandAmmoReloadOnly = true;
+        leftArmPos = new Vector3f(0.246F, -0.095F, -0.038F);
+        leftArmRot = new Vector3f(79F, 57F, 8F);
+        leftArmReloadPos = new Vector3f(0.197F, -0.262F, -0.043F);
+        leftArmReloadRot = new Vector3f(80F, 50F, 0F);
+        leftArmScale = new Vector3f(0.75F, 1.05F, 0.75F);
 
-        leftArmPos = new Vector3f(0.17F, -0.5F, 0F);
-        leftArmRot = new Vector3f(80F, 55F, 10F);
-        leftArmReloadPos = new Vector3f(-0.13F, -0.6F, 0.05F);
-        leftArmReloadRot = new Vector3f(80F, 60F, 0F);
-        leftArmScale = new Vector3f(0.75D, 1.5D, 0.75D);
-
-        rightArmPos = new Vector3f(0.17F, -0.52F, 0F);
-        rightArmRot = new Vector3f(0F, 0F, -85F);
-        rightArmReloadPos = new Vector3f(0.17F, -0.52F, 0F);
-        rightArmReloadRot = new Vector3f(0F, 0F, -85F);
-        rightArmChargePos = new Vector3f(0F, -0.5F, 0.13F);
-        rightArmChargeRot = new Vector3f(0F, 0F, -70F);
+        rightArmPos = new Vector3f(0.105F, -0.422F, 0.110F);
+        rightArmRot = new Vector3f(0F, 21F, -84F);
+        rightArmReloadPos = new Vector3f(rightArmPos);
+        rightArmReloadRot = new Vector3f(rightArmRot);
         rightArmScale = new Vector3f(0.75D, 1F, 0.75D);
 
-        chargeHandleDistance = 0.5F;
         chargeDelay = 10;
         chargeDelayAfterReload = 80;
         chargeTime = 20;
-        chargeModifier = new Vector3f(16F, 8F, 4F);
 
         fancyStance = true;
         stanceTranslate = new Vector3f(0.2D, 0D, 0.2D);
@@ -77,8 +60,20 @@ public class ModelSnipexAlligator extends ModelGun {
         translateGun = new Vector3f(0F, -0.0625F, -0.1875F);
         translateClip = new Vector3f(0F, -0.625F, 0F);
 
-        zoomOffsetY = -0.1F;
-        zoomOffset = 0.2F;
+        firstPersonOffset = new Vector3f(-0.065F, -0.045F, 0.115F);
+        // Keep the stock below the camera in bare ADS. PiP centers the raised lens separately.
+        zoomOffsetY = -0.11F;
+        zoomOffsetZ = -0.115F;
+        zoomOffset = -0.315F;
         crouchZoom = -0.05F;
+    }
+
+    private ModelRendererTurbo[] loadPart(String suffix) {
+        ModelRendererTurbo part = new ModelRendererTurbo(this, 0, 0, 512, 512);
+        part.addObj("/BFMCpack/SnipexAlligator" + suffix + ".obj");
+        part.setRotationPoint(0.75F, 0.15F, 0F);
+        // Undo the OBJ loader's height-to-depth rotation for the authored assembly.
+        part.rotateAngleX = (float) (Math.PI / 2);
+        return new ModelRendererTurbo[] {part};
     }
 }

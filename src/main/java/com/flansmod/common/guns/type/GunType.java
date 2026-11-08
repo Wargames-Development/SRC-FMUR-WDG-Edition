@@ -26,8 +26,10 @@ import net.minecraft.nbt.NBTTagList;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 public class GunType extends PaintableType implements IScope, IMarkable {
 
@@ -490,6 +492,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * Optional per-gun scope whitelist. An empty list preserves the legacy attachment rules.
      */
     public ArrayList<AttachmentType> allowedScopeAttachments = new ArrayList<>();
+    private final Set<String> allowedBarrelAttachmentNames = new HashSet<>();
     /**
      * Whether each attachment slot is available
      */
@@ -1057,6 +1060,9 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 for (int i = 1; i < split.length; i++) {
                     allowedScopeAttachments.add(AttachmentType.getAttachment(split[i]));
                 }
+            } else if (split[0].equals("AllowBarrelAttachmentsList")) {
+                for (int i = 1; i < split.length; i++)
+                    allowedBarrelAttachmentNames.add(split[i]);
             } else if (split[0].equals("AllowBarrelAttachments"))
                 allowBarrelAttachments = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("AllowScopeAttachments"))
@@ -1804,11 +1810,15 @@ public class GunType extends PaintableType implements IScope, IMarkable {
             return AttachmentType.getAttachment(fixedScopeName);
         checkForTags(gun);
         AttachmentType attachment = AttachmentType.getFromNBT(gun.stackTagCompound.getCompoundTag("attachments").getCompoundTag(name));
-        if (attachment != null && ((!allowLaserPointerAttachments && attachment.isLaserPointer)
-                || (disallowBarrelAttachments && attachment.type == EnumAttachmentType.barrel))) {
-            return null;
-        }
-        return attachment;
+        return attachment != null && isAttachmentCompatible(attachment) ? attachment : null;
+    }
+
+    public boolean isAttachmentCompatible(AttachmentType attachment) {
+        return (attachment.onlyForGun == null || attachment.onlyForGun.equals(shortName))
+                && (allowLaserPointerAttachments || !attachment.isLaserPointer)
+                && (attachment.type != EnumAttachmentType.barrel || (!disallowBarrelAttachments
+                    && (allowedBarrelAttachmentNames.isEmpty()
+                        || allowedBarrelAttachmentNames.contains(attachment.shortName))));
     }
 
     /**

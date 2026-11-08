@@ -1,0 +1,11 @@
+Name Snipex Suppressor
+ShortName snipexsuppressor
+Description Oversized suppressor for the Snipex Alligator
+Icon SnipexSuppressor
+AttachmentType barrel
+OnlyForGun snipexalligator
+Silencer true
+DisableMuzzleFlash true
+Model BFMCpack.SnipexSuppressor
+Texture SnipexAlligator
+ModelScale 1.0
