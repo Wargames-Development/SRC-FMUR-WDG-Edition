@@ -32,11 +32,12 @@ final class LightweightCamera {
     private boolean failed;
     private int sensorLightmap;
     private final DistantCameraGeometry distant = new DistantCameraGeometry();
+    private final ThermalGlassBarrier glass = new ThermalGlassBarrier();
 
     String failure() { return failure; }
     void capture(CameraView source) { distant.capture(source); }
 
-    Framebuffer render(Minecraft mc, CameraView view, boolean thermal) {
+    Framebuffer render(Minecraft mc, CameraView view, boolean thermal, boolean flir) {
         if (failed) return null;
         int draw = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int read = ThermalFramebuffers.canBlit() ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : draw;
@@ -79,6 +80,7 @@ final class LightweightCamera {
             GL11.glColor4f(1, 1, 1, 1);
             terrain.draw(0);
             GL20.glUseProgram(0);
+            if (thermal && flir) glass.render(mc, view);
             RenderHelper.enableStandardItemLighting();
             for (Object object : mc.theWorld.loadedEntityList) {
                 Entity entity = (Entity)object;

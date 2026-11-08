@@ -30,6 +30,12 @@ gradle.projectsEvaluated {
         classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
         main = 'com.flansmod.common.playerlod.PlayerLodServerChecks'
     }
+    p.tasks.create('playerLodHitmarkerChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.common.playerlod.PlayerLodHitmarkerChecks'
+        if (p.hasProperty('hitmarkerRuntime')) args p.property('hitmarkerRuntime')
+    }
     p.tasks.create('thermalGpuChecks', JavaExec) {
         dependsOn compileChecks
         classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath

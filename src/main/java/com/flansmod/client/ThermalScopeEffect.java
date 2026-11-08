@@ -148,7 +148,8 @@ public final class ThermalScopeEffect {
         GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix();
         GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix();
         try {
-            Framebuffer frame = CameraRenderManager.INSTANCE.render(mc, width, height, magnification, thermal, isModelLensDisplay());
+            Framebuffer frame = CameraRenderManager.INSTANCE.render(mc, width, height, magnification,
+                    thermal, isModelLensDisplay(), isVehicleDisplay() || flirEnabled);
             if (frame == null) return;
             frame.bindFramebuffer(true);
             CameraView view = CameraRenderManager.INSTANCE.currentView();
@@ -364,7 +365,8 @@ public final class ThermalScopeEffect {
         synchronizeThermalSensor(Minecraft.getMinecraft());
         ThermalProfile profile = activeProfile();
         if (profile == null) return false;
-        if (isVehicleDisplay()
+        // Throttle acquisition, while the cached lens follows the weapon every frame.
+        if ((isVehicleDisplay() || isModelLensDisplay())
                 && !SENSOR_CLOCK.tryAcquire(sensorDevice, profile.maxFramesPerSecond, System.nanoTime())) return false;
         CAMERA.beginSample(profile);
         return true;
@@ -713,6 +715,7 @@ public final class ThermalScopeEffect {
                 }
             }
             GL11.glEnd();
+            HitmarkerScopeCompat.renderAfterLens(minecraft);
         } finally {
             postCompositeLensGeometryValid = false;
             popOrthoProjection();

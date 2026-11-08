@@ -69,7 +69,7 @@ public final class CameraRenderManager implements IResourceManagerReloadListener
 
     CameraView currentView() { return secondary; }
 
-    Framebuffer render(Minecraft mc, int width, int height, float magnification, boolean thermal, boolean modelLens) {
+    Framebuffer render(Minecraft mc, int width, int height, float magnification, boolean thermal, boolean modelLens, boolean flir) {
         if (!captured || world != mc.theWorld || mc.theWorld == null || mc.renderViewEntity == null) return null;
         if (width < 1 || height < 1 || !Float.isFinite(magnification) || magnification <= 0) return null;
         float aspect = (float)mc.displayWidth / Math.max(1, mc.displayHeight);
@@ -100,7 +100,7 @@ public final class CameraRenderManager implements IResourceManagerReloadListener
                 }
             }
             backend = "Lightweight";
-            Framebuffer frame = lightweight.render(mc, secondary, thermal);
+            Framebuffer frame = lightweight.render(mc, secondary, thermal, flir);
             if (frame == null) {
                 backend = "Unavailable: " + lightweight.failure();
                 if (!backend.equals(reportedFailure)) {
