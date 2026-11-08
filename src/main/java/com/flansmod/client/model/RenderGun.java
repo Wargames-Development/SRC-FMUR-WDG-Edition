@@ -307,11 +307,23 @@ public class RenderGun implements IItemRenderer {
                     //持枪位置
                     GL11.glTranslatef(0.15F, 0.25F + 0.155F * actualZoomProgress, -0.8F - 0.205F * actualZoomProgress);
                     GL11.glRotatef((4.5F + model.adsRotateZ) * actualZoomProgress, 0F, 0F, 1F);
+                    if (model.firstPersonOffset != null) {
+                        Vector3f offset = model.firstPersonOffset;
+                        GL11.glTranslatef(offset.x, offset.y, offset.z);
+                    }
 
                     //瞄准偏移
                     float sightedOffsetY = model instanceof ModelSketchfabGun && gunType.getScope(item) != null
                             ? ((ModelSketchfabGun) model).sightedZoomOffsetY : 0F;
                     GL11.glTranslatef((model.crouchZoom - model.zoomOffset) * actualZoomProgress, (model.zoomOffsetY + sightedOffsetY - 0.03F) * actualZoomProgress, model.zoomOffsetZ * actualZoomProgress);
+
+                    if (!offHand && scope == gunType && model.ironSightOffset != null && actualZoomProgress > 0F) {
+                        Vector3f offset = model.ironSightOffset;
+                        GL11.glTranslatef(offset.x * actualZoomProgress, offset.y * actualZoomProgress,
+                                offset.z * actualZoomProgress);
+                        GL11.glRotatef(model.ironSightPitch * actualZoomProgress, 0F, 0F, 1F);
+                        GL11.glRotatef(model.ironSightYaw * actualZoomProgress, 0F, 1F, 0F);
+                    }
 
                     //跳跃偏移
                     GL11.glTranslatef(0, 0.005F * actualSpringProgress, 0F);

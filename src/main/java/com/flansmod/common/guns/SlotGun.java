@@ -43,8 +43,7 @@ public class SlotGun extends Slot
     		return false;
 		AttachmentType attachmentType = ((ItemAttachment)stack.getItem()).type;
 		GunType gunType = ((ItemGun)gunSlot.getStack().getItem()).type;
-		if ((!gunType.allowLaserPointerAttachments && attachmentType.isLaserPointer)
-				|| (gunType.disallowBarrelAttachments && attachmentType.type == EnumAttachmentType.barrel))
+		if (!gunType.isAttachmentCompatible(attachmentType))
 			return false;
 		if(attachmentType.type == EnumAttachmentType.sights && !gunType.allowedScopeAttachments.isEmpty())
 			return gunType.allowedScopeAttachments.contains(attachmentType);

@@ -25,6 +25,7 @@ public class AttachmentType extends PaintableType implements IScope
 	
 	/** The type of attachment. Each gun can have one barrel, one scope, one grip, one stock and some number of generics up to a limit set by the gun */
 	public EnumAttachmentType type = EnumAttachmentType.generic;
+	public String onlyForGun;
 
 	//Attachment Function add-ons
 	/** This variable controls whether or not bullet sounds should be muffled */
@@ -211,6 +212,8 @@ public class AttachmentType extends PaintableType implements IScope
 
 			if(split[0].equals("AttachmentType"))
 				type = EnumAttachmentType.get(split[1]);
+			else if (split[0].equals("OnlyForGun"))
+				onlyForGun = split[1];
 			else if(FMLCommonHandler.instance().getSide().isClient() && (split[0].equals("Model")))
 				model = FlansMod.proxy.loadModel(split[1], shortName, ModelAttachment.class);
 			else if (FMLCommonHandler.instance().getSide().isClient() && (split[0].equals("3rdModel")))

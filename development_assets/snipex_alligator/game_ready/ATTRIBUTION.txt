@@ -9,3 +9,9 @@ https://creativecommons.org/licenses/by/4.0/
 
 Modified for Wargames/FMUR by separating the body, magazine, and bolt and by
 converting the original flat materials into a shared texture palette.
+
+The remodel in ../remodel uses this same source. FMUR resized the silhouette
+against the pack M82A3, widened the scope rail, added a folded bipod and baked
+a new diffuse atlas. The green-tan revision separates the original brake
+and adds a newly modeled suppressor based on the supplied visual reference.
+Regenerate and install with tools/build_snipex_alligator.py --install.
