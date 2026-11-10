@@ -25,6 +25,11 @@ gradle.projectsEvaluated {
             jvmArgs '-Djava.library.path=' + p.property('lwjglNatives')
         }
     }
+    p.tasks.create('auxiliaryViewChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.client.AuxiliaryViewChecks'
+    }
     p.tasks.create('externalPlayerPresentationChecks', JavaExec) {
         dependsOn compileChecks
         classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath

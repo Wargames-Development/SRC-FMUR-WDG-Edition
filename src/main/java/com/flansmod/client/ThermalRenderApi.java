@@ -23,6 +23,20 @@ public final class ThermalRenderApi {
     private static Map<String, String> lastVehicleProfile;
     private static ThermalProfile resolvedVehicleProfile = ThermalProfile.DEFAULT;
     private static boolean vehicleProfileFailed;
+    private static final ThreadLocal<Integer> auxiliaryDepth=new ThreadLocal<Integer>() { protected Integer initialValue() { return 0; } };
+    public static boolean isAuxiliaryView() { return auxiliaryDepth.get()>0 || heatPass || particlePass; }
+    static CameraPass beginCameraPass() {
+        int depth=auxiliaryDepth.get()+1;auxiliaryDepth.set(depth);return new CameraPass(depth);
+    }
+    static final class CameraPass implements AutoCloseable {
+        private final Thread thread=Thread.currentThread();private final int depth;private boolean closed;
+        private CameraPass(int depth) { this.depth=depth; }
+        public void close() {
+            if(closed) return;
+            if(Thread.currentThread()!=thread || auxiliaryDepth.get()!=depth) throw new IllegalStateException("Camera view scopes must close in order on their owner thread");
+            auxiliaryDepth.set(depth-1);closed=true;
+        }
+    }
     private static boolean heatPass;
     private static boolean particlePass;
     private ThermalRenderApi() { }

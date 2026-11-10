@@ -38,6 +38,9 @@ final class LightweightCamera {
     void capture(CameraView source) { distant.capture(source); }
 
     Framebuffer render(Minecraft mc, CameraView view, boolean thermal, boolean flir) {
+        try(ThermalRenderApi.CameraPass ignored=ThermalRenderApi.beginCameraPass()) { return renderView(mc,view,thermal,flir); }
+    }
+    private Framebuffer renderView(Minecraft mc, CameraView view, boolean thermal, boolean flir) {
         if (failed) return null;
         int draw = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int read = ThermalFramebuffers.canBlit() ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : draw;
