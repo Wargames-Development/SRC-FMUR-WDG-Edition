@@ -76,6 +76,9 @@ public final class PlayerLodRenderer {
 
     @SubscribeEvent public void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+        if(com.flansmod.common.playerlod.ExternalPlayerPresentation.ownsClient()) {
+            contacts.clear();pending.clear();sequence=Long.MIN_VALUE;range=0;return;
+        }
         Minecraft mc = Minecraft.getMinecraft();
         if (world != mc.theWorld || connection != mc.getNetHandler()) {
             contacts.clear(); sequence = Long.MIN_VALUE; range = 0;
@@ -113,6 +116,8 @@ public final class PlayerLodRenderer {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void replaceNative(RenderPlayerEvent.Pre event) {
         EntityPlayer player = event.entityPlayer;
+        if(com.flansmod.common.playerlod.ExternalPlayerPresentation.ownsClient()
+                || com.flansmod.common.playerlod.ExternalPlayerPresentation.visualData(player.getCommandSenderName())!=null) return;
         double dx = mix(player.lastTickPosX, player.posX, event.partialRenderTick) - RenderManager.instance.viewerPosX;
         double dy = mix(player.lastTickPosY, player.posY, event.partialRenderTick) - RenderManager.instance.viewerPosY;
         double dz = mix(player.lastTickPosZ, player.posZ, event.partialRenderTick) - RenderManager.instance.viewerPosZ;
@@ -131,6 +136,7 @@ public final class PlayerLodRenderer {
     }
 
     private void renderPlayers(float partialTicks) {
+        if(com.flansmod.common.playerlod.ExternalPlayerPresentation.ownsClient()) return;
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.theWorld != world || mc.thePlayer == null || contacts.isEmpty() || rendering) return;
         double cx = RenderManager.instance.viewerPosX, cy = RenderManager.instance.viewerPosY,
