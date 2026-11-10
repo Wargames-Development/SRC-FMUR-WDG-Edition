@@ -40,6 +40,11 @@ public final class ExternalPresentationChecks {
         } finally { outer.close(); }
         check(ExternalPlayerPresentation.visualData("Fixture")==null,"scope cleanup leaves live player maps untouched");
         outer.close();check(ExternalPlayerPresentation.visualData("Fixture")==null,"repeated cleanup is harmless");
+        try(ExternalPlayerPresentation.VisualScope disabled=ExternalPlayerPresentation.beginVisual("Fixture",first,false)) {
+            check(!ExternalPlayerPresentation.visualExtensions("Fixture"),"FMUR toggle suppresses only this visual actor's extension layers");
+            check(ExternalPlayerPresentation.visualExtensions("Other"),"FMUR toggle cannot suppress native players");
+        }
+        check(ExternalPlayerPresentation.visualExtensions("Fixture"),"native extension behaviour restored after draw");
         System.out.println("PASS "+checks+" external player presentation checks");
     }
 }

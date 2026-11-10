@@ -8,7 +8,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 
 /** Optional presentation ownership. No dependency on DH and no gameplay-state ownership. */
 public final class ExternalPlayerPresentation {
-    public static final int API_VERSION=1;
+    public static final int API_VERSION=2;
     private static volatile Predicate<EntityPlayerMP> serverOwner;
     private static volatile BooleanSupplier clientOwner;
     private static volatile boolean serverFailed,clientFailed;
@@ -34,18 +34,39 @@ public final class ExternalPlayerPresentation {
     /** A visual actor gets its own PlayerData while native player maps remain untouched. */
     public static VisualScope beginVisual(String username,PlayerData data) {
         if(username==null || data==null) throw new IllegalArgumentException("Missing visual player data");
-        VisualScope scope=new VisualScope(username,data,visual.get());visual.set(scope);return scope;
+        return beginVisual(username,data,true);
+    }
+    public static VisualScope beginVisual(String username,PlayerData data,boolean extensions) {
+        if(username==null || data==null) throw new IllegalArgumentException("Missing visual player data");
+        VisualScope scope=new VisualScope(username,data,extensions,visual.get());visual.set(scope);return scope;
     }
     public static PlayerData visualData(String username) {
         VisualScope scope=visual.get();return scope!=null && scope.username.equals(username)?scope.data:null;
     }
+    public static boolean visualExtensions(String username) {
+        VisualScope scope=visual.get();return scope==null || !scope.username.equals(username) || scope.extensions;
+    }
+    /** Read-only server appearance extension; never supplies private inventory slots. */
+    public static net.minecraft.nbt.NBTTagCompound captureAppearance(EntityPlayerMP player) {
+        net.minecraft.nbt.NBTTagCompound tag=new net.minecraft.nbt.NBTTagCompound();
+        PlayerData data=com.flansmod.common.PlayerHandler.getPlayerData(player);
+        if(data.offHandGunSlot>0 && data.offHandGunSlot<=player.inventory.getSizeInventory())
+            item(tag,"offhand",player.inventory.getStackInSlot(data.offHandGunSlot-1));
+        item(tag,"night",com.flansmod.common.teams.PlayerEquipmentInventory.getStack(player,0));
+        item(tag,"face",com.flansmod.common.teams.PlayerEquipmentInventory.getStack(player,1));
+        return tag;
+    }
+    private static void item(net.minecraft.nbt.NBTTagCompound tag,String name,net.minecraft.item.ItemStack stack) {
+        if(stack!=null) { net.minecraft.nbt.NBTTagCompound item=new net.minecraft.nbt.NBTTagCompound();stack.writeToNBT(item);tag.setTag(name,item); }
+    }
     public static final class VisualScope implements AutoCloseable {
         private final String username;
         private final PlayerData data;
+        private final boolean extensions;
         private final VisualScope previous;
         private final Thread thread=Thread.currentThread();
         private boolean closed;
-        private VisualScope(String username,PlayerData data,VisualScope previous) { this.username=username;this.data=data;this.previous=previous; }
+        private VisualScope(String username,PlayerData data,boolean extensions,VisualScope previous) { this.username=username;this.data=data;this.extensions=extensions;this.previous=previous; }
         public void close() {
             if(closed) return;
             if(Thread.currentThread()!=thread || visual.get()!=this) throw new IllegalStateException("Visual scopes must close in stack order on their render thread");
