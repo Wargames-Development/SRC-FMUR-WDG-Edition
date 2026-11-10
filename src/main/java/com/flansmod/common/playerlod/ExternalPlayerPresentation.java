@@ -8,7 +8,7 @@ import net.minecraft.entity.player.EntityPlayerMP;
 
 /** Optional presentation ownership. No dependency on DH and no gameplay-state ownership. */
 public final class ExternalPlayerPresentation {
-    public static final int API_VERSION=2;
+    public static final int API_VERSION=3;
     private static volatile Predicate<EntityPlayerMP> serverOwner;
     private static volatile BooleanSupplier clientOwner;
     private static volatile boolean serverFailed,clientFailed;
@@ -47,6 +47,10 @@ public final class ExternalPlayerPresentation {
         VisualScope scope=visual.get();return scope==null || !scope.username.equals(username) || scope.extensions;
     }
     /** Read-only server appearance extension; never supplies private inventory slots. */
+    public static byte[] capturePose(EntityPlayerMP player) {
+        PlayerData data=com.flansmod.common.PlayerHandler.getPlayerData(player);
+        return data==null?new byte[0]:data.presentationPose().encode();
+    }
     public static net.minecraft.nbt.NBTTagCompound captureAppearance(EntityPlayerMP player) {
         net.minecraft.nbt.NBTTagCompound tag=new net.minecraft.nbt.NBTTagCompound();
         PlayerData data=com.flansmod.common.PlayerHandler.getPlayerData(player);

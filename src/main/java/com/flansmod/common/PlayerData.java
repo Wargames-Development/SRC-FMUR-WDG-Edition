@@ -82,6 +82,16 @@ public class PlayerData {
 	public boolean shotIntentLeft, shotIntentHeld, shotIntentServerScoped, hasShotContext;
 	/** Server-owned monotonically increasing identifier for authoritative gun shots. */
 	public long nextServerShotId;
+    /** Cosmetic observation of actual server projectile construction, per hand. */
+    public int presentationShotRightAge=Integer.MIN_VALUE,presentationShotLeftAge=Integer.MIN_VALUE;
+    public com.flansmod.common.playerlod.PlayerVisualPose presentationPose() {
+        ReloadState right=reloadRight,left=reloadLeft;
+        boolean r=right!=null && isReloading(right,right.gunStack),l=left!=null && isReloading(left,left.gunStack);
+        return new com.flansmod.common.playerlod.PlayerVisualPose(presentationShotRightAge,presentationShotLeftAge,
+            r?right.totalTime:0,r?Math.max(0,right.timeLeft):0,r?Math.min(4096,right.shellsToLoad):0,
+            l?left.totalTime:0,l?Math.max(0,left.timeLeft):0,l?Math.min(4096,left.shellsToLoad):0,
+            Math.max(0,Math.min(1000000,minigunSpeed)),isScoped);
+    }
 	/** The speed of the minigun the player is using */
 	public float minigunSpeed = 0F;
 	/** Server-side limiter for the two legitimate hand updates accepted each tick. */
