@@ -60,11 +60,81 @@ public final class CameraEnvironmentChecks {
             field(RenderGlobal.class, "renderEngine").set(mc.renderGlobal, mc.renderEngine);
             sky(mc, world);
             thermalModes(mc, world);
-            if (args.length != 1) throw new IllegalArgumentException("Supply WGQOL development classes or dev jar");
+            if (args.length < 1 || args.length > 2) throw new IllegalArgumentException("Supply WGQOL development classes or dev jar, optionally a DH runtime jar");
             weather(mc, world, args[0]);
+            if (args.length == 2) dhFog(args[1]);
             require(GL11.glGetError() == GL11.GL_NO_ERROR, "environment passes leave no GL errors");
             System.out.println("PASS " + checks + " scope environment OpenGL/companion checks");
         } finally { singleton.set(null, previous); context.destroy(); }
+    }
+
+    private static Object apiProxy(Class<?> type, java.util.function.Function<Method,Object> body) {
+        return Proxy.newProxyInstance(type.getClassLoader(),new Class<?>[]{type},(owner,method,args) -> body.apply(method));
+    }
+
+    private static void dhFog(String jar) throws Exception {
+        try (URLClassLoader loader = new URLClassLoader(new java.net.URL[]{Paths.get(jar).toUri().toURL()},CameraEnvironmentChecks.class.getClassLoader())) {
+            Class<?> configValue = loader.loadClass("com.seibel.distanthorizons.api.interfaces.config.IDhApiConfigValue");
+            Class<?> configType = loader.loadClass("com.seibel.distanthorizons.api.interfaces.config.IDhApiConfig");
+            boolean[] enabled = {true}, special = {false};
+            java.util.function.Function<Object,Object> boxed = value -> apiProxy(configValue, method -> method.getName().equals("getValue") ? value : null);
+            java.util.function.Function<Method,Object> values = method -> {
+                String name = method.getName();
+                try {
+                    if (name.equals("enableDhFog")) return apiProxy(configValue,m -> m.getName().equals("getValue") ? enabled[0] : null);
+                    if (name.equals("chunkRenderDistance")) return boxed.apply(64);
+                    if (name.equals("color")) return boxed.apply(Enum.valueOf((Class)loader.loadClass("com.seibel.distanthorizons.api.enums.rendering.EDhApiFogColorMode"),"USE_SKY_COLOR"));
+                    if (name.endsWith("Falloff")) return boxed.apply(Enum.valueOf((Class)loader.loadClass("com.seibel.distanthorizons.api.enums.rendering.EDhApiFogFalloff"),"LINEAR"));
+                    if (name.equals("heightFogMixMode")) return boxed.apply(Enum.valueOf((Class)loader.loadClass("com.seibel.distanthorizons.api.enums.rendering.EDhApiHeightFogMixMode"),"MAX"));
+                    if (name.equals("heightFogDirection")) return boxed.apply(loader.loadClass("com.seibel.distanthorizons.api.enums.rendering.EDhApiHeightFogDirection").getEnumConstants()[0]);
+                    if (name.endsWith("MaxThickness") || name.endsWith("EndDistance") || name.endsWith("EndingHeightPercent") || name.endsWith("Density")) return boxed.apply(1f);
+                    if (name.equals("heightFogBaseHeight")) return boxed.apply(64f);
+                    return boxed.apply(0f);
+                } catch (ReflectiveOperationException failure) { throw new RuntimeException(failure); }
+            };
+            Object[] fog = {null}, graphics = {null};
+            Class<?> graphicsType = configType.getMethod("graphics").getReturnType();
+            Class<?> fogType = graphicsType.getMethod("fog").getReturnType();
+            Object far = apiProxy(fogType.getMethod("farFog").getReturnType(),values);
+            Object height = apiProxy(fogType.getMethod("heightFog").getReturnType(),values);
+            fog[0] = apiProxy(fogType,m -> m.getName().equals("farFog") ? far : m.getName().equals("heightFog") ? height : values.apply(m));
+            graphics[0] = apiProxy(graphicsType,m -> m.getName().equals("fog") ? fog[0] : values.apply(m));
+            Object configs = apiProxy(configType,m -> graphics[0]);
+            Field configsField = loader.loadClass("com.seibel.distanthorizons.api.DhApi$Delayed").getField("configs");
+            Object previous = configsField.get(null); configsField.set(null,configs);
+            int program = 0;
+            try {
+                Class<?> wrapper = loader.loadClass("com.seibel.distanthorizons.core.wrapperInterfaces.minecraft.IMinecraftRenderWrapper");
+                Object renderer = apiProxy(wrapper,m -> m.getName().equals("getDelayedSetupComplete") ? true
+                    : m.getName().equals("isFogStateSpecial") ? special[0]
+                    : m.getName().equals("getSkyColor") ? java.awt.Color.BLUE
+                    : m.getName().equals("getFogColor") ? java.awt.Color.RED : null);
+                Class<?> injectorType = loader.loadClass("com.seibel.distanthorizons.core.dependencyInjection.SingletonInjector");
+                Object injector = injectorType.getField("INSTANCE").get(null);
+                injectorType.getMethod("bind",Class.class,loader.loadClass("com.seibel.distanthorizons.coreapi.interfaces.dependencyInjection.IBindable"))
+                    .invoke(injector,wrapper,renderer);
+                CameraDhFog sample = new CameraDhFog();
+                Method resolve = CameraDhFog.class.getDeclaredMethod("resolve",ClassLoader.class); resolve.setAccessible(true); resolve.invoke(sample,loader);
+                CameraView view = view();
+                Method create = DistantCameraGeometry.class.getDeclaredMethod("createProgram"); create.setAccessible(true);
+                program = (Integer)create.invoke(null); GL20.glUseProgram(program);
+                require(GL20.glGetProgrami(program,GL20.GL_LINK_STATUS) != 0,"production colour terrain shader compiles with DH fog");
+                for (int state = 0; state < 3; state++) {
+                    enabled[0] = state != 1; special[0] = state == 2;
+                    sample.apply(program,view,256);
+                    require(!field(CameraDhFog.class,"failed").getBoolean(sample),"actual DH API fog snapshot resolves");
+                    java.nio.IntBuffer flag = BufferUtils.createIntBuffer(1);
+                    GL20.glGetUniform(program,GL20.glGetUniformLocation(program,"dhFogEnabled"),flag);
+                    require(flag.get(0) == (enabled[0] ? 1 : 0),"scope follows effective DH fog enable/disable without writing it");
+                    if (enabled[0]) {
+                        FloatBuffer colour = BufferUtils.createFloatBuffer(3);
+                        GL20.glGetUniform(program,GL20.glGetUniformLocation(program,"dhFogColor"),colour);
+                        require(special[0] ? colour.get(0) == 1 : colour.get(2) == 1,"scope follows DH sky colour and special-medium fog colour");
+                    }
+                }
+                require(configsField.get(null)==configs,"scope snapshot retains primary DH config ownership");
+            } finally { GL20.glUseProgram(0); if(program != 0) GL20.glDeleteProgram(program); configsField.set(null,previous); }
+        }
     }
 
     private static void thermalModes(Minecraft mc, TestWorld world) throws Exception {

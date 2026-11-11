@@ -17,10 +17,13 @@ final class ShaderScopeScene {
     private final CameraTerrain terrain;
     private final DistantCameraGeometry distant = new DistantCameraGeometry();
     private int nativeCoverage, coverageWidth, coverageHeight;
+    private boolean shaderDistant;
     ShaderScopeScene(AngelicaCameraBridge scope, CameraTerrain terrain) { this.scope = scope; this.terrain = terrain; }
     void capture(CameraView primary) { distant.capture(primary); }
     boolean draw(Minecraft mc, CameraView view) {
+        shaderDistant = scope.hasDistantTerrain();
         try {
+            if (shaderDistant && !distant.begin(view)) return false;
             if (!terrain.begin(view)) return false;
             mc.entityRenderer.enableLightmap(view.partialTicks);
             mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
@@ -49,10 +52,14 @@ final class ShaderScopeScene {
                         TileEntityRendererDispatcher.instance.renderTileEntity(tile, view.partialTicks);
                 }
             } finally { RenderHelper.disableStandardItemLighting(); }
+            scope.phase("NONE");
+            if (shaderDistant && !distant.drawShadered(view, 0, scope)) return false;
             scope.beginTranslucents();
             mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             terrain.draw(1);
+            scope.phase("NONE");
+            if (shaderDistant && !distant.drawShadered(view, 1, scope)) return false;
             scope.phase("PARTICLES");
             ThermalRenderApi.renderParticles(() -> {
                 mc.effectRenderer.renderLitParticles(mc.renderViewEntity, view.partialTicks);
@@ -73,7 +80,12 @@ final class ShaderScopeScene {
         GL11.glEnable(GL11.GL_TEXTURE_2D); GL11.glEnable(GL11.GL_CULL_FACE);
         GL11.glEnable(GL11.GL_ALPHA_TEST); GL11.glAlphaFunc(GL11.GL_GREATER, 0.1f);
         mc.entityRenderer.enableLightmap(view.partialTicks);
-        if (!distant.draw(view, 0, nativeCoverage) || !DistantActorCamera.begin(view, false)) return false;
+        // Shadered DH colour is already in the pack's composite. Retain only its
+        // established auxiliary depth encoding for the forward actor occluders.
+        GL11.glColorMask(!shaderDistant, !shaderDistant, !shaderDistant, !shaderDistant);
+        boolean opaque = distant.draw(view, 0, nativeCoverage);
+        GL11.glColorMask(true, true, true, true);
+        if (!opaque || !DistantActorCamera.begin(view, false)) return false;
         try {
             RenderHelper.enableStandardItemLighting();
             for (Object value : mc.theWorld.loadedEntityList) {
@@ -93,7 +105,9 @@ final class ShaderScopeScene {
         } finally { try { DistantActorCamera.end(); } finally { RenderHelper.disableStandardItemLighting(); } }
         mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
         GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        return distant.draw(view, 1, nativeCoverage);
+        GL11.glColorMask(!shaderDistant, !shaderDistant, !shaderDistant, !shaderDistant);
+        try { return distant.draw(view, 1, nativeCoverage); }
+        finally { GL11.glColorMask(true, true, true, true); }
     }
     /** Native geometry owns its pixels. Never compare overlapping LOD surfaces
      * against the shaderpack's jittered native depth using the auxiliary encoding. */

@@ -83,7 +83,7 @@ final class LightweightCamera {
             if (!distant.begin(view)) { failure = "DH camera: " + distant.failure(); return null; }
             mc.entityRenderer.enableLightmap(view.partialTicks);
             if (thermal) bindSensorLightmap();
-            if (!distant.draw(view, 0)) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
+            if (!(colourScope ? distant.drawColour(view, 0) : distant.draw(view, 0))) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
             mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glColor4f(1, 1, 1, 1);
             terrain.draw(0);
@@ -118,7 +118,7 @@ final class LightweightCamera {
             mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             if (thermal) bindSensorLightmap();
-            if (!distant.draw(view, 1)) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
+            if (!(colourScope ? distant.drawColour(view, 1) : distant.draw(view, 1))) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
             terrain.draw(1);
             GL20.glUseProgram(0);
             if (!ignoreAtmosphere) {

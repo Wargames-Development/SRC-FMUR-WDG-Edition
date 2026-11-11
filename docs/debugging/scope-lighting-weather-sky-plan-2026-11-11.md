@@ -2,6 +2,8 @@
 
 Stage 1 now has a [sky/weather candidate and validation record](scope-sky-weather-2026-11-11.md). The investigation and remaining stages below retain their original context.
 
+Stage 2 now has a [paired DH fog candidate and acceptance checklist](scope-dh-fog-candidate-2026-11-11.md): FMUR X210 / Angelica X7. Automated validation passes; the user's in-game fog reproduction remains pending visual acceptance.
+
 Status: source investigation completed against FMUR's current scope implementation, Angelica X6 source, WGQOL weather source, the local Forge 1.7.10 renderer source and the installed BountifulStars water-input-probe shader archive. Rendering code is not changed by this document. This is not visual acceptance of a fix.
 
 ## What is established

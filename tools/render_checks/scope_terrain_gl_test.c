@@ -33,6 +33,9 @@ static GLuint texture(int depth, int width) {
 }
 static void integer(const char *name, int value) { glUniform1i(glGetUniformLocation(program, name), value); }
 static void scalar(const char *name, float value) { glUniform1f(glGetUniformLocation(program, name), value); }
+static void vector(const char *name, float x, float y, float z, float w) {
+    glUniform4f(glGetUniformLocation(program, name), x, y, z, w);
+}
 int main(int argc, char **argv) {
     require(argc == 3, "shader paths supplied");
     CGLPixelFormatAttribute attributes[] = {kCGLPFAAccelerated, kCGLPFAColorSize, 24, kCGLPFADepthSize, 24, 0};
@@ -82,6 +85,20 @@ int main(int argc, char **argv) {
         }
         require(glGetError()==GL_NO_ERROR,"coverage snapshot and production draw have no GL errors");
     }
+    integer("useNativeCoverage", 0);
+    glUniform3f(glGetUniformLocation(program, "dhFogColor"), .1f, .3f, .9f);
+    vector("dhFarFog", 0, .4f, 0, 1); vector("dhHeightFog", 0, .4f, 0, 1);
+    vector("dhHeightShape", 0, 1, 1, 0); vector("dhHeightDirection", 1, 1, 1, 0);
+    for (int falloff = 0; falloff < 3; falloff++) for (int mode = 0; mode < 10; mode++) {
+        vector("dhFogShape", 1, 1, falloff, mode);
+        integer("dhFogEnabled", 1); glClearDepth(1); glClear(GL_DEPTH_BUFFER_BIT); glDrawArrays(GL_TRIANGLES,0,6);
+        float fogged[4]; glReadPixels(2,2,1,1,GL_RGBA,GL_FLOAT,fogged);
+        require(fogged[0]<.5f && fogged[2]>.125f, "configured DH far/height fog changes actual terrain pixels");
+        integer("dhFogEnabled", 0); glClear(GL_DEPTH_BUFFER_BIT); glDrawArrays(GL_TRIANGLES,0,6);
+        float plain[4]; glReadPixels(2,2,1,1,GL_RGBA,GL_FLOAT,plain);
+        require(fabsf(plain[0]-.5f)<.005f && fabsf(plain[2]-.125f)<.005f, "disabled fog and FLIR retain original terrain colour");
+    }
+    require(glGetError()==GL_NO_ERROR,"all fog settings leave no GL errors");
     printf("PASS %d scope terrain OpenGL checks using production GLSL\n", checks);
     glDeleteTextures(1,&light); CGLSetCurrentContext(NULL); CGLDestroyContext(context); return 0;
 }

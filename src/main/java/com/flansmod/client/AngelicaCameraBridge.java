@@ -12,6 +12,7 @@ import org.lwjgl.opengl.*;
 /** Optional Flans scope provider. It is selected only for non-thermal Flans lenses. */
 final class AngelicaCameraBridge implements CameraRenderManager.ShaderCamera {
     private final Method supports, render, phase, translucent, release, program;
+    private Method distantAvailable, distantBegin, distantOffset, distantEnd;
     private final ShaderScopeScene scene;
     private Framebuffer target;
 
@@ -27,6 +28,13 @@ final class AngelicaCameraBridge implements CameraRenderManager.ShaderCamera {
         render = api.getMethod("render", Framebuffer.class, FloatBuffer.class, FloatBuffer.class, float.class, BooleanSupplier.class, BooleanSupplier.class);
         phase = api.getMethod("phase", String.class); translucent = api.getMethod("beginTranslucents");
         release = api.getMethod("release", Framebuffer.class); program = api.getMethod("terrainProgram", Object.class, Object.class);
+        try {
+            Method available = api.getMethod("hasDistantTerrain");
+            distantBegin = api.getMethod("beginDistantTerrain", int.class, float.class);
+            distantOffset = api.getMethod("distantTerrainOffset", float.class, float.class, float.class);
+            distantEnd = api.getMethod("endDistantTerrain");
+            distantAvailable = available;
+        } catch (NoSuchMethodException olderCompanion) { distantAvailable = null; }
         CameraTerrain terrain = (CameraTerrain) Class.forName("com.flansmod.client.compat.AngelicaCameraTerrain")
             .getConstructor(BiFunction.class).newInstance((BiFunction<Object, Object, Object>) (pass, config) -> invoke(program, pass, config));
         scene = new ShaderScopeScene(this, terrain);
@@ -35,6 +43,10 @@ final class AngelicaCameraBridge implements CameraRenderManager.ShaderCamera {
     @Override public boolean isSupported() { return (Boolean) invoke(supports); }
     void phase(String value) { invoke(phase, value); }
     void beginTranslucents() { invoke(translucent); }
+    boolean hasDistantTerrain() { return distantAvailable != null && (Boolean) invoke(distantAvailable); }
+    void beginDistantTerrain(int pass, float partialTicks) { invoke(distantBegin, pass, partialTicks); }
+    void distantTerrainOffset(float x, float y, float z) { invoke(distantOffset, x, y, z); }
+    void endDistantTerrain() { invoke(distantEnd); }
 
     @Override public Framebuffer render(CameraView view) {
         int read = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING), draw = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);

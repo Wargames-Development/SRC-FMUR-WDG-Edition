@@ -31,10 +31,11 @@ def constant(source, name, dependencies=None):
 depth = constant((JAVA / "PlayerLodDepthLayer.java").read_text(), "DEPTH_FUNCTION")
 source = (JAVA / "DistantCameraGeometry.java").read_text()
 depth = constant(source, "DEPTH", {"PlayerLodDepthLayer.DEPTH_FUNCTION": depth})
+fog = constant((JAVA / "CameraDhFog.java").read_text(), "SHADER")
 with tempfile.TemporaryDirectory(prefix="fmur-scope-terrain-") as temporary:
     work = Path(temporary)
     for name, extension in [("VERTEX", "vsh"), ("FRAGMENT", "fsh")]:
-        (work / ("terrain." + extension)).write_text(constant(source, name, {"DEPTH": depth}))
+        (work / ("terrain." + extension)).write_text(constant(source, name, {"DEPTH": depth, "CameraDhFog.SHADER": fog}))
     executable = work / "scope-terrain-check"
     subprocess.run(["clang", "-Wno-deprecated-declarations", str(Path(__file__).with_name("scope_terrain_gl_test.c")),
                     "-framework", "OpenGL", "-o", str(executable)], check=True)
