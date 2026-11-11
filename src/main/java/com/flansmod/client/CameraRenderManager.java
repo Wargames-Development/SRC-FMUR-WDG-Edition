@@ -72,11 +72,11 @@ public final class CameraRenderManager implements IResourceManagerReloadListener
 
     CameraView currentView() { return secondary; }
 
-    Framebuffer render(Minecraft mc, int width, int height, float magnification, boolean thermal, boolean modelLens, boolean flir) {
-        return render(mc, width, height, magnification, thermal, modelLens, flir, false);
+    Framebuffer render(Minecraft mc, int width, int height, float magnification, boolean thermal, boolean modelLens, boolean vehicle) {
+        return render(mc, width, height, magnification, thermal, modelLens, vehicle, false);
     }
 
-    Framebuffer render(Minecraft mc, int width, int height, float magnification, boolean thermal, boolean modelLens, boolean flir, boolean shaderScope) {
+    Framebuffer render(Minecraft mc, int width, int height, float magnification, boolean thermal, boolean modelLens, boolean vehicle, boolean shaderScope) {
         if (!captured || world != mc.theWorld || mc.theWorld == null || mc.renderViewEntity == null) return null;
         if (width < 1 || height < 1 || !Float.isFinite(magnification) || magnification <= 0) return null;
         float aspect = (float)mc.displayWidth / Math.max(1, mc.displayHeight);
@@ -109,14 +109,15 @@ public final class CameraRenderManager implements IResourceManagerReloadListener
             }
             backend = "Lightweight";
             Framebuffer frame;
-            boolean colourScope = !thermal && modelLens && !flir;
+            boolean colourScope = !thermal && !vehicle;
+            boolean ignoreAtmosphere = thermal && !vehicle;
             if (shaderScope) {
                 // The caller deliberately left the primary shaders available for the provider.
                 // A rejected sample must still enter the original lightweight isolation.
                 AutoCloseable isolated = ThermalRenderApi.beginIsolatedGeometry();
-                try { frame = lightweight.render(mc, secondary, thermal, flir, colourScope); }
+                try { frame = lightweight.render(mc, secondary, thermal, ignoreAtmosphere, colourScope); }
                 finally { try { isolated.close(); } catch (Exception failure) { throw new IllegalStateException(failure); } }
-            } else frame = lightweight.render(mc, secondary, thermal, flir, colourScope);
+            } else frame = lightweight.render(mc, secondary, thermal, ignoreAtmosphere, colourScope);
             if (frame == null) {
                 backend = "Unavailable: " + lightweight.failure();
                 if (!backend.equals(reportedFailure)) {

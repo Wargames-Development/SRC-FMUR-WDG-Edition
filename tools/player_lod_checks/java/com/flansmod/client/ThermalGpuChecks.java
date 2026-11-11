@@ -31,6 +31,7 @@ public final class ThermalGpuChecks {
                 particleOcclusion();
                 emissiveParticles();
                 nightVisionLensComposition();
+                cachedSensorDisplay();
                 check(GL11.glGetError()==GL11.GL_NO_ERROR,"Focused particle checks leave no GL errors");
                 GL30.glDeleteFramebuffers(displayTarget);displayTarget=0;
                 System.out.println("PASS: " + checks + " camera particle depth, heat, smoke and NVG checks.");
@@ -547,12 +548,32 @@ public final class ThermalGpuChecks {
             ByteBuffer held=pixel(SIZE/2,SIZE/2);
             check((held.get(0)&255)==expected && (held.get(1)&255)==(first.get(1)&255),"Held frame does not reprocess current sensor input");
             check(GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING)==source.framebufferObject,"Cached compositor restores caller FBO");
+            field(ThermalScopeEffect.class,"colorSceneTexture").setInt(null,source.framebufferTexture);
+            field(ThermalScopeEffect.class,"scopedSceneCaptured").setBoolean(null,true);
+            // Pbuffer default FBOs are undefined on macOS; provide the real-sized colour cache directly.
+            ((net.minecraft.client.shader.Framebuffer)field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").get(null)).deleteFramebuffer();
+            net.minecraft.client.shader.Framebuffer colourCache=fixtureFramebuffer(allocator,false);
+            int colourSize=field(ThermalScopeEffect.class,"MODEL_LENS_SIZE").getInt(null);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D,colourCache.framebufferTexture);
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D,0,GL11.GL_RGBA8,colourSize,colourSize,0,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,(ByteBuffer)null);
+            colourCache.framebufferWidth=colourCache.framebufferTextureWidth=colourSize;
+            colourCache.framebufferHeight=colourCache.framebufferTextureHeight=colourSize;
+            field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").set(null,colourCache);
+            source.bindFramebuffer(true);GL11.glClearColor(0,1,0,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+            ThermalScopeEffect.renderCameraDisplay(mc,false,true,true,false,false,false,1);
+            ByteBuffer colour=pixel(SIZE/2,SIZE/2);
+            check((colour.get(1)&255)>240 && (colour.get(0)&255)<10,"FLIR-off fullscreen sensor uses its normal RGB scene");
+            GL11.glClearColor(0,0,1,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+            ThermalScopeEffect.renderCameraDisplay(mc,false,false,true,false,false,false,1);
+            check((pixel(SIZE/2,SIZE/2).get(1)&255)>240,"FLIR-off sensor holds its sampled colour frame between deadlines");
             check(GL11.glGetError()==GL11.GL_NO_ERROR,"Cached sensor has no GL errors");
         } finally {
             Object cached=field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").get(null);
             if(cached!=null)((net.minecraft.client.shader.Framebuffer)cached).deleteFramebuffer();
             field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").set(null,null);
             field(ThermalScopeEffect.class,"sensorDisplayValid").setBoolean(null,false);
+            field(ThermalScopeEffect.class,"colorSceneTexture").setInt(null,0);
+            field(ThermalScopeEffect.class,"scopedSceneCaptured").setBoolean(null,false);
             if(source!=null)source.deleteFramebuffer();
             singleton.set(null,previousClient);
         }
@@ -1205,6 +1226,9 @@ public final class ThermalGpuChecks {
         framebuffer.framebufferObject=fbo();
         framebuffer.framebufferTexture=GL30.glGetFramebufferAttachmentParameteri(GL30.GL_FRAMEBUFFER,
                 GL30.GL_COLOR_ATTACHMENT0,GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D,framebuffer.framebufferTexture);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER,GL11.GL_NEAREST);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER,GL11.GL_NEAREST);
         framebuffer.framebufferWidth=SIZE;framebuffer.framebufferHeight=SIZE;
         framebuffer.framebufferTextureWidth=SIZE;framebuffer.framebufferTextureHeight=SIZE;
         framebuffer.depthBuffer=-1;

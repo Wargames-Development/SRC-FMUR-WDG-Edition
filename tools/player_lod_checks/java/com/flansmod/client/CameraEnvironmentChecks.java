@@ -59,11 +59,69 @@ public final class CameraEnvironmentChecks {
             field(RenderGlobal.class, "theWorld").set(mc.renderGlobal, world);
             field(RenderGlobal.class, "renderEngine").set(mc.renderGlobal, mc.renderEngine);
             sky(mc, world);
+            thermalModes(mc, world);
             if (args.length != 1) throw new IllegalArgumentException("Supply WGQOL development classes or dev jar");
             weather(mc, world, args[0]);
             require(GL11.glGetError() == GL11.GL_NO_ERROR, "environment passes leave no GL errors");
             System.out.println("PASS " + checks + " scope environment OpenGL/companion checks");
         } finally { singleton.set(null, previous); context.destroy(); }
+    }
+
+    private static void thermalModes(Minecraft mc, TestWorld world) throws Exception {
+        require(!ThermalScopeEffect.thermalCapture(true, false, false), "FLIR-off capable optic acquires a colour scene");
+        require(ThermalScopeEffect.thermalCapture(true, false, true), "FLIR-on optic acquires lightweight heat");
+        require(!ThermalScopeEffect.thermalCapture(false, false, true), "global FLIR toggle cannot change an ordinary colour optic");
+        require(ThermalScopeEffect.thermalCapture(false, true, false), "vehicle sensor remains on its established thermal path");
+        boolean before = ThermalScopeEffect.isFlirEnabled();
+        String[] flags = {"sceneCaptured", "scopedSceneCaptured", "modelLensValid", "sensorDisplayValid"};
+        boolean[] saved = new boolean[flags.length];
+        ThermalSensorClock clock = (ThermalSensorClock)field(ThermalScopeEffect.class, "SENSOR_CLOCK").get(null);
+        Object device = new Object(); require(clock.tryAcquire(device, 10, 1), "sensor deadline reserved before toggle");
+        try {
+            for (int i = 0; i < flags.length; i++) { Field f = field(ThermalScopeEffect.class, flags[i]); saved[i] = f.getBoolean(null); f.setBoolean(null, true); }
+            ThermalScopeEffect.toggleFlir();
+            for (String flag : flags) require(!field(ThermalScopeEffect.class, flag).getBoolean(null), "toggle rejects stale display state: " + flag);
+            require(!clock.tryAcquire(device, 10, 2), "toggling cannot bypass the sensor deadline");
+        } finally {
+            if (ThermalScopeEffect.isFlirEnabled() != before) ThermalScopeEffect.toggleFlir();
+            for (int i = 0; i < flags.length; i++) field(ThermalScopeEffect.class, flags[i]).setBoolean(null, saved[i]);
+            ((Map<?, ?>)field(ThermalSensorClock.class, "samples").get(clock)).remove(device);
+        }
+        world.loadedEntityList = new ArrayList();
+        mc.gameSettings.fboEnable = true; OpenGlHelper.initializeTextures();
+        Constructor<ThermalCamera> constructor = ThermalCamera.class.getDeclaredConstructor(); constructor.setAccessible(true);
+        ThermalCamera camera = constructor.newInstance(); require(ThermalCamera.ensureShader(), "thermal display shader compiles");
+        Field renderer = field(ThermalRenderApi.class, "vehicleRenderer"); Object previousRenderer = renderer.get(null);
+        Field vehicle = field(ThermalRenderApi.class, "vehicleCamera"); Object previousVehicle = vehicle.get(null);
+        try {
+            final int[] emitted = {0};
+            ThermalRenderApi.registerVehicleRenderer(() -> false, p -> {
+                GL13.glActiveTexture(GL13.GL_TEXTURE1); GL11.glDisable(GL11.GL_TEXTURE_2D);
+                GL13.glActiveTexture(GL13.GL_TEXTURE0); GL11.glDisable(GL11.GL_TEXTURE_2D);
+                GL11.glDisable(GL11.GL_CULL_FACE); GL11.glColor4f(1, 1, 1, 1); quad(.5F, -3);
+                emitted[0]++;
+            });
+            for (boolean covered : new boolean[]{false, true}) {
+                view(); clear(covered ? .01 : 1);
+                require(camera.prepareDepth(framebuffer, 128, 128), "lightweight thermal scene retains physical depth");
+                camera.captureColor(framebuffer, 128, 128);
+                // Null particle/lightmap renderers make any accidental cosmetic replay fail.
+                camera.renderHeat(.5F, false);
+                require(emitted[0] == (covered ? 2 : 1) && camera.heatValid(), "actual heat geometry executes in penetrating capture");
+                require(!field(ThermalCamera.class, "particlesValid").getBoolean(camera), "penetrating FLIR creates no smoke/weather attenuation mask");
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, framebuffer);
+                GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity(); GL11.glOrtho(-1, 1, -1, 1, -1, 1);
+                GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadIdentity(); GL11.glDisable(GL11.GL_DEPTH_TEST);
+                GL11.glDisable(GL11.GL_BLEND); GL11.glColorMask(true, true, true, true);
+                camera.bindDisplay(128, 128, false, true, false, true, true, 1, 1); quad(1, 0); GL20.glUseProgram(0);
+                int level = pixel(64, 64, 0);
+                require(covered ? level < 200 : level > 240, "FLIR highlights exposed entities but opaque depth still hides covered entities: covered=" + covered + " level=" + level);
+            }
+        } finally {
+            camera.destroy(); renderer.set(null, previousRenderer);
+            vehicle.set(null, previousVehicle);
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, framebuffer); GL13.glActiveTexture(GL13.GL_TEXTURE0);
+        }
     }
 
     private static void sky(Minecraft mc, TestWorld world) throws Exception {
@@ -252,7 +310,13 @@ public final class CameraEnvironmentChecks {
         GL11.glDepthRange(0, 1); GL11.glClearDepth(depth); GL11.glClearColor(0, 0, 0, 1); GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
         GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDepthFunc(GL11.GL_LEQUAL); GL20.glUseProgram(0);
     }
-    private static void quad(float size, float z) { GL11.glBegin(GL11.GL_QUADS); GL11.glVertex3f(-size, -size, z); GL11.glVertex3f(size, -size, z); GL11.glVertex3f(size, size, z); GL11.glVertex3f(-size, size, z); GL11.glEnd(); }
+    private static void quad(float size, float z) {
+        GL11.glBegin(GL11.GL_QUADS);
+        GL11.glTexCoord2f(0, 0); GL11.glVertex3f(-size, -size, z);
+        GL11.glTexCoord2f(1, 0); GL11.glVertex3f(size, -size, z);
+        GL11.glTexCoord2f(1, 1); GL11.glVertex3f(size, size, z);
+        GL11.glTexCoord2f(0, 1); GL11.glVertex3f(-size, size, z); GL11.glEnd();
+    }
     private static int pixel(int x, int y, int channel) { ByteBuffer out = BufferUtils.createByteBuffer(4); GL11.glReadPixels(x, y, 1, 1, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, out); return out.get(channel) & 255; }
     private static float depth() { FloatBuffer out = BufferUtils.createFloatBuffer(1); GL11.glReadPixels(64, 64, 1, 1, GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, out); return out.get(0); }
     private static FloatBuffer matrix(int type) { FloatBuffer out = BufferUtils.createFloatBuffer(16); GL11.glGetFloat(type, out); return out; }

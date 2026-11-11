@@ -169,6 +169,10 @@ final class ThermalCamera {
     }
 
     void renderHeat(final float partialTicks) {
+        renderHeat(partialTicks, true);
+    }
+
+    void renderHeat(final float partialTicks, boolean atmosphericParticles) {
         renderHeat(new Runnable() {
             @Override public void run() {
                 ThermalRenderApi.renderHeat(partialTicks,new Runnable() {
@@ -176,6 +180,7 @@ final class ThermalCamera {
                 });
             }
         });
+        if (!atmosphericParticles) return;
         final Minecraft mc = Minecraft.getMinecraft();
         final Entity viewer = mc.renderViewEntity;
         renderParticles(new Runnable() {
