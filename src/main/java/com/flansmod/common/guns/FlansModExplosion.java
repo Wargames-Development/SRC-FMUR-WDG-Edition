@@ -69,11 +69,12 @@ public class FlansModExplosion extends Explosion
         damageVsLiving  = damageLiving;
         damageVsPlane   = damagePlane;
         damageVsVehicle = damageVehicle;
+        canceled = net.minecraftforge.event.ForgeEventFactory.onExplosionStart(worldObj, this);
+        if (canceled) return;
         doExplosionA();
         doExplosionB(true);
         spawnParticle(smokeCount, debrisCount);
 
-        canceled = net.minecraftforge.event.ForgeEventFactory.onExplosionStart(worldObj, this);
         
         if(!worldObj.isRemote)
         {
@@ -105,6 +106,7 @@ public class FlansModExplosion extends Explosion
 	@Override
 	public void doExplosionA()
 	{
+		Integrations.prepareExplosionWGC(this, radius * power, breakBlocks || breakBreakableBlocks);
 		float f = explosionSize;
 		HashSet hashset = new HashSet();
 		double d0;
@@ -139,6 +141,7 @@ public class FlansModExplosion extends Explosion
 							int i1 = MathHelper.floor_double(d1);
 							int j1 = MathHelper.floor_double(d2);
 							Block block = worldObj.getBlock(l, i1, j1);
+							float incomingPower = f1;
 
 							float f3 = exploder != null ? exploder.func_145772_a(this, worldObj, l, i1, j1, block) : block.getExplosionResistance(exploder, worldObj, l, i1, j1, explosionX, explosionY, explosionZ);
 							double distFactor = Math.sqrt(Math.pow(d0 - explosionX, 2) + Math.pow(d1 - explosionY, 2) + Math.pow(d2 - explosionZ, 2));
@@ -148,6 +151,13 @@ public class FlansModExplosion extends Explosion
 								f1 -= (f3 + 0.3F) * f2 * Math.pow((distFactor - radius + 2), 3) * 20;
 							}
 
+							if (f1 <= 0F && incomingPower > 0F && Integrations.isWGCoreIntegrationEnabled()
+									&& block.getMaterial() != net.minecraft.block.material.Material.air
+									&& (breakBlocks && breakBreakableBlocks || !breakBlocks && breakBreakableBlocks
+									&& block instanceof IBreakableBlock && ((IBreakableBlock)block).canBreakableByExplosion())
+									&& (exploder == null || exploder.func_145774_a(this,worldObj,l,i1,j1,block,incomingPower))) {
+								hashset.add(new ChunkPosition(l,i1,j1));
+							}
 							if (f1 > 0.0F && (exploder == null || exploder.func_145774_a(this, worldObj, l, i1, j1, block, f1)))
 							{
 								if(breakBlocks && breakBreakableBlocks) {

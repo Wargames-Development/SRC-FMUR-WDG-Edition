@@ -99,8 +99,9 @@ public final class CameraRenderManager implements IResourceManagerReloadListener
                     FlansMod.log("[Camera] shader camera disabled: " + failure);
                 }
             }
-            backend = "Lightweight";
-            Framebuffer frame = lightweight.render(mc, secondary, thermal, flir);
+            Framebuffer frame = lightweight.render(mc, secondary, thermal, flir,
+                    !thermal && FlansMod.pipRenderingMode != 1);
+            backend = lightweight.usedShaders() ? "Shader-integrated" : "Lightweight";
             if (frame == null) {
                 backend = "Unavailable: " + lightweight.failure();
                 if (!backend.equals(reportedFailure)) {

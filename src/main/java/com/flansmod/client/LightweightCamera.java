@@ -25,9 +25,12 @@ final class LightweightCamera {
     private static final ResourceLocation SUN = new ResourceLocation("textures/environment/sun.png");
     private final FloatBuffer skyModelView = BufferUtils.createFloatBuffer(16);
     private Framebuffer target;
+    private Framebuffer shaderTarget;
     private CameraTerrain terrain;
     private boolean checked;
     private Method angelicaInstance;
+    private AngelicaCameraBridge angelicaCamera;
+    private boolean usedShaders;
     private String failure = "";
     private boolean failed;
     private int sensorLightmap;
@@ -35,12 +38,17 @@ final class LightweightCamera {
     private final ThermalGlassBarrier glass = new ThermalGlassBarrier();
 
     String failure() { return failure; }
+    boolean usedShaders() { return usedShaders; }
     void capture(CameraView source) { distant.capture(source); }
 
-    Framebuffer render(Minecraft mc, CameraView view, boolean thermal, boolean flir) {
-        try(ThermalRenderApi.CameraPass ignored=ThermalRenderApi.beginCameraPass()) { return renderView(mc,view,thermal,flir); }
+    Framebuffer render(Minecraft mc, CameraView view, boolean thermal, boolean flir, boolean preferShaders) {
+        try (ThermalRenderApi.CameraPass ignored = ThermalRenderApi.beginCameraPass()) {
+            return renderView(mc, view, thermal, flir, preferShaders);
+        }
     }
-    private Framebuffer renderView(Minecraft mc, CameraView view, boolean thermal, boolean flir) {
+
+    private Framebuffer renderView(Minecraft mc, CameraView view, boolean thermal, boolean flir, boolean preferShaders) {
+        usedShaders = false;
         if (failed) return null;
         int draw = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int read = ThermalFramebuffers.canBlit() ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : draw;
@@ -52,88 +60,39 @@ final class LightweightCamera {
         GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix();
         try {
             if (!selectTerrain()) return null;
+            if (!distant.begin(view)) { failure = "DH camera: " + distant.failure(); return null; }
+            if (preferShaders && terrain == angelicaCamera && angelicaCamera.supportsShaders()) {
+                if (shaderTarget == null) shaderTarget = new Framebuffer(view.width, view.height, true);
+                else if (shaderTarget.framebufferWidth != view.width || shaderTarget.framebufferHeight != view.height)
+                    shaderTarget.createBindFramebuffer(view.width, view.height);
+                prepareTarget(shaderTarget, view);
+                if (angelicaCamera.render(shaderTarget, view, true, () -> drawScene(mc, view, false, false, true))) {
+                    shaderTarget.bindFramebuffer(true);
+                    mc.entityRenderer.enableLightmap(view.partialTicks);
+                    if (!drawDistant(view, 0)) return null;
+                    GL11.glEnable(GL11.GL_BLEND);
+                    GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+                    if (!drawDistant(view, 1)) return null;
+                    usedShaders = true;
+                    failure = "";
+                    return shaderTarget;
+                }
+            }
             if (target == null || target.framebufferWidth != view.width || target.framebufferHeight != view.height) {
                 if (target != null) target.deleteFramebuffer();
                 target = new Framebuffer(view.width, view.height, true);
             }
-            target.bindFramebuffer(true);
-            GL20.glUseProgram(0);
-            GL13.glActiveTexture(GL13.GL_TEXTURE0);
-            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadMatrix(view.projection);
-            GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadMatrix(view.modelView);
-            GL11.glDisable(GL11.GL_SCISSOR_TEST); GL11.glDisable(GL11.GL_STENCIL_TEST);
-            GL11.glColorMask(true, true, true, true); GL11.glDepthMask(true);
-            GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDepthFunc(GL11.GL_LEQUAL);
-            GL11.glDisable(GL11.GL_BLEND); GL11.glDisable(GL11.GL_LIGHTING); GL11.glDisable(GL11.GL_FOG);
-            GL11.glEnable(GL11.GL_TEXTURE_2D); GL11.glEnable(GL11.GL_CULL_FACE);
-            GL11.glEnable(GL11.GL_ALPHA_TEST); GL11.glAlphaFunc(GL11.GL_GREATER, 0.1F);
-            Vec3 sky = mc.theWorld.getSkyColor(mc.renderViewEntity, view.partialTicks);
-            GL11.glClearColor((float)sky.xCoord, (float)sky.yCoord, (float)sky.zCoord, 1);
-            GL11.glClearDepth(1); GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-            if (!mc.theWorld.provider.hasNoSky) {
-                mc.getTextureManager().bindTexture(SUN);
-                drawSun(view, mc.theWorld.getCelestialAngle(view.partialTicks), 1 - mc.theWorld.getRainStrength(view.partialTicks));
-            }
-            if (!terrain.begin(view)) return null;
-            if (!distant.begin(view)) { failure = "DH camera: " + distant.failure(); return null; }
-            mc.entityRenderer.enableLightmap(view.partialTicks);
-            if (thermal) bindSensorLightmap();
-            if (!distant.draw(view, 0)) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
-            mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
-            GL11.glColor4f(1, 1, 1, 1);
-            terrain.draw(0);
-            GL20.glUseProgram(0);
-            if (thermal && flir) glass.render(mc, view);
-            if(!DistantActorCamera.begin(view,false)) { failure="DH isolated actor view is not ready";return null; }
-            RenderHelper.enableStandardItemLighting();
-            for (Object object : mc.theWorld.loadedEntityList) {
-                Entity entity = (Entity)object;
-                if (entity.isDead || entity == mc.renderViewEntity && mc.gameSettings.thirdPersonView == 0) continue;
-                AxisAlignedBB box = entity.boundingBox;
-                if (box == null || !view.visible(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)) continue;
-                Render renderer = RenderManager.instance.getEntityRenderObject(entity);
-                if (renderer == null) continue;
-                if(DistantActorCamera.renderNative(entity)) continue;
-                double x = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * view.partialTicks;
-                double y = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * view.partialTicks;
-                double z = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * view.partialTicks;
-                renderer.doRender(entity, x - RenderManager.renderPosX, y - RenderManager.renderPosY,
-                        z - RenderManager.renderPosZ, entity.prevRotationYaw
-                        + (entity.rotationYaw - entity.prevRotationYaw) * view.partialTicks, view.partialTicks);
-            }
-            for (Object object : mc.theWorld.loadedTileEntityList) {
-                TileEntity tile = (TileEntity)object;
-                AxisAlignedBB box = tile.getRenderBoundingBox();
-                if (box != null && view.visible(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ))
-                    TileEntityRendererDispatcher.instance.renderTileEntity(tile, view.partialTicks);
-            }
-            ThermalRenderApi.renderCameraGeometry(view.partialTicks);
-            DistantActorCamera.end();
-            RenderHelper.disableStandardItemLighting();
-            mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
-            GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            if (thermal) bindSensorLightmap();
-            if (!distant.draw(view, 1)) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
-            terrain.draw(1);
-            GL20.glUseProgram(0);
-            ThermalRenderApi.renderParticles(new Runnable() {
-                @Override public void run() {
-                    mc.effectRenderer.renderLitParticles(mc.renderViewEntity, view.partialTicks);
-                    mc.effectRenderer.renderParticles(mc.renderViewEntity, view.partialTicks);
-                }
-            });
-            mc.entityRenderer.enableLightmap(view.partialTicks);
-            if (thermal) bindSensorLightmap();
-            CameraWeather.render(mc, view);
-            failure = "";
-            return target;
+            prepareTarget(target, view);
+            boolean complete = terrain == angelicaCamera
+                    ? angelicaCamera.render(target, view, false, () -> drawScene(mc, view, thermal, flir, false))
+                    : drawScene(mc, view, thermal, flir, false);
+            return complete ? target : null;
         } catch (ReflectiveOperationException | RuntimeException | LinkageError problem) {
             failure = problem.toString();
             failed = true;
             return null;
         } finally {
             try {
-                DistantActorCamera.end();
                 if (terrain != null) terrain.close();
             } catch (RuntimeException | LinkageError problem) {
                 failure = problem.toString();
@@ -150,6 +109,111 @@ final class LightweightCamera {
                 GL11.glPopClientAttrib(); GL11.glPopAttrib();
             }
         }
+    }
+
+    private static void prepareTarget(Framebuffer framebuffer, CameraView view) {
+        framebuffer.bindFramebuffer(true);
+        GL20.glUseProgram(0);
+        GL13.glActiveTexture(GL13.GL_TEXTURE0);
+        GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadMatrix(view.projection);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadMatrix(view.modelView);
+        GL11.glDisable(GL11.GL_SCISSOR_TEST); GL11.glDisable(GL11.GL_STENCIL_TEST);
+        GL11.glColorMask(true, true, true, true); GL11.glDepthMask(true);
+        GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDepthFunc(GL11.GL_LEQUAL);
+        GL11.glDisable(GL11.GL_BLEND); GL11.glDisable(GL11.GL_LIGHTING); GL11.glDisable(GL11.GL_FOG);
+        GL11.glEnable(GL11.GL_TEXTURE_2D); GL11.glEnable(GL11.GL_CULL_FACE);
+        GL11.glEnable(GL11.GL_ALPHA_TEST); GL11.glAlphaFunc(GL11.GL_GREATER, 0.1F);
+        GL11.glClearDepth(1);
+    }
+
+    private boolean drawScene(Minecraft mc, CameraView view, boolean thermal, boolean flir, boolean shaders) {
+        if (!shaders) {
+            Vec3 sky = mc.theWorld.getSkyColor(mc.renderViewEntity, view.partialTicks);
+            GL11.glClearColor((float)sky.xCoord, (float)sky.yCoord, (float)sky.zCoord, 1);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+            if (!mc.theWorld.provider.hasNoSky) {
+                mc.getTextureManager().bindTexture(SUN);
+                drawSun(view, mc.theWorld.getCelestialAngle(view.partialTicks), 1 - mc.theWorld.getRainStrength(view.partialTicks));
+            }
+        }
+        if (!terrain.begin(view)) return false;
+        mc.entityRenderer.enableLightmap(view.partialTicks);
+        if (thermal) bindSensorLightmap();
+        if (!shaders && !drawDistant(view, 0)) return false;
+        mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
+        GL11.glColor4f(1, 1, 1, 1);
+        terrain.draw(0);
+        if (shaders) angelicaCamera.phase("ENTITIES");
+        else GL20.glUseProgram(0);
+        if (thermal && flir) glass.render(mc, view);
+        if (!DistantActorCamera.begin(view, false)) {
+            failure = "DH isolated actor view is not ready";
+            return false;
+        }
+        try {
+            RenderHelper.enableStandardItemLighting();
+            drawEntities(mc, view, shaders);
+            if (shaders) angelicaCamera.phase("BLOCK_ENTITIES");
+            for (Object object : mc.theWorld.loadedTileEntityList) {
+                TileEntity tile = (TileEntity)object;
+                AxisAlignedBB box = tile.getRenderBoundingBox();
+                if (box != null && view.visible(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ))
+                    TileEntityRendererDispatcher.instance.renderTileEntity(tile, view.partialTicks);
+            }
+            if (shaders) angelicaCamera.phase("ENTITIES");
+            ThermalRenderApi.renderCameraGeometry(view.partialTicks);
+        } finally {
+            try {
+                DistantActorCamera.end();
+            } finally {
+                RenderHelper.disableStandardItemLighting();
+            }
+        }
+        if (shaders) angelicaCamera.beginTranslucents();
+        mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
+        GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        if (thermal) bindSensorLightmap();
+        if (!shaders && !drawDistant(view, 1)) return false;
+        terrain.draw(1);
+        if (shaders) angelicaCamera.phase("PARTICLES");
+        else GL20.glUseProgram(0);
+        ThermalRenderApi.renderParticles(() -> {
+            mc.effectRenderer.renderLitParticles(mc.renderViewEntity, view.partialTicks);
+            mc.effectRenderer.renderParticles(mc.renderViewEntity, view.partialTicks);
+        });
+        mc.entityRenderer.enableLightmap(view.partialTicks);
+        if (thermal) bindSensorLightmap();
+        if (shaders) angelicaCamera.phase("RAIN_SNOW");
+        CameraWeather.render(mc, view);
+        failure = "";
+        return true;
+    }
+
+    private static void drawEntities(Minecraft mc, CameraView view, boolean shaders) {
+        for (Object object : mc.theWorld.loadedEntityList) {
+            Entity entity = (Entity)object;
+            if (entity.isDead || entity == mc.renderViewEntity && mc.gameSettings.thirdPersonView == 0) continue;
+            AxisAlignedBB box = entity.boundingBox;
+            if (box == null || !view.visible(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)) continue;
+            Render renderer = RenderManager.instance.getEntityRenderObject(entity);
+            if (renderer == null) continue;
+            if (DistantActorCamera.renderNative(entity)) continue;
+            double x = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * view.partialTicks;
+            double y = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * view.partialTicks;
+            double z = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * view.partialTicks;
+            float yaw = entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * view.partialTicks;
+            if (shaders) {
+                RenderManager.instance.renderEntityWithPosYaw(entity, x - view.x, y - view.y, z - view.z, yaw, view.partialTicks);
+            } else {
+                renderer.doRender(entity, x - view.x, y - view.y, z - view.z, yaw, view.partialTicks);
+            }
+        }
+    }
+
+    private boolean drawDistant(CameraView view, int pass) {
+        if (distant.draw(view, pass)) return true;
+        failure = "DH geometry unavailable: " + distant.failure();
+        return false;
     }
 
     void drawSun(CameraView view, float angle, float visibility) {
@@ -205,12 +269,17 @@ final class LightweightCamera {
     private boolean selectTerrain() throws ReflectiveOperationException {
         if (!checked) {
             checked = true;
+            angelicaCamera = AngelicaCameraBridge.find();
             try {
                 Class<?> renderer = Class.forName("com.gtnewhorizons.angelica.rendering.celeritas.CeleritasWorldRenderer");
                 angelicaInstance = renderer.getMethod("getInstanceOrNull");
             } catch (ClassNotFoundException absent) { angelicaInstance = null; }
         }
         boolean angelica = angelicaInstance != null && angelicaInstance.invoke(null) != null;
+        if (angelica && angelicaCamera != null) {
+            terrain = angelicaCamera;
+            return angelicaCamera.hasTerrain();
+        }
         if (angelica && (terrain == null || terrain instanceof VanillaCameraTerrain)) {
             if (terrain != null) terrain.destroy();
             terrain = (CameraTerrain)Class.forName("com.flansmod.client.compat.AngelicaCameraTerrain").newInstance();
@@ -227,6 +296,11 @@ final class LightweightCamera {
         terrain = null;
         if (target != null) target.deleteFramebuffer();
         target = null;
+        if (shaderTarget != null) {
+            angelicaCamera.release(shaderTarget);
+            shaderTarget.deleteFramebuffer();
+            shaderTarget = null;
+        }
         if (sensorLightmap != 0) GL11.glDeleteTextures(sensorLightmap);
         sensorLightmap = 0;
         failed = false;

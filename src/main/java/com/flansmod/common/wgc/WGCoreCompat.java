@@ -20,6 +20,10 @@ final class WGCoreCompat {
     private WGCoreCompat() {
     }
 
+    static void prepareExplosion(Explosion explosion,double strength,boolean terrainEnabled) {
+        WGCoreIntegrationAccess.prepareExplosion(explosion,strength,terrainEnabled,true);
+    }
+
     static boolean canHarmPlayer(UUID actingPlayerId, UUID targetPlayerId, World world) {
         return WGCoreIntegrationAccess.canHarmPlayer(actingPlayerId, targetPlayerId, world);
     }
