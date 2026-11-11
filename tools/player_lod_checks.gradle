@@ -30,6 +30,17 @@ gradle.projectsEvaluated {
         classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
         main = 'com.flansmod.client.AuxiliaryViewChecks'
     }
+    p.tasks.create('cameraEnvironmentChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.client.CameraEnvironmentChecks'
+        doFirst {
+            if (!p.hasProperty('lwjglNatives') || !p.hasProperty('wgqolRuntime'))
+                throw new GradleException('Supply -PlwjglNatives=<LWJGL 2 natives> and -PwgqolRuntime=<WGQOL dev classes/jar>')
+            jvmArgs '-Djava.library.path=' + p.property('lwjglNatives')
+            args p.property('wgqolRuntime')
+        }
+    }
     p.tasks.create('externalPlayerPresentationChecks', JavaExec) {
         dependsOn compileChecks
         classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath

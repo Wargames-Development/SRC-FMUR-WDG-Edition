@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 final class LightweightCamera {
     private static final ResourceLocation SUN = new ResourceLocation("textures/environment/sun.png");
     private final FloatBuffer skyModelView = BufferUtils.createFloatBuffer(16);
+    private final CameraSky sky = new CameraSky();
     private Framebuffer target;
     private CameraTerrain terrain;
     private boolean checked;
@@ -37,10 +38,10 @@ final class LightweightCamera {
     String failure() { return failure; }
     void capture(CameraView source) { distant.capture(source); }
 
-    Framebuffer render(Minecraft mc, CameraView view, boolean thermal, boolean flir) {
-        try(ThermalRenderApi.CameraPass ignored=ThermalRenderApi.beginCameraPass()) { return renderView(mc,view,thermal,flir); }
+    Framebuffer render(Minecraft mc, CameraView view, boolean thermal, boolean flir, boolean colourScope) {
+        try(ThermalRenderApi.CameraPass ignored=ThermalRenderApi.beginCameraPass()) { return renderView(mc,view,thermal,flir,colourScope); }
     }
-    private Framebuffer renderView(Minecraft mc, CameraView view, boolean thermal, boolean flir) {
+    private Framebuffer renderView(Minecraft mc, CameraView view, boolean thermal, boolean flir, boolean colourScope) {
         if (failed) return null;
         int draw = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int read = ThermalFramebuffers.canBlit() ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : draw;
@@ -70,9 +71,13 @@ final class LightweightCamera {
             Vec3 sky = mc.theWorld.getSkyColor(mc.renderViewEntity, view.partialTicks);
             GL11.glClearColor((float)sky.xCoord, (float)sky.yCoord, (float)sky.zCoord, 1);
             GL11.glClearDepth(1); GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-            if (!mc.theWorld.provider.hasNoSky) {
-                mc.getTextureManager().bindTexture(SUN);
-                drawSun(view, mc.theWorld.getCelestialAngle(view.partialTicks), 1 - mc.theWorld.getRainStrength(view.partialTicks));
+            if (!colourScope || !this.sky.render(mc, view)) {
+                // Sky precedes all geometry, so a rejected provider can be cleared safely.
+                if (colourScope) GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+                if (!mc.theWorld.provider.hasNoSky) {
+                    mc.getTextureManager().bindTexture(SUN);
+                    drawSun(view, mc.theWorld.getCelestialAngle(view.partialTicks), 1 - mc.theWorld.getRainStrength(view.partialTicks));
+                }
             }
             if (!terrain.begin(view)) return null;
             if (!distant.begin(view)) { failure = "DH camera: " + distant.failure(); return null; }
@@ -124,7 +129,8 @@ final class LightweightCamera {
             });
             mc.entityRenderer.enableLightmap(view.partialTicks);
             if (thermal) bindSensorLightmap();
-            CameraWeather.render(mc, view);
+            if (colourScope && !CameraWeather.renderColour(mc, view, false)) return null;
+            if (!colourScope) CameraWeather.render(mc, view);
             failure = "";
             return target;
         } catch (ReflectiveOperationException | RuntimeException | LinkageError problem) {
@@ -222,6 +228,7 @@ final class LightweightCamera {
     }
 
     void destroy() {
+        sky.reset();
         distant.destroy();
         if (terrain != null) terrain.destroy();
         terrain = null;

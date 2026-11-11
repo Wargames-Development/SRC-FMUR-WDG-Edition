@@ -44,6 +44,7 @@ public final class CameraRenderManager implements IResourceManagerReloadListener
     void beginFrame(Minecraft mc) {
         captured = false;
         if (world != mc.theWorld) {
+            CameraWeather.invalidate();
             lightweight.destroy();
             ThermalScopeEffect.invalidateCameraResources();
             if (shaderCamera != null) shaderCamera.destroy();
@@ -54,6 +55,7 @@ public final class CameraRenderManager implements IResourceManagerReloadListener
     }
 
     @Override public void onResourceManagerReload(IResourceManager resources) {
+        CameraWeather.invalidate();
         lightweight.destroy();
         ThermalScopeEffect.invalidateCameraResources();
         if (shaderCamera != null) shaderCamera.destroy();
@@ -107,13 +109,14 @@ public final class CameraRenderManager implements IResourceManagerReloadListener
             }
             backend = "Lightweight";
             Framebuffer frame;
+            boolean colourScope = !thermal && modelLens && !flir;
             if (shaderScope) {
                 // The caller deliberately left the primary shaders available for the provider.
                 // A rejected sample must still enter the original lightweight isolation.
                 AutoCloseable isolated = ThermalRenderApi.beginIsolatedGeometry();
-                try { frame = lightweight.render(mc, secondary, thermal, flir); }
+                try { frame = lightweight.render(mc, secondary, thermal, flir, colourScope); }
                 finally { try { isolated.close(); } catch (Exception failure) { throw new IllegalStateException(failure); } }
-            } else frame = lightweight.render(mc, secondary, thermal, flir);
+            } else frame = lightweight.render(mc, secondary, thermal, flir, colourScope);
             if (frame == null) {
                 backend = "Unavailable: " + lightweight.failure();
                 if (!backend.equals(reportedFailure)) {

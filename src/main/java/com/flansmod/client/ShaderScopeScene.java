@@ -58,8 +58,8 @@ final class ShaderScopeScene {
                 mc.effectRenderer.renderLitParticles(mc.renderViewEntity, view.partialTicks);
                 mc.effectRenderer.renderParticles(mc.renderViewEntity, view.partialTicks);
             });
-            scope.phase("RAIN_SNOW"); mc.entityRenderer.enableLightmap(view.partialTicks); CameraWeather.render(mc, view);
-            return true;
+            scope.phase("RAIN_SNOW"); mc.entityRenderer.enableLightmap(view.partialTicks);
+            return CameraWeather.renderColour(mc, view, true);
         } finally { terrain.close(); }
     }
     /** Keep the established actor/DH depth mapping out of shaderpack temporal history. */

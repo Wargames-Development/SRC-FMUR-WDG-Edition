@@ -13,8 +13,33 @@ import org.lwjgl.opengl.GL20;
 final class CameraWeather {
     private static final ResourceLocation RAIN = new ResourceLocation("textures/environment/rain.png");
     private static final ResourceLocation SNOW = new ResourceLocation("textures/environment/snow.png");
+    private static boolean checked;
+    private static java.lang.reflect.Method cameraWeather;
 
     private CameraWeather() { }
+
+    static void invalidate() { checked = false; cameraWeather = null; }
+
+    static boolean renderColour(Minecraft mc, CameraView view, boolean shadered) {
+        if (!checked) {
+            checked = true;
+            try {
+                cameraWeather = Class.forName("com.wdg.wgqol.client.WeatherEffects")
+                    .getMethod("renderCameraWeatherV1", float.class, boolean.class);
+            } catch (ClassNotFoundException | NoSuchMethodException | LinkageError absent) { cameraWeather = null; }
+        }
+        if (cameraWeather != null) {
+            try { if (Boolean.TRUE.equals(cameraWeather.invoke(null, view.partialTicks, shadered))) return true; }
+            catch (ReflectiveOperationException | LinkageError failure) {
+                cameraWeather = null;
+                // Reject this sample without permanently disabling either camera backend.
+                org.apache.logging.log4j.LogManager.getLogger("FMUR").warn("[Camera] Optional weather replay failed; using vanilla weather on subsequent samples", failure);
+                return false;
+            }
+        }
+        render(mc, view);
+        return true;
+    }
 
     static void render(Minecraft mc, CameraView view) {
         float strength = mc.theWorld.getRainStrength(view.partialTicks);
