@@ -26,10 +26,12 @@ final class DistantCameraGeometry {
             + "light=(vec2(floor(lights/16.0),mod(lights,16.0))+0.5)/16.0;}\n";
     private static final String FRAGMENT = "#version 120\n"
             + "uniform sampler2D lightMap,blockAtlas;uniform bool useAtlas;uniform vec2 atlasSize;uniform float clipDistance;"
+            + "uniform sampler2D nativeCoverage;uniform bool useNativeCoverage;uniform vec2 inverseViewSize;"
             + "varying vec4 tint;varying vec2 light;varying float eyeDistance;varying float radius;varying vec3 blockPos;varying vec2 material;\n"
             + DEPTH
             + "vec2 faceUv(){vec3 p=fract(blockPos);float n=material.x;if(n<0.5)return vec2(p.x,1.0-p.z);if(n<1.5)return p.xz;if(n<2.5)return vec2(1.0-p.x,1.0-p.y);if(n<3.5)return vec2(p.x,1.0-p.y);if(n<4.5)return vec2(p.z,1.0-p.y);return vec2(1.0-p.z,1.0-p.y);}"
-            + "void main(){if(radius<clipDistance||tint.a<0.01)discard;vec3 colour=tint.rgb;"
+            + "void main(){if(radius<clipDistance||tint.a<0.01)discard;"
+            + "if(useNativeCoverage&&texture2D(nativeCoverage,gl_FragCoord.xy*inverseViewSize).r<1.0)discard;vec3 colour=tint.rgb;"
             + "if(useAtlas&&material.y>0.5){vec2 tile=vec2(mod(material.y,256.0),floor(material.y/256.0))*16.0;vec4 texel=texture2D(blockAtlas,(tile+faceUv()*16.0)/atlasSize);colour=mix(colour,clamp(colour*texel.rgb*2.0,0.0,1.0),texel.a);}"
             + "gl_FragColor=vec4(colour*texture2D(lightMap,light).rgb,tint.a);"
             + "gl_FragDepth=clamp(cameraDepth(eyeDistance),0.0,1.0);}\n";
@@ -51,6 +53,8 @@ final class DistantCameraGeometry {
     private int program, vao, oldVao, oldArray, oldProgram;
     private int offsetUniform,oldActiveTexture,oldAtlas;
     private boolean drawing;
+    private boolean coverageBound;
+    private int oldCoverage, oldCoverageSampler;
 
     String failure() { return failure; }
     void capture(CameraView source) { primary = source; }
@@ -87,11 +91,27 @@ final class DistantCameraGeometry {
     }
 
     boolean draw(CameraView view, int pass) {
+        return draw(view, pass, 0);
+    }
+
+    boolean draw(CameraView view, int pass, int nativeCoverage) {
         if (!present || buffers == null || count == 0) return true;
         try {
             if(requestZoom!=null) try { requestZoom.invoke(null,Minecraft.getMinecraft().theWorld,view.projection.get(0),view.projection.get(5)); }
             catch(ReflectiveOperationException unavailableHint) { requestZoom=null; }
             if (!beginDraw(view, Math.max(0, ((Number)nearClip.invoke(null)).floatValue()))) return false;
+            GL20.glUniform1i(GL20.glGetUniformLocation(program, "useNativeCoverage"), nativeCoverage > 0 ? 1 : 0);
+            if (nativeCoverage > 0) {
+                GL13.glActiveTexture(GL13.GL_TEXTURE3);
+                oldCoverage = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+                oldCoverageSampler = GL11.glGetInteger(GL33.GL_SAMPLER_BINDING);
+                coverageBound = true;
+                GL33.glBindSampler(3, 0);
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, nativeCoverage);
+                GL20.glUniform1i(GL20.glGetUniformLocation(program, "nativeCoverage"), 3);
+                GL20.glUniform2f(GL20.glGetUniformLocation(program, "inverseViewSize"), 1.0f / view.width, 1.0f / view.height);
+                GL13.glActiveTexture(oldActiveTexture);
+            }
             for (int n = 0; n < count; n++) {
                 Object container = itemGetter.invoke(buffers, pass == 0 ? n : count - 1 - n);
                 Object corner = containerCorner.get(container);
@@ -231,6 +251,12 @@ final class DistantCameraGeometry {
     void offset(float x, float y, float z) { GL20.glUniform3f(offsetUniform, x, y, z); }
     void endDraw() {
         if (!drawing) return;
+        if (coverageBound) {
+            GL13.glActiveTexture(GL13.GL_TEXTURE3);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, oldCoverage);
+            GL33.glBindSampler(3, oldCoverageSampler);
+            coverageBound = false;
+        }
         GL13.glActiveTexture(GL13.GL_TEXTURE2);GL11.glBindTexture(GL11.GL_TEXTURE_2D,oldAtlas);GL13.glActiveTexture(oldActiveTexture);
         bindVao(oldVao); GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, oldArray); GL20.glUseProgram(oldProgram);
         drawing = false;

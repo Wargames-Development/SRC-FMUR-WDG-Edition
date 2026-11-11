@@ -20,6 +20,12 @@ public final class AuxiliaryViewChecks {
         check(!ThermalRenderApi.isAuxiliaryView(),"renderer failure cannot leak camera ownership");
         ThermalRenderApi.renderHeat(0,()->check(ThermalRenderApi.isAuxiliaryView(),"ordinary heat geometry is an auxiliary pass"));
         check(!ThermalRenderApi.isAuxiliaryView(),"heat cleanup restores primary view");
+        for (int mode = 0; mode < 3; mode++) for (int flags = 0; flags < 8; flags++) {
+            boolean thermal = (flags & 1) != 0, lens = (flags & 2) != 0, vehicle = (flags & 4) != 0;
+            boolean eligible = CameraRenderManager.shaderScopeEligible(thermal, lens, vehicle, mode);
+            check(eligible == (!thermal && lens && !vehicle && mode != 1), "shader provider is confined to ordinary Flans lenses");
+        }
+        check(!ThermalRenderApi.isAuxiliaryView(), "scope selection cannot claim main-view actors");
         System.out.println("PASS "+checks+" auxiliary view ownership checks");
     }
 }

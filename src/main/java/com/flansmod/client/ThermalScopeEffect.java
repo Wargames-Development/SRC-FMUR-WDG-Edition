@@ -141,8 +141,9 @@ public final class ThermalScopeEffect {
         cameraUnavailable = true;
         renderingScopedWorld = true;
         MCHeliScopeMarkerCompat.beginScopedMarkers();
+        boolean shaderScope = CameraRenderManager.INSTANCE.supportsShaderScope(thermal, isModelLensDisplay() || isColorPictureInPictureDisplay(), isVehicleDisplay());
         AutoCloseable isolated;
-        try { isolated=ThermalRenderApi.beginIsolatedGeometry(); }
+        try { isolated = shaderScope ? () -> { } : ThermalRenderApi.beginIsolatedGeometry(); }
         catch(RuntimeException | LinkageError unavailable) {
             MCHeliScopeMarkerCompat.endScopedMarkers();renderingScopedWorld=false;return;
         }
@@ -154,7 +155,7 @@ public final class ThermalScopeEffect {
         GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix();
         try {
             Framebuffer frame = CameraRenderManager.INSTANCE.render(mc, width, height, magnification,
-                    thermal, isModelLensDisplay(), isVehicleDisplay() || flirEnabled);
+                    thermal, isModelLensDisplay(), isVehicleDisplay() || flirEnabled, shaderScope);
             if (frame == null) return;
             frame.bindFramebuffer(true);
             CameraView view = CameraRenderManager.INSTANCE.currentView();
