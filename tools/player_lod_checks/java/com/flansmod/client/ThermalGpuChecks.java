@@ -26,6 +26,7 @@ public final class ThermalGpuChecks {
             if (args.length > 0 && "--camera-particles".equals(args[0])) {
                 // macOS pbuffers can lack a usable default framebuffer.
                 displayTarget=fbo();
+                entityReplayIsolation();
                 cameraParticles();
                 particleOcclusion();
                 emissiveParticles();
@@ -1573,17 +1574,17 @@ public final class ThermalGpuChecks {
             field(compat,"lastPreparedDimensionField").set(null,FakeManager.class.getField("dimension"));
             field(compat,"distantHorizonsChecked").setBoolean(null,false);
             field(compat,"celeritasChecked").setBoolean(null,false);
-            ScopeRenderCompatibility.RenderState state=ScopeRenderCompatibility.beginEntityReplay();
+            AutoCloseable isolated=ThermalRenderApi.beginIsolatedGeometry();
             try {
-                check(state.isSecondaryRenderAllowed(),"Entity replay permitted under shader pipeline");
+                check(isolated!=null,"Public DH model-capture isolation available under shader pipeline");
                 check(FakeIris.manager.pipeline!=primary,"Entity replay isolates native entity/particle drawing");
                 check(!field(compat,"distantHorizonsChecked").getBoolean(null),"Entity replay never probes/switches DH mode");
                 check(!field(compat,"celeritasChecked").getBoolean(null),"Entity replay never probes/changes terrain lists");
-            } finally {ScopeRenderCompatibility.endSecondaryRender(state);}
+            } finally {isolated.close();isolated.close();}
             check(FakeIris.manager.pipeline==primary,"Primary shader pipeline restored");
             check(FakeIris.manager.pipelines.get("test")==primary,"Primary dimension pipeline restored");
             check("test".equals(FakeIris.manager.dimension),"Prepared dimension restored");
-            state=ScopeRenderCompatibility.beginSecondaryRender();
+            ScopeRenderCompatibility.RenderState state=ScopeRenderCompatibility.beginSecondaryRender();
             try {
                 check(state.isSecondaryRenderAllowed(),"Isolated thermal world camera permitted");
                 check(FakeIris.manager.pipeline!=primary,"Thermal camera does not advance primary shader pipeline");

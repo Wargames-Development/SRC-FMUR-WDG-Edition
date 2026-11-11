@@ -90,6 +90,7 @@ public final class ThermalRenderApi {
     }
 
     static void renderCameraGeometry(float partialTicks) {
+        DistantActorCamera.renderDistant();
         PlayerLodRenderer.renderHeat(partialTicks);
         if (vehicleRenderer != null) vehicleRenderer.accept(partialTicks);
     }
@@ -108,6 +109,43 @@ public final class ThermalRenderApi {
         return GLContext.getCapabilities().OpenGL20 && OpenGlHelper.isFramebufferEnabled()
                 && ThermalFramebuffers.isAvailable()
                 && ThermalCamera.ensureShader();
+    }
+
+    /** Read-only geometry replay: isolate Iris program selection and restore its matrix cache. */
+    public static AutoCloseable beginIsolatedGeometry() {
+        if(isAuxiliaryView()) return () -> { }; // The enclosing private camera already owns isolation.
+        final ScopeRenderCompatibility.RenderState state=ScopeRenderCompatibility.beginEntityReplay();
+        if(!state.isSecondaryRenderAllowed()) {
+            ScopeRenderCompatibility.endSecondaryRender(state);
+            throw new IllegalStateException("Shader geometry isolation is unavailable");
+        }
+        final CameraSamplerBindings samplers;
+        try { samplers=new CameraSamplerBindings(); }
+        catch(RuntimeException | LinkageError failure) { ScopeRenderCompatibility.endSecondaryRender(state);throw failure; }
+        return new AutoCloseable() {
+            private boolean closed;
+            @Override public void close() {
+                if(closed)return;closed=true;
+                try { samplers.close(); }
+                finally { ScopeRenderCompatibility.endSecondaryRender(state); }
+            }
+        };
+    }
+    private static final class CameraSamplerBindings implements AutoCloseable {
+        private final int[] saved=new int[8];private int count;
+        CameraSamplerBindings() {
+            if(!org.lwjgl.opengl.GLContext.getCapabilities().OpenGL33)return;
+            int active=org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL13.GL_ACTIVE_TEXTURE);
+            try {
+                for(int unit=0;unit<saved.length;unit++) {
+                    org.lwjgl.opengl.GL13.glActiveTexture(org.lwjgl.opengl.GL13.GL_TEXTURE0+unit);
+                    saved[unit]=org.lwjgl.opengl.GL11.glGetInteger(org.lwjgl.opengl.GL33.GL_SAMPLER_BINDING);
+                    count=unit+1;org.lwjgl.opengl.GL33.glBindSampler(unit,0);
+                }
+            } catch(RuntimeException | LinkageError failure) { close();throw failure; }
+            finally { org.lwjgl.opengl.GL13.glActiveTexture(active); }
+        }
+        public void close() { for(int unit=0;unit<count;unit++)org.lwjgl.opengl.GL33.glBindSampler(unit,saved[unit]);count=0; }
     }
 
     public static boolean isHeatPass() { return heatPass; }
@@ -131,6 +169,7 @@ public final class ThermalRenderApi {
         heatPass = true;
         try {
             ordinaryTargets.run();
+            DistantActorCamera.renderDistant();
             PlayerLodRenderer.renderHeat(partialTicks);
             if (vehicleRenderer != null) vehicleRenderer.accept(partialTicks);
         } finally { heatPass = false; }

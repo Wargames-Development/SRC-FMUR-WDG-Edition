@@ -141,6 +141,11 @@ public final class ThermalScopeEffect {
         cameraUnavailable = true;
         renderingScopedWorld = true;
         MCHeliScopeMarkerCompat.beginScopedMarkers();
+        AutoCloseable isolated;
+        try { isolated=ThermalRenderApi.beginIsolatedGeometry(); }
+        catch(RuntimeException | LinkageError unavailable) {
+            MCHeliScopeMarkerCompat.endScopedMarkers();renderingScopedWorld=false;return;
+        }
         int draw = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int read = ThermalFramebuffers.canBlit() ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : draw;
         int matrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
@@ -158,7 +163,9 @@ public final class ThermalScopeEffect {
             if (thermal && !CAMERA.prepareDepth(frame.framebufferObject, width, height)) return;
             if (thermal) {
                 CAMERA.updateSun(mc, partialTicks);
-                CAMERA.renderHeat(partialTicks);
+                if(!DistantActorCamera.begin(view,true)) return;
+                try { CAMERA.renderHeat(partialTicks); }
+                finally { DistantActorCamera.end(); }
             }
             WGMapScopeCompat.renderWaypoints(partialTicks);
             if (!mc.gameSettings.hideGUI)
@@ -178,8 +185,9 @@ public final class ThermalScopeEffect {
                 ThermalFramebuffers.bind(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, draw);
             } else ThermalFramebuffers.bind(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, draw);
             GL11.glPopAttrib();
-            MCHeliScopeMarkerCompat.endScopedMarkers();
-            renderingScopedWorld = false;
+            try { isolated.close(); }
+            catch(Exception failure) { throw new IllegalStateException("Camera render-state cleanup",failure); }
+            finally { MCHeliScopeMarkerCompat.endScopedMarkers();renderingScopedWorld=false; }
         }
     }
 

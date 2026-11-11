@@ -84,6 +84,7 @@ final class LightweightCamera {
             terrain.draw(0);
             GL20.glUseProgram(0);
             if (thermal && flir) glass.render(mc, view);
+            if(!DistantActorCamera.begin(view,false)) { failure="DH isolated actor view is not ready";return null; }
             RenderHelper.enableStandardItemLighting();
             for (Object object : mc.theWorld.loadedEntityList) {
                 Entity entity = (Entity)object;
@@ -92,6 +93,7 @@ final class LightweightCamera {
                 if (box == null || !view.visible(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)) continue;
                 Render renderer = RenderManager.instance.getEntityRenderObject(entity);
                 if (renderer == null) continue;
+                if(DistantActorCamera.renderNative(entity)) continue;
                 double x = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * view.partialTicks;
                 double y = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * view.partialTicks;
                 double z = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * view.partialTicks;
@@ -106,6 +108,7 @@ final class LightweightCamera {
                     TileEntityRendererDispatcher.instance.renderTileEntity(tile, view.partialTicks);
             }
             ThermalRenderApi.renderCameraGeometry(view.partialTicks);
+            DistantActorCamera.end();
             RenderHelper.disableStandardItemLighting();
             mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
@@ -130,6 +133,7 @@ final class LightweightCamera {
             return null;
         } finally {
             try {
+                DistantActorCamera.end();
                 if (terrain != null) terrain.close();
             } catch (RuntimeException | LinkageError problem) {
                 failure = problem.toString();
