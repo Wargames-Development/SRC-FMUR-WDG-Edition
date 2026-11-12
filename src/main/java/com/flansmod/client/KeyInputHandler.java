@@ -63,6 +63,7 @@ public class KeyInputHandler {
     public static KeyBinding reloadKey = new KeyBinding("Reload", Keyboard.KEY_R, "FMUR Guns");
     public static KeyBinding inspectGunKey = new KeyBinding("Inspect Gun", Keyboard.KEY_I, "FMUR Guns");
     public static KeyBinding selectPreferredAmmo = new KeyBinding("Select Ammo Load Priority", Keyboard.KEY_P, "FMUR Guns");
+    public static KeyBinding programAirburstRange = new KeyBinding("Program Airburst Range", Keyboard.KEY_Y, "FMUR Guns");
     public static KeyBinding gunModeKey = new KeyBinding("Toggle Fire Mode", Keyboard.KEY_V, "FMUR Guns");
     //public static KeyBinding stableSightKey = new KeyBinding("Stabilize Sight", Keyboard.KEY_LSHIFT, "FMUR 枪械");
     public static KeyBinding secondaryKey = new KeyBinding("Switch Underbarrel Weapon", Keyboard.KEY_T, "FMUR Guns");
@@ -104,6 +105,7 @@ public class KeyInputHandler {
         ClientRegistry.registerKeyBinding(reloadKey);
         ClientRegistry.registerKeyBinding(inspectGunKey);
         ClientRegistry.registerKeyBinding(selectPreferredAmmo);
+        ClientRegistry.registerKeyBinding(programAirburstRange);
         ClientRegistry.registerKeyBinding(gunModeKey);
 //        ClientRegistry.registerKeyBinding(teamsMenuKey);
 //        ClientRegistry.registerKeyBinding(teamsScoresKey);
@@ -153,7 +155,15 @@ public class KeyInputHandler {
         }
 
         EntityPlayer player = mc.thePlayer; // 玩家
+        if (player == null) {
+            return;
+        }
         Entity ridingEntity = player.ridingEntity; // 玩家正在骑乘的载具
+
+        if (programAirburstRange.isPressed() && ridingEntity == null
+                && player.getHeldItem() != null && player.getHeldItem().getItem() instanceof ItemGun) {
+            FlansMod.getPacketHandler().sendToServer(new PacketZZProgramAirburst(player.inventory.currentItem));
+        }
 
         if (inspectGunKey.isPressed()) {
             ItemStack held = player == null ? null : player.getHeldItem();

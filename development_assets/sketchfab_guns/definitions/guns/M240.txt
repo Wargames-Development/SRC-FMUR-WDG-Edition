@@ -5,8 +5,6 @@ Icon M240
 Colour 255 255 255
 Ammo 762x51100rdbox
 Ammo 762x51100rdboxTracer
-Ammo 762x51100rdexbox
-Ammo 762x51100rdexboxTracer
 ReloadTime 100
 TacticalReloadTime 85
 Damage 8

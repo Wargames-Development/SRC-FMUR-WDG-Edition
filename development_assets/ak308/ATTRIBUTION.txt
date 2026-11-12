@@ -1,0 +1,14 @@
+AK-308 remodel for FMUR
+
+Adapted from "Low-Poly AK-308" by TastyTony, licensed under CC BY 4.0.
+https://sketchfab.com/3d-models/low-poly-ak-308-b2538bf6e49a4084ad5ae2adf6a995ca
+https://creativecommons.org/licenses/by/4.0/
+
+The original converted meshes and license are in
+development_assets/sketchfab_guns/game_ready/AK308.
+The remodel retains the early-pattern receiver, fore-end, sights, stock and
+brake. It refits the proportions, rebuilds the magazine and diffuse atlas,
+backs the ejection port and separates the moving and replaceable groups.
+
+Build and install with Blender 5.2 from the repository root.
+blender -b --factory-startup --python-exit-code 1 --python tools/build_ak308.py -- --install

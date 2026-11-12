@@ -1,0 +1,30 @@
+Name 30mm Armor Piercing
+ShortName sketch30mmAP
+Description Solid 30mm projectile for the Barrett SSRS_Penetrates up to two blocks of ordinary stone
+Icon Sketch30mmAP
+Colour 255 255 255
+Model mw.RoundGrenade
+Texture gl3
+MaxStackSize 4
+RoundsPerItem 6
+NumBullets 1
+FallSpeed 1.5
+HitBoxSize 0.2
+HitSound stoneimpact
+HitSoundIron hit_metal
+HitSoundRange 12
+HitSoundEnable True
+EntityHitSoundEnable True
+Damage 18
+DamageVsVehicles 24
+DamageVsPlanes 16
+Penetration 1.6
+PenetratingBlockMaxNum 2
+StonePenetrationChance 1
+StonePenetrationDamageRetention 0.65
+StonePenetrationSpeedRetention 0.55
+BreaksGlass True
+CanBeDestructByAPS True
+Explosion 0
+ExplodeOnImpact False
+Fuse 0

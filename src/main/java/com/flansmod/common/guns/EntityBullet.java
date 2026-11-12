@@ -100,6 +100,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     public float damage;
     public float originDamage;
     public boolean shotgun = false;
+    private double remainingAirburstDistance;
+
+    public void setAirburstDistance(float distance) {
+        remainingAirburstDistance = distance;
+    }
     /**
      * If this is non-zero, then the player raytrace code will look back in time to when the player thinks their bullet should have hit
      */
@@ -329,6 +334,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                 || type.enableBoost
                 || type.enableCallArtillery
                 || type.enableAirburst
+                || remainingAirburstDistance > 0D
                 || type.hasSubmunitions
                 || type.livingProximityTrigger > 0F
                 || type.driveableProximityTrigger > 0F
@@ -1224,7 +1230,12 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             }
         }
 
-        //We hit something
+        // Compare the fuse and physical impacts along the same swept segment.
+        boolean programmedAirburst = !worldObj.isRemote && remainingAirburstDistance > 0D;
+        double segmentLength = programmedAirburst
+                ? Math.sqrt(motionX * motionX + motionY * motionY + motionZ * motionZ) : 0D;
+        double airburstFraction = segmentLength > 0D
+                ? remainingAirburstDistance / segmentLength : Double.POSITIVE_INFINITY;
         float remainingHitLimit = 1F;
         float stoneSpeedRetention = 1F;
         Vec3 stoneMovementEnd = null;
@@ -1240,7 +1251,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             for (BulletHit bulletHit : hits) {
 
                 // Hits were traced at the incoming speed. A stone hit shortens this tick's travel.
-                if (bulletHit.intersectTime > remainingHitLimit) {
+                if (bulletHit.intersectTime > remainingHitLimit || bulletHit.intersectTime > airburstFraction) {
                     break;
                 }
 
@@ -1766,6 +1777,13 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 		}
 		*/
 
+        if (programmedAirburst && !isDead && !detonated && airburstFraction <= remainingHitLimit) {
+            setPosition(posX + motionX * airburstFraction, posY + motionY * airburstFraction,
+                    posZ + motionZ * airburstFraction);
+            setDead();
+            return;
+        }
+
         if (stoneSpeedRetention < 1F) {
             // Keep collision positions in the original trace's coordinates until all hits are resolved.
             stoneMovementEnd = Vec3.createVectorHelper(posX + motionX * remainingHitLimit,
@@ -2074,6 +2092,21 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             }
         }
 
+
+        if (programmedAirburst && !isDead) {
+            double dx = stoneMovementEnd == null ? motionX : stoneMovementEnd.xCoord - posX;
+            double dy = stoneMovementEnd == null ? motionY : stoneMovementEnd.yCoord - posY;
+            double dz = stoneMovementEnd == null ? motionZ : stoneMovementEnd.zCoord - posZ;
+            // Gravity can make the actual step longer than the incoming collision trace.
+            double traveled = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (traveled >= remainingAirburstDistance) {
+                double fraction = remainingAirburstDistance / traveled;
+                setPosition(posX + dx * fraction, posY + dy * fraction, posZ + dz * fraction);
+                setDead();
+                return;
+            }
+            remainingAirburstDistance -= traveled;
+        }
 
         //Apply motion
         //posX += motionX;
@@ -2513,6 +2546,8 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             return;
         }
         tag.setString("type", type.shortName);
+        if (remainingAirburstDistance > 0D)
+            tag.setDouble("FMURAirburstRemaining", remainingAirburstDistance);
         if (owner == null)
             tag.setString("owner", "null");
         else
@@ -2536,6 +2571,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         if (type.despawnTime <= 0) {
             this.isDead = true;
         }
+        double airburstDistance = tag.getDouble("FMURAirburstRemaining");
+        if (type.programmableAirburst && Double.isFinite(airburstDistance) && airburstDistance > 0D)
+            remainingAirburstDistance = airburstDistance;
 
         if (ownerName != null && !ownerName.equals("null"))
             owner = FMLCommonHandler.instance().getMinecraftServerInstance().getConfigurationManager().func_152612_a(ownerName);

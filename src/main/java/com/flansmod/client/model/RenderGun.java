@@ -607,11 +607,11 @@ public class RenderGun implements IItemRenderer {
         ItemStack pumpItemStack = gunType.getPumpItemStack(item);
         ItemStack accessoryItemStack = gunType.getAccessoryItemStack(item);
 
-        // Keep close-up model optics from intersecting the first-person near plane.
+        // Keep close-up ADS geometry from intersecting the first-person near plane.
         // This is projection-only: the authored ADS transform and PiP alignment stay
         // unchanged, so scope size/centering and shader post-compositing do not move.
         boolean scopeProjectionAdjusted = beginFirstPersonScopeProjection(
-                rtype, gunType.getCurrentScope(item));
+                rtype, gunType.getCurrentScope(item), scopeAttachment == null && model.closeBareAdsProjection);
         try {
 
         //枪械后坐力
@@ -1425,18 +1425,18 @@ public class RenderGun implements IItemRenderer {
     }
 
     /**
-     * Lower only the near plane used while drawing a retained first-person scope
-     * model. The world has already rendered, and the projection is restored before
+     * Lower only the near plane used while drawing close first-person ADS geometry.
+     * The world has already rendered, and the projection is restored before
      * returning, so this cannot alter terrain/DH culling or the main shader camera.
      *
      * Both model PiP scopes and model + dot-overlay sights need this. The latter do
      * not participate in ThermalScopeEffect's PiP path, but can clip for the same
      * reason when their rear housing sits close to the eye.
      */
-    private boolean beginFirstPersonScopeProjection(ItemRenderType renderType, IScope scope) {
+    private boolean beginFirstPersonScopeProjection(ItemRenderType renderType, IScope scope, boolean closeBareAds) {
         if (renderType != ItemRenderType.EQUIPPED_FIRST_PERSON || scope == null
                 || zoomProgress <= 0.7F
-                || (!ThermalScopeEffect.usesModelScopeLens(scope)
+                || (!closeBareAds && !ThermalScopeEffect.usesModelScopeLens(scope)
                 && scope.getDotOverlayTexture() == null)) {
             return false;
         }

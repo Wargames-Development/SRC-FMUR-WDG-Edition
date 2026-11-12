@@ -1,0 +1,29 @@
+{
+  "forge_launch": "BUILD SUCCESSFUL",
+  "mod_build_number": 206,
+  "viewport": [
+    1600,
+    900
+  ],
+  "attachments": [
+    "c79",
+    "verticalgrip",
+    "1mwlaser",
+    "silencer"
+  ],
+  "captures": {
+    "c7a2-ads.png": "ae9b34a4c653112f1f84fbc75beb9a2a9cef7e2d75d0e1dcce245a6b7ff33b06",
+    "c7a2-bare.png": "5e70ebe18797e8fab7d3a8785bf8ecfa256c8731eefabdf832d16393be58aa10",
+    "c7a2-blend.png": "7663a150eb74aabc90341f8a9e17dd4ff4410beb886d28a6dcae4a6c0d9d58c4",
+    "c7a2-hip.png": "303193715f0ba685201bdbbbfb99852e35b765b8ec72bafbb7d315688dd8ad4c",
+    "c7a2-irons-only.png": "d77e5d954b60323228db530e1c1095a1c93aba1f7cb6aa498cdae23a1393d2d0",
+    "c7a2-reload.png": "69fc0cf2e1c63ab1f64a851f07aeb223973e92e38f06ccc4eef2ee87c8a17a04",
+    "c7a2-third.png": "9341e225a34f3f117a04b98d3e704747ee3f0c3e3464a2e6c554bfafeb20130e"
+  },
+  "java_models": {
+    "ModelC79.java": "4835f5aa3a9559041b0a0e88861b8fc3155625f8bf2f1a2321fcc5d7345f8531",
+    "ModelC7A2.java": "51de796deaf274e1e95e22aa436ef8bc69636b9b32425c613e88f09b4cdc7036"
+  },
+  "revision": "Olive BFMC M4A1 stock",
+  "exporter_sha256": "1eec9b9575b197a5ea4862fca63466f5911687f0174b61f93291d8793ede80c3"
+}

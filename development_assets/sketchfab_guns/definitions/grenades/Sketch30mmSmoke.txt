@@ -1,0 +1,24 @@
+Name 30mm Smoke
+ShortName sketch30mmSmoke
+Description Six smoke rounds for the Barrett SSRS
+Icon Sketch30mmSmoke
+Colour 255 255 255
+Model mw.RoundGrenade
+Texture gl3
+MaxStackSize 4
+RoundsPerItem 6
+CanThrow False
+RenderHeldModel False
+ThrowSpeed 5
+FallSpeed 1.2
+HitBoxSize 0.2
+Sticky True
+DetonateOnImpact True
+Fuse 60
+ExplosionRadius 0
+SmokeTime 120
+SmokeParticles newcloud
+SmokeParticleCount 5
+SmokeParticleHeight 20
+DetonateSound order_smoke
+CanBeDestructByAPS True

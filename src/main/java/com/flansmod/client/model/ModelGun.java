@@ -289,6 +289,7 @@ public class ModelGun extends ModelBase {
     public Vector3f ironSightOffset;
     public float ironSightPitch;
     public float ironSightYaw;
+    public boolean closeBareAdsProjection;
     public boolean fancyStance = false;
     public Vector3f stanceTranslate = new Vector3f();
     public Vector3f stanceRotate = new Vector3f();

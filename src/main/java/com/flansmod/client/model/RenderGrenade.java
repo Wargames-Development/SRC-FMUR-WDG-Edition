@@ -282,7 +282,10 @@ public class RenderGrenade extends Render implements IItemRenderer {
         switch (type) {
             case EQUIPPED:
             case EQUIPPED_FIRST_PERSON:
-                return item != null && item.getItem() instanceof ItemGrenade && ((ItemGrenade) item.getItem()).type.model != null;
+                if (item == null || !(item.getItem() instanceof ItemGrenade))
+                    return false;
+                GrenadeType grenadeType = ((ItemGrenade) item.getItem()).type;
+                return grenadeType.renderHeldModel && grenadeType.model != null;
             default:
                 break;
         }

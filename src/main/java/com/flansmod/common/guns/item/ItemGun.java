@@ -77,6 +77,9 @@ import static com.flansmod.client.FlansModClient.*;
 
 public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptionable, ILockable {
     private static final String CHAMBERED_ROUND_TAG = "FMURChamberedRound";
+    private static final String AIRBURST_RANGE_TAG = "FMURAirburstRange";
+    private static final int MAX_RANGEFINDER_DISTANCE = 128;
+    private static final float AIRBURST_OFFSET = 2F;
 
     private static final ExecutorService threadPool = Executors.newFixedThreadPool(2);
     private static final String HEAT_TAG = "FlansHeat";
@@ -268,6 +271,59 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         return false;
     }
 
+    public void programAirburstRange(ItemStack gun, EntityPlayer player, boolean scoped) {
+        ItemStack round = getChamberedRound(gun);
+        for (int slot = 0; round == null && slot < type.getNumAmmoItemsInGun(gun); slot++) {
+            ItemStack ammo = getBulletItemStack(gun, slot);
+            if (ammo != null && ammo.getItemDamage() < ammo.getMaxDamage())
+                round = ammo;
+        }
+        if (round == null || !(round.getItem() instanceof ItemShootable))
+            return;
+        ShootableType ammoType = ((ItemShootable) round.getItem()).type;
+        if (!(ammoType instanceof BulletType) || !((BulletType) ammoType).programmableAirburst
+                || !type.isAmmo(ammoType, gun))
+            return;
+        if (!scoped) {
+            player.addChatMessage(new ChatComponentText("Aim down sights to program the airburst range."));
+            return;
+        }
+
+        float range = measureAirburstRange(player);
+        if (range <= 0F) {
+            player.addChatMessage(new ChatComponentText("No surface in range. Airburst setting kept."));
+            return;
+        }
+        if (!gun.hasTagCompound())
+            gun.setTagCompound(new NBTTagCompound());
+        gun.getTagCompound().setFloat(AIRBURST_RANGE_TAG, range);
+        player.addChatMessage(new ChatComponentText("Airburst programmed to " + Math.round(range) + " blocks."));
+    }
+
+    private static float measureAirburstRange(EntityPlayer player) {
+        World world = player.worldObj;
+        Vec3 eye = Vec3.createVectorHelper(player.posX, player.posY + player.getEyeHeight(), player.posZ);
+        Vec3 look = player.getLookVec();
+        if (!Double.isFinite(look.xCoord) || !Double.isFinite(look.yCoord) || !Double.isFinite(look.zCoord))
+            return 0F;
+
+        Vec3 start = eye;
+        // Trace short sections so the rangefinder stops at unloaded chunks.
+        for (int distance = 8; distance <= MAX_RANGEFINDER_DISTANCE; distance += 8) {
+            Vec3 end = eye.addVector(look.xCoord * distance, look.yCoord * distance, look.zCoord * distance);
+            if (!world.checkChunksExist(MathHelper.floor_double(Math.min(start.xCoord, end.xCoord)), 0,
+                    MathHelper.floor_double(Math.min(start.zCoord, end.zCoord)),
+                    MathHelper.floor_double(Math.max(start.xCoord, end.xCoord)), 255,
+                    MathHelper.floor_double(Math.max(start.zCoord, end.zCoord))))
+                break;
+            MovingObjectPosition hit = world.rayTraceBlocks(Vec3.createVectorHelper(start.xCoord, start.yCoord, start.zCoord), end);
+            if (hit != null && hit.typeOfHit == MovingObjectType.BLOCK)
+                return (float) eye.distanceTo(hit.hitVec) + AIRBURST_OFFSET;
+            start = end;
+        }
+        return 0F;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public void addInformation(ItemStack stack, EntityPlayer player, List lines, boolean advancedTooltips) {
@@ -368,6 +424,8 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
 
         List<String> ammoNames = new ArrayList<String>();
         for (ShootableType ammo : type.ammo) {
+            if (ammo.hideFromCompatibleAmmo)
+                continue;
             String localizationKey = "item." + ammo.shortName + ".name";
             String localizedName = StatCollector.translateToLocal(localizationKey);
             String displayName = localizationKey.equals(localizedName) ? ammo.name : localizedName;
@@ -1870,6 +1928,11 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     }
                     if (shootableEntity instanceof EntityBullet) {
                         EntityBullet bulletEntity = (EntityBullet) shootableEntity;
+                        if (((BulletType) shootableType).programmableAirburst && stack.hasTagCompound()) {
+                            float range = stack.getTagCompound().getFloat(AIRBURST_RANGE_TAG);
+                            if (range >= AIRBURST_OFFSET && range <= MAX_RANGEFINDER_DISTANCE + AIRBURST_OFFSET)
+                                bulletEntity.setAirburstDistance(range);
+                        }
                         bulletEntity.setPlayerShotContext(
                                 serverShotId, serverShotTimeNanos, playerData, left,
                                 shooterVelocityX, shooterVelocityZ);

@@ -1,0 +1,15 @@
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    def work = root.file('build/c7a2-check')
+    def compiler = root.task('compileC7A2Geometry', type: JavaCompile) {
+        source = root.files('tools/c7a2/C7A2GeometryCheck.java')
+        classpath = root.sourceSets.main.runtimeClasspath
+        destinationDir = new File(work, 'classes')
+        dependsOn root.tasks.compileJava
+    }
+    root.task('checkC7A2Geometry', type: JavaExec, dependsOn: [compiler, root.tasks.processResources]) {
+        classpath = root.files(compiler.destinationDir) + root.sourceSets.main.runtimeClasspath
+        main = 'C7A2GeometryCheck'
+        args work.absolutePath
+    }
+}

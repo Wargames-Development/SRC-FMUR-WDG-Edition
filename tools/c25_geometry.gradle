@@ -1,0 +1,15 @@
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    def work = root.file('build/c25-check')
+    def compiler = root.task('compileC25Geometry', type: JavaCompile) {
+        source = root.files('tools/c25/C25GeometryCheck.java')
+        classpath = root.sourceSets.main.runtimeClasspath
+        destinationDir = new File(work, 'classes')
+        dependsOn root.tasks.compileJava
+    }
+    root.task('checkC25Geometry', type: JavaExec, dependsOn: [compiler, root.tasks.processResources]) {
+        classpath = root.files(compiler.destinationDir) + root.sourceSets.main.runtimeClasspath
+        main = 'C25GeometryCheck'
+        args work.absolutePath
+    }
+}

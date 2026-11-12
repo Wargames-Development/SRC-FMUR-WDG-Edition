@@ -1,0 +1,32 @@
+{
+  "result": "PASS",
+  "checks": [
+    "default optic",
+    "replacement precedence",
+    "removal restores default",
+    "fitted scope metadata",
+    "gunsmith cannot extract default",
+    "item save/load",
+    "missing default",
+    "non-sight default",
+    "unconfigured legacy gun",
+    "FixedScope precedence",
+    "Dragunov rejects grips"
+  ],
+  "sources": {
+    "src/main/java/com/flansmod/common/guns/type/GunType.java": "0630b2fa5df782408fa8f7c3eb6b680f1ce31b9be0da5e7cbc6caa091e8ac0b2",
+    "development_assets/c7a2/definitions/guns/CA_AR_C7A2.txt": "2d120a758a0e4829aa8f7f3e66503b531e3c95316102fdccb43719f0bd391745",
+    "development_assets/sketchfab_guns/definitions/guns/DragunovSVD.txt": "26922ebd4373d089829c3801dfcd04190650ecde57bdacf19a5fd3a7393024f9"
+  },
+  "captures": {
+    "default-scope-c7-alternate.png": "6952275161e3a781bd029ad3440105c8588d4903177b73bc2c1b9f0c5e11778f",
+    "default-scope-c7-default.png": "73e37cc880853341a502d913c3df9d4393fd23e6fb777dce40f595874a74880b",
+    "default-scope-c7-hip.png": "fc32740fed556ef2dd132ab362b7e0b62abab484d2e769b4fc52a7bbe203c58c",
+    "default-scope-c7-restored.png": "245f07fe637d5e8a72fc87226b2cea536f12d6d506abd415d6f4b84cf909f9ce",
+    "default-scope-svd-alternate.png": "8b65cd3ee08c666a7cb358cc1d3317a86552ad3b5f052bae03d203d3d3c5244f",
+    "default-scope-svd-default.png": "d8b92c754a820dfb371584579d86255872496345edf9ced4d262b84c9631c962",
+    "default-scope-svd-hip.png": "8573abc9ae5afd40122d6f08170b8fd805410fd982f548278c755be7af6961f4",
+    "default-scope-svd-restored.png": "88f287aff9e0e31c4fae78a325916166b4bf8cccb2087bae01b1b034c1ccab16"
+  },
+  "modBuildNumber": 206
+}

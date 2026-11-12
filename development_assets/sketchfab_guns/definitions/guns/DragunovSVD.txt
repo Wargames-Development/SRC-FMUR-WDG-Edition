@@ -37,6 +37,7 @@ Texture DragunovSVD
 3rdModelScale 1.35
 3rdTexture DragunovSVD
 AllowAllAttachments False
-FixedScope pso1
-AllowScopeAttachments false
+AllowScopeAttachmentsList 8xscope acogta01 acogta31 c25scope c79 cl6x cnvdt coyote holo jgm4 kobra m145 okp7 pka pkas pks07 prisma pso1 qxm7 reflex variablezoomcn variablezoomru variablezoomus
+DefaultScope pso1
+AllowScopeAttachments true
 AllowBarrelAttachments false

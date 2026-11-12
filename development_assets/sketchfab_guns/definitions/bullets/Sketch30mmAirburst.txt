@@ -1,0 +1,33 @@
+Name 30mm Airburst
+ShortName sketch30mmAirburst
+Description Six programmable 30mm rounds for the Barrett SSRS_Aim at a surface and use Program Airburst Range
+Icon Sketch30mmAirburst
+Colour 255 255 255
+Model mw.RoundGrenade
+Texture gl3
+MaxStackSize 4
+RoundsPerItem 6
+NumBullets 1
+Spread 0
+FallSpeed 1.5
+Damage 15
+DamageVsVehicles 8
+DamageVsPlanes 8
+HitBoxSize 0.2
+Penetration 0
+PenetratingBlockMaxNum 0
+ProgrammableAirburst True
+AirburstRange 0
+Explosion 1.8
+ExplosionPower 1.2
+ExplosionBreaksBlocks False
+ExplodeOnImpact True
+Fuse 0
+FlakParticles 30
+HitSound 40mm_grenade
+DetonateSound 40mm_grenade
+HitSoundRange 50
+SmokeTrail True
+TrailParticles True
+TrailParticleType cloud
+Tracer False

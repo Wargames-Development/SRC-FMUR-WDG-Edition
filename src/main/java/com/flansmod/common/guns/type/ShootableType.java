@@ -43,6 +43,7 @@ public abstract class ShootableType extends InfoType {
      * The number of rounds fired by a gun per item
      */
     public int roundsPerItem = 1;
+    public boolean hideFromCompatibleAmmo = false;
 
     //Physics and Stuff
     /**
@@ -216,6 +217,8 @@ public abstract class ShootableType extends InfoType {
                 dropItemOnHit = split[1];
             else if (split[0].equals("RoundsPerItem"))
                 roundsPerItem = Integer.parseInt(split[1]);
+            else if (split[0].equals("HideFromCompatibleAmmo"))
+                hideFromCompatibleAmmo = Boolean.parseBoolean(split[1]);
 
                 //Physics
             else if (split[0].equals("FallSpeed"))

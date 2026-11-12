@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PlayerData {
 	private static final String RELOAD_ID_TAG = "FMURReloadId";
@@ -69,6 +70,8 @@ public class PlayerData {
 	public boolean isShootingRight, isShootingLeft;
 	/** Server-owned player state used to select hip-fire or ADS spread. */
 	public boolean isScoped;
+	private final AtomicInteger pendingAirburstSlot = new AtomicInteger(-1);
+	private int airburstProgramCooldown;
 	/** Latest finite client camera aim accepted by the server for gunfire. */
 	public float shotYaw, shotPitch;
 	public boolean hasShotAim;
@@ -179,6 +182,9 @@ public class PlayerData {
 		reloadingRight = isReloading(rightGun, false);
 		reloadingLeft = isReloading(leftGun, true);
 
+		if (!player.worldObj.isRemote)
+			tickAirburstProgram(player, rightGun);
+
 		if(shootClickDelay > 0)
 			shootClickDelay--;
 
@@ -197,6 +203,23 @@ public class PlayerData {
 		System.arraycopy(snapshots, 0, snapshots, 1, snapshots.length - 2 + 1);
 		//Take new snapshot
 		snapshots[0] = new PlayerSnapshot(player);
+	}
+
+	public void requestAirburstProgram(int slot) {
+		pendingAirburstSlot.set(slot);
+	}
+
+	private void tickAirburstProgram(EntityPlayer player, ItemStack gun) {
+		// Consume at most one intent per tick on the server thread.
+		int slot = pendingAirburstSlot.getAndSet(-1);
+		if (airburstProgramCooldown > 0)
+			airburstProgramCooldown--;
+		if (slot < 0 || slot != player.inventory.currentItem || airburstProgramCooldown > 0
+				|| !player.isEntityAlive() || player.ridingEntity != null || reloadingRight
+				|| gun == null || !(gun.getItem() instanceof ItemGun))
+			return;
+		airburstProgramCooldown = 5;
+		((ItemGun) gun.getItem()).programAirburstRange(gun, player, isScoped);
 	}
 
 	public void startGrenadeThrow(EntityPlayer player, ItemStack stack) {
@@ -373,6 +396,7 @@ public class PlayerData {
 	/** Clear transient weapon state before a server-side loadout replacement. */
 	public void resetWeaponState(EntityPlayer player) {
 		pendingGrenade = null;
+		pendingAirburstSlot.set(-1);
 		if (reloadRight != null)
 			clearReload(reloadRight, findReloadStack(player, reloadRight), false);
 		if (reloadLeft != null)

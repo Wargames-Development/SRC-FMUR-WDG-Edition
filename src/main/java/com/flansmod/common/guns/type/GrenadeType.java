@@ -24,6 +24,7 @@ public class GrenadeType extends ShootableType
 	public String dropItemOnThrow = null;
 	/** Whether you can throw this grenade by right clicking */
 	public boolean canThrow = true;
+	public boolean renderHeldModel = true;
 
 	//Physics
 
@@ -245,6 +246,9 @@ public class GrenadeType extends ShootableType
 					break;
 				case "CanThrow":
 					canThrow = Boolean.parseBoolean(split[1]);
+					break;
+				case "RenderHeldModel":
+					renderHeldModel = Boolean.parseBoolean(split[1]);
 					break;
 
 				//Grenade Physics

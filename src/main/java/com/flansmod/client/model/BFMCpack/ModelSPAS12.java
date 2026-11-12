@@ -47,16 +47,16 @@ public class ModelSPAS12 extends ModelGun //Same as Filename
         hasFlash = true;
         hasArms = true;
 
-        //leftArmPos = new Vector3f(0.5F, -0.03F, -0.45F);
-        leftArmPos = new Vector3f(0.4F, -0.03F, -0.55F);
-        leftArmRot = new Vector3f(80.0F, 56.0F, 10.0F);
+        // Lower the shoulder out of view while keeping the palm on the fore-end.
+        leftArmPos = new Vector3f(0.0084F, -0.2019F, -0.2608F);
+        leftArmRot = new Vector3f(60.0F, 56.0F, 10.0F);
         leftArmReloadPos = new Vector3f(-0.15F, -0.6F, -0.04F);
         leftArmReloadRot = new Vector3f(80.0F, 50.0F, 0.0F);
-        leftArmScale = new Vector3f(0.75D, 1.75D, 0.75D);
+        leftArmScale = new Vector3f(0.75D, 1.15D, 0.75D);
 
-        rightArmPos = new Vector3f(0.2F, -0.52F, 0.0F);
+        rightArmPos = new Vector3f(0.1461F, -0.6943F, 0.1031F);
         rightArmRot = new Vector3f(0.0F, 0.0F, -85.0F);
-        rightArmReloadPos = new Vector3f(0.2F, -0.52F, 0.0F);
+        rightArmReloadPos = new Vector3f(rightArmPos);
         rightArmReloadRot = new Vector3f(0.0F, 0.0F, -85.0F);
         rightArmScale = new Vector3f(0.75D, 1.0D, 0.75D);
 
@@ -80,7 +80,9 @@ public class ModelSPAS12 extends ModelGun //Same as Filename
         pumpTime = 7;
         pumpHandleDistance = 3F;
         gunOffset = -0.5F;
-        zoomOffset = 0.5F;
+        // Bring hip carry closer; compensate at full ADS to retain the existing sight position.
+        firstPersonOffset = new Vector3f(-0.15F, 0F, 0F);
+        zoomOffset = 0.35F;
         zoomOffsetY = -0.1F;
         crouchZoom = -0.05F;
         translateAll(-10.0F, 5.0F, 0.0F);

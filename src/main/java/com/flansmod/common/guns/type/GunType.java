@@ -482,6 +482,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
     public boolean allowAllAttachments = false;
     /** Permanent scope supplied by the gun definition; resolved after content packs load. */
     public String fixedScopeName;
+    /** Built-in optic used only when no compatible scope is fitted; never stored as an item. */
+    public String defaultScopeName;
     public boolean allowLaserPointerAttachments = true;
     public boolean disallowBarrelAttachments = false;
     /**
@@ -1048,6 +1050,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 allowAllAttachments = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("FixedScope"))
                 fixedScopeName = split[1];
+            else if (split[0].equals("DefaultScope"))
+                defaultScopeName = split[1];
             else if (split[0].equals("AllowLaserPointerAttachments"))
                 allowLaserPointerAttachments = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("DisallowBarrelAttachments"))
@@ -1768,7 +1772,14 @@ public class GunType extends PaintableType implements IScope, IMarkable {
             AttachmentType fixed = AttachmentType.getAttachment(fixedScopeName);
             if (fixed != null && fixed.item != null) return new ItemStack(fixed.item);
         }
-        return getAttachmentItemStack(gun, "scope");
+        ItemStack attached = getAttachmentItemStack(gun, "scope");
+        if (defaultScopeName != null) {
+            AttachmentType active = getScope(gun);
+            if (active == null) return null;
+            if (attached == null || attached.getItem() != active.item)
+                return new ItemStack(active.item);
+        }
+        return attached;
     }
 
     public ItemStack getStockItemStack(ItemStack gun) {
@@ -1810,7 +1821,13 @@ public class GunType extends PaintableType implements IScope, IMarkable {
             return AttachmentType.getAttachment(fixedScopeName);
         checkForTags(gun);
         AttachmentType attachment = AttachmentType.getFromNBT(gun.stackTagCompound.getCompoundTag("attachments").getCompoundTag(name));
-        return attachment != null && isAttachmentCompatible(attachment) ? attachment : null;
+        if (attachment != null && isAttachmentCompatible(attachment)) return attachment;
+        if ("scope".equals(name) && defaultScopeName != null) {
+            AttachmentType fallback = AttachmentType.getAttachment(defaultScopeName);
+            if (fallback != null && fallback.item != null && fallback.type == EnumAttachmentType.sights
+                    && isAttachmentCompatible(fallback)) return fallback;
+        }
+        return null;
     }
 
     public boolean isAttachmentCompatible(AttachmentType attachment) {

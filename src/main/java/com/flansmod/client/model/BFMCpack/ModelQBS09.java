@@ -1972,16 +1972,16 @@ public class ModelQBS09 extends ModelGun //Same as Filename
         lefthandPump = true;
         hasFlash = true;
         hasArms = true;
-        leftArmPos = new Vector3f(0.5F, -0.03F, -0.45F);
+        leftArmPos = new Vector3f(0.4132F, 0.0141F, -0.3286F);
         leftArmRot = new Vector3f(80.0F, 50.0F, 10.0F);
         leftArmReloadPos = new Vector3f(-0.15F, -0.6F, -0.04F);
         leftArmReloadRot = new Vector3f(80.0F, 50.0F, 0.0F);
-        rightArmPos = new Vector3f(0.17F, -0.52F, 0.0F);
+        rightArmPos = new Vector3f(0.1475F, -0.6066F, 0.0875F);
         rightArmRot = new Vector3f(0.0F, 0.0F, -85.0F);
-        rightArmReloadPos = new Vector3f(0.17F, -0.52F, 0.0F);
+        rightArmReloadPos = new Vector3f(rightArmPos);
         rightArmReloadRot = new Vector3f(0.0F, 0.0F, -85.0F);
         rightArmScale = new Vector3f(0.75D, 1.0D, 0.75D);
-        leftArmScale = new Vector3f(0.75D, 1.5D, 0.75D);
+        leftArmScale = new Vector3f(0.75D, 1.15D, 0.75D);
         rightHandAmmo = false;
         leftHandAmmo = true;
         fancyStance = true;
@@ -1999,7 +1999,9 @@ public class ModelQBS09 extends ModelGun //Same as Filename
         gunOffset = -0.3F;
         gunOffsetX = -2F;
         crouchZoom = -0.05F;
-        zoomOffset = 0.3F;
+        // Bring hip carry closer; compensate at full ADS to retain the existing sight position.
+        firstPersonOffset = new Vector3f(-0.15F, 0F, 0F);
+        zoomOffset = 0.15F;
         ShakeDistance = 1.5F;
         translateAll(0F, -14F, 0F);
 

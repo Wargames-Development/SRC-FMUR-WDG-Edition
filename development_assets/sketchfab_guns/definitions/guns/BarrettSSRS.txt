@@ -1,13 +1,19 @@
 Name Barrett SSRS
 ShortName sketchBarrettSSRS
-Description 30mm grenade launcher
+Description 30mm grenade launcher_Load Airburst and aim down sights at a surface_Press Y (default) to program the airburst distance
 Icon BarrettSSRS
 Colour 255 255 255
 Ammo sketch30mmGrenade
+Ammo sketch30mmCloseCombat
+Ammo sketch30mmSmoke
+Ammo sketch30mmAP
+Ammo sketch30mmAirburst
 ReloadTime 85
 TacticalReloadTime 70
 Damage 2
 NumBullets 1
+AllowNumBulletsByBulletType True
+AllowSpreadByBullet True
 BulletSpeed 12
 Accuracy 0.75
 AimingSpreadConstant 0.75
@@ -37,6 +43,7 @@ Texture BarrettSSRS
 AllowAllAttachments True
 AllowAttachments holo reflex
 AllowScopeAttachments true
-AllowBarrelAttachments true
+AllowBarrelAttachments false
+DisallowBarrelAttachments true
 AllowGadgetAttachments true
 AllowAccessoryAttachments true

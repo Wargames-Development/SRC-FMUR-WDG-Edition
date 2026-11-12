@@ -1,0 +1,21 @@
+Name C79 [3.4x]
+ShortName c79
+Icon C79
+AttachmentType sights
+Description ELCAN C79 olive optical sight_3.4x picture-in-picture_Black post and bars reticle
+Silencer false
+MeleeDamageMultiplier 1.0
+DamageMultiplier 1.0
+SpreadMultiplier 1.0
+RecoilMultiplier 1.0
+BulletSpeedMultiplier 1.0
+ReloadTimeMultiplier 1.0
+ZoomLevel 1
+FOVZoomLevel 1
+Magnification 3.4
+Model BFMCpack.C79
+Texture C7A2
+ModelScale 1.0
+PictureInPicture -2.111 1.65 0.0 0.51
+PictureInPictureReticle PIP\C79
+PictureInPictureReticleScale 1.0

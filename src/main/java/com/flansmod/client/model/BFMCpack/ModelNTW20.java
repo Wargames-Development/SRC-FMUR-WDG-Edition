@@ -8,18 +8,16 @@ import com.flansmod.common.vector.Vector3f;
 public class ModelNTW20 extends ModelGun {
     public ModelNTW20() {
 
-        int textureX = 512;
-        int textureY = 512;
+        gunModel = loadPart("remodel");
+        ammoModel = loadPart("magazine");
+        defaultScopeModel = loadPart("scope");
+        defaultBarrelModel = loadPart("muzzle");
 
-        gunModel = new ModelRendererTurbo[1];
-        gunModel[0] = new ModelRendererTurbo(this, 0, 0, textureX, textureY);
-        gunModel[0].addObj("/BFMCpack/NTW-20.obj");
-        gunModel[0].setRotationPoint(0F, 0F, 0F);
-
-        ammoModel = new ModelRendererTurbo[1];
-        ammoModel[0] = new ModelRendererTurbo(this, 0, 0, textureX, textureY);
-        ammoModel[0].addObj("/BFMCpack/NTW-20_Ammo.obj");
-        ammoModel[0].setRotationPoint(0F, 0F, 0F);
+        // Effective pack coordinates divided by 16 and the definition's 0.1 model scale.
+        scopeAttachPoint = new Vector3f(8.1F / 1.6F, 7.11F / 1.6F, 0F);
+        barrelAttachPoint = new Vector3f(32.8F / 1.6F, 5.745834F / 1.6F, 0F);
+        muzzleFlashPoint = new Vector3f(36.575F / 1.6F, 5.745834F / 1.6F, 0F);
+        mirrorThirdPerson = false;
 
         pumpDelayAfterReload = 60;
         pumpDelay = 15;
@@ -34,7 +32,7 @@ public class ModelNTW20 extends ModelGun {
         leftArmReloadRot = new Vector3f(55F, 70F, 25F);
         leftArmScale = new Vector3f(0.75D, 1.5D, 0.75D);
 
-        rightArmPos = new Vector3f(0.17F, -0.52F, 0.0F);
+        rightArmPos = new Vector3f(0.1792F, -0.6031F, 0.1156F);
         rightArmRot = new Vector3f(0.0F, 0.0F, -85.0F);
         rightArmReloadPos = new Vector3f(0.17F, -0.52F, 0.0F);
         rightArmReloadRot = new Vector3f(0.0F, 0.0F, -85.0F);
@@ -61,5 +59,11 @@ public class ModelNTW20 extends ModelGun {
 
         translateAll(5F, 5F, 0F);
         zoomOffsetY = -0.1F;
+    }
+
+    private ModelRendererTurbo[] loadPart(String suffix) {
+        ModelRendererTurbo part = new ModelRendererTurbo(this, 0, 0, 2048, 1024);
+        part.addObj("/BFMCpack/NTW20_" + suffix + ".obj");
+        return new ModelRendererTurbo[] {part};
     }
 }

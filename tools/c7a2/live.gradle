@@ -1,0 +1,17 @@
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    def dir = root.file('build/c7a2-check')
+    def compiler = root.task('compileC7A2Probe', type: JavaCompile) {
+        source = root.fileTree(new File(dir, 'probe')) { include '*.java' }
+        classpath = root.sourceSets.main.runtimeClasspath
+        destinationDir = new File(dir, 'probe-classes')
+        options.encoding = 'UTF-8'
+        dependsOn root.tasks.compileJava
+    }
+    root.tasks.runClient.dependsOn compiler
+    root.tasks.runClient.doFirst {
+        workingDir root.file('build/m240-check/instance')
+        args '--width', '1600', '--height', '900'
+        classpath = root.files(compiler.destinationDir) + classpath
+    }
+}

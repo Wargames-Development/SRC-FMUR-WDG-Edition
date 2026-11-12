@@ -13,8 +13,10 @@ The Java-loaded rifle measures 28.25 long, 4.27 high and 1.59 wide at
 `ModelScale 1.35`, with the magazine and irons fitted. The SVD-12 measures
 26.64 × 6.96 × 2.22 in the same units at `ModelScale 0.12`. The top row in
 [the scale comparison](DragunovSVD_scale.png) is the Dragunov. The installed
-weapon uses the fixed PSO-1 shown in [the preview](DragunovSVD_preview.png)
-and [mount close-up](DragunovSVD_mount.png).
+weapon uses the PSO-1 shown in [the preview](DragunovSVD_preview.png)
+and [mount close-up](DragunovSVD_mount.png) by default. A compatible optic fitted
+in the sights slot replaces it; removing that optic restores the built-in PSO.
+The default is virtual and is not a removable item in the gunsmith.
 
 ## Source and installation
 
@@ -31,8 +33,9 @@ and [mount close-up](DragunovSVD_mount.png).
 - `RenderGun.java` applies the legacy sight scale only to the remaining
   OBJ-based guns. The PSO-1 and its PiP lens both use the attachment's scale.
 - `install_sketchfab_guns.py` installs the new atlas, icon and credit for
-  `sketchDragunovSVD`. The original definition still specifies its fixed
-  scope, magazines, animation timings, damage and sounds.
+  `sketchDragunovSVD`. The durable definition now specifies `DefaultScope pso1`
+  and a sights-only allow-list; magazines, timings, damage and sounds are preserved.
+  See `docs/DEFAULT_SCOPES.md` for behavior and verified scope-swap checks.
 
 From the repository root, regenerate the Blender file, atlas and native
 mesh with Blender 5.2.
@@ -48,6 +51,11 @@ four named collections.
 blender -b development_assets/dragunov_custom/DragunovSVD.blend -t 4 --python-exit-code 1 -P tools/build_dragunov_custom.py -- --export-only
 python tools/install_sketchfab_guns.py --dragunov-only
 ```
+
+The art-only `--dragunov-only` route does not refresh gun definitions. Use the
+normal installer for definitions, or copy
+`development_assets/sketchfab_guns/definitions/guns/DragunovSVD.txt` into the
+development pack's `guns/` directory along with matching rebuilt mod classes.
 
 The installer targets `eclipse/Flan/BFMC Gun Pack`. Use a development launch
 from the rebuilt workspace or a matching rebuilt mod JAR with those pack files.

@@ -1,0 +1,56 @@
+{
+  "geometry": {
+    "C7A2": {
+      "triangles": 7004,
+      "maximum_java_error": 9.199999979614404e-07
+    },
+    "C7A2_magazine": {
+      "triangles": 180,
+      "maximum_java_error": 2.0000000006126228e-07
+    },
+    "C7A2_bolt": {
+      "triangles": 36,
+      "maximum_java_error": 2.599999999741698e-07
+    },
+    "C7A2_irons": {
+      "triangles": 1096,
+      "maximum_java_error": 4.0000000001150227e-07
+    },
+    "C7A2_muzzle": {
+      "triangles": 200,
+      "maximum_java_error": 9.950000006142545e-07
+    },
+    "C79": {
+      "triangles": 720,
+      "maximum_java_error": 1.0000000028043132e-07
+    }
+  },
+  "installed": {
+    "eclipse\\Flan\\BFMCpack\\C7A2.obj": "158d6e6e44e9ae91be232071bf684e107543ea537888d6076a839c8705c253a9",
+    "eclipse\\Flan\\BFMCpack\\C7A2_magazine.obj": "9a94c007de289456d2e9eaf74818e9d5e66c0f03f5587d847477a6045338faa7",
+    "eclipse\\Flan\\BFMCpack\\C7A2_bolt.obj": "1fe0e8739c9bed7381d9e1a2a71be46ec322498a0bb42c722bb56cad18730520",
+    "eclipse\\Flan\\BFMCpack\\C7A2_irons.obj": "c3879b5aeba6af3b527e964b58be8ef4a5237ba63093e463261a7720b2617b09",
+    "eclipse\\Flan\\BFMCpack\\C7A2_muzzle.obj": "3c15391e93aababbc5f74733f608254152f46db6a0eaeb660a9b876d99906678",
+    "eclipse\\Flan\\BFMCpack\\C79.obj": "9e373df9eff9f04c4966eb7bea94780feda6f470fce9bf210a0e0d135cbaf4b0",
+    "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\skins\\C7A2.png": "040ea30447353ea150ea5ef0b72b19189e56e4062cc2908e32baece82a9b4d45",
+    "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\textures\\items\\C7A2.png": "99030675babba5430df24586289ecace5ab6e9684bdab4a5f22e837b0694b783",
+    "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\textures\\items\\C79.png": "c8d3ebeebf3ed90ff63f4931394850757967f42b64adfcd89058d027a7e7cc51",
+    "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\gui\\PIP\\C79.png": "03717e28d221d0fcbcb603507d319ccf1f5452917d8b2d73e63324918f2097c0",
+    "eclipse\\Flan\\BFMC Gun Pack\\attachments\\SCOPE_C79.txt": "667faac9e19c33aaa3d692104f8135b8e81664c6146a02af406ac6ea8da5f054",
+    "eclipse\\Flan\\BFMC Gun Pack\\guns\\CA_AR_C7A2.txt": "2d120a758a0e4829aa8f7f3e66503b531e3c95316102fdccb43719f0bd391745"
+  },
+  "identity": {
+    "c7a2": [
+      "C:\\Users\\Robert Milkovic\\Documents\\GitHub\\SRC-FMUR-WDG-Edition\\eclipse\\Flan\\BFMC Gun Pack\\guns\\CA_AR_C7A2.txt"
+    ],
+    "c79": [
+      "C:\\Users\\Robert Milkovic\\Documents\\GitHub\\SRC-FMUR-WDG-Edition\\eclipse\\Flan\\BFMC Gun Pack\\attachments\\SCOPE_C79.txt"
+    ]
+  },
+  "donor_sha256": {
+    "M16A4.mesh": "27c166512367f1069f3040d0f8cdc63b185025233288c641a0c3cb3e45a3a50b",
+    "M16A4.png": "f2812542775c5327cf4b81b233296f237ab663fcf1450537c50a4ba452fc3cbf",
+    "M4A1.mesh": "2728e590a38e9b5a06914a6e60737d6a9179b709c143ee8dad26dde6271f0367",
+    "M4A1.png": "7b972c19b04ad4d9236767820d1d2ecce505a271ac498a9502afafd7f54f4603"
+  }
+}

@@ -164,7 +164,8 @@ def load_ammo_display_names():
             short_name = directive(lines, "ShortName")
             name = directive(lines, "Name")
             if short_name and name:
-                display_names[short_name.lower()] = description_ammo_name(name)
+                hidden = (directive(lines, "HideFromCompatibleAmmo") or "").lower() == "true"
+                display_names[short_name.lower()] = None if hidden else description_ammo_name(name)
     return display_names
 
 
@@ -367,7 +368,8 @@ def update_gun_descriptions():
                 raise RuntimeError("Missing display name for Ammo %s in %s"
                                    % (short_name, gun_file))
             seen.add(short_name)
-            ammo_names.append(display_names[short_name])
+            if display_names[short_name] is not None:
+                ammo_names.append(display_names[short_name])
         if not ammo_names:
             continue
 
@@ -400,6 +402,9 @@ def update_languages(definitions, previous_tracer_short_names):
                       for tracer, _name in variants.values()}
     for lang_file in LANG_DIR.glob("*.lang"):
         lines = lang_file.read_text(encoding="utf-8-sig").splitlines()
+        legendary_suffix = " §6[Legendary]"
+        legendary_keys = {line.split("=", 1)[0].strip().lower() for line in lines
+                          if line.endswith(legendary_suffix)}
         output = []
         for line in lines:
             key = line.split("=", 1)[0].strip().lower()
@@ -410,12 +415,15 @@ def update_languages(definitions, previous_tracer_short_names):
             output.pop()
         output.append("")
         output.append("# Generated tracer ammunition")
-        for _regular, variants in sorted(definitions.items()):
+        for regular, variants in sorted(definitions.items()):
             for color in ("red", "green"):
                 if color not in variants:
                     continue
                 tracer_short, tracer_name = variants[color]
-                output.append("item.%s.name=%s" % (tracer_short, tracer_name))
+                key = "item.%s.name" % tracer_short
+                if key.lower() in legendary_keys or ("item.%s.name" % regular.lower()) in legendary_keys:
+                    tracer_name += legendary_suffix
+                output.append("%s=%s" % (key, tracer_name))
         lang_file.write_text("\n".join(output) + "\n", encoding="utf-8")
 
 

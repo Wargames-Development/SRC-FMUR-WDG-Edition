@@ -1,0 +1,28 @@
+Name 30mm Close Combat
+ShortName sketch30mmCloseCombat
+Description Eight pellets per shot for close-range use with the Barrett SSRS
+Icon Sketch30mmCloseCombat
+Colour 255 255 255
+Model None
+MaxStackSize 4
+RoundsPerItem 6
+NumBullets 8
+Spread 18
+FallSpeed 3
+Damage 2.25
+DamageVsVehicles 0.5
+DamageVsPlanes 0.5
+ShootHeadMultiplier 1.5
+EnableBulletDecay True
+BulletDecay Segmented 8 0.75 16 0.55
+HitBoxSize 0.0001
+HitSound dirtimpact
+HitSoundIron hit_metal
+HitSoundRange 5
+HitSoundEnable True
+EntityHitSoundEnable True
+Penetration 0.7
+BreaksGlass True
+Explosion 0
+ExplodeOnImpact False
+Fuse 0

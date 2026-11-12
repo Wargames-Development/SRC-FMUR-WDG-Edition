@@ -1,0 +1,19 @@
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    def work = root.file('build/ntw20-check')
+    def compiler = root.task('compileNTW20Geometry', type: JavaCompile) {
+        source = root.files('tools/ntw20/NTW20GeometryCheck.java')
+        classpath = root.sourceSets.main.runtimeClasspath
+        destinationDir = new File(work, 'classes')
+        dependsOn root.tasks.compileJava
+    }
+    root.task('checkNTW20Geometry', type: JavaExec, dependsOn: [compiler, root.tasks.processResources]) {
+        classpath = root.files(compiler.destinationDir) + root.sourceSets.main.runtimeClasspath
+        main = 'NTW20GeometryCheck'
+        args root.file('eclipse/Flan/BFMC Gun Pack').absolutePath, work.absolutePath
+    }
+}
+
+
+
+

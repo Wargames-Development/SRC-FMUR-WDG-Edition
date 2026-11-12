@@ -32,8 +32,8 @@ Mode FullAuto SemiAuto
 Recoil 3.5
 RandomRecoilRange 0.7
 DecreaseRecoil 1.4
-ShootSound sa58_f
-ReloadSound scarh_r
+ShootSound scarh_f
+ReloadSound ak12_r
 ReloadSoundRange 5
 GunSoundRange 100
 EmptyClickSound emptyclick
@@ -47,6 +47,11 @@ Texture AK308
 3rdModel BFMCpack.AK308
 3rdModelScale 1.15
 3rdTexture AK308
+UseGLTFAnimation true
+GLTFAnimation fmurAK308 BFMCpack/animations/AK308.json
+UseLeftArmGLTFAnimation true
+UseRightArmGLTFAnimation true
+TacticalReloadGLTFAnimation fmurAK308
 AllowAllAttachments True
 AllowAttachments holo reflex acogta31 kx5 dmrsilencer verticalgrip afg
 AllowScopeAttachments true

@@ -1,0 +1,7 @@
+gunModel 3966 triangles; Java positions/UVs, normals and installed hash PASS
+ammoModel 88 triangles; Java positions/UVs, normals and installed hash PASS
+defaultScopeModel 1578 triangles; Java positions/UVs, normals and installed hash PASS
+defaultBarrelModel 352 triangles; Java positions/UVs, normals and installed hash PASS
+PASS: welded closed shoulder; 192 gap rays; barrel/collar RGB [43.0, 44.0, 44.0] [43.0, 44.0, 44.0]
+PASS: one item binding; occupied opaque UVs; installed atlas; open brake ports and bore
+Effective dimensions: [44.75, 12.327249100000001, 8.284347499999999]

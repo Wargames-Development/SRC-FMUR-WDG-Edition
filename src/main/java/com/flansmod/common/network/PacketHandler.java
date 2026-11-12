@@ -214,6 +214,7 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketB
         registerServerPacket(PacketGetPlayerClasses.class);
         registerClientPacket(PacketSendPlayerClasses.class);
         registerClientPacket(PacketZZOpStatus.class);
+        registerServerPacket(PacketZZProgramAirburst.class);
     }
 
     /**

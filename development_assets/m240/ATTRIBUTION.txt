@@ -1,0 +1,14 @@
+BFMC M240B remodel
+
+Body geometry adapted from “M240 (low-poly)” by ScurvyWoof, CC BY 4.0.
+https://sketchfab.com/3d-models/m240-low-poly-55eaa7d87d3c4546af67343b0fcaf266
+https://creativecommons.org/licenses/by/4.0/
+
+The remodel refits the donor's geometry and recolors the surface groups.
+The rail, feed box, belt and muzzle group are authored for BFMC.
+The BFMC M60-E4 informed the scale and styling of the feed box.
+The original M240 inventory sprite and converted donor are archived under
+development_assets/sketchfab_guns/game_ready/M240.
+
+Regenerate with tools/build_m240.py using Blender 5.2's bundled Python.
+Pass --install to refresh the meshes, diffuse atlas and credit in eclipse/Flan.

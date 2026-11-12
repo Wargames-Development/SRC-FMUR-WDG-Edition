@@ -204,6 +204,7 @@ public class BulletType extends ShootableType {
     public float penetrationDecayEffectOnDamage = 0F;
     public boolean duckBill = false;
     public boolean enableAirburst = false;
+    public boolean programmableAirburst = false;
     public float airburstRange = 3;
     public float airburstDamageRange = 0;
     public float airburstDamage = 0;
@@ -597,6 +598,9 @@ public class BulletType extends ShootableType {
                     break;
                 case "EnableAirburst":
                     enableAirburst = Boolean.parseBoolean(split[1]);
+                    break;
+                case "ProgrammableAirburst":
+                    programmableAirburst = Boolean.parseBoolean(split[1]);
                     break;
                 case "AirburstRange":
                     airburstRange = Float.parseFloat(split[1]);
