@@ -60,6 +60,14 @@ public final class CameraEnvironmentChecks {
             field(RenderGlobal.class, "renderEngine").set(mc.renderGlobal, mc.renderEngine);
             sky(mc, world);
             thermalModes(mc, world);
+            require(!ThermalScopeEffect.showCameraFailure(false,true,0),"inactive scope resets status delay");
+            require(!ThermalScopeEffect.showCameraFailure(true,true,10),"first ADS failure is silent");
+            require(!ThermalScopeEffect.showCameraFailure(true,true,1_999_999_999L),"transient acquisition stays silent");
+            require(ThermalScopeEffect.showCameraFailure(true,true,2_000_000_010L),"continuous two-second failure becomes visible");
+            require(!ThermalScopeEffect.showCameraFailure(true,false,2_100_000_000L),"successful frame clears error timing");
+            require(!ThermalScopeEffect.showCameraFailure(true,true,3_000_000_000L),"next failure receives its own grace period");
+            require(!ThermalScopeEffect.showCameraFailure(false,true,9_000_000_000L),"leaving ADS clears a prolonged failure");
+            require(!ThermalScopeEffect.showCameraFailure(true,true,10_000_000_000L),"re-entering ADS starts quietly");
             if (args.length < 1 || args.length > 2) throw new IllegalArgumentException("Supply WGQOL development classes or dev jar, optionally a DH runtime jar");
             weather(mc, world, args[0]);
             if (args.length == 2) dhFog(args[1]);

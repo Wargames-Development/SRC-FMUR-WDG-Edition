@@ -60,6 +60,8 @@ public final class ThermalScopeEffect {
     private static boolean sensorDisplayValid;
     private static int colorSceneTexture;
     private static boolean cameraUnavailable;
+    private static long cameraWaitingSince=Long.MIN_VALUE;
+    private static final long CAMERA_STATUS_DELAY_NANOS=2_000_000_000L;
     private static int colorLensShaderProgram = -1;
     private static boolean colorLensShaderUnavailable;
     private static int colorLensSceneTextureUniform = -1;
@@ -496,9 +498,11 @@ public final class ThermalScopeEffect {
         postCompositeLensGeometryValid = false;
         CameraRenderManager.INSTANCE.beginFrame(Minecraft.getMinecraft());
         synchronizeThermalSensor(Minecraft.getMinecraft());
+        if(!isActive(Minecraft.getMinecraft())) cameraWaitingSince=Long.MIN_VALUE;
     }
 
     static void invalidateCameraResources() {
+        cameraWaitingSince=Long.MIN_VALUE;
         sceneCaptured = false; scopedSceneCaptured = false; modelLensValid = false; sensorDisplayValid = false;
         colorSceneTexture = 0;
         cameraUnavailable = false;
@@ -512,6 +516,7 @@ public final class ThermalScopeEffect {
         Object device = isVehicleDisplay() ? ThermalRenderApi.vehicleSensorDevice() : FlansModClient.currentScope;
         boolean worldChanged = SENSOR_CLOCK.setWorld(mc.theWorld);
         if (worldChanged || device != sensorDevice || sensorViewer != mc.renderViewEntity) {
+            cameraWaitingSince=Long.MIN_VALUE;
             cameraUnavailable = false;
             sceneCaptured = false;
             scopedSceneCaptured = false;
@@ -792,6 +797,7 @@ public final class ThermalScopeEffect {
 
     public static boolean toggleFlir() {
         flirEnabled = !flirEnabled;
+        cameraWaitingSince=Long.MIN_VALUE;
         // A cached heat frame cannot be presented as a colour frame (or vice versa).
         // Keep device admission deadlines so toggling cannot bypass the sensor budget.
         sceneCaptured = false; scopedSceneCaptured = false; modelLensValid = false; sensorDisplayValid = false;
@@ -802,10 +808,20 @@ public final class ThermalScopeEffect {
 		return isActive(mc) && hasThermalVision();
     }
 
+    // Acquisition/mode-switch failures are transient. Only a continuous failure
+    // for this viewing session merits an on-screen warning; logs remain immediate.
+    static boolean showCameraFailure(boolean active,boolean waiting,long now) {
+        if(!active || !waiting) { cameraWaitingSince=Long.MIN_VALUE;return false; }
+        if(cameraWaitingSince==Long.MIN_VALUE) cameraWaitingSince=now;
+        return now-cameraWaitingSince>=CAMERA_STATUS_DELAY_NANOS;
+    }
+
     public static void renderStatus(Minecraft mc) {
-        if (!isActive(mc)) return;
+        if (!isActive(mc)) { cameraWaitingSince=Long.MIN_VALUE;return; }
         boolean imageValid = isModelLensDisplay() ? modelLensValid : sensorDisplayValid;
         boolean waiting = cameraUnavailable || !imageValid;
+        boolean showFailure=showCameraFailure(true,waiting,System.nanoTime());
+        if(waiting && !showFailure) return;
         if (!waiting && (isModelLensDisplay() || isVehicleDisplay())) return;
         ScaledResolution scaled = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
         String key = GameSettings.getKeyDisplayString(KeyInputHandler.thermalScopeKey.getKeyCode());
