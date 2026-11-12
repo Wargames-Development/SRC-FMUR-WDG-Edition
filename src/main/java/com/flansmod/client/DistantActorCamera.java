@@ -8,7 +8,7 @@ import net.minecraft.entity.Entity;
 /** Optional DH-owned actors in this camera's native/heat depth encoding. */
 final class DistantActorCamera {
     private static boolean resolved,active;
-    private static Method owned,begin,nativeDraw,distant,end;
+    private static Method owned,begin,nativeDraw,distant,end,beginShader;
     private DistantActorCamera() { }
     static boolean begin(CameraView view,boolean heat) {
         if(active) throw new IllegalStateException("Nested isolated actor camera");
@@ -18,6 +18,17 @@ final class DistantActorCamera {
             float start=(float)Math.max(16,Minecraft.getMinecraft().gameSettings.renderDistanceChunks*16.0-16);
             active=Boolean.TRUE.equals(begin.invoke(null,Minecraft.getMinecraft().theWorld,view.projection,view.modelView,
                 view.x,view.y,view.z,view.width,view.height,view.partialTicks,start,heat));
+            return active;
+        }catch(ReflectiveOperationException | RuntimeException | LinkageError failure){return false;}
+    }
+    static boolean supportsShader() { resolve();return beginShader!=null; }
+    static boolean beginShader(CameraView view,int[] targets,FloatBuffer projection) {
+        if(active) throw new IllegalStateException("Nested isolated actor camera");
+        resolve();
+        try {
+            if(!Boolean.TRUE.equals(owned.invoke(null))) return true;
+            active=Boolean.TRUE.equals(beginShader.invoke(null,Minecraft.getMinecraft().theWorld,view.projection,view.modelView,
+                view.x,view.y,view.z,view.width,view.height,view.partialTicks,targets,projection));
             return active;
         }catch(ReflectiveOperationException | RuntimeException | LinkageError failure){return false;}
     }
@@ -43,6 +54,9 @@ final class DistantActorCamera {
             owned=api.getMethod("isOwned");nativeDraw=api.getMethod("renderNative",Entity.class);distant=api.getMethod("renderDistant");end=api.getMethod("end");
             begin=api.getMethod("begin",Object.class,FloatBuffer.class,FloatBuffer.class,double.class,double.class,double.class,
                 int.class,int.class,float.class,float.class,boolean.class);
+            try { beginShader=api.getMethod("beginShader",Object.class,FloatBuffer.class,FloatBuffer.class,double.class,double.class,double.class,
+                int.class,int.class,float.class,int[].class,FloatBuffer.class); }
+            catch(NoSuchMethodException olderCompanion) { beginShader=null; }
         }catch(ClassNotFoundException absent){ }
         catch(ReflectiveOperationException | LinkageError unsupported){com.flansmod.common.FlansMod.log("[Camera] Optional DH actor API unavailable: "+unsupported);}
     }

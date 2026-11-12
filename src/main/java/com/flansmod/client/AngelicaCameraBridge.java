@@ -12,7 +12,7 @@ import org.lwjgl.opengl.*;
 /** Optional Flans scope provider. It is selected only for non-thermal Flans lenses. */
 final class AngelicaCameraBridge implements CameraRenderManager.ShaderCamera {
     private final Method supports, render, phase, translucent, release, program;
-    private Method distantAvailable, distantBegin, distantOffset, distantEnd;
+    private Method distantAvailable, distantBegin, distantOffset, distantEnd, actorTargets, actorProjection;
     private final ShaderScopeScene scene;
     private Framebuffer target;
 
@@ -35,10 +35,14 @@ final class AngelicaCameraBridge implements CameraRenderManager.ShaderCamera {
             distantEnd = api.getMethod("endDistantTerrain");
             distantAvailable = available;
         } catch (NoSuchMethodException olderCompanion) { distantAvailable = null; }
+        try { actorTargets=api.getMethod("actorTargets");actorProjection=api.getMethod("actorProjection"); }
+        catch(NoSuchMethodException olderCompanion) { actorTargets=null;actorProjection=null; }
         CameraTerrain terrain = (CameraTerrain) Class.forName("com.flansmod.client.compat.AngelicaCameraTerrain")
             .getConstructor(BiFunction.class).newInstance((BiFunction<Object, Object, Object>) (pass, config) -> invoke(program, pass, config));
         scene = new ShaderScopeScene(this, terrain);
     }
+    int[] actorTargets() { return actorTargets==null?null:(int[])invoke(actorTargets); }
+    FloatBuffer actorProjection() { return actorProjection==null?null:(FloatBuffer)invoke(actorProjection); }
     void capture(CameraView primary) { scene.capture(primary); }
     @Override public boolean isSupported() { return (Boolean) invoke(supports); }
     void phase(String value) { invoke(phase, value); }
