@@ -22,12 +22,13 @@ public final class PlayerLodServerChecks {
             throw new AssertionError("Side audit did not detect its inherited client-only negative control: " + control);
         List<String> violations = new ArrayList<String>();
         for (String name : new String[] {"PlayerLodServer", "PlayerLodServer$AppearanceState",
-                "PlayerLodSnapshot", "PlayerLodSnapshot$Entry", "PlayerLodSnapshot$Appearance"})
+                "PlayerLodSnapshot", "PlayerLodSnapshot$Entry", "PlayerLodSnapshot$Appearance", "ExternalPlayerPresentation", "PlayerVisualPose"})
             violations.addAll(inspect("com/flansmod/common/playerlod/" + name, null));
+        violations.addAll(inspect("com/flansmod/common/PlayerData","presentationPose"));
         if (!violations.isEmpty()) throw new AssertionError("Dedicated-server LOD references: " + violations);
         visibilityPolicy();
         profileClassLoaderBoundary();
-        System.out.println("PASS: all five LOD server/data classes avoid client-only Minecraft members; inherited-call negative control, six visibility-policy scenarios and split-Guava profile copying checked.");
+        System.out.println("PASS: all seven LOD server/data classes and the PlayerData presentation method avoid client-only Minecraft members; inherited-call negative control, six visibility-policy scenarios and split-Guava profile copying checked.");
     }
 
     private static void profileClassLoaderBoundary() throws Exception {

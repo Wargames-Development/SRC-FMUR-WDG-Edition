@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 final class LightweightCamera {
     private static final ResourceLocation SUN = new ResourceLocation("textures/environment/sun.png");
     private final FloatBuffer skyModelView = BufferUtils.createFloatBuffer(16);
+    private final CameraSky sky = new CameraSky();
     private Framebuffer target;
     private CameraTerrain terrain;
     private boolean checked;
@@ -32,11 +33,15 @@ final class LightweightCamera {
     private boolean failed;
     private int sensorLightmap;
     private final DistantCameraGeometry distant = new DistantCameraGeometry();
+    private final ThermalGlassBarrier glass = new ThermalGlassBarrier();
 
     String failure() { return failure; }
     void capture(CameraView source) { distant.capture(source); }
 
-    Framebuffer render(Minecraft mc, CameraView view, boolean thermal) {
+    Framebuffer render(Minecraft mc, CameraView view, boolean thermal, boolean ignoreAtmosphere, boolean colourScope) {
+        try(ThermalRenderApi.CameraPass ignored=ThermalRenderApi.beginCameraPass()) { return renderView(mc,view,thermal,ignoreAtmosphere,colourScope); }
+    }
+    private Framebuffer renderView(Minecraft mc, CameraView view, boolean thermal, boolean ignoreAtmosphere, boolean colourScope) {
         if (failed) return null;
         int draw = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int read = ThermalFramebuffers.canBlit() ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : draw;
@@ -66,19 +71,25 @@ final class LightweightCamera {
             Vec3 sky = mc.theWorld.getSkyColor(mc.renderViewEntity, view.partialTicks);
             GL11.glClearColor((float)sky.xCoord, (float)sky.yCoord, (float)sky.zCoord, 1);
             GL11.glClearDepth(1); GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
-            if (!mc.theWorld.provider.hasNoSky) {
-                mc.getTextureManager().bindTexture(SUN);
-                drawSun(view, mc.theWorld.getCelestialAngle(view.partialTicks), 1 - mc.theWorld.getRainStrength(view.partialTicks));
+            if (!colourScope || !this.sky.render(mc, view)) {
+                // Sky precedes all geometry, so a rejected provider can be cleared safely.
+                if (colourScope) GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+                if (!mc.theWorld.provider.hasNoSky) {
+                    mc.getTextureManager().bindTexture(SUN);
+                    drawSun(view, mc.theWorld.getCelestialAngle(view.partialTicks), 1 - mc.theWorld.getRainStrength(view.partialTicks));
+                }
             }
             if (!terrain.begin(view)) return null;
             if (!distant.begin(view)) { failure = "DH camera: " + distant.failure(); return null; }
             mc.entityRenderer.enableLightmap(view.partialTicks);
             if (thermal) bindSensorLightmap();
-            if (!distant.draw(view, 0)) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
+            if (!(colourScope ? distant.drawColour(view, 0) : distant.draw(view, 0))) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
             mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glColor4f(1, 1, 1, 1);
             terrain.draw(0);
             GL20.glUseProgram(0);
+            if (thermal) glass.render(mc, view);
+            if(!DistantActorCamera.begin(view,false)) { failure="DH isolated actor view is not ready";return null; }
             RenderHelper.enableStandardItemLighting();
             for (Object object : mc.theWorld.loadedEntityList) {
                 Entity entity = (Entity)object;
@@ -87,6 +98,7 @@ final class LightweightCamera {
                 if (box == null || !view.visible(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)) continue;
                 Render renderer = RenderManager.instance.getEntityRenderObject(entity);
                 if (renderer == null) continue;
+                if(DistantActorCamera.renderNative(entity)) continue;
                 double x = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * view.partialTicks;
                 double y = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * view.partialTicks;
                 double z = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * view.partialTicks;
@@ -101,22 +113,26 @@ final class LightweightCamera {
                     TileEntityRendererDispatcher.instance.renderTileEntity(tile, view.partialTicks);
             }
             ThermalRenderApi.renderCameraGeometry(view.partialTicks);
+            DistantActorCamera.end();
             RenderHelper.disableStandardItemLighting();
             mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             if (thermal) bindSensorLightmap();
-            if (!distant.draw(view, 1)) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
+            if (!(colourScope ? distant.drawColour(view, 1) : distant.draw(view, 1))) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
             terrain.draw(1);
             GL20.glUseProgram(0);
-            ThermalRenderApi.renderParticles(new Runnable() {
-                @Override public void run() {
-                    mc.effectRenderer.renderLitParticles(mc.renderViewEntity, view.partialTicks);
-                    mc.effectRenderer.renderParticles(mc.renderViewEntity, view.partialTicks);
-                }
-            });
-            mc.entityRenderer.enableLightmap(view.partialTicks);
-            if (thermal) bindSensorLightmap();
-            CameraWeather.render(mc, view);
+            if (!ignoreAtmosphere) {
+                ThermalRenderApi.renderParticles(new Runnable() {
+                    @Override public void run() {
+                        mc.effectRenderer.renderLitParticles(mc.renderViewEntity, view.partialTicks);
+                        mc.effectRenderer.renderParticles(mc.renderViewEntity, view.partialTicks);
+                    }
+                });
+                mc.entityRenderer.enableLightmap(view.partialTicks);
+                if (thermal) bindSensorLightmap();
+                if (colourScope && !CameraWeather.renderColour(mc, view, false)) return null;
+                if (!colourScope) CameraWeather.render(mc, view);
+            }
             failure = "";
             return target;
         } catch (ReflectiveOperationException | RuntimeException | LinkageError problem) {
@@ -125,6 +141,7 @@ final class LightweightCamera {
             return null;
         } finally {
             try {
+                DistantActorCamera.end();
                 if (terrain != null) terrain.close();
             } catch (RuntimeException | LinkageError problem) {
                 failure = problem.toString();
@@ -213,6 +230,7 @@ final class LightweightCamera {
     }
 
     void destroy() {
+        sky.reset();
         distant.destroy();
         if (terrain != null) terrain.destroy();
         terrain = null;

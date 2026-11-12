@@ -26,10 +26,12 @@ public final class ThermalGpuChecks {
             if (args.length > 0 && "--camera-particles".equals(args[0])) {
                 // macOS pbuffers can lack a usable default framebuffer.
                 displayTarget=fbo();
+                entityReplayIsolation();
                 cameraParticles();
                 particleOcclusion();
                 emissiveParticles();
                 nightVisionLensComposition();
+                cachedSensorDisplay();
                 check(GL11.glGetError()==GL11.GL_NO_ERROR,"Focused particle checks leave no GL errors");
                 GL30.glDeleteFramebuffers(displayTarget);displayTarget=0;
                 System.out.println("PASS: " + checks + " camera particle depth, heat, smoke and NVG checks.");
@@ -45,6 +47,7 @@ public final class ThermalGpuChecks {
             if (System.getProperty("fmur.checks.hitmarkerRuntime") != null)
                 hitmarkerLensComposition(System.getProperty("fmur.checks.hitmarkerRuntime"));
             cameraGeometry();
+            cameraGlass();
             cameraSun();
             cameraWeather();
             if (System.getProperty("fmur.checks.angelicaRuntime") != null)
@@ -391,7 +394,12 @@ public final class ThermalGpuChecks {
             singleton.set(null,mc);
             Class<?> type=loader.loadClass("com.hitmarkerplus.client.HitmarkerOverlay");
             Object overlay=type.newInstance();
-            Method tick=type.getMethod("onRenderTick",cpw.mods.fml.common.gameevent.TickEvent.RenderTickEvent.class);
+            Method tick;
+            try { tick=type.getMethod("onRenderTick",cpw.mods.fml.common.gameevent.TickEvent.RenderTickEvent.class); }
+            catch (NoSuchMethodException legacy) {
+                legacyHitmarkerLensComposition(mc,type,overlay,output,lens);
+                return;
+            }
             Method hud=type.getMethod("onRenderOverlay",net.minecraftforge.client.event.RenderGameOverlayEvent.Post.class);
             Method show=type.getMethod("show",boolean.class);
             check(tick.getAnnotation(cpw.mods.fml.common.eventhandler.SubscribeEvent.class).priority()
@@ -452,6 +460,56 @@ public final class ThermalGpuChecks {
         }
     }
 
+    private static void legacyHitmarkerLensComposition(net.minecraft.client.Minecraft mc,
+            Class<?> type,Object overlay,int output,int lens) throws Exception {
+        Class<?> compat=HitmarkerScopeCompat.class;
+        // FML is not running in this GPU harness; bind the actual optional renderer directly.
+        field(compat,"checked").setBoolean(null,true);
+        field(compat,"overlay").set(null,overlay);
+        field(compat,"renderOverlay").set(null,type.getMethod("onRenderOverlay",net.minecraftforge.client.event.RenderGameOverlayEvent.Post.class));
+        field(compat,"lastTrigger").set(null,field(type,"lastTriggerMs"));
+        field(compat,"duration").setLong(null,field(type,"DURATION_MS").getLong(null));
+        field(compat,"markerRadius").setInt(null,Math.max(field(type,"DRAW_SIZE_RAW").getInt(null),
+                field(type,"HEADSHOT_DRAW_SIZE_RAW").getInt(null))/2+4);
+        float[] x=(float[])field(ThermalScopeEffect.class,"postCompositeLensNdcX").get(null);
+        float[] y=(float[])field(ThermalScopeEffect.class,"postCompositeLensNdcY").get(null);
+        try {
+            for(boolean nightVision:new boolean[]{false,true}) for(boolean headshot:new boolean[]{false,true}) {
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);GL11.glColorMask(true,true,true,true);
+                GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glClearColor(0,0,0,0);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+                x[0]=0;y[0]=0;
+                for(int i=0;i<=32;i++){x[i+1]=(float)Math.cos(i*Math.PI/16)*0.7F;y[i+1]=(float)Math.sin(i*Math.PI/16)*0.7F;}
+                type.getMethod("show",boolean.class).invoke(null,headshot);
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,0);
+                GL13.glActiveTexture(GL13.GL_TEXTURE3);
+                GL11.glEnable(GL11.GL_FOG);GL11.glEnable(GL11.GL_SCISSOR_TEST);GL11.glScissor(0,0,1,1);
+                ThermalScopeEffect.renderLensImage(output,SIZE,SIZE,SIZE,SIZE,lens,true,mc,nightVision?1:0);
+                check(GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING)==0
+                        && GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE)==GL13.GL_TEXTURE3
+                        && GL11.glIsEnabled(GL11.GL_FOG) && GL11.glIsEnabled(GL11.GL_SCISSOR_TEST),
+                        "Legacy hitmarker replay restores lens caller state");
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);ByteBuffer p=pixel(64,64);
+                check((p.get(0)&255)>180 && (headshot?(p.get(1)&255)<100:(p.get(1)&255)>180),
+                        "Actual legacy hitmarker stays above the late lens/NVGs; headshot="+headshot);
+                check((pixel(4,4).get(3)&255)==0,"Legacy replay leaves the peripheral HUD alone");
+                FloatBuffer depth=BufferUtils.createFloatBuffer(1);
+                GL11.glReadPixels(64,64,1,1,GL11.GL_DEPTH_COMPONENT,GL11.GL_FLOAT,depth);
+                check(Math.abs(depth.get(0)-0.37F)<0.0001F,"Legacy replay preserves scene depth");
+                mc.gameSettings.hideGUI=true;
+                ThermalScopeEffect.renderLensImage(output,SIZE,SIZE,SIZE,SIZE,lens,true,mc,0);
+                check((pixel(64,64).get(0)&255)==32,"F1 suppresses legacy scope hitmarkers");
+                mc.gameSettings.hideGUI=false;
+                field(type,"lastTriggerMs").setLong(null,System.currentTimeMillis()-1000);
+                ThermalScopeEffect.renderLensImage(output,SIZE,SIZE,SIZE,SIZE,lens,true,mc,0);
+                check((pixel(64,64).get(0)&255)==32,"Cached lenses do not retain expired legacy hitmarkers");
+            }
+            check(GL11.glGetError()==GL11.GL_NO_ERROR,"Legacy scope hitmarkers leave no GL errors");
+        } finally {
+            field(compat,"checked").setBoolean(null,false);
+            field(compat,"overlay").set(null,null);field(compat,"renderOverlay").set(null,null);
+        }
+    }
+
     private static void cachedSensorDisplay() throws Exception {
         sun.misc.Unsafe allocator=(sun.misc.Unsafe)field(sun.misc.Unsafe.class,"theUnsafe").get(null);
         net.minecraft.client.Minecraft mc=(net.minecraft.client.Minecraft)allocator.allocateInstance(net.minecraft.client.Minecraft.class);
@@ -490,12 +548,32 @@ public final class ThermalGpuChecks {
             ByteBuffer held=pixel(SIZE/2,SIZE/2);
             check((held.get(0)&255)==expected && (held.get(1)&255)==(first.get(1)&255),"Held frame does not reprocess current sensor input");
             check(GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING)==source.framebufferObject,"Cached compositor restores caller FBO");
+            field(ThermalScopeEffect.class,"colorSceneTexture").setInt(null,source.framebufferTexture);
+            field(ThermalScopeEffect.class,"scopedSceneCaptured").setBoolean(null,true);
+            // Pbuffer default FBOs are undefined on macOS; provide the real-sized colour cache directly.
+            ((net.minecraft.client.shader.Framebuffer)field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").get(null)).deleteFramebuffer();
+            net.minecraft.client.shader.Framebuffer colourCache=fixtureFramebuffer(allocator,false);
+            int colourSize=field(ThermalScopeEffect.class,"MODEL_LENS_SIZE").getInt(null);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D,colourCache.framebufferTexture);
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D,0,GL11.GL_RGBA8,colourSize,colourSize,0,GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,(ByteBuffer)null);
+            colourCache.framebufferWidth=colourCache.framebufferTextureWidth=colourSize;
+            colourCache.framebufferHeight=colourCache.framebufferTextureHeight=colourSize;
+            field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").set(null,colourCache);
+            source.bindFramebuffer(true);GL11.glClearColor(0,1,0,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+            ThermalScopeEffect.renderCameraDisplay(mc,false,true,true,false,false,false,1);
+            ByteBuffer colour=pixel(SIZE/2,SIZE/2);
+            check((colour.get(1)&255)>240 && (colour.get(0)&255)<10,"FLIR-off fullscreen sensor uses its normal RGB scene");
+            GL11.glClearColor(0,0,1,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+            ThermalScopeEffect.renderCameraDisplay(mc,false,false,true,false,false,false,1);
+            check((pixel(SIZE/2,SIZE/2).get(1)&255)>240,"FLIR-off sensor holds its sampled colour frame between deadlines");
             check(GL11.glGetError()==GL11.GL_NO_ERROR,"Cached sensor has no GL errors");
         } finally {
             Object cached=field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").get(null);
             if(cached!=null)((net.minecraft.client.shader.Framebuffer)cached).deleteFramebuffer();
             field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").set(null,null);
             field(ThermalScopeEffect.class,"sensorDisplayValid").setBoolean(null,false);
+            field(ThermalScopeEffect.class,"colorSceneTexture").setInt(null,0);
+            field(ThermalScopeEffect.class,"scopedSceneCaptured").setBoolean(null,false);
             if(source!=null)source.deleteFramebuffer();
             singleton.set(null,previousClient);
         }
@@ -602,6 +680,76 @@ public final class ThermalGpuChecks {
             check(GL11.glGetError()==GL11.GL_NO_ERROR,"Dedicated terrain pass has no GL errors");
         } finally {
             terrain.close();singleton.set(null,previous);GL11.glDeleteLists(list,1);GL30.glDeleteFramebuffers(output);
+        }
+    }
+
+    private static void cameraGlass() throws Exception {
+        sun.misc.Unsafe allocator=(sun.misc.Unsafe)field(sun.misc.Unsafe.class,"theUnsafe").get(null);
+        net.minecraft.client.Minecraft mc=(net.minecraft.client.Minecraft)allocator.allocateInstance(net.minecraft.client.Minecraft.class);
+        mc.gameSettings=new net.minecraft.client.settings.GameSettings();mc.gameSettings.renderDistanceChunks=1;
+        GlassWorld world=(GlassWorld)allocator.allocateInstance(GlassWorld.class);mc.theWorld=world;
+        net.minecraft.world.chunk.Chunk chunk=(net.minecraft.world.chunk.Chunk)allocator.allocateInstance(net.minecraft.world.chunk.Chunk.class);
+        GlassSection section=new GlassSection();
+        field(net.minecraft.world.chunk.Chunk.class,"storageArrays").set(chunk,new net.minecraft.world.chunk.storage.ExtendedBlockStorage[]{section});
+        world.chunk=chunk;
+        int output=fbo(),depth=GL30.glGenRenderbuffers(),transparent=texture(128,128,128,0);
+        GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER,depth);GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER,GL14.GL_DEPTH_COMPONENT24,SIZE,SIZE);
+        GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER,GL30.GL_DEPTH_ATTACHMENT,GL30.GL_RENDERBUFFER,depth);
+        mc.renderEngine=new ParticleTextures(transparent);
+        ThermalGlassBarrier glass=new ThermalGlassBarrier();field(ThermalGlassBarrier.class,"blocks").set(glass,new GlassBlocks());
+        try {
+            for(int scenario=0;scenario<4;scenario++) {
+                section.block=new GlassBlock(scenario==2?net.minecraft.block.material.Material.rock:net.minecraft.block.material.Material.glass);
+                world.loaded=scenario!=3;world.queries=0;
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);GL11.glViewport(0,0,SIZE,SIZE);
+                GL11.glColorMask(true,true,true,true);GL11.glDepthMask(true);
+                GL11.glDisable(GL11.GL_SCISSOR_TEST);GL11.glDisable(GL11.GL_STENCIL_TEST);
+                GL11.glClearColor(0,0,0,0);GL11.glClearDepth(1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT|GL11.GL_DEPTH_BUFFER_BIT);
+                GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GLU.gluPerspective(70,1,0.05F,256);
+                GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();
+                CameraView primary=new CameraView();primary.capture(0.5,0.5,0,0);
+                CameraView view=new CameraView();view.set(primary,SIZE,SIZE,1,1,1);
+                GL20.glUseProgram(0);GL13.glActiveTexture(GL13.GL_TEXTURE1);GL11.glDisable(GL11.GL_TEXTURE_2D);
+                GL13.glActiveTexture(GL13.GL_TEXTURE0);GL11.glEnable(GL11.GL_BLEND);GL11.glEnable(GL11.GL_ALPHA_TEST);
+                GL11.glAlphaFunc(GL11.GL_GREATER,0.1F);
+                glass.render(mc,view);
+                check(GL11.glIsEnabled(GL11.GL_BLEND) && GL11.glIsEnabled(GL11.GL_ALPHA_TEST),"Glass pass restores color-camera blend/alpha state");
+                check(world.queries<=25,"Thermal glass lookup remains bounded by the loaded view radius");
+                ThermalCamera sensor=ThermalCamera.INSTANCE;
+                check(sensor.prepareDepth(output,SIZE,SIZE),"Glass thermal occlusion depth prepares");
+                final boolean inFront=scenario==1;
+                sensor.renderHeat(() -> {GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glColor4f(1,1,1,1);quad(1,inFront?-1:-5);});
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,field(ThermalCamera.class,"framebuffer").getInt(sensor));
+                int heat=pixel(64,64).get(3)&255;
+                check(scenario==0?heat==0:heat==255,"Transparent glass blocks heat behind it, while front targets, non-glass and absent chunks remain unchanged; case="+scenario);
+                check(GL11.glGetError()==GL11.GL_NO_ERROR,"Thermal glass pass leaves no GL errors");
+            }
+        } finally {
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,0);GL11.glDeleteTextures(transparent);
+            GL30.glDeleteFramebuffers(output);GL30.glDeleteRenderbuffers(depth);
+        }
+    }
+
+    private static final class GlassBlock extends net.minecraft.block.Block {
+        GlassBlock(net.minecraft.block.material.Material material) { super(material); }
+    }
+    private static final class GlassSection extends net.minecraft.world.chunk.storage.ExtendedBlockStorage {
+        net.minecraft.block.Block block;
+        GlassSection() { super(0,false);getBlockLSBArray()[13<<4]=1; }
+        @Override public boolean isEmpty() { return false; }
+        @Override public net.minecraft.block.Block getBlockByExtId(int x,int y,int z) { return block; }
+    }
+    private static final class GlassWorld extends net.minecraft.client.multiplayer.WorldClient {
+        net.minecraft.world.chunk.Chunk chunk;boolean loaded;int queries;
+        private GlassWorld() { super(null,null,0,null,null); }
+        @Override public net.minecraft.world.chunk.Chunk getChunkFromChunkCoords(int x,int z) { queries++;return loaded && x==0 && z==-1?chunk:null; }
+    }
+    private static final class GlassBlocks extends net.minecraft.client.renderer.RenderBlocks {
+        @Override public boolean renderBlockByRenderType(net.minecraft.block.Block block,int x,int y,int z) {
+            net.minecraft.client.renderer.Tessellator t=net.minecraft.client.renderer.Tessellator.instance;
+            t.setColorOpaque_F(1,1,1);
+            t.addVertexWithUV(x,y,z,0,0);t.addVertexWithUV(x+1,y,z,1,0);
+            t.addVertexWithUV(x+1,y+1,z,1,1);t.addVertexWithUV(x,y+1,z,0,1);return true;
         }
     }
 
@@ -1078,6 +1226,9 @@ public final class ThermalGpuChecks {
         framebuffer.framebufferObject=fbo();
         framebuffer.framebufferTexture=GL30.glGetFramebufferAttachmentParameteri(GL30.GL_FRAMEBUFFER,
                 GL30.GL_COLOR_ATTACHMENT0,GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D,framebuffer.framebufferTexture);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MIN_FILTER,GL11.GL_NEAREST);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_MAG_FILTER,GL11.GL_NEAREST);
         framebuffer.framebufferWidth=SIZE;framebuffer.framebufferHeight=SIZE;
         framebuffer.framebufferTextureWidth=SIZE;framebuffer.framebufferTextureHeight=SIZE;
         framebuffer.depthBuffer=-1;
@@ -1447,17 +1598,17 @@ public final class ThermalGpuChecks {
             field(compat,"lastPreparedDimensionField").set(null,FakeManager.class.getField("dimension"));
             field(compat,"distantHorizonsChecked").setBoolean(null,false);
             field(compat,"celeritasChecked").setBoolean(null,false);
-            ScopeRenderCompatibility.RenderState state=ScopeRenderCompatibility.beginEntityReplay();
+            AutoCloseable isolated=ThermalRenderApi.beginIsolatedGeometry();
             try {
-                check(state.isSecondaryRenderAllowed(),"Entity replay permitted under shader pipeline");
+                check(isolated!=null,"Public DH model-capture isolation available under shader pipeline");
                 check(FakeIris.manager.pipeline!=primary,"Entity replay isolates native entity/particle drawing");
                 check(!field(compat,"distantHorizonsChecked").getBoolean(null),"Entity replay never probes/switches DH mode");
                 check(!field(compat,"celeritasChecked").getBoolean(null),"Entity replay never probes/changes terrain lists");
-            } finally {ScopeRenderCompatibility.endSecondaryRender(state);}
+            } finally {isolated.close();isolated.close();}
             check(FakeIris.manager.pipeline==primary,"Primary shader pipeline restored");
             check(FakeIris.manager.pipelines.get("test")==primary,"Primary dimension pipeline restored");
             check("test".equals(FakeIris.manager.dimension),"Prepared dimension restored");
-            state=ScopeRenderCompatibility.beginSecondaryRender();
+            ScopeRenderCompatibility.RenderState state=ScopeRenderCompatibility.beginSecondaryRender();
             try {
                 check(state.isSecondaryRenderAllowed(),"Isolated thermal world camera permitted");
                 check(FakeIris.manager.pipeline!=primary,"Thermal camera does not advance primary shader pipeline");

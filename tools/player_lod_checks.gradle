@@ -25,10 +25,38 @@ gradle.projectsEvaluated {
             jvmArgs '-Djava.library.path=' + p.property('lwjglNatives')
         }
     }
+    p.tasks.create('auxiliaryViewChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.client.AuxiliaryViewChecks'
+    }
+    p.tasks.create('cameraEnvironmentChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.client.CameraEnvironmentChecks'
+        doFirst {
+            if (!p.hasProperty('lwjglNatives') || !p.hasProperty('wgqolRuntime'))
+                throw new GradleException('Supply -PlwjglNatives=<LWJGL 2 natives> and -PwgqolRuntime=<WGQOL dev classes/jar>')
+            jvmArgs '-Djava.library.path=' + p.property('lwjglNatives')
+            args p.property('wgqolRuntime')
+            if (p.hasProperty('dhRuntime')) args p.property('dhRuntime')
+        }
+    }
+    p.tasks.create('externalPlayerPresentationChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.common.playerlod.ExternalPresentationChecks'
+    }
     p.tasks.create('playerLodServerChecks', JavaExec) {
         dependsOn compileChecks
         classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
         main = 'com.flansmod.common.playerlod.PlayerLodServerChecks'
+    }
+    p.tasks.create('playerLodHitmarkerChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.common.playerlod.PlayerLodHitmarkerChecks'
+        if (p.hasProperty('hitmarkerRuntime')) args p.property('hitmarkerRuntime')
     }
     p.tasks.create('thermalGpuChecks', JavaExec) {
         dependsOn compileChecks

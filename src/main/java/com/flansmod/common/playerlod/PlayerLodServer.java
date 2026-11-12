@@ -45,6 +45,7 @@ public final class PlayerLodServer {
         appearances.keySet().retainAll(live);
         int range = Math.max(0, Math.min(1024, FlansMod.playerLodDistance));
         for (final EntityPlayerMP viewer : players) {
+            if(ExternalPlayerPresentation.ownsServerViewer(viewer)) { recipients.remove(viewer);continue; }
             Map<UUID, Integer> known = recipients.get(viewer);
             if (known == null) { known = new HashMap<UUID, Integer>(); recipients.put(viewer, known); }
             List<EntityPlayerMP> visible = new ArrayList<EntityPlayerMP>();

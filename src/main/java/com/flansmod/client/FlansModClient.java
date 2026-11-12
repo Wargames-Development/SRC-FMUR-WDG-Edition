@@ -1004,6 +1004,7 @@ public class FlansModClient extends FlansMod {
 
     @SubscribeEvent
     public void renderOffHandGun(RenderPlayerEvent.Specials.Post event) {
+        if(!com.flansmod.common.playerlod.ExternalPlayerPresentation.visualExtensions(event.entityPlayer.getCommandSenderName())) return;
         RenderPlayer renderer = event.renderer;
         EntityPlayer player = event.entityPlayer;
         PlayerData data = PlayerHandler.getPlayerData(player, Side.CLIENT);
@@ -1048,6 +1049,10 @@ public class FlansModClient extends FlansMod {
     //Handle player hiding / name tag removal for teams
     @SubscribeEvent
     public void renderLiving(RenderPlayerEvent.Pre event) {
+        if(!com.flansmod.common.playerlod.ExternalPlayerPresentation.visualExtensions(event.entityPlayer.getCommandSenderName())) {
+            if(PacketTeamInfo.isSpectator(event.entityPlayer.getCommandSenderName())) event.setCanceled(true);
+            return;
+        }
         PlayerData data = PlayerHandler.getPlayerData(event.entityPlayer, Side.CLIENT);
 
         //Render debug boxes for player snapshots

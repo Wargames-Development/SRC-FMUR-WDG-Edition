@@ -1922,6 +1922,10 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                                 numBullets > 1, gunType, spread,
                                 type.isDuckBill() ? spread * 2.0F : spread);
                     }
+                    if(playerData!=null) {
+                        if(left) playerData.presentationShotLeftAge=entityPlayer.ticksExisted;
+                        else playerData.presentationShotRightAge=entityPlayer.ticksExisted;
+                    }
                     if (shootableType instanceof BulletType) {
                         shootableEntity.motionX += shooterVelocityX;
                         shootableEntity.motionZ += shooterVelocityZ;

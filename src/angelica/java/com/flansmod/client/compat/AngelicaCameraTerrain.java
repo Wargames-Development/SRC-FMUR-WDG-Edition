@@ -10,6 +10,7 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import org.embeddedt.embeddium.impl.gl.device.CommandList;
 import org.embeddedt.embeddium.impl.gl.device.RenderDevice;
 import org.embeddedt.embeddium.impl.render.chunk.ChunkRenderMatrices;
@@ -46,6 +47,9 @@ public final class AngelicaCameraTerrain implements CameraTerrain, ChunkRenderLi
     private CameraTransform camera;
     private CommandList commands;
     private boolean managed;
+    private final BiFunction<Object, Object, Object> shaderPrograms;
+    public AngelicaCameraTerrain() { this(null); }
+    public AngelicaCameraTerrain(BiFunction<Object, Object, Object> shaderPrograms) { this.shaderPrograms = shaderPrograms; }
 
     @Override public boolean begin(final CameraView view) {
         CeleritasWorldRenderer world = CeleritasWorldRenderer.getInstanceOrNull();
@@ -56,7 +60,7 @@ public final class AngelicaCameraTerrain implements CameraTerrain, ChunkRenderLi
         if (configuration != next) {
             if (renderer != null) renderer.delete(commands);
             configuration = next;
-            renderer = new CameraChunkRenderer(next);
+            renderer = new CameraChunkRenderer(next, shaderPrograms);
         }
         lists.clear(); byRegion.clear(); visible.clear();
         for (RenderSection section : world.getRenderSectionManager().getAllRenderSections()) {
@@ -149,7 +153,24 @@ public final class AngelicaCameraTerrain implements CameraTerrain, ChunkRenderLi
     private static final class CameraChunkRenderer extends DefaultChunkRenderer {
         private final List<CachedBatch> batches = new ArrayList<>();
         private final List<GlTessellation> tessellations = new ArrayList<>();
-        CameraChunkRenderer(RenderPassConfiguration<?> configuration) { super(RenderDevice.INSTANCE, configuration); }
+        private final BiFunction<Object, Object, Object> shaderPrograms;
+        private final RenderPassConfiguration<?> configuration;
+        private GlProgram<? extends ChunkShaderInterface> scopeProgram;
+        CameraChunkRenderer(RenderPassConfiguration<?> configuration, BiFunction<Object, Object, Object> shaderPrograms) {
+            super(RenderDevice.INSTANCE, configuration); this.configuration = configuration; this.shaderPrograms = shaderPrograms;
+        }
+        @Override @SuppressWarnings("unchecked") protected void begin(TerrainRenderPass pass) {
+            if (shaderPrograms == null) { super.begin(pass); return; }
+            scopeProgram = (GlProgram<? extends ChunkShaderInterface>) shaderPrograms.apply(pass, configuration);
+            if (scopeProgram == null) throw new IllegalStateException("Flans scope terrain shader unavailable");
+            pass.startDrawing(); scopeProgram.bind(); scopeProgram.getInterface().setupState(pass);
+            activeProgram = (GlProgram<ChunkShaderInterface>) scopeProgram;
+        }
+        @Override protected void end(TerrainRenderPass pass) {
+            if (shaderPrograms == null) { super.end(pass); return; }
+            try { if (scopeProgram != null) { scopeProgram.getInterface().restoreState(); scopeProgram.unbind(); } }
+            finally { scopeProgram = null; activeProgram = null; pass.endDrawing(); }
+        }
         @Override protected boolean useBlockFaceCulling() { return false; }
         @Override protected GlProgram<ChunkShaderInterface> compileProgram(ChunkShaderOptions options) {
             GlProgram<ChunkShaderInterface> program = super.compileProgram(options);

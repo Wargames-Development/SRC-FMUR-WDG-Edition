@@ -52,7 +52,7 @@ repositories {
 
 dependencies {
     // Use the MCP-mapped WGCore dev jar for local compilation and runs.
-    compile fileTree(dir: 'lib', include: ['*.jar'], exclude: ['WGCore-2.7.5_X211.jar'])
+    compile fileTree(dir: 'lib', include: ['*.jar'], exclude: ['WGCore-2.7.5_X212.jar'])
     // Always ship our optional runtime adapter; compile dependencies are never bundled.
     if (project.hasProperty('angelicaCompileJar')) {
         def cameraAngelicaJar = file(project.property('angelicaCompileJar'))

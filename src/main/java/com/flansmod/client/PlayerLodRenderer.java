@@ -24,7 +24,11 @@ import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.common.MinecraftForge;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL12;
+import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL14;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GLContext;
 
 import java.nio.FloatBuffer;
 import java.util.HashMap;
@@ -72,6 +76,9 @@ public final class PlayerLodRenderer {
 
     @SubscribeEvent public void tick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
+        if(com.flansmod.common.playerlod.ExternalPlayerPresentation.ownsClient()) {
+            contacts.clear();pending.clear();sequence=Long.MIN_VALUE;range=0;return;
+        }
         Minecraft mc = Minecraft.getMinecraft();
         if (world != mc.theWorld || connection != mc.getNetHandler()) {
             contacts.clear(); sequence = Long.MIN_VALUE; range = 0;
@@ -109,6 +116,8 @@ public final class PlayerLodRenderer {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void replaceNative(RenderPlayerEvent.Pre event) {
         EntityPlayer player = event.entityPlayer;
+        if(com.flansmod.common.playerlod.ExternalPlayerPresentation.ownsClient()
+                || com.flansmod.common.playerlod.ExternalPlayerPresentation.visualData(player.getCommandSenderName())!=null) return;
         double dx = mix(player.lastTickPosX, player.posX, event.partialRenderTick) - RenderManager.instance.viewerPosX;
         double dy = mix(player.lastTickPosY, player.posY, event.partialRenderTick) - RenderManager.instance.viewerPosY;
         double dz = mix(player.lastTickPosZ, player.posZ, event.partialRenderTick) - RenderManager.instance.viewerPosZ;
@@ -127,6 +136,7 @@ public final class PlayerLodRenderer {
     }
 
     private void renderPlayers(float partialTicks) {
+        if(com.flansmod.common.playerlod.ExternalPlayerPresentation.ownsClient()) return;
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.theWorld != world || mc.thePlayer == null || contacts.isEmpty() || rendering) return;
         double cx = RenderManager.instance.viewerPosX, cy = RenderManager.instance.viewerPosY,
@@ -193,26 +203,68 @@ public final class PlayerLodRenderer {
     private void draw(Contact contact, float partialTicks, double scale, double near, double far, boolean precision) {
         Render renderer = RenderManager.instance.getEntityRenderObject(contact.visual);
         if (renderer == null) return;
+        boolean shaders = GLContext.getCapabilities().OpenGL20;
+        int previousProgram = shaders ? GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) : 0;
+        float oldLightX = OpenGlHelper.lastBrightnessX, oldLightY = OpenGlHelper.lastBrightnessY;
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         GL11.glPushMatrix();
         try {
+            prepareLighting((contact.latest.flags & 8) != 0 ? 0xF000F0 : contact.latest.brightness);
             GL11.glTranslated((contact.x - RenderManager.instance.viewerPosX) * scale,
                     (contact.y - RenderManager.instance.viewerPosY) * scale,
                     (contact.z - RenderManager.instance.viewerPosZ) * scale);
             GL11.glScaled(scale, scale, scale);
             GL11.glDepthRange(near, far);
             GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDepthMask(true);
-            GL11.glEnable(GL11.GL_NORMALIZE);
             if (scale < 1) GL11.glDisable(GL11.GL_FOG);
-            RenderHelper.enableStandardItemLighting();
             GL11.glEnable(GL11.GL_BLEND);
             if (precision) GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA,
                     GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit,
-                    contact.latest.brightness & 65535, contact.latest.brightness >>> 16);
-            GL11.glColor4f(1, 1, 1, 1);
             renderer.doRender(contact.visual, 0, 0, 0, contact.visual.rotationYaw, partialTicks);
-        } finally { GL11.glPopMatrix(); GL11.glPopAttrib(); }
+        } finally {
+            GL11.glPopMatrix(); GL11.glPopAttrib();
+            OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, oldLightX, oldLightY);
+            if (shaders) GL20.glUseProgram(previousProgram);
+        }
+    }
+
+    /** Late LOD color is already outside Angelica's world shader pipeline. */
+    static void prepareLighting(int brightness) {
+        if (GLContext.getCapabilities().OpenGL20) GL20.glUseProgram(0);
+        int units = GL11.glGetInteger(GL13.GL_MAX_TEXTURE_UNITS);
+        for (int unit = 0; unit < units; unit++) {
+            int textureUnit = GL13.GL_TEXTURE0 + unit;
+            OpenGlHelper.setActiveTexture(textureUnit);
+            // Fixed-function texturing otherwise multiplies leftover shader samplers.
+            GL11.glDisable(GL11.GL_TEXTURE_1D);
+            GL11.glDisable(GL12.GL_TEXTURE_3D);
+            GL11.glDisable(GL13.GL_TEXTURE_CUBE_MAP);
+            GL11.glDisable(GL11.GL_TEXTURE_GEN_S); GL11.glDisable(GL11.GL_TEXTURE_GEN_T);
+            GL11.glDisable(GL11.GL_TEXTURE_GEN_R); GL11.glDisable(GL11.GL_TEXTURE_GEN_Q);
+            if (textureUnit == OpenGlHelper.defaultTexUnit || textureUnit == OpenGlHelper.lightmapTexUnit) {
+                GL11.glEnable(GL11.GL_TEXTURE_2D);
+                if (textureUnit == OpenGlHelper.lightmapTexUnit) {
+                    // Lightmap alpha is not skin coverage. RGB-only/custom lightmaps
+                    // must not make an alpha-tested LOD disappear at the handoff.
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL11.GL_TEXTURE_ENV_MODE, GL13.GL_COMBINE);
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL13.GL_COMBINE_RGB, GL11.GL_MODULATE);
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL13.GL_SOURCE0_RGB, GL13.GL_PREVIOUS);
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL13.GL_SOURCE1_RGB, GL11.GL_TEXTURE);
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL13.GL_OPERAND0_RGB, GL11.GL_SRC_COLOR);
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL13.GL_OPERAND1_RGB, GL11.GL_SRC_COLOR);
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL13.GL_RGB_SCALE, 1);
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL13.GL_COMBINE_ALPHA, GL11.GL_REPLACE);
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL13.GL_SOURCE0_ALPHA, GL13.GL_PREVIOUS);
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL13.GL_OPERAND0_ALPHA, GL11.GL_SRC_ALPHA);
+                    GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL11.GL_ALPHA_SCALE, 1);
+                } else GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL11.GL_TEXTURE_ENV_MODE, GL11.GL_MODULATE);
+            } else GL11.glDisable(GL11.GL_TEXTURE_2D);
+        }
+        OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
+        RenderHelper.enableStandardItemLighting();
+        GL11.glEnable(GL11.GL_NORMALIZE);
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, brightness & 65535, brightness >>> 16);
+        GL11.glColor4f(1, 1, 1, 1);
     }
 
     private static double square(double value) { return value * value; }
@@ -319,6 +371,10 @@ public final class PlayerLodRenderer {
         @Override public boolean isPlayerSleeping() { return (flags & 32) != 0; }
         @Override public float getBedOrientationInDegrees() { return bedYaw; }
         @Override public int getBrightnessForRender(float partialTicks) { return brightness; }
-        @Override public float getBrightness(float partialTicks) { return 1.0F; }
+        @Override public float getBrightness(float partialTicks) {
+            int block = (brightness & 65535) >> 4;
+            int sky = Math.max(0, (brightness >>> 20) - worldObj.skylightSubtracted);
+            return worldObj.provider.lightBrightnessTable[Math.min(15, Math.max(block, sky))];
+        }
     }
 }

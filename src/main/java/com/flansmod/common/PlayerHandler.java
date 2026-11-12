@@ -143,6 +143,10 @@ public class PlayerHandler {
 
     public static PlayerData getPlayerData(String username, Side side) {
         if (side.isClient()) {
+            PlayerData visual=com.flansmod.common.playerlod.ExternalPlayerPresentation.visualData(username);
+            if(visual!=null) return visual;
+        }
+        if (side.isClient()) {
             if (!clientSideData.containsKey(username))
                 clientSideData.put(username, new PlayerData(username));
         } else {

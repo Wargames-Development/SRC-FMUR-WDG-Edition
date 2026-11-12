@@ -102,9 +102,10 @@ public final class ThermalScopeEffect {
                 || !GLContext.getCapabilities().OpenGL20 || !OpenGlHelper.isFramebufferEnabled()) return;
         if (!tryBeginThermalSample()) return;
         renderScopedWorld(mc, partialTicks);
-        if (sceneCaptured && CAMERA.heatValid()) {
+        boolean thermal = isThermalCapture();
+        if (sceneCaptured && (!thermal || CAMERA.heatValid())) {
             renderCameraDisplay(mc, isModelLensDisplay(), true, isBinocularDisplay(), isVehicleDisplay(),
-                    isVehicleDisplay() || flirEnabled, true, 1F, false);
+                    isVehicleDisplay() || flirEnabled, thermal, 1F, false);
         }
     }
 
@@ -131,7 +132,7 @@ public final class ThermalScopeEffect {
     }
 
     private static void renderScopedWorld(Minecraft mc, float partialTicks) {
-        boolean thermal = hasThermalVision();
+        boolean thermal = isThermalCapture();
         ThermalProfile profile = activeProfile();
         int width = thermal ? profile.width : MODEL_LENS_SIZE;
         int height = thermal ? profile.height : MODEL_LENS_SIZE;
@@ -141,6 +142,13 @@ public final class ThermalScopeEffect {
         cameraUnavailable = true;
         renderingScopedWorld = true;
         MCHeliScopeMarkerCompat.beginScopedMarkers();
+        boolean shaderScope = CameraRenderManager.INSTANCE.supportsShaderScope(thermal,
+                isModelLensDisplay() || isColorPictureInPictureDisplay() || hasScopeThermalVision(), isVehicleDisplay());
+        AutoCloseable isolated;
+        try { isolated = shaderScope ? () -> { } : ThermalRenderApi.beginIsolatedGeometry(); }
+        catch(RuntimeException | LinkageError unavailable) {
+            MCHeliScopeMarkerCompat.endScopedMarkers();renderingScopedWorld=false;return;
+        }
         int draw = GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER_BINDING);
         int read = ThermalFramebuffers.canBlit() ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : draw;
         int matrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
@@ -148,7 +156,8 @@ public final class ThermalScopeEffect {
         GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix();
         GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix();
         try {
-            Framebuffer frame = CameraRenderManager.INSTANCE.render(mc, width, height, magnification, thermal, isModelLensDisplay());
+            Framebuffer frame = CameraRenderManager.INSTANCE.render(mc, width, height, magnification,
+                    thermal, isModelLensDisplay(), isVehicleDisplay(), shaderScope);
             if (frame == null) return;
             frame.bindFramebuffer(true);
             CameraView view = CameraRenderManager.INSTANCE.currentView();
@@ -157,7 +166,9 @@ public final class ThermalScopeEffect {
             if (thermal && !CAMERA.prepareDepth(frame.framebufferObject, width, height)) return;
             if (thermal) {
                 CAMERA.updateSun(mc, partialTicks);
-                CAMERA.renderHeat(partialTicks);
+                if(!DistantActorCamera.begin(view,true)) return;
+                try { CAMERA.renderHeat(partialTicks, isVehicleDisplay()); }
+                finally { DistantActorCamera.end(); }
             }
             WGMapScopeCompat.renderWaypoints(partialTicks);
             if (!mc.gameSettings.hideGUI)
@@ -177,8 +188,9 @@ public final class ThermalScopeEffect {
                 ThermalFramebuffers.bind(org.lwjgl.opengl.GL30.GL_DRAW_FRAMEBUFFER, draw);
             } else ThermalFramebuffers.bind(org.lwjgl.opengl.GL30.GL_FRAMEBUFFER, draw);
             GL11.glPopAttrib();
-            MCHeliScopeMarkerCompat.endScopedMarkers();
-            renderingScopedWorld = false;
+            try { isolated.close(); }
+            catch(Exception failure) { throw new IllegalStateException("Camera render-state cleanup",failure); }
+            finally { MCHeliScopeMarkerCompat.endScopedMarkers();renderingScopedWorld=false; }
         }
     }
 
@@ -186,7 +198,7 @@ public final class ThermalScopeEffect {
         if (isModelLensDisplay() || !isActive(mc)) return;
         if (sensorDisplayValid) {
             renderCameraDisplay(mc, false, false, isBinocularDisplay(), isVehicleDisplay(),
-                    isVehicleDisplay() || flirEnabled, true, 1F);
+                    isVehicleDisplay() || flirEnabled, isThermalCapture(), 1F);
         } else {
             boolean shaders = GLContext.getCapabilities().OpenGL20;
             int program = shaders ? GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) : 0;
@@ -221,10 +233,10 @@ public final class ThermalScopeEffect {
                                     boolean binocularDisplay, boolean vehicleDisplay, boolean sensorEnabled,
                                     boolean thermalDisplay, float magnification, boolean present) {
         if (thermalDisplay ? !ensureShader() : !ensureColorLensShader()) return;
-        boolean cachedSensorDisplay = !modelDisplay && thermalDisplay;
+        boolean cachedSensorDisplay = !modelDisplay && (thermalDisplay || binocularDisplay || vehicleDisplay);
         if (cachedSensorDisplay && !ensureColorLensShader()) return;
         if (cachedSensorDisplay && !refreshSensorDisplay && !sensorDisplayValid) return;
-        boolean colorLensShader = modelDisplay && !thermalDisplay
+        boolean colorLensShader = !thermalDisplay
                 && ensureColorLensShader();
         int previousFramebuffer = GL11.glGetInteger(EXTFramebufferObject.GL_FRAMEBUFFER_BINDING_EXT);
         int previousActiveTexture = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
@@ -364,7 +376,8 @@ public final class ThermalScopeEffect {
         synchronizeThermalSensor(Minecraft.getMinecraft());
         ThermalProfile profile = activeProfile();
         if (profile == null) return false;
-        if (isVehicleDisplay()
+        // Throttle acquisition, while the cached lens follows the weapon every frame.
+        if ((isVehicleDisplay() || isModelLensDisplay())
                 && !SENSOR_CLOCK.tryAcquire(sensorDevice, profile.maxFramesPerSecond, System.nanoTime())) return false;
         CAMERA.beginSample(profile);
         return true;
@@ -387,6 +400,15 @@ public final class ThermalScopeEffect {
 
     private static boolean hasThermalVision() {
         return isVehicleDisplay() || hasScopeThermalVision();
+    }
+
+    private static boolean isThermalCapture() {
+        return thermalCapture(hasScopeThermalVision(), isVehicleDisplay(), flirEnabled);
+    }
+
+    /** Device capability keeps controls/lens geometry active; the switch selects acquisition. */
+    static boolean thermalCapture(boolean capable, boolean vehicle, boolean enabled) {
+        return vehicle || capable && enabled;
     }
 
     private static boolean hasScopeThermalVision() {
@@ -713,6 +735,7 @@ public final class ThermalScopeEffect {
                 }
             }
             GL11.glEnd();
+            HitmarkerScopeCompat.renderAfterLens(minecraft);
         } finally {
             postCompositeLensGeometryValid = false;
             popOrthoProjection();
@@ -769,6 +792,9 @@ public final class ThermalScopeEffect {
 
     public static boolean toggleFlir() {
         flirEnabled = !flirEnabled;
+        // A cached heat frame cannot be presented as a colour frame (or vice versa).
+        // Keep device admission deadlines so toggling cannot bypass the sensor budget.
+        sceneCaptured = false; scopedSceneCaptured = false; modelLensValid = false; sensorDisplayValid = false;
         return flirEnabled;
     }
 

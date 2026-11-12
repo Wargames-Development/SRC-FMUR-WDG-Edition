@@ -169,6 +169,10 @@ final class ThermalCamera {
     }
 
     void renderHeat(final float partialTicks) {
+        renderHeat(partialTicks, true);
+    }
+
+    void renderHeat(final float partialTicks, boolean atmosphericParticles) {
         renderHeat(new Runnable() {
             @Override public void run() {
                 ThermalRenderApi.renderHeat(partialTicks,new Runnable() {
@@ -176,6 +180,7 @@ final class ThermalCamera {
                 });
             }
         });
+        if (!atmosphericParticles) return;
         final Minecraft mc = Minecraft.getMinecraft();
         final Entity viewer = mc.renderViewEntity;
         renderParticles(new Runnable() {
@@ -266,10 +271,12 @@ final class ThermalCamera {
         Frustrum frustum = new Frustrum();
         frustum.setPosition(manager.viewerPosX,manager.viewerPosY,manager.viewerPosZ);
         for (Object object : mc.theWorld.loadedEntityList) {
-            if (!(object instanceof EntityLivingBase) && !(object instanceof EntityDriveable)) continue;
             Entity entity = (Entity)object;
             if (entity == mc.renderViewEntity && mc.gameSettings.thirdPersonView == 0) continue;
-            if (!frustum.isBoundingBoxInFrustum(entity.boundingBox)) continue;
+            if(entity.isDead || !frustum.isBoundingBoxInFrustum(entity.boundingBox)) continue;
+            if(!(entity instanceof EntityLivingBase) && !(entity instanceof EntityDriveable)) {
+                DistantActorCamera.renderNative(entity);continue;
+            }
             Render renderer = manager.getEntityRenderObject(entity);
             if (renderer == null) continue;
             GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
@@ -282,6 +289,7 @@ final class ThermalCamera {
                 double z = entity.lastTickPosZ+(entity.posZ-entity.lastTickPosZ)*partialTicks;
                 float yaw = entity.prevRotationYaw+(entity.rotationYaw-entity.prevRotationYaw)*partialTicks;
                 // Direct geometry avoids renderEntitySimple's shadows/fire/debug boxes becoming heat.
+                if(DistantActorCamera.renderNative(entity)) continue;
                 renderer.doRender(entity,x-RenderManager.renderPosX,y-RenderManager.renderPosY,
                         z-RenderManager.renderPosZ,yaw,partialTicks);
             } finally { GL11.glPopAttrib(); }

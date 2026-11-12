@@ -27,6 +27,10 @@ public final class Integrations {
         return WGCORE_LOADED && FlansMod.enableWGCoreIntegration;
     }
 
+    public static void prepareExplosionWGC(Explosion explosion,double strength,boolean terrainEnabled) {
+        if (isWGCoreIntegrationEnabled()) WGCoreCompat.prepareExplosion(explosion,strength,terrainEnabled);
+    }
+
     public static boolean canHarmPlayerWGC(Entity actingEntity, Entity targetEntity, World world) {
         if (!isWGCoreIntegrationEnabled()) {
             return true;
