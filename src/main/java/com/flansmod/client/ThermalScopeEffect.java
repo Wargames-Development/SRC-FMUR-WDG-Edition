@@ -60,6 +60,8 @@ public final class ThermalScopeEffect {
     private static boolean sensorDisplayValid;
     private static int colorSceneTexture;
     private static boolean cameraUnavailable;
+    private static long cameraWaitingSince=Long.MIN_VALUE;
+    private static final long CAMERA_STATUS_DELAY_NANOS=2_000_000_000L;
     private static int colorLensShaderProgram = -1;
     private static boolean colorLensShaderUnavailable;
     private static int colorLensSceneTextureUniform = -1;
@@ -446,13 +448,27 @@ public final class ThermalScopeEffect {
             return desiredMagnification;
         }
 
-        // The secondary camera fills the display before being reduced into the
-        // physical lens. Compensate for that reduction so `Magnification 4` is
-        // visually 4x relative to the 1x world surrounding the optic.
-        float lensDiameterFraction = hasThermalVision() && !hasPictureInPictureLensGeometry()
-                ? POST_COMPOSITE_THERMAL_RADIUS_FRACTION * 2F : MODEL_SCOPE_LENS_DIAMETER_FRACTION;
-        lensDiameterFraction *= POST_COMPOSITE_LENS_INSET;
-        return desiredMagnification / Math.max(0.1F, lensDiameterFraction);
+        // The centered thermal fallback is drawn without the model aperture inset.
+        float fallbackDiameter=hasThermalVision() && !hasPictureInPictureLensGeometry()
+                ? POST_COMPOSITE_THERMAL_RADIUS_FRACTION*2F
+                : MODEL_SCOPE_LENS_DIAMETER_FRACTION*POST_COMPOSITE_LENS_INSET;
+        return modelLensMagnification(desiredMagnification,fallbackDiameter);
+    }
+
+    private static float modelLensMagnification(float desiredMagnification,float fallbackDiameter) {
+        // Use the aperture that the late pass actually draws. Custom model scale
+        // and ADS projection can change its diameter independently of the nominal lens.
+        float lensDiameterFraction;
+        if (postCompositeLensGeometryValid) {
+            float low=Float.POSITIVE_INFINITY, high=Float.NEGATIVE_INFINITY;
+            for(int i=1;i<=POST_COMPOSITE_LENS_SEGMENTS;i++) {
+                low=Math.min(low,postCompositeLensNdcY[i]);
+                high=Math.max(high,postCompositeLensNdcY[i]);
+            }
+            lensDiameterFraction=(high-low)*0.5F;
+        } else lensDiameterFraction=fallbackDiameter;
+        return Float.isFinite(lensDiameterFraction) && lensDiameterFraction>0.0001F
+                ? desiredMagnification/lensDiameterFraction : desiredMagnification;
     }
 
     private static boolean usesExplicitMagnification() {
@@ -496,9 +512,11 @@ public final class ThermalScopeEffect {
         postCompositeLensGeometryValid = false;
         CameraRenderManager.INSTANCE.beginFrame(Minecraft.getMinecraft());
         synchronizeThermalSensor(Minecraft.getMinecraft());
+        if(!isActive(Minecraft.getMinecraft())) cameraWaitingSince=Long.MIN_VALUE;
     }
 
     static void invalidateCameraResources() {
+        cameraWaitingSince=Long.MIN_VALUE;
         sceneCaptured = false; scopedSceneCaptured = false; modelLensValid = false; sensorDisplayValid = false;
         colorSceneTexture = 0;
         cameraUnavailable = false;
@@ -512,6 +530,7 @@ public final class ThermalScopeEffect {
         Object device = isVehicleDisplay() ? ThermalRenderApi.vehicleSensorDevice() : FlansModClient.currentScope;
         boolean worldChanged = SENSOR_CLOCK.setWorld(mc.theWorld);
         if (worldChanged || device != sensorDevice || sensorViewer != mc.renderViewEntity) {
+            cameraWaitingSince=Long.MIN_VALUE;
             cameraUnavailable = false;
             sceneCaptured = false;
             scopedSceneCaptured = false;
@@ -792,6 +811,7 @@ public final class ThermalScopeEffect {
 
     public static boolean toggleFlir() {
         flirEnabled = !flirEnabled;
+        cameraWaitingSince=Long.MIN_VALUE;
         // A cached heat frame cannot be presented as a colour frame (or vice versa).
         // Keep device admission deadlines so toggling cannot bypass the sensor budget.
         sceneCaptured = false; scopedSceneCaptured = false; modelLensValid = false; sensorDisplayValid = false;
@@ -802,10 +822,20 @@ public final class ThermalScopeEffect {
 		return isActive(mc) && hasThermalVision();
     }
 
+    // Acquisition/mode-switch failures are transient. Only a continuous failure
+    // for this viewing session merits an on-screen warning; logs remain immediate.
+    static boolean showCameraFailure(boolean active,boolean waiting,long now) {
+        if(!active || !waiting) { cameraWaitingSince=Long.MIN_VALUE;return false; }
+        if(cameraWaitingSince==Long.MIN_VALUE) cameraWaitingSince=now;
+        return now-cameraWaitingSince>=CAMERA_STATUS_DELAY_NANOS;
+    }
+
     public static void renderStatus(Minecraft mc) {
-        if (!isActive(mc)) return;
+        if (!isActive(mc)) { cameraWaitingSince=Long.MIN_VALUE;return; }
         boolean imageValid = isModelLensDisplay() ? modelLensValid : sensorDisplayValid;
         boolean waiting = cameraUnavailable || !imageValid;
+        boolean showFailure=showCameraFailure(true,waiting,System.nanoTime());
+        if(waiting && !showFailure) return;
         if (!waiting && (isModelLensDisplay() || isVehicleDisplay())) return;
         ScaledResolution scaled = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
         String key = GameSettings.getKeyDisplayString(KeyInputHandler.thermalScopeKey.getKeyCode());
