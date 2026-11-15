@@ -90,9 +90,10 @@ public final class ThermalRenderApi {
     }
 
     static void renderCameraGeometry(float partialTicks) {
-        DistantActorCamera.renderDistant();
         PlayerLodRenderer.renderHeat(partialTicks);
         if (vehicleRenderer != null) vehicleRenderer.accept(partialTicks);
+        // Collect companion geometry before DH finishes this private actor view.
+        DistantActorCamera.renderDistant();
     }
 
     static Object vehicleSensorDevice() {
@@ -169,9 +170,9 @@ public final class ThermalRenderApi {
         heatPass = true;
         try {
             ordinaryTargets.run();
-            DistantActorCamera.renderDistant();
             PlayerLodRenderer.renderHeat(partialTicks);
             if (vehicleRenderer != null) vehicleRenderer.accept(partialTicks);
+            DistantActorCamera.renderDistant();
         } finally { heatPass = false; }
     }
 }

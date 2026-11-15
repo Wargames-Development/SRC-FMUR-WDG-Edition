@@ -1070,13 +1070,25 @@ public final class ThermalGpuChecks {
                         && GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)==0,"DH draw restores caller VAO, array buffer and program");
             }
             long lock=near.renderStampLock.writeLock();
-            try { check(!terrain.drawMesh(near),"Busy DH vertex upload defers sensor without blocking"); }
+            try {
+                check(!terrain.drawMesh(near),"Busy DH vertex upload defers sensor without blocking");
+                check(terrain.failure().equals("DH vertex buffer upload busy"),"Deferred vertex upload has a diagnostic reason");
+            }
             finally { near.renderStampLock.unlockWrite(lock); }
             lock=near.indices.renderStampLock.writeLock();
-            try { check(!terrain.drawMesh(near),"Busy per-mesh index upload defers sensor without blocking"); }
+            try {
+                check(!terrain.drawMesh(near),"Busy per-mesh index upload defers sensor without blocking");
+                check(terrain.failure().equals("DH index buffer upload busy"),"Deferred index upload has a distinct reason");
+            }
             finally { near.indices.renderStampLock.unlockWrite(lock); }
             lock=near.renderStampLock.tryWriteLock();check(lock!=0,"Failed DH draw releases its vertex read lock");
             if(lock!=0)near.renderStampLock.unlockWrite(lock);
+            check(terrain.beginDraw(view,0,32),"Camera material is reusable after upload contention");
+            try {
+                terrain.offset(-1,-1,-10);
+                check(terrain.drawMesh(near),"An upload retry succeeds without reload");
+                check(terrain.failure().isEmpty(),"Transient upload diagnostics do not latch the camera off");
+            } finally { terrain.endDraw(); }
             terrain.destroy();
             check(GL15.glIsBuffer(near.id)&&GL15.glIsBuffer(far.id)&&GL15.glIsBuffer(near.indices.id)
                     &&GL15.glIsBuffer(far.indices.id),"Camera destroy retains all borrowed DH GPU buffers");

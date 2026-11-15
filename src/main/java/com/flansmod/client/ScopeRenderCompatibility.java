@@ -37,14 +37,10 @@ final class ScopeRenderCompatibility {
     private static Object renderingState;
     private static Method renderingStateGetProjectionBuffer;
     private static Method renderingStateGetModelViewBuffer;
-    private static Method renderingStateGetProjectionMatrix;
-    private static Method renderingStateGetModelViewMatrix;
     private static Method renderingStateGetFov;
     private static Method renderingStateSetProjectionMatrix;
     private static Method renderingStateSetModelViewMatrix;
     private static Method renderingStateSetFov;
-    private static Method angelicaSetProjectionMatrix;
-    private static Method angelicaSetModelViewMatrix;
     private static Object systemFrameCounter;
     private static Object systemTimer;
     private static Field systemFrameCounterCountField;
@@ -338,10 +334,6 @@ final class ScopeRenderCompatibility {
             Class<?> angelicaRenderingState = Class.forName(
                     "com.gtnewhorizons.angelica.rendering.RenderingState",
                     false, loader);
-            Class<?> angelicaGlStateManager = Class.forName(
-                    "com.gtnewhorizons.angelica.glsm.GLStateManager",
-                    false, loader);
-            Class<?> matrix4fc = Class.forName("org.joml.Matrix4fc", false, loader);
             Class<?> systemTimeUniforms = Class.forName(
                     "net.coderbot.iris.uniforms.SystemTimeUniforms", false, loader);
             irisGetInstance = irisApi.getMethod("getInstance");
@@ -371,10 +363,6 @@ final class ScopeRenderCompatibility {
                     "getProjectionBuffer");
             renderingStateGetModelViewBuffer = angelicaRenderingState.getMethod(
                     "getModelViewBuffer");
-            renderingStateGetProjectionMatrix = angelicaRenderingState.getMethod(
-                    "getProjectionMatrix");
-            renderingStateGetModelViewMatrix = angelicaRenderingState.getMethod(
-                    "getModelViewMatrix");
             renderingStateGetFov = angelicaRenderingState.getMethod("getFov");
             renderingStateSetProjectionMatrix = angelicaRenderingState.getMethod(
                     "setProjectionMatrix", FloatBuffer.class);
@@ -382,10 +370,6 @@ final class ScopeRenderCompatibility {
                     "setModelViewMatrix", FloatBuffer.class);
             renderingStateSetFov = angelicaRenderingState.getMethod(
                     "setFov", Float.TYPE);
-            angelicaSetProjectionMatrix = angelicaGlStateManager.getMethod(
-                    "setProjectionMatrix", matrix4fc);
-            angelicaSetModelViewMatrix = angelicaGlStateManager.getMethod(
-                    "setModelViewMatrix", matrix4fc);
             systemFrameCounter = systemTimeUniforms.getField("COUNTER").get(null);
             systemTimer = systemTimeUniforms.getField("TIMER").get(null);
             systemFrameCounterCountField = getAccessibleField(
@@ -493,14 +477,10 @@ final class ScopeRenderCompatibility {
         renderingState = null;
         renderingStateGetProjectionBuffer = null;
         renderingStateGetModelViewBuffer = null;
-        renderingStateGetProjectionMatrix = null;
-        renderingStateGetModelViewMatrix = null;
         renderingStateGetFov = null;
         renderingStateSetProjectionMatrix = null;
         renderingStateSetModelViewMatrix = null;
         renderingStateSetFov = null;
-        angelicaSetProjectionMatrix = null;
-        angelicaSetModelViewMatrix = null;
         systemFrameCounter = null;
         systemTimer = null;
         systemFrameCounterCountField = null;
@@ -1475,13 +1455,10 @@ final class ScopeRenderCompatibility {
             renderingStateSetModelViewMatrix.invoke(state.renderingState,
                     createDirectMatrixBuffer(state.renderingModelView));
             renderingStateSetFov.invoke(state.renderingState, state.renderingFov);
-            // Raw LWJGL matrix pops restore the driver but bypass Angelica's
-            // matrix cache. Celeritas builds its next chunk frustum from that
-            // cache, so leaving the scope projection there culls the main view.
-            angelicaSetProjectionMatrix.invoke(null,
-                    renderingStateGetProjectionMatrix.invoke(state.renderingState));
-            angelicaSetModelViewMatrix.invoke(null,
-                    renderingStateGetModelViewMatrix.invoke(state.renderingState));
+            // RenderingState describes the world for shader uniforms, not the live
+            // matrix stack. The caller restores its GL stacks (Angelica redirects
+            // those calls to GLSM). Copying these scene matrices into GLSM would
+            // overwrite a restored model/capture/GUI transform with the world view.
         } catch (ReflectiveOperationException ignored) {
             // Angelica refreshes these values from the main camera next frame.
         }
