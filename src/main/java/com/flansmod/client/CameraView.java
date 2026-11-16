@@ -28,6 +28,22 @@ public final class CameraView {
         projection.put(5, projection.get(5) * magnification);
         x = source.x; y = source.y; z = source.z; partialTicks = source.partialTicks;
         this.width = width; this.height = height;
+        updateClip();
+    }
+
+    void extendFarPlane(float far) {
+        if (!(far > 0) || !Float.isFinite(far)
+                || projection.get(11) != -1 || projection.get(15) != 0) return;
+        float a = projection.get(10), b = projection.get(14);
+        if (a >= -1) return;
+        float near = b / (a - 1), currentFar = b / (a + 1);
+        if (!(near > 0 && far > currentFar && far > near)) return;
+        projection.put(10, -(far + near) / (far - near));
+        projection.put(14, -2 * far * near / (far - near));
+        updateClip();
+    }
+
+    private void updateClip() {
         for (int column = 0; column < 4; column++) for (int row = 0; row < 4; row++) {
             float value = 0;
             for (int i = 0; i < 4; i++) value += projection.get(i * 4 + row) * modelView.get(column * 4 + i);
