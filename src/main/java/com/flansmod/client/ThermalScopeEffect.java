@@ -7,6 +7,7 @@ import com.flansmod.common.guns.type.GunType;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiChat;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.Tessellator;
@@ -453,9 +454,10 @@ public final class ThermalScopeEffect {
     }
 
     private static boolean isActive(Minecraft mc) {
-        return mc.thePlayer != null && mc.currentScreen == null
-                && (isVehicleDisplay() || FlansModClient.zoomProgress > 0.9F
-                && (hasScopeThermalVision() || usesModelScopeLens(FlansModClient.currentScope)));
+        if (mc.thePlayer == null) return false;
+        if (mc.currentScreen != null) return mc.currentScreen instanceof GuiChat && isVehicleDisplay();
+        return isVehicleDisplay() || FlansModClient.zoomProgress > 0.9F
+                && (hasScopeThermalVision() || usesModelScopeLens(FlansModClient.currentScope));
     }
 
     private static boolean hasThermalVision() {
