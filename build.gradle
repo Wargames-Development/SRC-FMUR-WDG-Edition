@@ -51,9 +51,9 @@ repositories {
 }
 
 dependencies {
-    // Pin the merged WGCore API; older dev jars must not shadow X212 classes.
-    compile files('lib/WGCore-2.7.5_X212-dev.jar')
-    compile fileTree(dir: 'lib', include: ['*.jar'], exclude: ['WGCore*.jar'])
+    // Pin one MCP-mapped WGCore jar so older copies cannot shadow the explosion API.
+    compile files('lib/WGCore-2.7.5_X217-dev.jar')
+    compile fileTree(dir: 'lib', include: ['*.jar'], exclude: ['WGCore-*.jar'])
     // Always ship our optional runtime adapter; compile dependencies are never bundled.
     if (project.hasProperty('angelicaCompileJar')) {
         def cameraAngelicaJar = file(project.property('angelicaCompileJar'))

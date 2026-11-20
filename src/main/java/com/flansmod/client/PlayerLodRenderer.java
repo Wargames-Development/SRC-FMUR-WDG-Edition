@@ -55,10 +55,12 @@ public final class PlayerLodRenderer {
     private long sequence = Long.MIN_VALUE, lastReceived;
     private int range, serverViewDistance = 8;
     private boolean rendering;
+    private boolean physicalCapture;
 
     public static void register() {
         if (instance != null) return;
         instance = new PlayerLodRenderer();
+        DistantVisuals.register(partial -> instance.renderPlayers((float)partial));
         MinecraftForge.EVENT_BUS.register(instance);
         FMLCommonHandler.instance().bus().register(instance);
     }
@@ -115,6 +117,7 @@ public final class PlayerLodRenderer {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void replaceNative(RenderPlayerEvent.Pre event) {
+        if(DistantVisuals.supported() && !DistantVisuals.ready()) return;
         EntityPlayer player = event.entityPlayer;
         if(com.flansmod.common.playerlod.ExternalPlayerPresentation.ownsClient()
                 || com.flansmod.common.playerlod.ExternalPlayerPresentation.visualData(player.getCommandSenderName())!=null) return;
@@ -136,6 +139,7 @@ public final class PlayerLodRenderer {
     }
 
     private void renderPlayers(float partialTicks) {
+        if(DistantVisuals.supported() && !DistantVisuals.collecting()) return;
         if(com.flansmod.common.playerlod.ExternalPlayerPresentation.ownsClient()) return;
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.theWorld != world || mc.thePlayer == null || contacts.isEmpty() || rendering) return;
@@ -166,6 +170,18 @@ public final class PlayerLodRenderer {
                     targets[count * 3] = contact.x; targets[count * 3 + 1] = contact.y; targets[count * 3 + 2] = contact.z;
                     radii[count] = 4.0D; ++count;
                 }
+            }
+            if(DistantVisuals.supported()) {
+                for(int i=0;i<count;i++) {
+                    final Contact contact=candidates[i];candidates[i]=null;
+                    final int brightness=(contact.latest.flags & 8)!=0?0xF000F0:contact.latest.brightness;
+                    DistantVisuals.submit(world,contact.x,contact.y,contact.z,contact.y+1,8,partialTicks,brightness,()-> {
+                        boolean previous=rendering;rendering=true;physicalCapture=true;
+                        try { draw(contact,partialTicks,1,0,1,true); }
+                        finally { physicalCapture=false;rendering=previous; }
+                    });
+                }
+                return;
             }
             boolean[] ready = count == 0 ? null : PlayerLodTerrain.depth(mc.thePlayer.dimension,
                     cx, cy, cz, start, targets, radii, count);
@@ -209,7 +225,7 @@ public final class PlayerLodRenderer {
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         GL11.glPushMatrix();
         try {
-            prepareLighting((contact.latest.flags & 8) != 0 ? 0xF000F0 : contact.latest.brightness);
+            if(!physicalCapture) prepareLighting((contact.latest.flags & 8) != 0 ? 0xF000F0 : contact.latest.brightness);
             GL11.glTranslated((contact.x - RenderManager.instance.viewerPosX) * scale,
                     (contact.y - RenderManager.instance.viewerPosY) * scale,
                     (contact.z - RenderManager.instance.viewerPosZ) * scale);

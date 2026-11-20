@@ -1,5 +1,6 @@
 package com.flansmod.client;
 
+import com.wdg.wgcore.client.territory.TerritoryBorderClientState.BorderColumn;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URLClassLoader;
@@ -49,6 +50,7 @@ public final class ThermalGpuChecks {
             cameraGeometry();
             cameraGlass();
             cameraSun();
+            cameraClouds();
             cameraWeather();
             if (System.getProperty("fmur.checks.angelicaRuntime") != null)
                 irisTerrainCorrection(System.getProperty("fmur.checks.angelicaRuntime"));
@@ -64,6 +66,7 @@ public final class ThermalGpuChecks {
             primaryApertureIsolation();
             scopeMarkers();
             scopeWaypoints();
+            scopeTerritoryBorders();
             m40LensSize();
             entityReplayIsolation();
             if (System.getProperty("fmur.checks.dhRuntime") != null)
@@ -515,6 +518,10 @@ public final class ThermalGpuChecks {
         net.minecraft.client.Minecraft mc=(net.minecraft.client.Minecraft)allocator.allocateInstance(net.minecraft.client.Minecraft.class);
         Field singleton=field(net.minecraft.client.Minecraft.class,"theMinecraft");
         Object previousClient=singleton.get(null);
+        Field waypointChecked=field(WGMapScopeCompat.class,"checked");
+        Field thermalWaypoints=field(WGMapScopeCompat.class,"renderThermalWaypoints");
+        boolean previousWaypointChecked=waypointChecked.getBoolean(null);
+        Object previousThermalWaypoints=thermalWaypoints.get(null);
         net.minecraft.client.shader.Framebuffer source=null;
         try {
             singleton.set(null,mc);
@@ -534,19 +541,41 @@ public final class ThermalGpuChecks {
             GL11.glMatrixMode(GL11.GL_PROJECTION);GL11.glLoadIdentity();GL11.glOrtho(-1,1,-1,1,-1,1);
             GL11.glMatrixMode(GL11.GL_MODELVIEW);GL11.glLoadIdentity();
             ThermalCamera camera=ThermalCamera.INSTANCE;
-            check(camera.prepareDepth(source.framebufferObject,SIZE,SIZE),"Cached sensor depth prepares");
+            int sensorSize=SIZE/2;
+            net.minecraft.client.shader.Framebuffer lowResolutionCache=(net.minecraft.client.shader.Framebuffer)
+                    field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").get(null);
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D,lowResolutionCache.framebufferTexture);
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D,0,GL11.GL_RGBA8,sensorSize,sensorSize,0,
+                    GL11.GL_RGBA,GL11.GL_UNSIGNED_BYTE,(ByteBuffer)null);
+            lowResolutionCache.framebufferWidth=lowResolutionCache.framebufferTextureWidth=sensorSize;
+            lowResolutionCache.framebufferHeight=lowResolutionCache.framebufferTextureHeight=sensorSize;
+            field(ThermalScopeEffect.class,"sensorPresentationFramebuffer").set(null,fixtureFramebuffer(allocator,false));
+            source.bindFramebuffer(true);
+            check(camera.prepareDepth(source.framebufferObject,sensorSize,sensorSize),"Cached sensor depth prepares");
             camera.projectSun(0,0,-1,0);camera.renderHeat(() -> {});
-            camera.captureColor(source.framebufferObject,SIZE,SIZE);
-            ThermalScopeEffect.renderCameraDisplay(mc,false,true,true,false,true,true,1);
+            camera.captureColor(source.framebufferObject,sensorSize,sensorSize);
+            CameraView markerView=new CameraView();
+            markerView.capture(0,0,0,0.375F);
+            markerView.width=markerView.height=sensorSize;
+            waypointChecked.setBoolean(null,true);
+            thermalWaypoints.set(null,ThermalGpuChecks.class.getMethod("drawThermalWaypoint",Float.TYPE,Float.TYPE));
+            Method renderDisplay=ThermalScopeEffect.class.getDeclaredMethod("renderCameraDisplay",
+                    net.minecraft.client.Minecraft.class,Boolean.TYPE,Boolean.TYPE,Boolean.TYPE,Boolean.TYPE,
+                    Boolean.TYPE,Boolean.TYPE,Float.TYPE,Boolean.TYPE,CameraView.class,Float.TYPE);
+            renderDisplay.setAccessible(true);
+            renderDisplay.invoke(null,mc,false,true,true,false,true,true,1F,true,markerView,0.375F);
             ByteBuffer first=pixel(SIZE/2,SIZE/2);int expected=first.get(0)&255;
             check(Math.abs(expected-(first.get(1)&255))<=1,"Sample produces thermal grayscale");
             check(field(ThermalScopeEffect.class,"sensorDisplayValid").getBoolean(null),"Sensor result cached");
+            check((pixel(80,64).get(1)&255)>240 && (pixel(85,64).get(1)&255)==expected,
+                    "Thermal waypoint stays anchored and compact when the native sensor image doubles in size");
             // Mutate both the displayed primary world and sensor input between deadlines.
             GL11.glClearColor(0,1,0,1);GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-            camera.captureColor(source.framebufferObject,SIZE,SIZE);
+            camera.captureColor(source.framebufferObject,sensorSize,sensorSize);
             ThermalScopeEffect.renderCameraDisplay(mc,false,false,true,false,true,true,1);
             ByteBuffer held=pixel(SIZE/2,SIZE/2);
             check((held.get(0)&255)==expected && (held.get(1)&255)==(first.get(1)&255),"Held frame does not reprocess current sensor input");
+            check((pixel(80,64).get(1)&255)>240,"Held thermal frame retains the resolved waypoint");
             check(GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING)==source.framebufferObject,"Cached compositor restores caller FBO");
             field(ThermalScopeEffect.class,"colorSceneTexture").setInt(null,source.framebufferTexture);
             field(ThermalScopeEffect.class,"scopedSceneCaptured").setBoolean(null,true);
@@ -568,6 +597,13 @@ public final class ThermalGpuChecks {
             check((pixel(SIZE/2,SIZE/2).get(1)&255)>240,"FLIR-off sensor holds its sampled colour frame between deadlines");
             check(GL11.glGetError()==GL11.GL_NO_ERROR,"Cached sensor has no GL errors");
         } finally {
+            waypointChecked.setBoolean(null,previousWaypointChecked);
+            thermalWaypoints.set(null,previousThermalWaypoints);
+            Field presentation=field(ThermalScopeEffect.class,"sensorPresentationFramebuffer");
+            net.minecraft.client.shader.Framebuffer resolved=(net.minecraft.client.shader.Framebuffer)presentation.get(null);
+            if(resolved!=null)resolved.deleteFramebuffer();
+            presentation.set(null,null);
+            field(ThermalScopeEffect.class,"sensorPresentationValid").setBoolean(null,false);
             Object cached=field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").get(null);
             if(cached!=null)((net.minecraft.client.shader.Framebuffer)cached).deleteFramebuffer();
             field(ThermalScopeEffect.class,"sensorDisplayFramebuffer").set(null,null);
@@ -577,6 +613,16 @@ public final class ThermalGpuChecks {
             if(source!=null)source.deleteFramebuffer();
             singleton.set(null,previousClient);
         }
+    }
+
+    public static void drawThermalWaypoint(float partialTicks,float iconScale) {
+        check(partialTicks==0.375F && iconScale==0.4F,"Thermal waypoint hook receives compact sample styling");
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glColor4f(0,1,0,1);
+        GL11.glPushMatrix();
+        GL11.glTranslatef(0.25F,0,0);
+        quad(0.0625F,0);
+        GL11.glPopMatrix();
     }
 
     private static void refreshRateOverlay() throws Exception {
@@ -750,6 +796,68 @@ public final class ThermalGpuChecks {
             t.setColorOpaque_F(1,1,1);
             t.addVertexWithUV(x,y,z,0,0);t.addVertexWithUV(x+1,y,z,1,0);
             t.addVertexWithUV(x+1,y+1,z,1,1);t.addVertexWithUV(x,y+1,z,0,1);return true;
+        }
+    }
+
+    private static void cameraClouds() {
+        int output = fbo(), depth = GL30.glGenRenderbuffers();
+        try {
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, output);
+            GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, depth);
+            GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER, GL14.GL_DEPTH_COMPONENT24, SIZE, SIZE);
+            GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL30.GL_RENDERBUFFER, depth);
+            GL11.glViewport(0, 0, SIZE, SIZE);
+            GL11.glDisable(GL11.GL_SCISSOR_TEST);
+            GL11.glColorMask(true, true, true, true);
+            GL11.glDepthMask(true);
+            GL11.glClearColor(0, 0, 0, 1);
+            GL11.glClearDepth(1);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+            GL11.glEnable(GL11.GL_SCISSOR_TEST);
+            GL11.glScissor(0, 0, SIZE / 2, SIZE);
+            GL11.glClearDepth(.9);
+            GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+            GL11.glDisable(GL11.GL_SCISSOR_TEST);
+            GL11.glClearDepth(1);
+
+            GL11.glMatrixMode(GL11.GL_PROJECTION);
+            GL11.glLoadIdentity();
+            GLU.gluPerspective(70, 1, .05F, 64);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            GL11.glLoadIdentity();
+            GL11.glTranslatef(1, 0, 0);
+            CameraView source = new CameraView(), scope = new CameraView();
+            source.capture(0, 0, 0, .5F);
+            scope.set(source, SIZE, SIZE, 2, 1, 1);
+            float near = scope.projection.get(14) / (scope.projection.get(10) - 1);
+            check(!scope.visible(-2, -1, -501, 2, 1, -499), "Native far plane clips distant clouds");
+            scope.extendFarPlane(2048);
+            check(scope.visible(-2, -1, -501, 2, 1, -499), "DH cloud distance extends the scope frustum");
+            check(Math.abs(near - scope.projection.get(14) / (scope.projection.get(10) - 1)) < 1e-6F,
+                "Cloud range preserves the scope near plane");
+            GL11.glLoadIdentity();
+            GL11.glDepthMask(false);
+            new CameraSky().renderClouds(scope, () -> {
+                FloatBuffer matrix = BufferUtils.createFloatBuffer(16);
+                GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX, matrix);
+                check(matrix.get(0) == scope.projection.get(0) && matrix.get(10) == scope.projection.get(10),
+                    "Clouds use the scope magnification and terrain depth projection");
+                GL11.glGetFloat(GL11.GL_MODELVIEW_MATRIX, matrix);
+                check(matrix.get(12) == 1, "Clouds retain the camera translation");
+                GL11.glDisable(GL11.GL_TEXTURE_2D);
+                GL11.glDisable(GL11.GL_ALPHA_TEST);
+                GL11.glDisable(GL11.GL_BLEND);
+                GL11.glDisable(GL11.GL_CULL_FACE);
+                quad(4, -5);
+            });
+            check((pixel(SIZE / 4, SIZE / 2).get(0) & 255) == 0, "Terrain depth hides clouds behind it");
+            check((pixel(3 * SIZE / 4, SIZE / 2).get(0) & 255) == 255, "Clouds draw where terrain depth is clear");
+            check(!GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK), "Clouds restore the caller's depth mask");
+        } finally {
+            GL11.glDepthMask(true);
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
+            GL30.glDeleteFramebuffers(output);
+            GL30.glDeleteRenderbuffers(depth);
         }
     }
 
@@ -1070,13 +1178,25 @@ public final class ThermalGpuChecks {
                         && GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM)==0,"DH draw restores caller VAO, array buffer and program");
             }
             long lock=near.renderStampLock.writeLock();
-            try { check(!terrain.drawMesh(near),"Busy DH vertex upload defers sensor without blocking"); }
+            try {
+                check(!terrain.drawMesh(near),"Busy DH vertex upload defers sensor without blocking");
+                check(terrain.failure().equals("DH vertex buffer upload busy"),"Deferred vertex upload has a diagnostic reason");
+            }
             finally { near.renderStampLock.unlockWrite(lock); }
             lock=near.indices.renderStampLock.writeLock();
-            try { check(!terrain.drawMesh(near),"Busy per-mesh index upload defers sensor without blocking"); }
+            try {
+                check(!terrain.drawMesh(near),"Busy per-mesh index upload defers sensor without blocking");
+                check(terrain.failure().equals("DH index buffer upload busy"),"Deferred index upload has a distinct reason");
+            }
             finally { near.indices.renderStampLock.unlockWrite(lock); }
             lock=near.renderStampLock.tryWriteLock();check(lock!=0,"Failed DH draw releases its vertex read lock");
             if(lock!=0)near.renderStampLock.unlockWrite(lock);
+            check(terrain.beginDraw(view,0,32),"Camera material is reusable after upload contention");
+            try {
+                terrain.offset(-1,-1,-10);
+                check(terrain.drawMesh(near),"An upload retry succeeds without reload");
+                check(terrain.failure().isEmpty(),"Transient upload diagnostics do not latch the camera off");
+            } finally { terrain.endDraw(); }
             terrain.destroy();
             check(GL15.glIsBuffer(near.id)&&GL15.glIsBuffer(far.id)&&GL15.glIsBuffer(near.indices.id)
                     &&GL15.glIsBuffer(far.indices.id),"Camera destroy retains all borrowed DH GPU buffers");
@@ -1549,6 +1669,75 @@ public final class ThermalGpuChecks {
         check(!GL11.glIsEnabled(GL11.GL_LIGHTING) && !GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK),"Waypoint replay is unlit without changing scene depth");
         GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glDisable(GL11.GL_BLEND);GL11.glColor4f(0,1,0,1);
         quad(1,0);GL11.glTranslatef(0.25F,0,0);
+    }
+
+    private static void scopeTerritoryBorders() throws Exception {
+        Method draw = WGCoreScopeCompat.class.getDeclaredMethod("drawBorders", CameraView.class, java.util.List.class);
+        draw.setAccessible(true);
+        CameraView view = new CameraView();
+        view.x = 16000000;
+        view.y = 64;
+        view.z = -16000000;
+        java.util.List<BorderColumn> columns = java.util.Arrays.asList(
+                new BorderColumn(view.x + 0.2578125, view.y - 0.5, view.z - 0.5, 1, 0, 1, 0),
+                new BorderColumn(view.x - 0.2421875, view.y - 0.5, view.z + 0.5, 1, 1, 0, 0));
+        int previousDraw = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int previousRead = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+        int previousRenderbuffer = GL11.glGetInteger(GL30.GL_RENDERBUFFER_BINDING);
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        int target = fbo();
+        int color = GL30.glGetFramebufferAttachmentParameteri(GL30.GL_FRAMEBUFFER,
+                GL30.GL_COLOR_ATTACHMENT0, GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+        int depth = GL30.glGenRenderbuffers();
+        GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, depth);
+        GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER, GL14.GL_DEPTH_COMPONENT24, SIZE, SIZE);
+        GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL30.GL_RENDERBUFFER, depth);
+        GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix(); GL11.glLoadIdentity();
+        GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix(); GL11.glLoadIdentity();
+        try {
+            int lensProgram = field(ThermalScopeEffect.class, "colorLensShaderProgram").getInt(null);
+            check(lensProgram > 0, "Border fixture has a linked caller shader");
+            GL11.glViewport(0, 0, SIZE, SIZE);
+            GL11.glDisable(GL11.GL_DEPTH_TEST);
+            GL13.glActiveTexture(GL13.GL_TEXTURE1);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            for (int program : new int[] {0, lensProgram}) {
+                GL20.glUseProgram(program);
+                GL11.glDisable(GL11.GL_SCISSOR_TEST);
+                GL11.glColorMask(true, true, true, true);
+                GL11.glDepthMask(true);
+                GL11.glClearDepth(0.5);
+                GL11.glClearColor(0, 0, 0, 1);
+                GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+                GL11.glColorMask(false, false, false, false);
+                GL14.glBlendEquation(GL14.GL_FUNC_REVERSE_SUBTRACT);
+                draw.invoke(null, view, columns);
+                check((pixel(80, 64).get(1) & 255) > 200, "Exposed border keeps its color and camera-relative position");
+                check((pixel(48, 64).get(0) & 255) == 0, "Terrain depth hides the far border");
+                FloatBuffer sampledDepth = BufferUtils.createFloatBuffer(1);
+                GL11.glReadPixels(80, 64, 1, 1, GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, sampledDepth);
+                check(Math.abs(sampledDepth.get(0) - 0.5F) < 0.0001F, "Border replay preserves camera depth");
+                check(GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) == program
+                        && GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE) == GL13.GL_TEXTURE1
+                        && GL11.glIsEnabled(GL11.GL_TEXTURE_2D)
+                        && !GL11.glIsEnabled(GL11.GL_DEPTH_TEST)
+                        && GL11.glGetInteger(GL20.GL_BLEND_EQUATION_RGB) == GL14.GL_FUNC_REVERSE_SUBTRACT,
+                        "Border replay restores the caller's render state");
+                check(GL11.glGetError() == GL11.GL_NO_ERROR, "Border replay leaves no GL errors");
+            }
+        } finally {
+            GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPopMatrix();
+            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();
+            GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, previousDraw);
+            GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, previousRead);
+            GL11.glPopAttrib();
+            GL20.glUseProgram(previousProgram);
+            GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, previousRenderbuffer);
+            GL30.glDeleteFramebuffers(target);
+            GL30.glDeleteRenderbuffers(depth);
+            GL11.glDeleteTextures(color);
+        }
     }
 
     private static void m40LensSize() throws Exception {

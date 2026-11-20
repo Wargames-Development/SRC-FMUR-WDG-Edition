@@ -60,12 +60,49 @@ public final class CameraEnvironmentChecks {
             field(RenderGlobal.class, "renderEngine").set(mc.renderGlobal, mc.renderEngine);
             sky(mc, world);
             thermalModes(mc, world);
+            displayedMagnification();
+            require(!ThermalScopeEffect.showCameraFailure(false,true,0),"inactive scope resets status delay");
+            require(!ThermalScopeEffect.showCameraFailure(true,true,10),"first ADS failure is silent");
+            require(!ThermalScopeEffect.showCameraFailure(true,true,1_999_999_999L),"transient acquisition stays silent");
+            require(ThermalScopeEffect.showCameraFailure(true,true,2_000_000_010L),"continuous two-second failure becomes visible");
+            require(!ThermalScopeEffect.showCameraFailure(true,false,2_100_000_000L),"successful frame clears error timing");
+            require(!ThermalScopeEffect.showCameraFailure(true,true,3_000_000_000L),"next failure receives its own grace period");
+            require(!ThermalScopeEffect.showCameraFailure(false,true,9_000_000_000L),"leaving ADS clears a prolonged failure");
+            require(!ThermalScopeEffect.showCameraFailure(true,true,10_000_000_000L),"re-entering ADS starts quietly");
             if (args.length < 1 || args.length > 2) throw new IllegalArgumentException("Supply WGQOL development classes or dev jar, optionally a DH runtime jar");
             weather(mc, world, args[0]);
             if (args.length == 2) dhFog(args[1]);
             require(GL11.glGetError() == GL11.GL_NO_ERROR, "environment passes leave no GL errors");
             System.out.println("PASS " + checks + " scope environment OpenGL/companion checks");
         } finally { singleton.set(null, previous); context.destroy(); }
+    }
+
+    private static void displayedMagnification() throws Exception {
+        Field valid=field(ThermalScopeEffect.class,"postCompositeLensGeometryValid");
+        boolean wasValid=valid.getBoolean(null);
+        float[] y=(float[])field(ThermalScopeEffect.class,"postCompositeLensNdcY").get(null);
+        float[] saved=y.clone();
+        Method magnification=ThermalScopeEffect.class.getDeclaredMethod("modelLensMagnification",float.class,float.class);magnification.setAccessible(true);
+        try {
+            valid.setBoolean(null,true);
+            for(float desired:new float[]{2,4,8}) for(float diameter:new float[]{.08F,.25F,.5F,.8F}) for(float aspect:new float[]{4F/3F,16F/9F}) {
+                for(int i=1;i<y.length;i++) y[i]=(float)Math.sin(2*Math.PI*(i-1)/(y.length-2))*diameter;
+                float submitted=(Float)magnification.invoke(null,desired,.5F);
+                CameraView primary=new CameraView();primary.projection.put(0,1/aspect);primary.projection.put(5,1);
+                CameraView camera=new CameraView();camera.set(primary,1024,1024,submitted,aspect,1);
+                // A target's final size includes both projection and reduction into the lens.
+                float vertical=camera.projection.get(5)/primary.projection.get(5)*diameter;
+                float horizontal=camera.projection.get(0)/primary.projection.get(0)*diameter/aspect;
+                require(Math.abs(vertical-desired)<.0001F && Math.abs(horizontal-desired)<.0001F,
+                    "requested zoom survives measured aperture, final lens reduction and aspect ratio");
+            }
+            valid.setBoolean(null,false);
+            require(Math.abs((Float)magnification.invoke(null,4F,.5F)-8F)<.0001F,"unavailable aperture uses the established fallback diameter");
+            valid.setBoolean(null,true);java.util.Arrays.fill(y,0F);
+            require((Float)magnification.invoke(null,4F,.5F)==4F,"degenerate aperture cannot produce infinite zoom");
+        } finally {
+            System.arraycopy(saved,0,y,0,y.length);valid.setBoolean(null,wasValid);
+        }
     }
 
     private static Object apiProxy(Class<?> type, java.util.function.Function<Method,Object> body) {

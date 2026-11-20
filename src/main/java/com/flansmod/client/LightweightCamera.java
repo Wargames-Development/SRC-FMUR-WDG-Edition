@@ -53,6 +53,7 @@ final class LightweightCamera {
         GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix();
         try {
             if (!selectTerrain()) return null;
+            boolean distantClouds = colourScope && this.sky.prepareDistantClouds(mc, view);
             if (target == null || target.framebufferWidth != view.width || target.framebufferHeight != view.height) {
                 if (target != null) target.deleteFramebuffer();
                 target = new Framebuffer(view.width, view.height, true);
@@ -115,12 +116,14 @@ final class LightweightCamera {
             ThermalRenderApi.renderCameraGeometry(view.partialTicks);
             DistantActorCamera.end();
             RenderHelper.disableStandardItemLighting();
+            if (distantClouds) this.sky.renderDistantClouds(mc, view);
             mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             if (thermal) bindSensorLightmap();
             if (!(colourScope ? distant.drawColour(view, 1) : distant.draw(view, 1))) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
             terrain.draw(1);
             GL20.glUseProgram(0);
+            if (colourScope) this.sky.renderClouds(mc, view);
             if (!ignoreAtmosphere) {
                 ThermalRenderApi.renderParticles(new Runnable() {
                     @Override public void run() {

@@ -18,10 +18,11 @@ final class ShaderScopeScene {
     private final DistantCameraGeometry distant = new DistantCameraGeometry();
     private int nativeCoverage, coverageWidth, coverageHeight;
     private boolean shaderDistant;
+    private int shaderActors;
     ShaderScopeScene(AngelicaCameraBridge scope, CameraTerrain terrain) { this.scope = scope; this.terrain = terrain; }
     void capture(CameraView primary) { distant.capture(primary); }
     boolean draw(Minecraft mc, CameraView view) {
-        shaderDistant = scope.hasDistantTerrain();
+        shaderDistant = scope.hasDistantTerrain();shaderActors=0;
         try {
             if (shaderDistant && !distant.begin(view)) return false;
             if (!terrain.begin(view)) return false;
@@ -66,7 +67,20 @@ final class ShaderScopeScene {
                 mc.effectRenderer.renderParticles(mc.renderViewEntity, view.partialTicks);
             });
             scope.phase("RAIN_SNOW"); mc.entityRenderer.enableLightmap(view.partialTicks);
-            return CameraWeather.renderColour(mc, view, true);
+            if(!CameraWeather.renderColour(mc, view, true)) return false;
+            int[] targets=scope.actorTargets();
+            if(targets!=null && DistantActorCamera.supportsShader()) {
+                if(!DistantActorCamera.beginShader(view,targets,scope.actorProjection())) return false;
+                shaderActors=DistantActorCamera.activeKinds();
+                scope.phase("ENTITIES");RenderHelper.enableStandardItemLighting();
+                try {
+                    drawActors(mc,view,shaderActors);
+                    if(DistantVisuals.supported()) ThermalRenderApi.renderCameraGeometry(view.partialTicks);
+                    else DistantActorCamera.renderDistant();
+                }
+                finally { try { DistantActorCamera.end(); } finally { RenderHelper.disableStandardItemLighting();scope.phase("NONE"); } }
+            }
+            return true;
         } finally { terrain.close(); }
     }
     /** Keep the established actor/DH depth mapping out of shaderpack temporal history. */
@@ -85,12 +99,25 @@ final class ShaderScopeScene {
         GL11.glColorMask(!shaderDistant, !shaderDistant, !shaderDistant, !shaderDistant);
         boolean opaque = distant.draw(view, 0, nativeCoverage);
         GL11.glColorMask(true, true, true, true);
-        if (!opaque || !DistantActorCamera.begin(view, false)) return false;
+        if (!opaque || shaderActors==0 && !DistantActorCamera.begin(view, false)) return false;
         try {
             RenderHelper.enableStandardItemLighting();
+            drawActors(mc,view,3 & ~shaderActors);
+            // Each legacy consumer checks its own owner. Mixed ownership must
+            // still replay the other kind, even when DH rendered shader actors.
+            ThermalRenderApi.renderCameraGeometry(view.partialTicks);
+        } finally { try { DistantActorCamera.end(); } finally { RenderHelper.disableStandardItemLighting(); } }
+        mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
+        GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glColorMask(!shaderDistant, !shaderDistant, !shaderDistant, !shaderDistant);
+        try { return distant.draw(view, 1, nativeCoverage); }
+        finally { GL11.glColorMask(true, true, true, true); }
+    }
+    private void drawActors(Minecraft mc,CameraView view,int kinds) {
             for (Object value : mc.theWorld.loadedEntityList) {
                 Entity entity = (Entity) value;
                 if (!forwardActor(entity) || entity.isDead || entity == mc.renderViewEntity && mc.gameSettings.thirdPersonView == 0) continue;
+                if((kinds & (entity instanceof net.minecraft.entity.player.EntityPlayer?1:2))==0) continue;
                 AxisAlignedBB box = entity.boundingBox;
                 if (box == null || !view.visible(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)) continue;
                 Render renderer = RenderManager.instance.getEntityRenderObject(entity);
@@ -101,13 +128,6 @@ final class ShaderScopeScene {
                 renderer.doRender(entity, x - view.x, y - view.y, z - view.z,
                     entity.prevRotationYaw + (entity.rotationYaw - entity.prevRotationYaw) * view.partialTicks, view.partialTicks);
             }
-            ThermalRenderApi.renderCameraGeometry(view.partialTicks);
-        } finally { try { DistantActorCamera.end(); } finally { RenderHelper.disableStandardItemLighting(); } }
-        mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
-        GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glColorMask(!shaderDistant, !shaderDistant, !shaderDistant, !shaderDistant);
-        try { return distant.draw(view, 1, nativeCoverage); }
-        finally { GL11.glColorMask(true, true, true, true); }
     }
     /** Native geometry owns its pixels. Never compare overlapping LOD surfaces
      * against the shaderpack's jittered native depth using the auxiliary encoding. */

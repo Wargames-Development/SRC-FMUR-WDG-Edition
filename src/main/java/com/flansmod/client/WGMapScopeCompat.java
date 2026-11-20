@@ -14,10 +14,15 @@ import org.lwjgl.opengl.GL20;
 final class WGMapScopeCompat {
     private static boolean checked;
     private static Method renderWaypoints;
+    private static Method renderThermalWaypoints;
 
     private WGMapScopeCompat() { }
 
     static void renderWaypoints(float partialTicks) {
+        renderWaypoints(partialTicks, 0.0F);
+    }
+
+    static void renderWaypoints(float partialTicks, float thermalIconScale) {
         if (!checked) {
             checked = true;
             if (!Loader.isModLoaded("wgmap")) return;
@@ -25,11 +30,17 @@ final class WGMapScopeCompat {
                 Class<?> hook = Class.forName("com.wdg.wgmap.waypoint.client.render.WaypointEntityOcclusion",
                         false, WGMapScopeCompat.class.getClassLoader());
                 renderWaypoints = hook.getMethod("drawAfterRenderLast", float.class);
+                try {
+                    renderThermalWaypoints = hook.getMethod("drawThermalWaypoints", float.class, float.class);
+                } catch (NoSuchMethodException olderCompanion) {
+                    FlansMod.logger.warn("Update WGMap to display waypoint icons in thermal cameras.");
+                }
             } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
                 disable(failure);
             }
         }
-        if (renderWaypoints == null) return;
+        boolean thermal = thermalIconScale > 0.0F;
+        if (thermal ? renderThermalWaypoints == null : renderWaypoints == null) return;
 
         int program = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         int activeTexture = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
@@ -45,11 +56,14 @@ final class WGMapScopeCompat {
             GL11.glDisable(GL11.GL_LIGHTING);
             GL11.glDepthMask(false);
             // The lightweight camera does not dispatch RenderWorldLast or WGMap's
-            // late EntityRenderer hook. Reuse that draw entry exactly once here;
-            // its controller retains ownership of visibility, labels and settings.
-            renderWaypoints.invoke(null, partialTicks);
+            // late EntityRenderer hook. WGMap still owns waypoint visibility and settings.
+            if (thermal) renderThermalWaypoints.invoke(null, partialTicks, thermalIconScale);
+            else renderWaypoints.invoke(null, partialTicks);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
-            disable(failure);
+            if (thermal) {
+                renderThermalWaypoints = null;
+                FlansMod.logger.warn("WGMap thermal waypoint rendering unavailable.", failure);
+            } else disable(failure);
         } finally {
             GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPopMatrix();
             GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();

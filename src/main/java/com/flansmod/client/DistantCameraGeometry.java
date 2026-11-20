@@ -39,6 +39,7 @@ final class DistantCameraGeometry {
 
     private boolean checked, present;
     private String failure = "";
+    private String waiting = "";
     private CameraView primary;
     private Object buffers;
     private int count, maxHeight;
@@ -59,19 +60,22 @@ final class DistantCameraGeometry {
     private boolean colourFog;
     private int oldCoverage, oldCoverageSampler;
 
-    String failure() { return failure; }
+    String failure() { return failure.isEmpty() ? waiting : failure; }
+    private boolean waitFor(String reason) { waiting = reason; return false; }
     void capture(CameraView source) { primary = source; }
 
     boolean begin(CameraView view) {
+        waiting = "";
         if (!checked) resolve();
         if (!present) return failure.isEmpty();
-        if (!failure.isEmpty() || primary == null || !canBorrow(primary, view)) return false;
+        if (!failure.isEmpty()) return false;
+        if (primary == null || !canBorrow(primary, view)) return waitFor("camera does not match the captured terrain view");
         try {
             Object world = worldGetter.invoke(null);
             Object state = renderState.get(null);
             Object wrapper = stateLevel.get(state);
             if (world == null || wrapper == null) { buffers = null; count = 0; return true; }
-            if (unwrap.invoke(wrapper) != Minecraft.getMinecraft().theWorld) return false;
+            if (unwrap.invoke(wrapper) != Minecraft.getMinecraft().theWorld) return waitFor("DH world transition pending");
             Object level = levelGetter.invoke(world, wrapper);
             if (level != null && !Boolean.TRUE.equals(isRendering.invoke(level))) { buffers = null; count = 0; return true; }
             Object handler = level == null ? null : handlerGetter.invoke(level);
@@ -143,7 +147,7 @@ final class DistantCameraGeometry {
                 double z = ((Number)blockZ.invoke(corner)).doubleValue();
                 int width = ((Number)blockWidth.invoke(null, containerPosition.getLong(container))).intValue();
                 if (!view.visible(x, y, z, x + width, maxHeight, z + width, true)) continue;
-                if (!uploaded.getBoolean(container)) return false;
+                if (!uploaded.getBoolean(container)) return waitFor("visible DH terrain upload pending");
                 Object[] meshes = (Object[])(pass == 0 ? opaque : transparent).get(container);
                 if (scope == null) GL20.glUniform3f(offsetUniform, (float)(x - view.x), (float)(y - view.y), (float)(z - view.z));
                 else scope.distantTerrainOffset((float)(x - view.x), (float)(y - view.y), (float)(z - view.z));
@@ -254,19 +258,21 @@ final class DistantCameraGeometry {
     }
 
     private boolean drawMesh(Object mesh, boolean shadered) throws ReflectiveOperationException {
+        waiting = "";
         StampedLock vertices = (StampedLock)bufferLock.get(mesh);
         long vertexStamp = vertices.tryReadLock();
-        if (vertexStamp == 0) return false;
+        if (vertexStamp == 0) return waitFor("DH vertex buffer upload busy");
         try {
             Object indices = indexBuffer.invoke(mesh);
             StampedLock index = (StampedLock)indexLock.get(indices);
             long indexStamp = index.tryReadLock();
-            if (indexStamp == 0) return false;
+            if (indexStamp == 0) return waitFor("DH index buffer upload busy");
             try {
                 int count = ((Number)vertexCount.invoke(mesh)).intValue();
                 int vbo = ((Number)bufferId.invoke(mesh)).intValue(), ibo = ((Number)indexId.invoke(indices)).intValue();
                 if (count == 0) return true;
-                if (vbo <= 0 || ibo <= 0 || count < 0 || count % 4 != 0 || count / 4 > Integer.MAX_VALUE / 6) return false;
+                if (vbo <= 0 || ibo <= 0 || count < 0 || count % 4 != 0 || count / 4 > Integer.MAX_VALUE / 6)
+                    return waitFor("DH mesh buffers are not ready");
                 GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vbo); GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, ibo);
                 if (shadered) GL30.glVertexAttribIPointer(0, 4, GL11.GL_UNSIGNED_SHORT, 16, 0L);
                 else GL20.glVertexAttribPointer(0, 4, GL11.GL_UNSIGNED_SHORT, false, 16, 0L);
@@ -329,7 +335,7 @@ final class DistantCameraGeometry {
             if (GLContext.getCapabilities().OpenGL30) GL30.glDeleteVertexArrays(vao);
             else ARBVertexArrayObject.glDeleteVertexArrays(vao);
         }
-        program = 0; vao = 0; buffers = null; count = 0; failure = ""; checked = false; present = false; primary = null;
+        program = 0; vao = 0; buffers = null; count = 0; failure = ""; waiting = ""; checked = false; present = false; primary = null;
         fog = new CameraDhFog(); colourFog = false;
     }
 }

@@ -38,6 +38,7 @@ final class MCHeliScopeMarkerCompat {
     private static int pointMarkerType;
     private static Method drawGui;
     private static Method drawCameraGui;
+    private static Method drawThermalGui;
     private static Object primaryPositions;
     private static Object primaryMarkedIds;
     private static final ArrayList<Object> SCOPED_POSITIONS = new ArrayList<Object>();
@@ -81,6 +82,8 @@ final class MCHeliScopeMarkerCompat {
             drawGui = markers.getMethod("drawGui", EntityPlayer.class, boolean.class);
             try { drawCameraGui = markers.getMethod("drawCameraGui", EntityPlayer.class, boolean.class, int.class, int.class); }
             catch (NoSuchMethodException olderCompanion) { drawCameraGui = null; }
+            try { drawThermalGui = markers.getMethod("drawThermalGui", EntityPlayer.class, boolean.class, int.class, int.class); }
+            catch (NoSuchMethodException olderCompanion) { drawThermalGui = null; }
             available = true;
         } catch (ReflectiveOperationException | LinkageError exception) {
             disable(exception);
@@ -132,25 +135,36 @@ final class MCHeliScopeMarkerCompat {
     static void renderMarkers(Minecraft minecraft) {
         // Fullscreen sensors already contain their own camera's markers.
         if (ThermalScopeEffect.replacesPrimaryScene(minecraft)) return;
-        renderMarkers(minecraft, minecraft.displayWidth, minecraft.displayHeight, minecraft.displayWidth, minecraft.displayHeight);
+        renderMarkers(minecraft, minecraft.displayWidth, minecraft.displayHeight,
+                minecraft.displayWidth, minecraft.displayHeight, false);
     }
 
     static void renderCameraMarkers(Minecraft minecraft, int width, int height) {
-        int logicalWidth = drawCameraGui == null ? minecraft.displayWidth : width;
-        int logicalHeight = drawCameraGui == null ? minecraft.displayHeight : width;
-        if (primaryPositions != null) {
-            try {
-                for (Object marker : SCOPED_POSITIONS) {
-                    FloatBuffer position = (FloatBuffer)markerPositionField.get(marker);
-                    position.put(0, position.get(0) * logicalWidth / width);
-                    position.put(1, position.get(1) * logicalHeight / height);
-                }
-            } catch (IllegalAccessException failure) { disable(failure); return; }
-        }
-        renderMarkers(minecraft, width, height, logicalWidth, logicalHeight);
+        renderCameraMarkers(minecraft, width, height, width, height, 1F, 1F, 0);
     }
 
-    private static void renderMarkers(Minecraft minecraft, int width, int height, int logicalWidth, int logicalHeight) {
+    static void renderCameraMarkers(Minecraft minecraft, int width, int height,
+            int sensorWidth, int sensorHeight, float cropX, float cropY, int thermalHudScale) {
+        if (primaryPositions == null) return;
+        boolean thermal = thermalHudScale > 0;
+        int logicalWidth = drawCameraGui == null ? minecraft.displayWidth : width;
+        int logicalHeight = drawCameraGui == null ? minecraft.displayHeight : width;
+        if (thermal && drawCameraGui != null) {
+            logicalWidth = Math.max(1, width / thermalHudScale);
+            logicalHeight = Math.max(1, height / thermalHudScale);
+        }
+        try {
+            for (Object marker : SCOPED_POSITIONS) {
+                FloatBuffer position = (FloatBuffer)markerPositionField.get(marker);
+                position.put(0, ((position.get(0) / sensorWidth - 0.5F) * cropX + 0.5F) * logicalWidth);
+                position.put(1, ((position.get(1) / sensorHeight - 0.5F) * cropY + 0.5F) * logicalHeight);
+            }
+        } catch (IllegalAccessException failure) { disable(failure); return; }
+        renderMarkers(minecraft, width, height, logicalWidth, logicalHeight, thermal);
+    }
+
+    private static void renderMarkers(Minecraft minecraft, int width, int height, int logicalWidth, int logicalHeight,
+            boolean thermal) {
         if (minecraft.thePlayer == null || minecraft.theWorld == null || !isAvailable()) {
             return;
         }
@@ -184,9 +198,10 @@ final class MCHeliScopeMarkerCompat {
         try {
             ScaledResolution scaled = new ScaledResolution(minecraft,
                     logicalWidth, logicalHeight);
-            scaleFactorField.setInt(null, scaled.getScaleFactor());
+            scaleFactorField.setInt(null, thermal ? 1 : scaled.getScaleFactor());
             GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity();
-            GL11.glOrtho(0, scaled.getScaledWidth(), scaled.getScaledHeight(), 0, 1000, 3000);
+            GL11.glOrtho(0, thermal ? logicalWidth : scaled.getScaledWidth(),
+                    thermal ? logicalHeight : scaled.getScaledHeight(), 0, 1000, 3000);
             GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadIdentity(); GL11.glTranslatef(0, 0, -2000);
             GL11.glViewport(0, 0, width, height);
             if (shadersSupported) {
@@ -198,7 +213,9 @@ final class MCHeliScopeMarkerCompat {
             GL11.glColorMask(true, true, true, true);
             // drawScreen suppresses the HUD during PiP. Draw only the existing
             // marker GUI, using the projections collected by that camera.
-            if (primaryPositions != null && drawCameraGui != null)
+            if (thermal && drawThermalGui != null)
+                drawThermalGui.invoke(markerGui, minecraft.thePlayer, minecraft.gameSettings.thirdPersonView != 0, logicalWidth, logicalHeight);
+            else if (primaryPositions != null && drawCameraGui != null)
                 drawCameraGui.invoke(markerGui, minecraft.thePlayer, minecraft.gameSettings.thirdPersonView != 0, logicalWidth, logicalHeight);
             else drawGui.invoke(markerGui, minecraft.thePlayer, minecraft.gameSettings.thirdPersonView != 0);
         } catch (ReflectiveOperationException | LinkageError exception) {
