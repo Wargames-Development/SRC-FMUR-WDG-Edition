@@ -1,10 +1,8 @@
 #By Darkyoooooo
 
 itemGroup.tabFlan0=FMUR 枪械
-itemGroup.tabFlan1=FMUR 载具
-itemGroup.tabFlan2=FMUR 零件
-itemGroup.tabFlan3=FMUR 团队工具
-itemGroup.tabFlan4=FMUR 机甲
+itemGroup.tabFlan1=FMUR 载具与零件
+itemGroup.tabFlan3=FMUR 护甲
 itemGroup.tabFlan5=FMUR 方块
 tile.flansWorkbench.0.name=载具制造台
 tile.flansWorkbench.1.name=枪械制造台

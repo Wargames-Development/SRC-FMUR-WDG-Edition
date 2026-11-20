@@ -135,38 +135,12 @@ def armor_pixels(values):
     return opaque, mask
 
 
-def cnvdt():
-    image = Image.new("RGBA", (32, 32))
-    d = ImageDraw.Draw(image)
-    ink, dark, body, light = "#24271f", "#64654d", "#9c9b78", "#c3bfa0"
-    d.polygon([(7, 10), (21, 10), (25, 13), (25, 22), (7, 22), (5, 20), (5, 13)], fill=ink)
-    d.polygon([(8, 11), (20, 11), (23, 14), (23, 20), (8, 20), (6, 18), (6, 14)], fill=body)
-    d.line((8, 11, 20, 11), fill=light)
-    d.rectangle((8, 18, 22, 20), fill=dark)
-    d.rectangle((2, 14, 6, 19), fill=ink)
-    d.line((3, 15, 3, 18), fill="#5a6058")
-    d.rectangle((24, 13, 29, 20), fill=ink)
-    d.rectangle((25, 14, 28, 19), fill=dark)
-    d.rectangle((26, 15, 28, 18), fill="#4b635c")
-    d.point((26, 15), fill="#a4b8a0")
-    d.rectangle((11, 7, 18, 10), fill=ink)
-    d.line((12, 8, 17, 8), fill=light)
-    d.rectangle((12, 22, 20, 24), fill=ink)
-    d.line((13, 23, 19, 23), fill=dark)
-    for x in (10, 14, 18):
-        d.rectangle((x, 13, x + 1, 14), fill=ink)
-        d.point((x, 13), fill=light)
-    d.line((10, 16, 19, 16), fill=dark)
-    return image
-
-
 def main():
-    catalog = json.loads((HERE / "catalog.json").read_text())
-    artwork = {}
+    catalog = json.loads((HERE / "catalog.json").read_text(encoding="utf-8"))
+    artwork_path = HERE / "artwork.json"
+    artwork = json.loads(artwork_path.read_text(encoding="utf-8"))
     shutil.copyfile(HERE / "references/approved_M1911.png", HERE / "icons/pixel_sketchM1911.png")
     artwork["sketchM1911"] = {"origin": "User-approved M1911 pixel icon, unchanged", "size": [32, 32]}
-    cnvdt().save(HERE / "icons/pixel_cnvdt.png")
-    artwork["cnvdt"] = {"origin": "Hand-drawn horizontal CNVD-T thermal optic", "size": [32, 32]}
     for path in sorted((ROOT / "eclipse/Flan/TaP-Escalation/armorFiles").glob("*.txt")):
         values = dict(re.findall(r"^(\w+) +([^\r\n]+)", path.read_text(), re.M))
         short = values["ShortName"]
@@ -177,7 +151,7 @@ def main():
         image.save(HERE / "icons" / (catalog["icons"][short] + ".png"))
         artwork[short] = {"origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
                           "model": values["Model"], "texture": values["ArmourTexture"], "size": [32, 32]}
-    (HERE / "artwork.json").write_text(json.dumps(artwork, indent=2) + "\n")
+    artwork_path.write_text(json.dumps(artwork, indent=2) + "\n", encoding="utf-8")
     builtin = HERE / "builtin_icons"
     builtin.mkdir(exist_ok=True)
     for short in ("gpnvg", "gpnvg_wp", "gpnvg_black", "gpnvg_wp_black", "pvs14", "pvs14_wp",

@@ -13,6 +13,8 @@ import net.minecraft.world.World;
 
 public class ContainerGunModTable extends Container 
 {
+	private static final int PLAYER_SLOTS_START = 17;
+
 	private InventoryGunModTable inventory;
 	public InventoryPlayer playerInv;
 	public World world;
@@ -79,16 +81,26 @@ public class ContainerGunModTable extends Container
             ItemStack slotStack = currentSlot.getStack();
             stack = slotStack.copy();
             
-            if(slotID >= 17)
+            if (slotID >= PLAYER_SLOTS_START)
             {
-            	return null;
+                // Slot validation enforces the gun's attachment rules. Move a
+                // single item and leave any installed attachment in place.
+                for (int i = 0; i < PLAYER_SLOTS_START; i++)
+                {
+                    Slot target = getSlot(i);
+                    if (!target.getHasStack() && target.isItemValid(slotStack))
+                    {
+                        target.putStack(slotStack.splitStack(1));
+                        break;
+                    }
+                }
             }
-            else 
+            else
             {
-            	if(!mergeItemStack(slotStack, 17, inventorySlots.size(), true))
-            	{
-            		return null;
-            	}
+                if (!mergeItemStack(slotStack, PLAYER_SLOTS_START, inventorySlots.size(), true))
+                {
+                    return null;
+                }
             }
             
             if (slotStack.stackSize == 0)

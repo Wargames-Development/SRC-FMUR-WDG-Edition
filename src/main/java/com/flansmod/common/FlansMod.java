@@ -231,9 +231,9 @@ public class FlansMod {
     public static CreativeTabFlan
             tabFlanGuns = new CreativeTabFlan(0),
             tabFlanDriveables = new CreativeTabFlan(1),
-            tabFlanParts = new CreativeTabFlan(2),
+            tabFlanParts = tabFlanDriveables,
             tabFlanTeams = new CreativeTabFlan(3),
-            tabFlanMechas = new CreativeTabFlan(4),
+            tabFlanMechas = tabFlanDriveables,
             tabFlanBlocks = new CreativeTabFlan(5),
             tabFlanAttachments = new CreativeTabFlan(6),
             tabFlanAmmo = new CreativeTabFlan(7),

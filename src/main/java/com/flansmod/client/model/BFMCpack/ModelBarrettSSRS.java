@@ -43,9 +43,9 @@ public class ModelBarrettSSRS extends ModelGun {
         fancyStance = true;
         stanceTranslate = new Vector3f(0.2F, 0F, 0.2F);
         stanceRotate = new Vector3f(20F, -20F, 0F);
-        firstPersonOffset = new Vector3f(-0.245F, -0.175F, 0.115F);
+        firstPersonOffset = new Vector3f(-0.365F, -0.175F, 0.115F);
         // Recover the optic alignment at full ADS.
-        zoomOffset = -0.34F;
+        zoomOffset = -0.46F;
         zoomOffsetY = 0.18F;
         zoomOffsetZ = -0.115F;
         // Shorten eye relief along the calibrated bare sight line to keep it centered.

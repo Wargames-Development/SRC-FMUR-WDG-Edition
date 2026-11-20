@@ -7,7 +7,7 @@
     ]
   },
   "cnvdt": {
-    "origin": "Hand-drawn horizontal CNVD-T thermal optic",
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
     "size": [
       32,
       32
@@ -1214,6 +1214,83 @@
     "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
     "model": "NewArmor.TurkishModernBodyArmor",
     "texture": "SkinTurkishModern",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "c25": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "c7a2": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "mg36": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "sketchAK308": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "sketchDragunovSVD": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "sketchM240": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "sketchVHS2": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tripleActionThunder": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "c25scope": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "c79": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "handheldFlashlight": {
+    "origin": "Orthographic inventory sprite rendered from the pack model and its texture, with a limited palette and inset edge shading",
     "size": [
       32,
       32

@@ -1,8 +1,6 @@
 itemGroup.tabFlan0=Оружие FMUR
-itemGroup.tabFlan1=Техника FMUR
-itemGroup.tabFlan2=Детали FMUR
-itemGroup.tabFlan3=Командная экипировка FMUR
-itemGroup.tabFlan4=Меха FMUR
+itemGroup.tabFlan1=Техника и детали FMUR
+itemGroup.tabFlan3=Броня FMUR
 tile.flansWorkbench.0.name=Стол создания техники
 tile.flansWorkbench.1.name=Стол изменения оружия
 tile.flansWorkbench.2.name=Стол создания деталей

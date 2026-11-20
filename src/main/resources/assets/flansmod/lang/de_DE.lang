@@ -1,8 +1,6 @@
 itemGroup.tabFlan0=FMUR Waffen
-itemGroup.tabFlan1=FMUR Fahrzeuge
-itemGroup.tabFlan2=FMUR Teile
-itemGroup.tabFlan3=FMUR Teamteile
-itemGroup.tabFlan4=FMUR Mechas
+itemGroup.tabFlan1=FMUR Fahrzeuge & Teile
+itemGroup.tabFlan3=FMUR Rüstung
 tile.flansWorkbench.0.name=Fahrzeugerstellungsblock
 tile.flansWorkbench.1.name=Waffenmodifikationsblock
 tile.flansWorkbench.2.name=Teilerstellungsblock

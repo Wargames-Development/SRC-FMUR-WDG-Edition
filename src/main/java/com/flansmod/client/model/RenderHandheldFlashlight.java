@@ -23,7 +23,7 @@ public class RenderHandheldFlashlight implements IItemRenderer {
 
     @Override
     public boolean handleRenderType(ItemStack item, ItemRenderType type) {
-        return item != null && item.getItem() instanceof ItemHandheldFlashlight;
+        return type != ItemRenderType.INVENTORY && item != null && item.getItem() instanceof ItemHandheldFlashlight;
     }
 
     @Override
@@ -48,13 +48,7 @@ public class RenderHandheldFlashlight implements IItemRenderer {
             Minecraft.getMinecraft().getTextureManager().bindTexture(TEXTURE);
             GL11.glColor4f(1F, 1F, 1F, 1F);
             GL11.glDisable(GL11.GL_CULL_FACE);
-            if (type == ItemRenderType.INVENTORY) {
-                GL11.glTranslatef(8F, 8F, 0F);
-                GL11.glScalef(12F, -12F, 12F);
-                GL11.glRotatef(25F, 1F, 0F, 0F);
-                GL11.glRotatef(135F, 0F, 1F, 0F);
-                GL11.glTranslatef(0F, -0.125F, 0.0625F);
-            } else if (type == ItemRenderType.EQUIPPED_FIRST_PERSON) {
+            if (type == ItemRenderType.EQUIPPED_FIRST_PERSON) {
                 // The supplied OBJ points down -Z. Keep its nose aligned with the
                 // camera-space light origin instead of vanilla's flat-item tilt.
                 GL11.glLoadIdentity();

@@ -37,12 +37,12 @@ public class BlockFlansWorkbench extends Block
     @Override
     public void getSubBlocks(Item item, CreativeTabs tab, List par3List)
     {
-    	if(tab == FlansMod.tabFlanDriveables)
-    		par3List.add(new ItemStack(item, 1, 0));
-        else if(tab == FlansMod.tabFlanAttachments)
-    		par3List.add(new ItemStack(item, 1, 1));
-    	else if(tab == FlansMod.tabFlanParts)
-    		par3List.add(new ItemStack(item, 1, 2));
+        if (tab == FlansMod.tabFlanDriveables) {
+            par3List.add(new ItemStack(item, 1, 0));
+            par3List.add(new ItemStack(item, 1, 2));
+        } else if (tab == FlansMod.tabFlanAttachments) {
+            par3List.add(new ItemStack(item, 1, 1));
+        }
     }
 
     @Override

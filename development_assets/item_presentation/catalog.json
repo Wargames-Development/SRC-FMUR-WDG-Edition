@@ -9,15 +9,15 @@
       "description": "Manufacturer: Kalashnikov Concern (Izhmash)_7.62x51mm battle rifle"
     },
     "sketchBarrettSSRS": {
-      "name": "SSRS",
+      "name": "Barrett SSRS",
       "description": "Manufacturer: Barrett Firearms_30mm grenade launcher_Load Airburst and aim down sights at a surface_Press Y (default) to program the airburst distance"
     },
     "c25": {
-      "name": "C25",
+      "name": "Colt Canada C25",
       "description": "Manufacturer: Colt Canada (Diemaco)_Tan C25 rifle_Uses existing 5.56x45mm STANAG magazines_Factory Colt Optics VMR [1-6x] scope"
     },
     "c7a2": {
-      "name": "C7A2",
+      "name": "Colt Canada C7A2",
       "description": "Manufacturer: Colt Canada (Diemaco)_Canadian assault rifle_Uses existing 5.56x45mm STANAG magazines_C79 optic by default_Fit another optic to replace it"
     },
     "ace52": {
@@ -157,11 +157,11 @@
       "description": "Manufacturer: Knight's Armament Company (KAC)_Designated Marksman Rifle"
     },
     "ntw20": {
-      "name": "NTW-20",
+      "name": "Denel NTW-20",
       "description": "Manufacturer: Denel Land Systems (Mechem)_Anti-Tank Rifle"
     },
     "snipexalligator": {
-      "name": "Alligator",
+      "name": "Snipex Alligator",
       "description": "Manufacturer: XADO (Snipex)_Anti-materiel rifle"
     },
     "vss": {
@@ -169,7 +169,7 @@
       "description": "Manufacturer: TsNIITochMash / Tula Arms Plant (TOZ)_Designated Marksman Rifle"
     },
     "sketchDragunovSVD": {
-      "name": "SVD",
+      "name": "SVD Dragunov",
       "description": "Manufacturer: Kalashnikov Concern (Izhmash)_7.62x54mm designated marksman rifle"
     },
     "g53": {
@@ -177,7 +177,7 @@
       "description": "Manufacturer: Heckler & Koch (HK)_Carbine Rifle"
     },
     "mg36": {
-      "name": "G36",
+      "name": "HK G36",
       "description": "Manufacturer: Heckler & Koch (HK)_Assault Rifle"
     },
     "m72a7": {
@@ -325,7 +325,7 @@
       "description": "Manufacturer: Colt_.45 ACP semi-automatic pistol"
     },
     "sketchM240": {
-      "name": "M240",
+      "name": "FN M240",
       "description": "Manufacturer: FN Herstal (FN)_7.62x51mm belt-fed machine gun"
     },
     "aek971": {
@@ -365,7 +365,7 @@
       "description": "Manufacturer: KBP Instrument Design Bureau (Tula)_Assault Rifle"
     },
     "msbs": {
-      "name": "MSBS",
+      "name": "MSBS Grot",
       "description": "Manufacturer: Fabryka Broni Lucznik-Radom (FB)_Assault Rifle"
     },
     "a91": {
@@ -401,15 +401,15 @@
       "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Light Machine Gun"
     },
     "taurus44": {
-      "name": "Model 44",
+      "name": "Taurus Model 44",
       "description": "Manufacturer: Taurus_Pistol"
     },
     "aps": {
-      "name": "APS",
+      "name": "Stechkin APS",
       "description": "Manufacturer: Molot_APS machine pistol; custom in-game ammunition"
     },
     "mp443": {
-      "name": "MP-443",
+      "name": "MP-443 \"Grach\"",
       "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Pistol"
     },
     "ks12": {
@@ -437,11 +437,11 @@
       "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Submachine Gun"
     },
     "sr2": {
-      "name": "SR-2",
+      "name": "SR-2 \"Veresk\"",
       "description": "Manufacturer: TsNIITochMash / Tula Arms Plant (TOZ)_Submachine Gun"
     },
     "sr3m": {
-      "name": "SR-3M",
+      "name": "SR-3M \"Vikhr\"",
       "description": "Manufacturer: TsNIITochMash / Tula Arms Plant (TOZ)_Submachine Gun"
     },
     "jng90": {
@@ -457,11 +457,11 @@
       "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Sniper rifle"
     },
     "svch338": {
-      "name": "SVCh .338",
+      "name": "Chukavin SVCh .338",
       "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Designated Marksman Rifle"
     },
     "svd12": {
-      "name": "SVDM",
+      "name": "SVDM Dragunov",
       "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Designated Marksman Rifle"
     },
     "svu": {
@@ -469,7 +469,7 @@
       "description": "Manufacturer: TsKIB SOO (Tula)_Designated Marksman Rifle"
     },
     "vks": {
-      "name": "VKS",
+      "name": "VKS \"Vykhlop\"",
       "description": "Manufacturer: KBP Instrument Design Bureau (Tula)_Sniper rifle"
     },
     "qjz89": {
@@ -485,7 +485,7 @@
       "description": "Manufacturer: Fabrique Nationale (FN) / General Dynamics_HMG Recipe Part"
     },
     "tripleActionThunder": {
-      "name": "Thunder .50 BMG",
+      "name": "Triple Action Thunder .50 BMG",
       "description": "Manufacturer: Triple Action LLC_Single-shot .50 BMG pistol with extreme recoil"
     },
     "ar160": {
@@ -501,7 +501,7 @@
       "description": "Manufacturer: Manufacture d armes de Saint-Etienne (MAS / GIAT)_Assault Rifle"
     },
     "hcar": {
-      "name": "HCAR",
+      "name": "Ohio Ordnance HCAR",
       "description": "Manufacturer: Ohio Ordnance Works (OOW)_Assault Rifle"
     },
     "hk416": {
@@ -637,7 +637,7 @@
       "description": "Manufacturer: Heckler & Koch (HK)_Submachine Gun"
     },
     "vector": {
-      "name": "Vector",
+      "name": "KRISS Vector",
       "description": "Manufacturer: KRISS USA (TDI)_Submachine Gun"
     },
     "l115": {
@@ -688,15 +688,15 @@
     },
     "870mcsbarrel": {
       "name": "14-inch Barrel",
-      "description": "14-inch barrel for the 870 MCS"
+      "description": "Manufacturer: Remington_14-inch barrel for the 870 MCS"
     },
     "umpflashhider": {
       "name": "Flash Hider",
-      "description": "Flash hider for compatible UMP barrels"
+      "description": "Manufacturer: Heckler & Koch_Flash hider for compatible UMP barrels"
     },
     "kx3": {
       "name": "Flash Hider",
-      "description": "KX3 flash hider for compatible 5.56mm barrels"
+      "description": "Manufacturer: Noveske Rifleworks_KX3 flash hider for compatible 5.56mm barrels"
     },
     "74flashhider": {
       "name": "Flash Hider",
@@ -708,7 +708,7 @@
     },
     "kx5": {
       "name": "Flash Hider",
-      "description": "KX5 flash hider for compatible 7.62mm barrels"
+      "description": "Manufacturer: Noveske Rifleworks_KX5 flash hider for compatible 7.62mm barrels"
     },
     "dmrsilencer": {
       "name": "Suppressor [DMR]",
@@ -740,7 +740,7 @@
     },
     "osprey": {
       "name": "Osprey Silencer",
-      "description": "Osprey suppressor"
+      "description": "Manufacturer: SilencerCo_Osprey suppressor"
     },
     "ots14grip": {
       "name": "Grip Suppressor",
@@ -772,7 +772,7 @@
     },
     "snipexsuppressor": {
       "name": "Snipex Suppressor",
-      "description": "Oversized suppressor for the Alligator"
+      "description": "Manufacturer: Snipex_Oversized suppressor for the Snipex Alligator"
     },
     "speedyrifling": {
       "name": "Speedy Rifling",
@@ -808,11 +808,11 @@
     },
     "afg": {
       "name": "AFG Grip",
-      "description": "Angled foregrip"
+      "description": "Manufacturer: Magpul_Angled foregrip"
     },
     "stubby": {
       "name": "BCM Grip",
-      "description": "BCM short vertical foregrip"
+      "description": "Manufacturer: Bravo Company Manufacturing_BCM short vertical foregrip"
     },
     "bipod": {
       "name": "Bipod",
@@ -832,7 +832,7 @@
     },
     "rvg": {
       "name": "RVG Grip",
-      "description": "RVG vertical foregrip"
+      "description": "Manufacturer: Magpul_RVG vertical foregrip"
     },
     "bolt": {
       "name": "Straight Pull Bolt",
@@ -844,23 +844,23 @@
     },
     "x400": {
       "name": "X400 Tactical Light",
-      "description": "X400 tactical flashlight; visible beam can reveal your position"
+      "description": "Manufacturer: SureFire_X400 tactical flashlight; visible beam can reveal your position"
     },
     "acogta01": {
       "name": "ACOG TA-01 [4x]",
-      "description": "Trijicon ACOG TA01 fixed-power optical sight"
+      "description": "Manufacturer: Trijicon_Trijicon ACOG TA01 fixed-power optical sight"
     },
     "acogta31": {
       "name": "ACOG TA-31 [4x]",
-      "description": "Trijicon ACOG TA31 fixed-power optical sight"
+      "description": "Manufacturer: Trijicon_Trijicon ACOG TA31 fixed-power optical sight"
     },
     "c25scope": {
       "name": "VMR [1x / 6x]",
-      "description": "Colt Optics VMR variable-power rifle scope; VMR reticle"
+      "description": "Manufacturer: Colt Optics_Colt Optics VMR variable-power rifle scope; VMR reticle"
     },
     "c79": {
       "name": "C79 [3.4x]",
-      "description": "ELCAN C79 optical sight; post-and-bars reticle"
+      "description": "Manufacturer: Raytheon ELCAN_ELCAN C79 optical sight; post-and-bars reticle"
     },
     "cl6x": {
       "name": "CL6X [6x]",
@@ -868,15 +868,15 @@
     },
     "cnvdt": {
       "name": "CNVD-T",
-      "description": "CNVD-T FLIR thermal sight"
+      "description": "Manufacturer: L-3 Insight Technology_CNVD-T clip-on thermal sight"
     },
     "coyote": {
       "name": "Coyote [RDS]",
       "description": "Coyote unmagnified red-dot sight"
     },
     "holo": {
-      "name": "HOLO [1x]",
-      "description": "Holographic close-range sight"
+      "name": "EOTECH Holo [1x]",
+      "description": "Manufacturer: EOTECH_Unmagnified holographic close-range sight"
     },
     "jgm4": {
       "name": "JGM-4 [4x]",
@@ -884,11 +884,11 @@
     },
     "kobra": {
       "name": "Kobra [RDS]",
-      "description": "Kobra unmagnified reflex sight"
+      "description": "Manufacturer: Axion_Kobra unmagnified reflex sight"
     },
     "m145": {
       "name": "SpecterDR [1x / 4x]",
-      "description": "ELCAN SpecterDR dual-power optical sight"
+      "description": "Manufacturer: Raytheon ELCAN_ELCAN SpecterDR dual-power optical sight"
     },
     "okp7": {
       "name": "OKP-7 [RDS]",
@@ -912,7 +912,7 @@
     },
     "pso1": {
       "name": "PSO-1 [4x]",
-      "description": "PSO-1 fixed-power scope with rangefinding reticle"
+      "description": "Manufacturer: Novosibirsk Instrument-Making Plant (NPZ)_PSO-1 fixed-power scope with rangefinding reticle"
     },
     "qxm7": {
       "name": "QXM-7 [1x]",
@@ -1107,7 +1107,17 @@
     "ospreyMK4": "pixel_ospreyMK4",
     "smbFelin": "pixel_smbFelin",
     "IOTVtrk": "pixel_IOTVtrk",
-    "cnvdt": "pixel_cnvdt"
+    "cnvdt": "pixel_cnvdt",
+    "c25": "pixel_c25",
+    "c7a2": "pixel_c7a2",
+    "mg36": "pixel_mg36",
+    "sketchAK308": "pixel_sketchAK308",
+    "sketchDragunovSVD": "pixel_sketchDragunovSVD",
+    "sketchM240": "pixel_sketchM240",
+    "sketchVHS2": "pixel_sketchVHS2",
+    "tripleActionThunder": "pixel_tripleActionThunder",
+    "c25scope": "pixel_c25scope",
+    "c79": "pixel_c79"
   },
   "original_icons": {
     "12gsupp": "12GSupp",
@@ -1590,6 +1600,63 @@
     },
     "c4remote": {
       "InventoryCategory": "Gadgets"
+    },
+    "advancedblindage": {
+      "HideFromCreative": "true"
+    },
+    "andesite": {
+      "HideFromCreative": "true"
+    },
+    "blindage": {
+      "HideFromCreative": "true"
+    },
+    "breakablestone": {
+      "HideFromCreative": "true"
+    },
+    "copper_block": {
+      "HideFromCreative": "true"
+    },
+    "copper_block_cutted": {
+      "HideFromCreative": "true"
+    },
+    "diorite": {
+      "HideFromCreative": "true"
+    },
+    "dirt_path": {
+      "HideFromCreative": "true"
+    },
+    "elevator_door": {
+      "HideFromCreative": "true"
+    },
+    "granite": {
+      "HideFromCreative": "true"
+    },
+    "polished_andesite": {
+      "HideFromCreative": "true"
+    },
+    "polished_diorite": {
+      "HideFromCreative": "true"
+    },
+    "polished_granite": {
+      "HideFromCreative": "true"
+    },
+    "smooth_stone": {
+      "HideFromCreative": "true"
+    },
+    "testblock": {
+      "HideFromCreative": "true"
+    },
+    "testblock_bush": {
+      "HideFromCreative": "true"
+    },
+    "testblock_fence": {
+      "HideFromCreative": "true"
+    },
+    "testblock_slab": {
+      "HideFromCreative": "true"
+    },
+    "white_terracotta_118": {
+      "HideFromCreative": "true"
     }
   }
 }

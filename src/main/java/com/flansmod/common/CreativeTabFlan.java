@@ -24,7 +24,7 @@ import java.util.Comparator;
 import java.util.List;
 
 public class CreativeTabFlan extends CreativeTabs {
-    public int type; //0 Guns, 1 Vehicles, 2 Parts, 3 Teams, 4 Mechas, 5 Blocks, 6 Attachments, 7 Ammo, 8 Gadgets
+    public int type; // 0 Guns, 1 Vehicles & Parts, 3 Armor, 5 Blocks, 6 Attachments, 7 Ammo, 8 Gadgets
     public int icon;
     public int time = 0;
 
@@ -55,23 +55,17 @@ public class CreativeTabFlan extends CreativeTabs {
                     return new ItemStack(Blocks.wool, 1, 4);
                 }
             case 1:
-                if(DriveableType.types.size() == 0) {
-                    return new ItemStack(Blocks.wool, 1, 14);
-                } else {
+                if (!DriveableType.types.isEmpty()) {
                     Item item = DriveableType.types.get(icon % DriveableType.types.size()).item;
-                    if(item != null)
+                    if (item != null)
                         return new ItemStack(item);
-                    return new ItemStack(Blocks.wool, 1, 14);
                 }
-            case 2:
-                if(FlansMod.partItems.size() == 0) {
-                    return new ItemStack(Blocks.wool, 1, 5);
-                } else {
+                if (!FlansMod.partItems.isEmpty()) {
                     Item item = FlansMod.partItems.get(icon % FlansMod.partItems.size());
-                    if(item != null)
+                    if (item != null)
                         return new ItemStack(item);
-                    return new ItemStack(Blocks.wool, 1, 5);
                 }
+                return new ItemStack(Blocks.wool, 1, 14);
             case 3:
                 if(FlansMod.armourItems.size() == 0) {
                     return new ItemStack(Blocks.wool, 1, 11);
@@ -82,15 +76,6 @@ public class CreativeTabFlan extends CreativeTabs {
                             return new ItemStack(item);
                     }
                     return new ItemStack(Blocks.wool, 1, 11);
-                }
-            case 4:
-                if(FlansMod.mechaItems.size() == 0) {
-                    return new ItemStack(Blocks.wool, 1, 10);
-                } else {
-                    Item item = FlansMod.mechaItems.get(icon % FlansMod.mechaItems.size());
-                    if(item != null)
-                        return new ItemStack(item);
-                    return new ItemStack(Blocks.wool, 1, 10);
                 }
             case 6:
                 return FlansMod.attachmentItems.isEmpty()

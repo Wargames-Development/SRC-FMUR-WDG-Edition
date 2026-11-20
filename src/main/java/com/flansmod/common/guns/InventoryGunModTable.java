@@ -26,52 +26,48 @@ public class InventoryGunModTable extends InventoryBasic
 			return;
 		ItemStack gunStack = getStackInSlot(0);
 		if(gunStack == null || !(gunStack.getItem() instanceof ItemGun))
+		{
+			if (lastGunStack != null)
+			{
+				busy = true;
+				for (int i = 1; i < getSizeInventory(); i++)
+					setInventorySlotContents(i, null);
+				busy = false;
+				lastGunStack = null;
+				gunType = null;
+			}
 			return;
+		}
 		
 		gunType = ((ItemGun)gunStack.getItem()).type;
+		gunType.checkForTags(gunStack);
+		NBTTagCompound attachmentTags = gunStack.stackTagCompound.getCompoundTag("attachments");
 		String[] tags = {"barrel", "scope", "stock", "grip", "gadget", "slide", "pump", "accessory"};
 		
 		//If we changed the gun (i.e. a new gun has been placed in the table)
 		if(gunStack != lastGunStack)
 		{
 			busy = true;
-			NBTTagCompound attachmentTags = gunStack.stackTagCompound.getCompoundTag("attachments");
 			for(int i = 0; i < 8; i++)
 				setInventorySlotContents(i + 1, ItemStack.loadItemStackFromNBT(attachmentTags.getCompoundTag(tags[i])));
 
 			genericScroll = 0;
-			for(int i = 0; i < Math.min(gunType.numGenericAttachmentSlots, 8); i++)
-				setInventorySlotContents(tags.length + i + 1, ItemStack.loadItemStackFromNBT(attachmentTags.getCompoundTag("generic_" + i)));
+			for (int i = 0; i < 8; i++)
+				setInventorySlotContents(tags.length + i + 1, i < gunType.numGenericAttachmentSlots
+						? ItemStack.loadItemStackFromNBT(attachmentTags.getCompoundTag("generic_" + i)) : null);
 			busy = false;
 		}
 		//Else we changed an attachment
 		else
 		{
-			//Create a new NBT tag compound for our gun item
-			NBTTagCompound gunTags = new NBTTagCompound();
-			//Copy the ammo and paintjob from the old stack
-			gunTags.setTag("ammo", getStackInSlot(0).stackTagCompound.getTag("ammo"));
-			if(getStackInSlot(0).stackTagCompound.getTag("Paint") != null)
-				gunTags.setTag("Paint", getStackInSlot(0).stackTagCompound.getTag("Paint"));
-			
-			//Add each attachment from the inventory to our gun stack
-	    	NBTTagCompound attachmentTags = new NBTTagCompound();
+			// Update only the table's attachment slots in the gun's existing NBT.
 			for(int i = 0; i < 8; i++)
 				writeAttachmentTags(attachmentTags, getStackInSlot(i + 1), tags[i]);
 	
-	       	//Change all the attachments that we are looking at, but copy in the old ones
-	       	for(int i = 0; i < gunType.numGenericAttachmentSlots; i++)
-	       	{
-	       		if(i >= genericScroll * 4 && i < genericScroll * 4 + 8)
-	       		{
-	       			writeAttachmentTags(attachmentTags, getStackInSlot(i - genericScroll * 4 + tags.length + 1), "generic_" + i);
-	       		}
-	       		else attachmentTags.setTag("generic_" + i, getStackInSlot(0).stackTagCompound.getTag("generic_" + i));
-	       	}
-	       	
-	       	//Set the tags to be these new tags
-	       	gunTags.setTag("attachments", attachmentTags);
-	       	gunStack.stackTagCompound = gunTags;
+			int start = genericScroll * 4;
+			for (int i = start; i < Math.min(gunType.numGenericAttachmentSlots, start + 8); i++)
+				writeAttachmentTags(attachmentTags, getStackInSlot(i - start + tags.length + 1), "generic_" + i);
+			gunStack.stackTagCompound.setTag("attachments", attachmentTags);
 		}
 		
 		lastGunStack = gunStack;

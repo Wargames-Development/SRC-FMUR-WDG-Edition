@@ -14,7 +14,7 @@ public class ItemBlockFlansWorkbench extends ItemBlockManyNames {
 
     @Override
     public CreativeTabs[] getCreativeTabs() {
-        return new CreativeTabs[]{FlansMod.tabFlanDriveables, FlansMod.tabFlanAttachments, FlansMod.tabFlanParts};
+        return new CreativeTabs[]{FlansMod.tabFlanDriveables, FlansMod.tabFlanAttachments};
     }
 
     @Override

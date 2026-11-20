@@ -28,6 +28,6 @@ public class ItemBlockManyNames extends ItemBlock {
     @Override
     public CreativeTabs[] getCreativeTabs()
     {
-        return new CreativeTabs[]{ FlansMod.tabFlanDriveables, FlansMod.tabFlanGuns, FlansMod.tabFlanTeams, FlansMod.tabFlanParts, FlansMod.tabFlanBlocks };
+        return new CreativeTabs[]{ FlansMod.tabFlanDriveables, FlansMod.tabFlanGuns, FlansMod.tabFlanTeams, FlansMod.tabFlanBlocks };
     }
 }

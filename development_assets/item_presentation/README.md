@@ -30,15 +30,18 @@ always before the old `Uses:` section, so it remains visible in gun tooltips.
 Attachment effects are calculated from the existing multipliers; changing a
 tooltip never changes those multipliers. Optic magnification is read from the
 active definition, including the C79 and VMR 1x/6x settings.
+Identifiable attachments list their manufacturer first, including the EOTECH
+1x holographic sight, Raytheon ELCAN optics and Magpul grips.
 
 ## Current artwork policy
 
-Gun and attachment icons are restored to the original paths recorded in
-`catalog.json` under `original_icons`. The two exceptions are the approved
-M1911 pixel icon (preserved unchanged) and a new **horizontal 32x32 CNVD-T**
-thermal optic icon. No other gun or attachment sprites are generated. The
-original SSRS and all ammunition icons remain untouched. New gun artwork is
-deferred until the user supplies further guidance.
+The C25, C7A2, G36, AK-308, SVD Dragunov, M240, VHS-2 and Triple Action Thunder
+use **32 × 32** inventory sprites rendered from their pack models and textures.
+The weapon angles, limited palettes and edge shading follow existing pack art
+such as the M16A4, AN-94, M1911 and Barrett SSRS. The CNVD-T, VMR and C79 use
+near-horizontal views. The handheld flashlight displays its built-in sprite in
+inventory. `original_icons` in `catalog.json` provides the fallback paths for
+the remaining pack items.
 
 All 134 TaP armor icons are now **32x32**. Each uses its own model silhouette
 and actual UV-mapped camouflage, sampled directly on the pixel grid. Uniforms
@@ -59,23 +62,27 @@ python tools/install_item_presentation.py
 python tools/install_item_presentation.py --check
 ```
 
-The 136 installed replacement PNGs live in `icons/`; `artwork.json` records their
-model/skin provenance. `references/approved_M1911.png` preserves the accepted
-M1911 sprite. The installer also restores original gun/attachment icon paths on
-subsequent runs, so the rejected diagonal scope/gun replacements cannot return.
+The pack replacement PNGs live in `icons/` and the mod's flashlight source
+lives in `builtin_icons/`. `artwork.json` records the source of the sprites.
+`references/approved_M1911.png` preserves the accepted M1911 sprite.
 
 ## Creative inventory organization
 
-Three tabs are appended without renumbering the original six tabs:
+The creative inventory includes these three tabs:
 
 - `tabFlan6`: FMUR Attachments; includes the Gun Modification Table (metadata 1).
 - `tabFlan7`: FMUR Ammunition; includes bullets, magazines, shells, missiles, and launcher grenades.
 - `tabFlan8`: FMUR Gadgets; includes hand grenades, bags, sensors, medical tools and binoculars.
 
-The handheld flashlight moves from team/armor items to the weapons tab.
-Vehicle and part workbench metadata remain in their original tabs. Registry
-IDs, table metadata, recipes, gameplay, models and armor skins are unchanged.
-Restart the development client for these Java/tab and icon-path changes.
+FMUR Vehicles & Parts contains both workbench variants and the items formerly
+listed under FMUR Parts and FMUR Mechas. The team tab is now FMUR Armor. The
+handheld flashlight is in FMUR Guns. The blocks marked `HideFromCreative` in
+`catalog.json` remain registered for existing worlds.
+
+Restart the development client after installing. In the Attachment Station,
+shift-click a gun into the gun slot, then a compatible optic into the sights
+slot. A second optic stays in the inventory until the installed one is removed.
+Shift-click the optic or gun again to return it to inventory.
 
 ## Latest wearable and inventory fixes
 
@@ -89,8 +96,7 @@ All six balaclavas use a rounded hood, neck and eye opening instead of the
 armor cube outline. The wz.93 Pantera vest has a visible V neckline. Ten native
 32x32 night-vision sprites cover tan/black GPNVG and PVS-14 variants, including
 phosphor variants. Their source PNGs are in `builtin_icons/`; the installer also
-copies these to the main mod resource folder. Other gun icons remain restored,
-with the same approved M1911 and CNVD-T exceptions.
+copies these to the main mod resource folder.
 
 ### Creative hiding versus disabling an item
 
@@ -132,12 +138,12 @@ rule and reinstall; its registry name and assets have been preserved.
 4. Hover every attachment, particularly Heavy Barrel, PSO-1, C79 and VMR.
    Descriptions should be readable English, with magnification and configured
    non-neutral effects. Switch VMR between 1x/6x and SpecterDR between 1x/4x.
-5. Compare armor at 32x32: check camouflage on Croatian, Greek and Serbian
-   uniforms; no stray shoulder pixels on the clone uniform; distinct IOTV, MTV,
-   IDF and new-country vests. Confirm original guns/scopes and the approved
-   M1911, plus the new horizontal CNVD-T.
-6. Check Attachments and Ammunition tabs, flashlight under weapons, and the
-   gun table under Attachments. Check the empty-content tab icon fallbacks.
+5. Compare the 32 × 32 armor sprites, including the Croatian, Greek and Serbian
+   uniforms, and the IOTV, MTV and IDF vests. Compare the eight redrawn guns and
+   three optics with the M1911 and Barrett SSRS.
+6. Check the flashlight under FMUR Guns and the gun table under Attachments.
+   The inventory table should face the viewer. In first person, check the
+   Barrett SSRS at hip, during reload and at full ADS.
 7. Inspect a painted gun, equip/reload/fire representative weapons, and join a
    dedicated server with matching content packs. Model skins, paint IDs,
    ammunition, recoil, attachments and saved inventories must remain intact.
@@ -157,12 +163,9 @@ this is presentation cleanup, not a historical ammunition or balance conversion.
 
 ## Validation performed
 
-The current revision checks 136 replacement PNGs for exact 32x32 size and hard
-transparency, restores every gun/attachment icon path except M1911/CNVD-T,
-compares approved M1911 and SSRS/ammunition bytes, and preserves definition
-fields outside Icon. Armor generation asserts that alpha exactly matches its
-own cleaned geometry mask. Vest masks and actual model/skin provenance are
-checked independently. Repeated generation/installation must be unchanged.
+The installer checks the pack and built-in replacement PNGs for exact 32 × 32
+dimensions and verifies that the installed assets and definitions match the
+catalog. Armor generation also checks that alpha matches each geometry mask.
 
 Java changes are validated with `gradlew.bat compileJava --offline`; resource
 processing and `git diff --check` cover language/patch consistency. The manual

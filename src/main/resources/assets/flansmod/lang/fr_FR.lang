@@ -1,8 +1,6 @@
 itemGroup.tabFlan0=Armes FMUR
-itemGroup.tabFlan1=Véhicules FMUR
-itemGroup.tabFlan2=Composants FMUR
-itemGroup.tabFlan3=Matériel d'Equipe FMUR
-itemGroup.tabFlan4=Méchas FMUR
+itemGroup.tabFlan1=Véhicules et composants FMUR
+itemGroup.tabFlan3=Armures FMUR
 tile.flansWorkbench.0.name=Table de Fabrication de Véhicules
 tile.flansWorkbench.1.name=Table de Modification d'Armes
 tile.flansWorkbench.2.name=Tables de Fabrication de Composants

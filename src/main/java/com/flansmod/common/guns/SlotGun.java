@@ -22,19 +22,32 @@ public class SlotGun extends Slot
 
     public boolean isItemValid(ItemStack stack)
     {
-    	switch(slotID)
-    	{
-    		case 0 : return stack == null || (stack.getItem() instanceof ItemGun && !((ItemGun)stack.getItem()).type.deployable && stack.getTagCompound() != null);
-    		case 1 : return stack == null || (canAttachToCurrentGun(stack) && ((ItemAttachment)stack.getItem()).type.type == EnumAttachmentType.barrel);
-    		case 2 : return stack == null || (canAttachToCurrentGun(stack) && ((ItemAttachment)stack.getItem()).type.type == EnumAttachmentType.sights);
-    		case 3 : return stack == null || (canAttachToCurrentGun(stack) && ((ItemAttachment)stack.getItem()).type.type == EnumAttachmentType.stock);
-    		case 4 : return stack == null || (canAttachToCurrentGun(stack) && ((ItemAttachment)stack.getItem()).type.type == EnumAttachmentType.grip);
-			case 5 : return stack == null || (canAttachToCurrentGun(stack) && ((ItemAttachment)stack.getItem()).type.type == EnumAttachmentType.gadget);
-			case 6 : return stack == null || (canAttachToCurrentGun(stack) && ((ItemAttachment)stack.getItem()).type.type == EnumAttachmentType.slide);
-			case 7 : return stack == null || (canAttachToCurrentGun(stack) && ((ItemAttachment)stack.getItem()).type.type == EnumAttachmentType.pump);
-			case 8 : return stack == null || (canAttachToCurrentGun(stack) && ((ItemAttachment)stack.getItem()).type.type == EnumAttachmentType.accessory);
-			default : return stack == null || (canAttachToCurrentGun(stack) && ((ItemAttachment)stack.getItem()).type.type == EnumAttachmentType.generic);
-    	}
+        if (stack == null) return true;
+        if (slotID == 0)
+            return stack.getItem() instanceof ItemGun && !((ItemGun) stack.getItem()).type.deployable;
+        if (!canAttachToCurrentGun(stack)) return false;
+
+        GunType gunType = ((ItemGun) gunSlot.getStack().getItem()).type;
+        EnumAttachmentType type = ((ItemAttachment) stack.getItem()).type.type;
+        switch (slotID)
+        {
+            case 1: return gunType.allowBarrelAttachments && type == EnumAttachmentType.barrel;
+            case 2: return gunType.allowScopeAttachments && type == EnumAttachmentType.sights;
+            case 3: return gunType.allowStockAttachments && type == EnumAttachmentType.stock;
+            case 4: return gunType.allowGripAttachments && type == EnumAttachmentType.grip;
+            case 5: return gunType.allowGadgetAttachments && type == EnumAttachmentType.gadget;
+            case 6: return gunType.allowSlideAttachments && type == EnumAttachmentType.slide;
+            case 7: return gunType.allowPumpAttachments && type == EnumAttachmentType.pump;
+            case 8: return gunType.allowAccessoryAttachments && type == EnumAttachmentType.accessory;
+            default: return slotID - 9 + ((InventoryGunModTable) inventory).genericScroll * 4
+                    < gunType.numGenericAttachmentSlots && type == EnumAttachmentType.generic;
+        }
+    }
+
+    @Override
+    public int getSlotStackLimit()
+    {
+        return 1;
     }
     
     public boolean canAttachToCurrentGun(ItemStack stack)

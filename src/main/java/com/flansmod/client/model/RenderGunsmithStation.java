@@ -61,7 +61,13 @@ public class RenderGunsmithStation extends TileEntitySpecialRenderer implements 
         GL11.glTranslatef(0.08F, 0.12F, 0.29F);
         GL11.glScalef(0.42F, 0.42F, 0.42F);
         Minecraft.getMinecraft().getTextureManager().bindTexture(TEXTURE);
-        drawModel(0);
+        if (type == ItemRenderType.INVENTORY) {
+            // Rotating around the root moves the other half to the opposite side.
+            GL11.glTranslatef(1F, 0F, 0F);
+            drawModel(2);
+        } else {
+            drawModel(0);
+        }
         GL11.glPopMatrix();
     }
 
