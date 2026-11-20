@@ -69,6 +69,7 @@ public final class AttachmentLightingChecks {
         checkHandheldFlashlight((Unsafe) field.get(null));
         checkGammaLimit((Unsafe) field.get(null));
         checkGrenadeRelease((Unsafe) field.get(null));
+        checkDemolitionAssets();
         System.out.println("PASS: cone rays, preserved origins, zeroing/pose, entity occlusion/interpolation, tri-beam spacing, corpse armor synchronization, corpse damage feedback/persistence, non-overlapping tinnitus, handheld light state and vanilla brightness range");
     }
 
@@ -124,7 +125,46 @@ public final class AttachmentLightingChecks {
             for (int i = 0; i < 21; i++) tick.invoke(data, player);
             check(world.grenades == 1 && stack.stackSize == 2, "Dead players must not release a pending grenade");
             check(world.grenadeSounds.size() == 2, "Canceled throws must not play grenade sounds");
+            player.isDead = false;
+            type.shortName = "c4cn"; type.remote = true;
+            type.throwSound = "c4";
+            check(item.getThrowReleaseTicks() == 4 && item.getThrowAnimationTicks() == 12,
+                    "M112 must use a short release and recovery");
+            data.remoteExplosives = new java.util.ArrayList<com.flansmod.common.guns.EntityGrenade>();
+            data.startGrenadeThrow(player, stack);
+            for (int i = 0; i < 3; i++) tick.invoke(data, player);
+            check(world.grenades == 1 && stack.stackSize == 2, "M112 must wait until tick 4 before release");
+            tick.invoke(data, player);
+            check(world.grenades == 2 && stack.stackSize == 1 && data.remoteExplosives.size() == 1,
+                    "M112 must release at tick 4 and register the charge for its owner's remote");
+            for (int i = 0; i < 12; i++) tick.invoke(data, player);
+            check(world.grenades == 2 && stack.stackSize == 1, "M112 recovery must not duplicate the release");
+            check(world.grenadeSounds.equals(Arrays.asList("flansmod:grenade_pinpull", "flansmod:grenade_throw", "flansmod:grenade_throw")),
+                    "M112 must not play a grenade pin-pull sound");
         } finally { com.flansmod.common.PlayerHandler.serverSideData.remove(player.getCommandSenderName()); }
+    }
+
+    private static void checkDemolitionAssets() throws Exception {
+        ClassLoader resources = AttachmentLightingChecks.class.getClassLoader();
+        for (String name : Arrays.asList("m112", "m57")) {
+            try (java.io.InputStream source = resources.getResourceAsStream("assets/flansmod/models/demolition/" + name + "_runtime.obj")) {
+                check(source != null, "Missing " + name + " OBJ");
+                net.minecraftforge.client.model.obj.WavefrontObject model =
+                        new net.minecraftforge.client.model.obj.WavefrontObject(name + ".obj", source);
+                check(model.groupObjects.size() == (name.equals("m57") ? 2 : 1), "Incorrect demolition model groups");
+                for (net.minecraftforge.client.model.obj.GroupObject group : model.groupObjects)
+                    check(group.glDrawingMode == org.lwjgl.opengl.GL11.GL_TRIANGLES && !group.faces.isEmpty(),
+                            "Forge requires nonempty triangulated model groups");
+                check(model.groupObjects.get(0).name.equals("body"), "Missing body group");
+                if (name.equals("m57")) check(model.groupObjects.get(1).name.equals("handle"), "Missing animated handle");
+            }
+        }
+        try (java.io.InputStream source = resources.getResourceAsStream("assets/flansmod/textures/items/WDG_M112.png")) {
+            java.awt.image.BufferedImage icon = javax.imageio.ImageIO.read(source);
+            check(icon.getWidth() == 32 && icon.getHeight() == 32 && icon.getColorModel().hasAlpha(),
+                    "M112 icon must be an actual transparent 32x32 PNG");
+        }
+        System.out.println("PASS: M112/M57 Forge OBJ loading, separate handle and true 32x32 icon");
     }
 
     private static void checkGrenadeSpawn(com.flansmod.common.guns.EntityGrenade grenade, Entity player, Unsafe allocator) throws Exception {

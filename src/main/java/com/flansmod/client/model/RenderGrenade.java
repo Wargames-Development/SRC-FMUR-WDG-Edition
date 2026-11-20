@@ -26,7 +26,6 @@ import org.lwjgl.BufferUtils;
 import java.nio.FloatBuffer;
 
 public class RenderGrenade extends Render implements IItemRenderer {
-    private static final long THROW_DURATION_NANOS = ItemGrenade.THROW_ANIMATION_TICKS * 50000000L;
     private static final ResourceLocation PARTICLE_TEXTURE = new ResourceLocation("textures/particle/particles.png");
     private long throwStarted;
     private EntityPlayer throwingPlayer;
@@ -52,7 +51,8 @@ public class RenderGrenade extends Render implements IItemRenderer {
 
     private float throwProgress(Minecraft mc) {
         if (throwStarted == 0L) return -1F;
-        float progress = (System.nanoTime() - throwStarted) / (float) THROW_DURATION_NANOS;
+        long duration = ((ItemGrenade) thrownStack.getItem()).getThrowAnimationTicks() * 50000000L;
+        float progress = (System.nanoTime() - throwStarted) / (float) duration;
         ItemStack held = mc.thePlayer == null ? null : mc.thePlayer.getHeldItem();
         if (progress >= 1F || mc.thePlayer != throwingPlayer || mc.theWorld != throwingWorld
                 || !throwingPlayer.isEntityAlive() || throwingPlayer.inventory.currentItem != throwingSlot
@@ -103,6 +103,11 @@ public class RenderGrenade extends Render implements IItemRenderer {
     }
 
     static void renderThrowPose(EntityPlayer player, float progress, ItemStack grenade) {
+        if (grenade != null && grenade.getItem() instanceof ItemGrenade
+                && "c4cn".equals(((ItemGrenade) grenade.getItem()).type.shortName)) {
+            renderChargePose(player, progress, grenade);
+            return;
+        }
         boolean molotov = grenade != null && grenade.getItem() instanceof ItemGrenade
                 && ((ItemGrenade) grenade.getItem()).type.isMolotov();
         float lift = smooth((progress - 0.25F) / 0.18F);
@@ -147,6 +152,32 @@ public class RenderGrenade extends Render implements IItemRenderer {
     private static float smooth(float value) {
         float t = Math.max(0F, Math.min(1F, value));
         return t * t * (3F - 2F * t);
+    }
+
+    private static void renderChargePose(EntityPlayer player, float progress, ItemStack stack) {
+        ItemGrenade item = (ItemGrenade) stack.getItem();
+        float windup = smooth(progress / 0.18F);
+        float toss = smooth((progress - 0.18F) / 0.24F);
+        float recover = smooth((progress - 0.42F) / 0.58F);
+        float x = 0.36F + 0.05F * windup - 0.08F * toss + 0.03F * recover;
+        float y = -0.36F - 0.08F * windup + 0.16F * toss - 0.08F * recover;
+        float z = -0.95F + 0.12F * windup - 0.42F * toss + 0.30F * recover;
+        FirstPersonHands.render(player, true, x, y, z, -55F - 15F * windup + 25F * toss - 10F * recover, 15F);
+        if (progress >= item.getThrowReleaseTicks() / (float) item.getThrowAnimationTicks()
+                || item.type.model == null) return;
+        GL11.glPushMatrix();
+        try {
+            GL11.glTranslatef(x, y + 0.06F, z - 0.03F);
+            GL11.glRotatef(-15F * windup + 25F * toss, 1F, 0F, 0F);
+            // Turn the long slab into the palm instead of balancing it like a tray.
+            GL11.glRotatef(-20F, 0F, 1F, 0F);
+            GL11.glRotatef(65F, 0F, 0F, 1F);
+            GL11.glRotatef(65F, 1F, 0F, 0F);
+            GL11.glScalef(0.85F, 0.85F, 0.85F);
+            Minecraft.getMinecraft().renderEngine.bindTexture(FlansModResourceHandler.getTexture(item.type));
+            GL11.glColor4f(1F, 1F, 1F, 1F);
+            item.type.model.render(null, 0F, 0F, 0F, 0F, 0F, 0.0625F);
+        } finally { GL11.glPopMatrix(); }
     }
 
     private static void renderMolotovLighter(EntityPlayer player, float progress) {
@@ -317,6 +348,11 @@ public class RenderGrenade extends Render implements IItemRenderer {
                         idleProjectionPlayer = Minecraft.getMinecraft().thePlayer;
                         GL11.glLoadIdentity();
                         FirstPersonHands.applyViewBobbing(Minecraft.getMinecraft().thePlayer, RenderGun.smoothing);
+                        if ("c4cn".equals(grenadeType.shortName)) {
+                            renderChargePose(Minecraft.getMinecraft().thePlayer, 0F, item);
+                            GL11.glPopMatrix();
+                            return;
+                        }
                         GL11.glTranslatef(0.32F, -0.27F, -1.0F);
                         FirstPersonHands.render(Minecraft.getMinecraft().thePlayer, true,
                                 0F, -0.09F, 0.05F, -55F, 15F);

@@ -38,12 +38,7 @@ public class BlockSpawner extends BlockContainer
     @Override
     public void getSubBlocks(Item item, CreativeTabs tab, List list)
     {
-    	if(tab == FlansMod.tabFlanTeams)
-    	{
-	        list.add(new ItemStack(item, 1, 0));
-	        list.add(new ItemStack(item, 1, 1));
-	        list.add(new ItemStack(item, 1, 2));
-    	}
+        // Administrative spawners remain registered for commands and saved worlds.
     }
     
     @Override

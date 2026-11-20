@@ -1,0 +1,1222 @@
+{
+  "sketchM1911": {
+    "origin": "User-approved M1911 pixel icon, unchanged",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "cnvdt": {
+    "origin": "Hand-drawn horizontal CNVD-T thermal optic",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "canadaModern": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.CanadaModernBody",
+    "texture": "SkinCanadianElite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "chinaModernBodyDesert": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.PLABodyModern",
+    "texture": "SkinPLAType07Desert",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "chinaModernBody": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.PLABodyModern",
+    "texture": "SkinPLAType07",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "chinaModernBodyMarine": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.PLABodyModern",
+    "texture": "SkinPLAType07Ocean",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "franceModern": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.FrenchArmyUniform",
+    "texture": "SkinFranceModernElite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "franceModernD": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.FrenchArmyUniform",
+    "texture": "SkinFranceModernEliteDesert",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "germanArmyFleck": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.GermanArmyModernBody",
+    "texture": "SkinBWFlecktarn",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "greekLizard": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.GreekBodyCW",
+    "texture": "SkinGreekArmyCW",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "insurgentRobeDDBU": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.InsurgentBody",
+    "texture": "SkinTalibanD",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "insurgentRobe": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.InsurgentBody",
+    "texture": "SkinTaliban",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "iraq90s": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.IraqGulfWarBody",
+    "texture": "SkinIraqGulfWar",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "IDFModern": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.IDFUniformModern",
+    "texture": "SkinIDFElite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "MECBody": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.MECBody",
+    "texture": "SkinMECElite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "NKBody": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.NorthKoreanUniform",
+    "texture": "SkinNK",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "rok90s": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.ROK90sBody",
+    "texture": "SkinROK90",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "russiaEMRVKBO": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.VKBORussia",
+    "texture": "SkinRussiaVKBO",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "syriamod": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.SyriaModernBody",
+    "texture": "SkinSyriaModern",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "TURKIYEBODY": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.TurkishModernBody",
+    "texture": "SkinTurkishModern",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "ukMTP": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BritishModernUniform",
+    "texture": "SkinBritishModern",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "ukrSlavaMM14": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.UkraineUniformM14",
+    "texture": "SkinUkraineArmyM14",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "us80s": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.USArmyBDUBody",
+    "texture": "SkinUSBDU",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "USAOCPBody": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.USAOCPBody",
+    "texture": "SkinUSARMYOCP",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "USAUCPBody": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.USAOCPBody",
+    "texture": "SkinUSARMYUCP",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "usmcbodyD": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.USMCBody",
+    "texture": "SkinUSMCModern",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "usmcbodyW": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.USMCBody",
+    "texture": "SkinUSMCModernWoodland",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "cadpatTransitionalHelmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.CanadaModernHelmet",
+    "texture": "SkinCanadianTransitional",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "cadpatTransitionalUniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.CanadaModernBody",
+    "texture": "SkinCanadianTransitional",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "cadpatTransitionalVest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.CanadaModernVest",
+    "texture": "SkinCanadianTransitional",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "6B47snow": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.6B47Cover",
+    "texture": "Skin6b47CoverSnow",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "6B47": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.6B47Cover",
+    "texture": "Skin6b47Cover",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "achucp": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.ACHUCP",
+    "texture": "SkinACHUCP",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "altyn": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.Altyn",
+    "texture": "SkinAtlyn",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatCADPATW": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieCADPAT",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatDB": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieDigitalBeige",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatCADPATD": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieCADPATD",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatEMR": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieEMR",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatCE": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieCE",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatDaguet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieDaguet",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatFlecktarn": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieFlecktarn",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatWustentarn": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieWustentarn",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatMEC": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieMEC",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatOD": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieOD",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHat07D": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieType08D",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHat07M": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieType08M",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHat07U": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieType08",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatChocChip": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieChocChip",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatOCP": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieOCP",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatUSWood": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieWoodland",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatUSMC": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieMARPATD",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "boonieHatUSMCW": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BoonieHat",
+    "texture": "SkinBoonieMARPATW",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "CG634": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.CanadaModernHelmet",
+    "texture": "SkinCanadianElite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "muricaTankHelmetMW": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewAge.CVCHelmet",
+    "texture": "SkinCVC",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "spectraFranceWood": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.FrenchArmyPASGT",
+    "texture": "SkinFranceModernElite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "spectraFranceDesert": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.FrenchArmyPASGT",
+    "texture": "SkinFranceModernEliteDesert",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "G92Woodland": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.GermanArmyModernHelmet",
+    "texture": "SkinBWFlecktarn",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "IHPSvisor": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.IHPSHeavy",
+    "texture": "SkinIHPSHeavy",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "IHPS": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.IHPSlight",
+    "texture": "SkinIHPSLight",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "LWHwood": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.USMCLWH",
+    "texture": "SkinUSMCModernWoodland",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "LWH": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.USMCLWH",
+    "texture": "SkinUSMCModern",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "M1PotIraq": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.M1PotElite",
+    "texture": "SkinM1PotIraq",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "achMitznefet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewAge.Mitznefet",
+    "texture": "SkinMitzfenet",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "mk7Ukraine": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.Mk7Cover",
+    "texture": "SkinMk7MM14",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "mk7MTP": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.Mk7Cover",
+    "texture": "SkinMk7MTP",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "PASGTChinaDesert": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.PLAHelmetModern",
+    "texture": "SkinQGF03Desert",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "PASGTChinaMarine": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.PLAHelmetModern",
+    "texture": "SkinQGF03",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "PASGTChina": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.PLAHelmetModern",
+    "texture": "SkinQGF03Woodland",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "PASGTMEC": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.MECPASGT",
+    "texture": "SkinMECElite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "TYURKIYENUMERONEHELMET": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.PASGTHelmetNaked",
+    "texture": "SkinPASGTTurkish",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "PASGT": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.USPasgt",
+    "texture": "SkinPASGTCover",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "SSH68NK": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.NorthKoreanHelmet",
+    "texture": "SkinNK",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "balaclava2Black": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BalaclavaEye",
+    "texture": "SkinBalaclavaOneHoleBlack",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "balaclava2Green": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BalaclavaEye",
+    "texture": "SkinBalaclavaOneHoleGreen",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "balaclava2Tan": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BalaclavaEye",
+    "texture": "SkinBalaclavaOneHoleTan",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "eyePro": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.EyePros",
+    "texture": "SkinEyePros",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapBelarusUniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.BelarusUniform",
+    "texture": "SkinTapNewBelu",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapBelarusVest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.BelarusVest",
+    "texture": "SkinTapNewBelu",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapClonePhase2Body": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.CloneBody",
+    "texture": "SkinTapNewCloneh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapClonePhase2Helmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.CloneHelmet",
+    "texture": "SkinTapNewCloneh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapCroatiaHelmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.CroatiaHelmet",
+    "texture": "SkinTapNewCroh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapCroatiaUniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.CroatiaUniform",
+    "texture": "SkinTapNewCroh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapCroatiaVest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.CroatiaVest",
+    "texture": "SkinTapNewCroh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapDenmarkHelmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.DenmarkHelmet",
+    "texture": "SkinTapNewDenh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapDenmarkUniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.DenmarkUniform",
+    "texture": "SkinTapNewDenh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapDenmarkVest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.DenmarkVest",
+    "texture": "SkinTapNewDenh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapEstoniaSnowHelmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.EstoniaHelmet",
+    "texture": "SkinTapNewEstsnow",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapEstoniaSnowUniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.EstoniaUniform",
+    "texture": "SkinTapNewEstsnow",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapEstoniaSnowVest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.EstoniaVest",
+    "texture": "SkinTapNewEstsnow",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapEstoniaT5Helmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.EstoniaHelmet",
+    "texture": "SkinTapNewEsth",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapEstoniaT5Uniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.EstoniaUniform",
+    "texture": "SkinTapNewEsth",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapEstoniaT5Vest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.EstoniaVest",
+    "texture": "SkinTapNewEsth",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapGhillieHood": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.GhillieHelmet",
+    "texture": "SkinTapNewGhillie",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapGhillieSuit": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.GhillieSuit",
+    "texture": "SkinTapNewGhillie",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapJapanFangHelmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.JapanHelmet",
+    "texture": "SkinTapNewJpnh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapJapanFangUniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.JapanUniform",
+    "texture": "SkinTapNewJpnh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapJapanVestMk1": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.JapanVest",
+    "texture": "SkinTapNewJpnv",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapKorea45Helmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.KoreaHelmet",
+    "texture": "SkinTapNewKorh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapKorea45Uniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.KoreaUniform",
+    "texture": "SkinTapNewKorh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapKorea45Vest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.KoreaVest",
+    "texture": "SkinTapNewKorv",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapMexicoHelmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.MexicoHelmet",
+    "texture": "SkinTapNewMexh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapMexicoUniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.MexicoUniform",
+    "texture": "SkinTapNewMexh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapMexicoVest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.MexicoVest",
+    "texture": "SkinTapNewMexh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapMulticamBalaclava": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BalaclavaEye",
+    "texture": "SkinTapNewBalaclavaMulticam",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapOperatorCarrier": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.OperatorVest",
+    "texture": "SkinTapNewOph",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapOperatorHelmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.OperatorHelmet",
+    "texture": "SkinTapNewOph",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapOperatorOutfit": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.OperatorUniform",
+    "texture": "SkinTapNewOph",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapPolandHelmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.PolandHelmet",
+    "texture": "SkinTapNewPolh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapPolandUniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.PolandUniform",
+    "texture": "SkinTapNewPolu",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapPolandVest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.PolandVest",
+    "texture": "SkinTapNewPolh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapRomaniaHelmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.RomaniaHelmet",
+    "texture": "SkinTapNewRomh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapRomaniaUniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.RomaniaUniform",
+    "texture": "SkinTapNewRomh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapRomaniaVest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.RomaniaVest",
+    "texture": "SkinTapNewRomh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapSerbiaT5Helmet": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.SerbiaHelmet",
+    "texture": "SkinTapNewSerh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapSerbiaT5Uniform": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.SerbiaUniform",
+    "texture": "SkinTapNewSerh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapSerbiaT5Vest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.SerbiaVest",
+    "texture": "SkinTapNewSerh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapSkullBalaclava": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BalaclavaEye",
+    "texture": "SkinTapNewBalaclavaSkull",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapSnowGhillieHood": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.GhillieHelmet",
+    "texture": "SkinTapNewGhilliesnow",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapSnowGhillieSuit": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.GhillieSuit",
+    "texture": "SkinTapNewGhilliesnow",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapTankerHat": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewTapArmor.TankerHat",
+    "texture": "SkinTapNewTankh",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "tapWhiteBalaclava": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.BalaclavaEye",
+    "texture": "SkinTapNewBalaclavawhite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "6b45": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.6B43Normal",
+    "texture": "Skin6b43",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "type06Vest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.PLAVestModern",
+    "texture": "SkinPLAType07",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "idzVest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.GermanArmyModernSuperVest",
+    "texture": "SkinBWFlecktarn",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "IDFArmor": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.IDFBodyArmor",
+    "texture": "SkinIDFElite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "mtv": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.USMCMTV",
+    "texture": "SkinUSMCModern",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "InterceptorBodyArmor": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.InterceptorBodyArmor",
+    "texture": "SkinInterceptor",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "IOTVUCP": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.IOTV",
+    "texture": "SkinUSARMYUCP",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "IOTVUkraine": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.UkraineIOTV",
+    "texture": "SkinUkraineArmyM14",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "IOTV": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.IOTV",
+    "texture": "SkinUSARMYOCP",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "fragVestSORK": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.ROK90sVest",
+    "texture": "SkinROK90",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "ospreyMK4": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.OspreyMk4",
+    "texture": "SkinOspreyMk4",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "pasgtvest": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.PASGTVest",
+    "texture": "SkinPASGTVest",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "PBAWoodland": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.CanadaModernVest",
+    "texture": "SkinCanadianElite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "smbFelin": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.FrenchArmyBodyArmor",
+    "texture": "SkinFranceModernElite",
+    "size": [
+      32,
+      32
+    ]
+  },
+  "IOTVtrk": {
+    "origin": "Native 32px orthographic pixels from the item's own model and UV-mapped camouflage; inset outline",
+    "model": "NewArmor.TurkishModernBodyArmor",
+    "texture": "SkinTurkishModern",
+    "size": [
+      32,
+      32
+    ]
+  }
+}

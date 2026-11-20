@@ -1,0 +1,15 @@
+gradle.projectsEvaluated {
+    def root = gradle.rootProject
+    def work = root.file('build/ash12-check')
+    def compiler = root.task('compileASH12Geometry', type: JavaCompile) {
+        source = root.files('tools/ash12/ASH12GeometryCheck.java')
+        classpath = root.sourceSets.main.runtimeClasspath
+        destinationDir = new File(work, 'classes')
+        dependsOn root.tasks.compileJava
+    }
+    root.task('checkASH12Geometry', type: JavaExec, dependsOn: [compiler, root.tasks.processResources]) {
+        classpath = root.files(compiler.destinationDir) + root.sourceSets.main.runtimeClasspath
+        main = 'ASH12GeometryCheck'
+        args work.absolutePath
+    }
+}

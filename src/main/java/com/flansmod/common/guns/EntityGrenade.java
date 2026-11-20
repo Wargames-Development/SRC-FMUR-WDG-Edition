@@ -143,7 +143,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
         }
         // The pack's grenade / <team>_grenade sounds are spoken callouts.
         // Keep physical effects such as pin pulls, syringes and supply deployment.
-        if (type.throwSound != null && !type.throwSound.isEmpty()
+        if (!"c4cn".equals(type.shortName) && type.throwSound != null && !type.throwSound.isEmpty()
                 && !type.throwSound.equalsIgnoreCase("grenade")
                 && !type.throwSound.toLowerCase(java.util.Locale.ROOT).endsWith("_grenade")) {
             if(t instanceof EntityPlayer && type.teamThrowSound && t.getTeam() != null) {

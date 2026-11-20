@@ -147,13 +147,17 @@ public final class TapArmorGeometryExtractor {
             writer.write("model\t" + modelName);
             writer.newLine();
             if (modelName.equals("NewTapArmor.GhillieHelmet")) {
-                count += dumpNativePart(model.bipedHead, new ArrayList<ModelRenderer>(), writer, quadsField);
+                count += dumpNativePart(model.bipedHead, new ArrayList<ModelRenderer>(), writer, quadsField, "headModel");
+                count += dumpNativePanel(model, "faceVeil", model.bipedHead, writer, quadsField, "nativeFaceVeil");
+                count += dumpNativePanel(model, "faceWeave", model.bipedHead, writer, quadsField, "nativeFaceWeave");
             } else if (modelName.equals("NewTapArmor.GhillieSuit")) {
-                count += dumpNativePart(model.bipedBody, new ArrayList<ModelRenderer>(), writer, quadsField);
-                count += dumpNativePart(model.bipedLeftArm, new ArrayList<ModelRenderer>(), writer, quadsField);
-                count += dumpNativePart(model.bipedRightArm, new ArrayList<ModelRenderer>(), writer, quadsField);
-                count += dumpNativePart(model.bipedLeftLeg, new ArrayList<ModelRenderer>(), writer, quadsField);
-                count += dumpNativePart(model.bipedRightLeg, new ArrayList<ModelRenderer>(), writer, quadsField);
+                count += dumpNativePart(model.bipedBody, new ArrayList<ModelRenderer>(), writer, quadsField, "bodyModel");
+                count += dumpNativePart(model.bipedLeftArm, new ArrayList<ModelRenderer>(), writer, quadsField, "nativeLeftArm");
+                count += dumpNativePart(model.bipedRightArm, new ArrayList<ModelRenderer>(), writer, quadsField, "nativeRightArm");
+                count += dumpNativePart(model.bipedLeftLeg, new ArrayList<ModelRenderer>(), writer, quadsField, "nativeLeftLeg");
+                count += dumpNativePart(model.bipedRightLeg, new ArrayList<ModelRenderer>(), writer, quadsField, "nativeRightLeg");
+                count += dumpNativePanel(model, "leftCuff", model.bipedLeftArm, writer, quadsField, "nativeLeftCuff");
+                count += dumpNativePanel(model, "rightCuff", model.bipedRightArm, writer, quadsField, "nativeRightCuff");
             }
             for (String groupName : GROUPS) {
                 Field groupField = ModelCustomArmour.class.getField(groupName);
@@ -202,17 +206,26 @@ public final class TapArmorGeometryExtractor {
         return count;
     }
 
+    private static int dumpNativePanel(ModelCustomArmour model, String fieldName, ModelRenderer parent,
+                                       BufferedWriter writer, Field quadsField, String group) throws Exception {
+        Field field = model.getClass().getSuperclass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return dumpNativePart((ModelRenderer) field.get(model),
+                new ArrayList<ModelRenderer>(Collections.singletonList(parent)), writer, quadsField, group);
+    }
+
     private static int dumpNativePart(ModelRenderer part, List<ModelRenderer> chain,
-                                      BufferedWriter writer, Field quadsField) throws Exception {
+                                      BufferedWriter writer, Field quadsField, String group) throws Exception {
         chain.add(part);
         int count = 0;
         for (Object cube : part.cubeList) {
             TexturedQuad[] quads = (TexturedQuad[]) quadsField.get((ModelBox) cube);
             for (TexturedQuad quad : quads) {
-                writer.write("bodyModel");
+                writer.write(group);
                 for (net.minecraft.client.model.PositionTextureVertex vertex : quad.vertexPositions) {
                     double[] point = transformNative(vertex.vector3D.xCoord,
                             vertex.vector3D.yCoord, vertex.vector3D.zCoord, chain);
+                    if (group.equals("nativeFaceVeil") || group.equals("nativeFaceWeave")) point[0] *= 1.066;
                     writer.write('\t');
                     writer.write(Double.toString(point[0]));
                     writer.write(',' );
@@ -231,7 +244,7 @@ public final class TapArmorGeometryExtractor {
         }
         if (part.childModels != null) {
             for (Object child : part.childModels) {
-                count += dumpNativePart((ModelRenderer) child, chain, writer, quadsField);
+                count += dumpNativePart((ModelRenderer) child, chain, writer, quadsField, group);
             }
         }
         chain.remove(chain.size() - 1);
