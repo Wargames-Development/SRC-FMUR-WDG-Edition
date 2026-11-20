@@ -8,6 +8,7 @@ import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.item.ItemGrenade;
 import com.flansmod.common.guns.raytracing.PlayerSnapshot;
 import com.flansmod.common.guns.type.GunType;
+import com.flansmod.common.guns.type.GrenadeType;
 import com.flansmod.common.network.PacketReload;
 import com.flansmod.common.network.PacketSelectOffHandGun;
 import com.flansmod.common.teams.PlayerClass;
@@ -239,7 +240,7 @@ public class PlayerData {
 		pendingGrenade = stack.copy();
 		grenadeSlot = player.inventory.currentItem;
 		grenadeDimension = player.dimension;
-		grenadeReleaseTicks = ItemGrenade.THROW_RELEASE_TICKS;
+		grenadeReleaseTicks = ((ItemGrenade) stack.getItem()).getThrowReleaseTicks();
 	}
 
 	private void tickGrenadeThrow(EntityPlayer player) {
@@ -253,8 +254,9 @@ public class PlayerData {
 		grenadeReleaseTicks--;
 		// Broadcast once from the server, at the free hand's preparation gesture.
 		if (grenadeReleaseTicks == ItemGrenade.THROW_RELEASE_TICKS - ItemGrenade.THROW_PIN_PULL_TICKS) {
-			boolean molotov = ((ItemGrenade) pendingGrenade.getItem()).type.isMolotov();
-			player.worldObj.playSoundAtEntity(player, molotov ? "fire.ignite" : "flansmod:grenade_pinpull", 1F, 1F);
+			GrenadeType preparing = ((ItemGrenade) pendingGrenade.getItem()).type;
+			if (!"c4cn".equals(preparing.shortName))
+				player.worldObj.playSoundAtEntity(player, preparing.isMolotov() ? "fire.ignite" : "flansmod:grenade_pinpull", 1F, 1F);
 		}
 		if (grenadeReleaseTicks > 0) return;
 		ItemStack stack = player.getHeldItem();

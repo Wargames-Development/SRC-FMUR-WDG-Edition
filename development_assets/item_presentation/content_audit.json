@@ -1,0 +1,1150 @@
+{
+  "disabled_ammunition": [
+    {
+      "id": "12gauge5rdmag",
+      "name": "12 Gauge 5-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/12Gauge5rdmag.txt"
+    },
+    {
+      "id": "12gaugeslug5rdmag",
+      "name": "12 Gauge Slug 5-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/12GaugeSlug5rdmag.txt"
+    },
+    {
+      "id": "atbullet",
+      "name": "14.5x114mm Bullet[AP]",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/145x114Bullet.txt"
+    },
+    {
+      "id": "atbulletGreenTracer",
+      "name": "14.5x114mm Bullet[AP] Green Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/145x114Bullet_GreenTracer.txt"
+    },
+    {
+      "id": "30310rdmag",
+      "name": ".303 Cal 10-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/30310rdmag.txt"
+    },
+    {
+      "id": "30310rdmagTracer",
+      "name": ".303 Cal 10-Round Magazine Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/30310rdmag_Tracer.txt"
+    },
+    {
+      "id": "408cheytac5rdmag",
+      "name": ".408 CheyTac 5-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/408CheyTac5rdMag.txt"
+    },
+    {
+      "id": "408cheytac5rdmagTracer",
+      "name": ".408 CheyTac 5-Round Magazine Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/408CheyTac5rdMag_Tracer.txt"
+    },
+    {
+      "id": "408cheytac7rdmag",
+      "name": ".408 CheyTac 7-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/408CheyTac7rdMag.txt"
+    },
+    {
+      "id": "408cheytac7rdmagTracer",
+      "name": ".408 CheyTac 7-Round Magazine Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/408CheyTac7rdMag_Tracer.txt"
+    },
+    {
+      "id": "44magnum1",
+      "name": ".44 Magnum",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/44Magnum_Martini.txt"
+    },
+    {
+      "id": "44magnum1Tracer",
+      "name": ".44 Magnum Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/44Magnum_Martini_Tracer.txt"
+    },
+    {
+      "id": "47x3351rdmagburst",
+      "name": "4.7x33mm 51-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/47x3351rdmagburst.txt"
+    },
+    {
+      "id": "47x3351rdmagburstTracer",
+      "name": "4.7x33mm 51-Round Magazine Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/47x3351rdmagburst_Tracer.txt"
+    },
+    {
+      "id": "50cal30rdmag",
+      "name": ".50BMG 30-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/50Cal30rdmag.txt"
+    },
+    {
+      "id": "50cal30rdmagTracer",
+      "name": ".50BMG 30-Round Magazine Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/50Cal30rdmag_Tracer.txt"
+    },
+    {
+      "id": "57x2825rdmag",
+      "name": "5.7x28mm 25-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/57x2825rdmag.txt"
+    },
+    {
+      "id": "57x2825rdmagTracer",
+      "name": "5.7x28mm 25-Round Magazine Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/57x2825rdmag_Tracer.txt"
+    },
+    {
+      "id": "58x2130rdmag",
+      "name": "5.8x21mm 30-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/58x2130rdmag.txt"
+    },
+    {
+      "id": "58x2130rdmagGreenTracer",
+      "name": "5.8x21mm 30-Round Magazine Green Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/58x2130rdmag_GreenTracer.txt"
+    },
+    {
+      "id": "762x258rdmag",
+      "name": "7.62x25mm 8-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/762x258rdmag.txt"
+    },
+    {
+      "id": "762x258rdmagGreenTracer",
+      "name": "7.62x25mm 8-Round Magazine Green Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/762x258rdmag_GreenTracer.txt"
+    },
+    {
+      "id": "9x1840rdmag",
+      "name": "9x18mm 40-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/9x1840rdmag.txt"
+    },
+    {
+      "id": "9x1840rdmagGreenTracer",
+      "name": "9x18mm 40-Round Magazine Green Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/9x1840rdmag_GreenTracer.txt"
+    },
+    {
+      "id": "9x1944rdmag",
+      "name": "9x19mm 44-Round Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/9x1944rdmag.txt"
+    },
+    {
+      "id": "9x1944rdmagTracer",
+      "name": "9x19mm 44-Round Magazine Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/9x1944rdmag_Tracer.txt"
+    },
+    {
+      "id": "defibrillatorammo",
+      "name": "Defibrillator Recharge",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/DefibrillatorAmmo.txt"
+    },
+    {
+      "id": "g84ammo",
+      "name": "G-84 Missile",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/G84Ammo.txt"
+    },
+    {
+      "id": "blowtorchammo",
+      "name": "Gas Container",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/GasContainer.txt"
+    },
+    {
+      "id": "xm214ammo",
+      "name": "Minigun Magazine",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/Xm214Ammo.txt"
+    },
+    {
+      "id": "xm214ammoTracer",
+      "name": "Minigun Magazine Tracer",
+      "path": "eclipse/Flan/BFMC Gun Pack/bullets/Xm214Ammo_Tracer.txt"
+    },
+    {
+      "id": "25mmsmoke",
+      "name": "XM25 Smoke",
+      "path": "eclipse/Flan/BFMC Gun Pack/grenades/25mmSmoke.txt"
+    },
+    {
+      "id": "84mmsmoke",
+      "name": "84mm Smoke Grenade",
+      "path": "eclipse/Flan/BFMC Gun Pack/grenades/84mmSmoke.txt"
+    }
+  ],
+  "ammo_usage": {
+    "50calammo": [
+      "test_model",
+      "qjz89",
+      "kord",
+      "m2hb50"
+    ],
+    "50calammoTracer": [
+      "test_model",
+      "qjz89",
+      "kord",
+      "m2hb50"
+    ],
+    "50calammoGreenTracer": [
+      "test_model",
+      "qjz89",
+      "kord",
+      "m2hb50"
+    ],
+    "762x5110rdmag": [
+      "sketchAK308",
+      "cslr4",
+      "m110a2",
+      "m24sws",
+      "m39emr",
+      "m40a5"
+    ],
+    "762x5110rdmagGreenTracer": [
+      "sketchAK308",
+      "cslr4",
+      "m110a2",
+      "m24sws",
+      "m39emr",
+      "m40a5"
+    ],
+    "762x5110rdmagTracer": [
+      "sketchAK308",
+      "cslr4",
+      "m110a2",
+      "m24sws",
+      "m39emr",
+      "m40a5"
+    ],
+    "762x5120rdmag": [
+      "sketchAK308",
+      "m110a2",
+      "g3a3",
+      "scarh",
+      "mk11mod0",
+      "mk20ssr"
+    ],
+    "762x5120rdmagGreenTracer": [
+      "sketchAK308",
+      "m110a2",
+      "g3a3",
+      "scarh",
+      "mk11mod0",
+      "mk20ssr"
+    ],
+    "762x5120rdmagTracer": [
+      "sketchAK308",
+      "m110a2",
+      "g3a3",
+      "scarh",
+      "mk11mod0",
+      "mk20ssr"
+    ],
+    "762x5125rdmag": [
+      "sketchAK308",
+      "ace52",
+      "m110a2"
+    ],
+    "762x5125rdmagGreenTracer": [
+      "sketchAK308",
+      "ace52",
+      "m110a2"
+    ],
+    "762x5125rdmagTracer": [
+      "sketchAK308",
+      "ace52",
+      "m110a2"
+    ],
+    "762x5130rdmag": [
+      "sketchAK308",
+      "sa58"
+    ],
+    "762x5130rdmagTracer": [
+      "sketchAK308",
+      "sa58"
+    ],
+    "762x515rdmag": [
+      "sketchAK308",
+      "cslr4",
+      "m24sws",
+      "m40a5"
+    ],
+    "762x515rdmagGreenTracer": [
+      "sketchAK308",
+      "cslr4",
+      "m24sws",
+      "m40a5"
+    ],
+    "762x515rdmagTracer": [
+      "sketchAK308",
+      "cslr4",
+      "m24sws",
+      "m40a5"
+    ],
+    "762x51highlight5rdmag": [
+      "sketchAK308",
+      "cslr4",
+      "m24sws",
+      "m40a5"
+    ],
+    "762x51highlight5rdmagGreenTracer": [
+      "sketchAK308",
+      "cslr4",
+      "m24sws",
+      "m40a5"
+    ],
+    "762x51highlight5rdmagTracer": [
+      "sketchAK308",
+      "cslr4",
+      "m24sws",
+      "m40a5"
+    ],
+    "sketch30mmGrenade": [
+      "sketchBarrettSSRS"
+    ],
+    "sketch30mmCloseCombat": [
+      "sketchBarrettSSRS"
+    ],
+    "sketch30mmSmoke": [
+      "sketchBarrettSSRS"
+    ],
+    "sketch30mmAP": [
+      "sketchBarrettSSRS"
+    ],
+    "sketch30mmAirburst": [
+      "sketchBarrettSSRS"
+    ],
+    "556x4530rdmag": [
+      "c25",
+      "c7a2",
+      "auga3",
+      "m16a3",
+      "g53",
+      "mg36",
+      "lvoa",
+      "cz805",
+      "msbs",
+      "ar160",
+      "f2000",
+      "hk416",
+      "l85a2",
+      "m16a4",
+      "mk18",
+      "scarl",
+      "m4a1",
+      "m27iar",
+      "sketchVHS2"
+    ],
+    "556x4530rdmagTracer": [
+      "c25",
+      "c7a2",
+      "auga3",
+      "m16a3",
+      "g53",
+      "mg36",
+      "lvoa",
+      "cz805",
+      "msbs",
+      "ar160",
+      "f2000",
+      "hk416",
+      "l85a2",
+      "m16a4",
+      "mk18",
+      "scarl",
+      "m4a1",
+      "m27iar",
+      "sketchVHS2"
+    ],
+    "556x4530rdmagGreenTracer": [
+      "c25",
+      "c7a2",
+      "auga3",
+      "m16a3",
+      "g53",
+      "mg36",
+      "lvoa",
+      "cz805",
+      "msbs",
+      "ar160",
+      "f2000",
+      "hk416",
+      "l85a2",
+      "m16a4",
+      "mk18",
+      "scarl",
+      "m4a1",
+      "m27iar",
+      "sketchVHS2"
+    ],
+    "556x4540rdmag": [
+      "c25",
+      "c7a2",
+      "auga3",
+      "m16a3",
+      "g53",
+      "lvoa",
+      "cz805",
+      "msbs",
+      "ar160",
+      "f2000",
+      "hk416",
+      "l85a2",
+      "m16a4",
+      "mk18",
+      "scarl",
+      "m4a1",
+      "m27iar",
+      "sketchVHS2"
+    ],
+    "556x4540rdmagTracer": [
+      "c25",
+      "c7a2",
+      "auga3",
+      "m16a3",
+      "g53",
+      "lvoa",
+      "cz805",
+      "msbs",
+      "ar160",
+      "f2000",
+      "hk416",
+      "l85a2",
+      "m16a4",
+      "mk18",
+      "scarl",
+      "m4a1",
+      "m27iar",
+      "sketchVHS2"
+    ],
+    "58x4230rdmag": [
+      "cq58",
+      "qbz03",
+      "qbz191",
+      "qbz95",
+      "qbz192"
+    ],
+    "58x4230rdmagGreenTracer": [
+      "cq58",
+      "qbz03",
+      "qbz191",
+      "qbz95",
+      "qbz192"
+    ],
+    "762x3930rdmag": [
+      "qbz811",
+      "type81m",
+      "ak47tec",
+      "groza",
+      "a91",
+      "sks"
+    ],
+    "762x3930rdmagGreenTracer": [
+      "qbz811",
+      "type81m",
+      "ak47tec",
+      "groza",
+      "a91",
+      "sks"
+    ],
+    "762x3940rdmag": [
+      "qbz811",
+      "type81m",
+      "ak47tec",
+      "groza",
+      "a91"
+    ],
+    "762x3940rdmagGreenTracer": [
+      "qbz811",
+      "type81m",
+      "ak47tec",
+      "groza",
+      "a91"
+    ],
+    "pf89rocket": [
+      "pf89"
+    ],
+    "556x4535rdmag": [
+      "ace21",
+      "sketchVHS2"
+    ],
+    "556x4535rdmagGreenTracer": [
+      "ace21",
+      "sketchVHS2"
+    ],
+    "40mm3gl": [
+      "qlg10ahe",
+      "gp30he",
+      "m320he"
+    ],
+    "40mmdart": [
+      "qlg10ahe",
+      "gp30he",
+      "m320he"
+    ],
+    "40mmflashbang": [
+      "qlg10ahe",
+      "gp30he",
+      "m320he"
+    ],
+    "40mmfrag": [
+      "qlg10ahe",
+      "gp30he",
+      "m320he"
+    ],
+    "40mmhe": [
+      "qlg10ahe",
+      "gp30he",
+      "m320he"
+    ],
+    "40mmlvg": [
+      "qlg10ahe",
+      "gp30he",
+      "m320he"
+    ],
+    "40mmmpat": [
+      "qlg10ahe",
+      "gp30he",
+      "m320he"
+    ],
+    "40mmpoisongas": [
+      "qlg10ahe",
+      "gp30he",
+      "m320he"
+    ],
+    "40mmsmoke": [
+      "qlg10ahe",
+      "gp30he",
+      "m320he"
+    ],
+    "58x4275rddrum": [
+      "qbb95"
+    ],
+    "58x4275rddrumGreenTracer": [
+      "qbb95"
+    ],
+    "58x42100rdbox": [
+      "qjy88"
+    ],
+    "58x42100rdboxGreenTracer": [
+      "qjy88"
+    ],
+    "9x1915rdmag": [
+      "np22",
+      "np7",
+      "qsz92",
+      "93r",
+      "g17",
+      "aps",
+      "mp443",
+      "g18",
+      "m9"
+    ],
+    "9x1915rdmagTracer": [
+      "np22",
+      "np7",
+      "qsz92",
+      "93r",
+      "g17",
+      "aps",
+      "mp443",
+      "g18",
+      "m9"
+    ],
+    "9x1915rdmagGreenTracer": [
+      "np22",
+      "np7",
+      "qsz92",
+      "93r",
+      "g17",
+      "aps",
+      "mp443",
+      "g18",
+      "m9"
+    ],
+    "357magnum": [
+      "nrp357",
+      "m327"
+    ],
+    "357magnumTracer": [
+      "nrp357",
+      "m327"
+    ],
+    "357magnumGreenTracer": [
+      "nrp357",
+      "m327"
+    ],
+    "12gaugebuckshot": [
+      "striker",
+      "qbs09",
+      "sawedoff",
+      "shorty12g",
+      "870mcs",
+      "m1014",
+      "spas12"
+    ],
+    "12gaugebirdshot": [
+      "striker",
+      "qbs09",
+      "sawedoff",
+      "shorty12g",
+      "870mcs",
+      "m1014",
+      "spas12"
+    ],
+    "12gaugeheavy": [
+      "striker",
+      "qbs09",
+      "sawedoff",
+      "shorty12g",
+      "870mcs",
+      "m1014",
+      "spas12"
+    ],
+    "12gaugeslug": [
+      "striker",
+      "qbs09",
+      "sawedoff",
+      "shorty12g",
+      "870mcs",
+      "m1014",
+      "spas12"
+    ],
+    "12gaugeincendiary": [
+      "striker",
+      "qbs09",
+      "sawedoff",
+      "shorty12g",
+      "870mcs",
+      "m1014",
+      "spas12"
+    ],
+    "12gaugefrag": [
+      "striker",
+      "qbs09",
+      "sawedoff",
+      "shorty12g",
+      "870mcs",
+      "m1014",
+      "spas12"
+    ],
+    "12gauge8rdmag": [
+      "hawk12g",
+      "s12k",
+      "aa12"
+    ],
+    "12gauge10rdmag": [
+      "hawk12g",
+      "s12k",
+      "aa12"
+    ],
+    "1845rdmag": [
+      "hawk12g"
+    ],
+    "12gaugefrag8rdmag": [
+      "hawk12g",
+      "s12k",
+      "aa12"
+    ],
+    "12gaugeslug8rdmag": [
+      "hawk12g",
+      "s12k",
+      "aa12"
+    ],
+    "12gaugebirdshot8rdmag": [
+      "hawk12g",
+      "s12k",
+      "aa12"
+    ],
+    "12gaugeflc8rdmag": [
+      "hawk12g",
+      "s12k",
+      "aa12"
+    ],
+    "12gaugeincendiary8rdmag": [
+      "hawk12g",
+      "s12k",
+      "aa12"
+    ],
+    "762x2520rdmag": [
+      "taps79"
+    ],
+    "762x2520rdmagGreenTracer": [
+      "taps79"
+    ],
+    "58x4210rdmagfyjs": [
+      "fyjs"
+    ],
+    "58x4210rdmagfyjsGreenTracer": [
+      "fyjs"
+    ],
+    "762x5410rdmag": [
+      "nsg85",
+      "avt40",
+      "sketchDragunovSVD",
+      "jng90",
+      "sv98",
+      "svd12",
+      "svu"
+    ],
+    "762x5410rdmagGreenTracer": [
+      "nsg85",
+      "avt40",
+      "sketchDragunovSVD",
+      "jng90",
+      "sv98",
+      "svd12",
+      "svu"
+    ],
+    "50cal5rdmag": [
+      "qbu10",
+      "vks",
+      "m82a3"
+    ],
+    "50cal5rdmagTracer": [
+      "qbu10",
+      "vks",
+      "m82a3"
+    ],
+    "50cal5rdmagGreenTracer": [
+      "qbu10",
+      "vks",
+      "m82a3"
+    ],
+    "50cal10rdmag": [
+      "qbu10",
+      "vks",
+      "m82a3"
+    ],
+    "50cal10rdmagTracer": [
+      "qbu10",
+      "vks",
+      "m82a3"
+    ],
+    "50cal10rdmagGreenTracer": [
+      "qbu10",
+      "vks",
+      "m82a3"
+    ],
+    "50calexplosive5rdmag": [
+      "qbu10",
+      "vks",
+      "m82a3"
+    ],
+    "50calhighlight5rdmag": [
+      "qbu10",
+      "vks",
+      "m82a3"
+    ],
+    "50calhighlight5rdmagTracer": [
+      "qbu10",
+      "vks",
+      "m82a3"
+    ],
+    "50calhighlight5rdmagGreenTracer": [
+      "qbu10",
+      "vks",
+      "m82a3"
+    ],
+    "58x4210rdmag": [
+      "qbu88"
+    ],
+    "58x4210rdmagGreenTracer": [
+      "qbu88"
+    ],
+    "47x3351rdmag": [
+      "g11"
+    ],
+    "47x3351rdmagTracer": [
+      "g11"
+    ],
+    "762x51100rdbox": [
+      "mg3",
+      "sketchM240",
+      "m60e4"
+    ],
+    "762x51100rdboxTracer": [
+      "mg3",
+      "sketchM240",
+      "m60e4"
+    ],
+    "127x4210rdmag": [
+      "beowulf"
+    ],
+    "127x4210rdmagTracer": [
+      "beowulf"
+    ],
+    "20x823rdmag": [
+      "ntw20"
+    ],
+    "20x823rdmagTracer": [
+      "ntw20"
+    ],
+    "20x823rdmagExplosive": [
+      "ntw20"
+    ],
+    "snipex145x114mag": [
+      "snipexalligator"
+    ],
+    "snipex145x114magGreenTracer": [
+      "snipexalligator"
+    ],
+    "snipex145x114magExplosive": [
+      "snipexalligator"
+    ],
+    "9x3920rdmag": [
+      "vss",
+      "asval",
+      "groza4",
+      "sr3m"
+    ],
+    "9x3920rdmagGreenTracer": [
+      "vss",
+      "asval",
+      "groza4",
+      "sr3m"
+    ],
+    "9x3930rdmag": [
+      "vss",
+      "asval",
+      "groza4",
+      "sr3m"
+    ],
+    "9x3930rdmagGreenTracer": [
+      "vss",
+      "asval",
+      "groza4",
+      "sr3m"
+    ],
+    "762x545rdmag": [
+      "sketchDragunovSVD",
+      "jng90",
+      "sv98"
+    ],
+    "762x545rdmagGreenTracer": [
+      "sketchDragunovSVD",
+      "jng90",
+      "sv98"
+    ],
+    "762x54highlight5rdmag": [
+      "sketchDragunovSVD",
+      "jng90",
+      "sv98"
+    ],
+    "762x54highlight5rdmagGreenTracer": [
+      "sketchDragunovSVD",
+      "jng90",
+      "sv98"
+    ],
+    "m72a7ammo": [
+      "m72a7"
+    ],
+    "mbtlawammo": [
+      "mbtlaw"
+    ],
+    "pzf3itammo": [
+      "pzf3it"
+    ],
+    "rpgammo": [
+      "rpg7v2"
+    ],
+    "mgl140ammo": [
+      "mgl140"
+    ],
+    "45acp8rdmag": [
+      "compact45",
+      "sketchM1911",
+      "m45a1"
+    ],
+    "45acp8rdmagTracer": [
+      "compact45",
+      "sketchM1911",
+      "m45a1"
+    ],
+    "9x1925rdmag": [
+      "g17"
+    ],
+    "9x1925rdmagTracer": [
+      "g17"
+    ],
+    "40sw10rdmag": [
+      "j941"
+    ],
+    "40sw10rdmagTracer": [
+      "j941"
+    ],
+    "50magnum": [
+      "m500"
+    ],
+    "50magnumTracer": [
+      "m500"
+    ],
+    "mosinammo": [
+      "mosin"
+    ],
+    "mosinammoGreenTracer": [
+      "mosin"
+    ],
+    "338magnum7rdmag": [
+      "sr338",
+      "l115"
+    ],
+    "338magnum7rdmagTracer": [
+      "sr338",
+      "l115"
+    ],
+    "45acp25rdmag": [
+      "sketchM1911",
+      "ump45",
+      "vector"
+    ],
+    "45acp25rdmagTracer": [
+      "sketchM1911",
+      "ump45",
+      "vector"
+    ],
+    "545x3930rdmag": [
+      "aek971",
+      "ak12",
+      "ak74m",
+      "an94",
+      "ak12u",
+      "rpk12"
+    ],
+    "545x3930rdmagGreenTracer": [
+      "aek971",
+      "ak12",
+      "ak74m",
+      "an94",
+      "ak12u",
+      "rpk12"
+    ],
+    "545x3940rdmag": [
+      "aek971",
+      "ak12",
+      "ak74m",
+      "an94",
+      "ak12u",
+      "rpk12"
+    ],
+    "545x3940rdmagGreenTracer": [
+      "aek971",
+      "ak12",
+      "ak74m",
+      "an94",
+      "ak12u",
+      "rpk12"
+    ],
+    "545x3945rdmag": [
+      "aek971",
+      "ak12",
+      "ak74m",
+      "an94",
+      "ak12u",
+      "rpk12"
+    ],
+    "545x3945rdmagGreenTracer": [
+      "aek971",
+      "ak12",
+      "ak74m",
+      "an94",
+      "ak12u",
+      "rpk12"
+    ],
+    "127x5520rdmag": [
+      "ash12"
+    ],
+    "127x5520rdmagGreenTracer": [
+      "ash12"
+    ],
+    "545x3995rddrum": [
+      "ak74lmg"
+    ],
+    "545x3995rddrumGreenTracer": [
+      "ak74lmg"
+    ],
+    "762x54100rdbox": [
+      "pkp"
+    ],
+    "762x54100rdboxGreenTracer": [
+      "pkp"
+    ],
+    "762x3950rddrum": [
+      "rpk"
+    ],
+    "762x3950rddrumGreenTracer": [
+      "rpk"
+    ],
+    "44magnum": [
+      "taurus44"
+    ],
+    "44magnumGreenTracer": [
+      "taurus44"
+    ],
+    "20gauge": [
+      "ks12"
+    ],
+    "20gaugeslug": [
+      "ks12"
+    ],
+    "20gaugebirdshot": [
+      "ks12"
+    ],
+    "20gaugefc": [
+      "ks12"
+    ],
+    "20gaugeexplosive": [
+      "ks12"
+    ],
+    "20gaugeincendiary": [
+      "ks12"
+    ],
+    "9x1930rdmag": [
+      "cz3a1",
+      "ppk20",
+      "uzi",
+      "mp5sd",
+      "mp9",
+      "ro635"
+    ],
+    "9x1930rdmagTracer": [
+      "cz3a1",
+      "ppk20",
+      "uzi",
+      "mp5sd",
+      "mp9",
+      "ro635"
+    ],
+    "9x1930rdmagGreenTracer": [
+      "cz3a1",
+      "ppk20",
+      "uzi",
+      "mp5sd",
+      "mp9",
+      "ro635"
+    ],
+    "9x1950rddrum": [
+      "pp19"
+    ],
+    "9x1950rddrumGreenTracer": [
+      "pp19"
+    ],
+    "9x2130rdmag": [
+      "sr2"
+    ],
+    "9x2130rdmagGreenTracer": [
+      "sr2"
+    ],
+    "338magnum5rdmag": [
+      "svch338",
+      "l115"
+    ],
+    "338magnum5rdmagTracer": [
+      "svch338",
+      "l115"
+    ],
+    "338magnum5rdmagGreenTracer": [
+      "svch338",
+      "l115"
+    ],
+    "tripleAction50BMG": [
+      "tripleActionThunder"
+    ],
+    "556x4525rdmag": [
+      "famas",
+      "sketchVHS2"
+    ],
+    "556x4525rdmagTracer": [
+      "famas",
+      "sketchVHS2"
+    ],
+    "300620rdmag": [
+      "hcar"
+    ],
+    "300620rdmagTracer": [
+      "hcar"
+    ],
+    "68x5130rdmag": [
+      "mcx"
+    ],
+    "68x5130rdmagTracer": [
+      "mcx"
+    ],
+    "mk153ammo": [
+      "mk153"
+    ],
+    "65x3930rdmag": [
+      "acwr"
+    ],
+    "65x3930rdmagTracer": [
+      "acwr"
+    ],
+    "556x45200rdbox": [
+      "m249"
+    ],
+    "556x45200rdboxTracer": [
+      "m249"
+    ],
+    "44magnum7rdmag": [
+      "deagle44"
+    ],
+    "44magnum7rdmagTracer": [
+      "deagle44"
+    ],
+    "300blk30rdmag": [
+      "honeybadger"
+    ],
+    "300blk30rdmagTracer": [
+      "honeybadger"
+    ],
+    "65x2530rdmag": [
+      "cbjms"
+    ],
+    "65x2530rdmagTracer": [
+      "cbjms"
+    ],
+    "46x3040rdmag": [
+      "mp7"
+    ],
+    "46x3040rdmagTracer": [
+      "mp7"
+    ],
+    "40sw30rdmag": [
+      "mpx"
+    ],
+    "40sw30rdmagTracer": [
+      "mpx"
+    ],
+    "57x2850rdmag": [
+      "p90"
+    ],
+    "57x2850rdmagTracer": [
+      "p90"
+    ],
+    "762x51flash5rdmag": [
+      "m40a5"
+    ],
+    "556x45100rddrum": [
+      "sketchVHS2"
+    ],
+    "556x45100rddrumTracer": [
+      "sketchVHS2"
+    ],
+    "m4a1BluePulseBolt": [
+      "m4a1IntegratedPulse"
+    ],
+    "m4a1RedLaserBolt": [
+      "m4a1PrototypeLaser"
+    ]
+  },
+  "hidden_creative": [
+    "flagpole",
+    "teamsSpawner:0",
+    "teamsSpawner:1",
+    "teamsSpawner:2",
+    "corpseSpawner",
+    "soldierSpawner",
+    "test_model",
+    "frag",
+    "frag1",
+    "apstank",
+    "tankfire",
+    "114514grenade"
+  ],
+  "disabled_items": [
+    "defibrillator"
+  ]
+}

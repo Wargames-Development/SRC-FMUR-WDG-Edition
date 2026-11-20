@@ -136,6 +136,10 @@ public class ContentManager {
                         InfoType infoType = (typeClass.getConstructor(TypeFile.class).newInstance(typeFile));
                         infoType.read(typeFile);
                         if (infoType.shortName != null) {
+                            if (!infoType.createItem) {
+                                Sync.addHash(typeFile.lines.toString(), infoType.shortName);
+                                continue;
+                            }
                             switch (type) {
                                 case bullet:
                                     if (!((BulletType) infoType).internalProjectile)
@@ -191,6 +195,7 @@ public class ContentManager {
                                     FlansMod.logger.error("Unrecognized type for " + infoType.shortName);
                                     break;
                             }
+                            infoType.applyCreativeCategory();
                             Sync.addHash(typeFile.lines.toString(), infoType.shortName);
                         }
 

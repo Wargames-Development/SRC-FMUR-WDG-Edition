@@ -1,0 +1,47 @@
+{
+  "parts": 363,
+  "maximum_source_error": 6.000000016825879e-07,
+  "effective_bounds": [
+    [
+      -12.636,
+      -4.14,
+      -0.99
+    ],
+    [
+      13.05,
+      8.1,
+      0.99
+    ]
+  ],
+  "dimensions": [
+    25.686,
+    12.239999999999998,
+    1.98
+  ],
+  "groups": {
+    "gunModel": 197,
+    "defaultScopeModel": 72,
+    "defaultBarrelModel": 29,
+    "slideModel": 10,
+    "ammoModel": 55
+  },
+  "unique_ash12_binding": "eclipse\\Flan\\BFMC Gun Pack\\guns\\RU_AR_ASH-12.txt",
+  "gameplay_definition_unchanged": true,
+  "installed_assets_match": true,
+  "mounts": {
+    "scope": [
+      2.52,
+      7.30799973,
+      0.0
+    ],
+    "grip": [
+      7.2,
+      2.62000013,
+      0.0
+    ],
+    "scopedOffsetY": -0.80800003
+  },
+  "top_rail_y": 7.308,
+  "bottom_rail_y": 2.52,
+  "magazine_neck_front_clearance": 0.07199990000000023
+}

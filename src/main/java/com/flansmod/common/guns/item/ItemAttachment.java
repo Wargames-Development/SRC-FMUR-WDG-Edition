@@ -31,7 +31,7 @@ public class ItemAttachment extends Item implements IPaintableItem
 		type = t;
 		type.item = this;
 		maxStackSize = t.maxStackSize;
-		setCreativeTab(FlansMod.tabFlanGuns);
+		setCreativeTab(FlansMod.tabFlanAttachments);
 		GameRegistry.registerItem(this, type.shortName, FlansMod.MODID);
 	}
 	

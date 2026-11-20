@@ -722,6 +722,72 @@ public final class AttachmentLightingGpuChecks {
         renderer.tick(mc);
         check(started.getLong(renderer) == 0L, "Leaving a world must clear the throw animation");
         mc.thePlayer = (net.minecraft.client.entity.EntityClientPlayerMP) player;
+        checkDemolitionHands(mc, allocator, renderer, grenade, stack);
+    }
+
+    private static void checkDemolitionHands(net.minecraft.client.Minecraft mc, sun.misc.Unsafe allocator,
+            com.flansmod.client.model.RenderGrenade renderer, com.flansmod.common.guns.item.ItemGrenade grenade,
+            net.minecraft.item.ItemStack stack) throws Exception {
+        grenade.type.shortName = "c4cn";
+        grenade.type.model = new com.flansmod.client.model.BFMCpack.ModelM112();
+        loadDemolitionModel(grenade.type.model, "m112");
+        GL11.glLoadIdentity(); GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        renderer.renderItem(net.minecraftforge.client.IItemRenderer.ItemRenderType.EQUIPPED_FIRST_PERSON, stack);
+        check(countSkin(read(SIZE)) > 20, "M112 needs a visible gripping hand");
+        savePreview("m112-one-hand");
+        java.lang.reflect.Method pose = renderer.getClass().getDeclaredMethod("renderThrowPose",
+                net.minecraft.entity.player.EntityPlayer.class, float.class, net.minecraft.item.ItemStack.class);
+        pose.setAccessible(true);
+        for (float progress : new float[] {0.2F, 0.32F, 0.42F, 0.75F}) {
+            GL11.glLoadIdentity(); GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+            pose.invoke(null, mc.thePlayer, progress, stack);
+            savePreview("m112-forward-" + progress);
+        }
+        renderer.startThrow(mc.thePlayer, stack);
+        java.lang.reflect.Field started = renderer.getClass().getDeclaredField("throwStarted"); started.setAccessible(true);
+        started.setLong(renderer, System.nanoTime() - 650000000L);
+        check(!renderer.renderThrowHands(mc), "M112 recovery must end after 0.6 seconds");
+
+        com.flansmod.common.tools.ToolType type = (com.flansmod.common.tools.ToolType)
+                allocator.allocateInstance(com.flansmod.common.tools.ToolType.class);
+        type.model = new com.flansmod.client.model.BFMCpack.ModelM57(); type.texture = "test";
+        loadDemolitionModel(type.model, "m57");
+        com.flansmod.common.tools.ItemTool tool = (com.flansmod.common.tools.ItemTool)
+                allocator.allocateInstance(com.flansmod.common.tools.ItemTool.class);
+        tool.type = type;
+        net.minecraft.item.ItemStack remote = new net.minecraft.item.ItemStack(tool);
+        java.lang.reflect.Field delegate = remote.getClass().getDeclaredField("delegate"); delegate.setAccessible(true);
+        delegate.set(remote, new cpw.mods.fml.common.registry.RegistryDelegate.Delegate<net.minecraft.item.Item>(tool, net.minecraft.item.Item.class));
+        java.lang.reflect.Field itemDelegate = net.minecraft.item.Item.class.getDeclaredField("delegate"); itemDelegate.setAccessible(true);
+        itemDelegate.set(tool, delegate.get(remote));
+        mc.thePlayer.inventory.mainInventory[mc.thePlayer.inventory.currentItem] = remote;
+        com.flansmod.client.model.RenderM57 detonator = new com.flansmod.client.model.RenderM57();
+        GL11.glLoadIdentity(); GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        detonator.renderItem(net.minecraftforge.client.IItemRenderer.ItemRenderType.EQUIPPED_FIRST_PERSON, remote);
+        ByteBuffer open = read(SIZE);
+        check(countSkin(open) > 20, "M57 needs a visible gripping hand");
+        savePreview("m57-open-one-hand");
+        detonator.startPress(mc.thePlayer, remote);
+        java.lang.reflect.Field pressed = detonator.getClass().getDeclaredField("pressedAt"); pressed.setAccessible(true);
+        pressed.setLong(detonator, System.nanoTime() - 110000000L);
+        GL11.glLoadIdentity(); GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        detonator.renderItem(net.minecraftforge.client.IItemRenderer.ItemRenderType.EQUIPPED_FIRST_PERSON, remote);
+        ByteBuffer closed = read(SIZE); int changed = 0;
+        for (int i = 0; i < SIZE * SIZE * 4; i += 4) if (open.get(i) != closed.get(i)) changed++;
+        check(changed > 10, "M57 press must visibly change the handle pose");
+        savePreview("m57-pressed-one-hand");
+        check(GL11.glGetError() == GL11.GL_NO_ERROR, "Demolition hands leaked a GL error");
+        System.out.println("PASS: M112 quick recovery and demolition hand/model GPU previews");
+    }
+
+    private static void loadDemolitionModel(net.minecraft.client.model.ModelBase target, String name) throws Exception {
+        try (java.io.InputStream source = AttachmentLightingGpuChecks.class.getClassLoader().getResourceAsStream(
+                "assets/flansmod/models/demolition/" + name + "_runtime.obj")) {
+            java.lang.reflect.Field model = target.getClass().getDeclaredField("model"); model.setAccessible(true);
+            model.set(target, new net.minecraftforge.client.model.obj.WavefrontObject(name + ".obj", source));
+            java.lang.reflect.Field loaded = target.getClass().getDeclaredField("loadAttempted"); loaded.setAccessible(true);
+            loaded.setBoolean(target, true);
+        }
     }
 
     private static int countSkin(ByteBuffer pixels) {

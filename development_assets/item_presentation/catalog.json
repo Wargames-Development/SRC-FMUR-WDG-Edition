@@ -1,0 +1,1595 @@
+{
+  "guns": {
+    "test_model": {
+      "name": "TEST",
+      "description": "Development test item; no real-world manufacturer"
+    },
+    "sketchAK308": {
+      "name": "AK-308",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_7.62x51mm battle rifle"
+    },
+    "sketchBarrettSSRS": {
+      "name": "SSRS",
+      "description": "Manufacturer: Barrett Firearms_30mm grenade launcher_Load Airburst and aim down sights at a surface_Press Y (default) to program the airburst distance"
+    },
+    "c25": {
+      "name": "C25",
+      "description": "Manufacturer: Colt Canada (Diemaco)_Tan C25 rifle_Uses existing 5.56x45mm STANAG magazines_Factory Colt Optics VMR [1-6x] scope"
+    },
+    "c7a2": {
+      "name": "C7A2",
+      "description": "Manufacturer: Colt Canada (Diemaco)_Canadian assault rifle_Uses existing 5.56x45mm STANAG magazines_C79 optic by default_Fit another optic to replace it"
+    },
+    "ace52": {
+      "name": "ACE 52",
+      "description": "Manufacturer: Israel Weapon Industries (IWI / IMI)_Assault Rifle"
+    },
+    "cq58": {
+      "name": "CQ-A3",
+      "description": "Manufacturer: Norinco_Assault Rifle"
+    },
+    "qbz03": {
+      "name": "QBZ-03",
+      "description": "Manufacturer: Norinco_Assault Rifle"
+    },
+    "qbz191": {
+      "name": "QBZ-191",
+      "description": "Manufacturer: Norinco_Assault Rifle"
+    },
+    "qbz811": {
+      "name": "Type 81-1",
+      "description": "Manufacturer: Norinco_Assault Rifle"
+    },
+    "qbz95": {
+      "name": "QBZ-95-1",
+      "description": "Manufacturer: Norinco_Assault Rifle"
+    },
+    "pf89": {
+      "name": "PF-89",
+      "description": "Manufacturer: Norinco_Anti-tank launcher"
+    },
+    "ace21": {
+      "name": "ACE 21",
+      "description": "Manufacturer: Israel Weapon Industries (IWI / IMI)_Carbine Rifle"
+    },
+    "qbz192": {
+      "name": "QBZ-192",
+      "description": "Manufacturer: Norinco_Carbine Rifle"
+    },
+    "qlg10ahe": {
+      "name": "QLG-10A",
+      "description": "Manufacturer: Norinco_Grenade Launcher"
+    },
+    "qbb95": {
+      "name": "QBB-95",
+      "description": "Manufacturer: Norinco_Light Machine Gun"
+    },
+    "type81m": {
+      "name": "Type 81 LMG",
+      "description": "Manufacturer: Norinco_Light Machine Gun"
+    },
+    "qjy88": {
+      "name": "QJY-88",
+      "description": "Manufacturer: Norinco_Light Machine Gun"
+    },
+    "np22": {
+      "name": "NP22",
+      "description": "Manufacturer: Norinco_Pistol"
+    },
+    "np7": {
+      "name": "NP7",
+      "description": "Manufacturer: Norinco_Pistol"
+    },
+    "nrp357": {
+      "name": "NRP-357",
+      "description": "Manufacturer: Norinco_Pistol"
+    },
+    "qsz92": {
+      "name": "QSZ-92",
+      "description": "Manufacturer: Norinco_Pistol"
+    },
+    "striker": {
+      "name": "Striker-12",
+      "description": "Manufacturer: Armsel_Shotgun"
+    },
+    "hawk12g": {
+      "name": "Hawk 97-2",
+      "description": "Manufacturer: Qiqihar Hawk Industries (Norinco)_Shotgun"
+    },
+    "qbs09": {
+      "name": "QBS-09",
+      "description": "Manufacturer: Norinco_Shotgun"
+    },
+    "taps79": {
+      "name": "TAPS-79",
+      "description": "Manufacturer: Norinco_Submachine Gun"
+    },
+    "cslr4": {
+      "name": "CS-LR4",
+      "description": "Manufacturer: Norinco_Sniper rifle"
+    },
+    "fyjs": {
+      "name": "FY-JS",
+      "description": "Manufacturer: Norinco_Sniper rifle"
+    },
+    "nsg85": {
+      "name": "Type 85",
+      "description": "Manufacturer: Norinco_Designated Marksman Rifle"
+    },
+    "qbu10": {
+      "name": "QBU-10",
+      "description": "Manufacturer: Norinco_Sniper rifle"
+    },
+    "qbu88": {
+      "name": "QBU-88",
+      "description": "Manufacturer: Norinco_Designated Marksman Rifle"
+    },
+    "auga3": {
+      "name": "AUG A3",
+      "description": "Manufacturer: Steyr Arms_Assault Rifle"
+    },
+    "g11": {
+      "name": "G11",
+      "description": "Manufacturer: Heckler & Koch (HK)_Assault Rifle"
+    },
+    "m16a3": {
+      "name": "M16A3",
+      "description": "Manufacturer: Colt_Assault Rifle"
+    },
+    "sa58": {
+      "name": "SA-58 OSW",
+      "description": "Manufacturer: DS Arms (DSA)_Assault Rifle"
+    },
+    "avt40": {
+      "name": "AVT-40",
+      "description": "Manufacturer: Tokarev / Tula Arsenal_Designated Marksman Rifle"
+    },
+    "mg3": {
+      "name": "MG3",
+      "description": "Manufacturer: Rheinmetall_Light Machine Gun"
+    },
+    "beowulf": {
+      "name": ".50 Beowulf",
+      "description": "Manufacturer: Alexander Arms_Designated Marksman Rifle"
+    },
+    "m110a2": {
+      "name": "M110A2",
+      "description": "Manufacturer: Knight's Armament Company (KAC)_Designated Marksman Rifle"
+    },
+    "ntw20": {
+      "name": "NTW-20",
+      "description": "Manufacturer: Denel Land Systems (Mechem)_Anti-Tank Rifle"
+    },
+    "snipexalligator": {
+      "name": "Alligator",
+      "description": "Manufacturer: XADO (Snipex)_Anti-materiel rifle"
+    },
+    "vss": {
+      "name": "VSS Vintorez",
+      "description": "Manufacturer: TsNIITochMash / Tula Arms Plant (TOZ)_Designated Marksman Rifle"
+    },
+    "sketchDragunovSVD": {
+      "name": "SVD",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_7.62x54mm designated marksman rifle"
+    },
+    "g53": {
+      "name": "HK53",
+      "description": "Manufacturer: Heckler & Koch (HK)_Carbine Rifle"
+    },
+    "mg36": {
+      "name": "G36",
+      "description": "Manufacturer: Heckler & Koch (HK)_Assault Rifle"
+    },
+    "m72a7": {
+      "name": "M72A7 LAW",
+      "description": "Manufacturer: Nammo / Talley Defense Systems_Anti-tank launcher"
+    },
+    "mbtlaw": {
+      "name": "NLAW",
+      "description": "Manufacturer: Saab Bofors Dynamics / Thales_Anti-tank launcher"
+    },
+    "pzf3it": {
+      "name": "PzF 3-IT",
+      "description": "Manufacturer: Dynamit Nobel Defence_Anti-tank launcher"
+    },
+    "rpg7v2": {
+      "name": "RPG-7V2",
+      "description": "Manufacturer: Bazalt_Anti-tank launcher"
+    },
+    "lvoa": {
+      "name": "LVOA-C",
+      "description": "Manufacturer: War Sport Industries_Carbine Rifle"
+    },
+    "defibrillator": {
+      "name": "Defibrillator",
+      "description": "Medical revival tool; manufacturer unspecified"
+    },
+    "mgl140": {
+      "name": "MGL-140",
+      "description": "Manufacturer: Milkor_Grenade Launcher"
+    },
+    "6x9": {
+      "name": "6Kh9-1 Bayonet",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "acb90": {
+      "name": "ACB90",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "bj2": {
+      "name": "BJ-2",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "c100": {
+      "name": "C-100",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "carbonfiber": {
+      "name": "Carbon Fiber Knife",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "dive": {
+      "name": "Dive Knife",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "improvised": {
+      "name": "Improvised Knife",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "m2sword": {
+      "name": "M2 Sword",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "m9bayonet": {
+      "name": "M9 Bayonet",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "militaryshovel": {
+      "name": "Military Shovel",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "mpl50": {
+      "name": "MPL-50",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "precision": {
+      "name": "Precision Knife",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "qnl95": {
+      "name": "QNL-95",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "shank": {
+      "name": "Shank",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "survival": {
+      "name": "Survival Knife",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "type56": {
+      "name": "Type 56 Spike Bayonet",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "weaver": {
+      "name": "Weaver Knife",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "wjq308": {
+      "name": "WJQ-308",
+      "description": "Melee weapon; manufacturer unspecified"
+    },
+    "93r": {
+      "name": "93R",
+      "description": "Manufacturer: Beretta_Pistol"
+    },
+    "compact45": {
+      "name": "HK45 Compact",
+      "description": "Manufacturer: Heckler & Koch (HK)_Uses:_45ACP 8rnd Magazine_45ACP 8rnd Tracer Magazine"
+    },
+    "g17": {
+      "name": "GLOCK 17",
+      "description": "Manufacturer: GLOCK_Pistol"
+    },
+    "j941": {
+      "name": "Jericho 941",
+      "description": "Manufacturer: Israel Weapon Industries (IWI / IMI)_Uses:_40SW 10rnd Magazine_40SW 10rnd Tracer Magazine"
+    },
+    "m500": {
+      "name": "Model 500",
+      "description": "Manufacturer: Smith & Wesson (S&W)_Pistol"
+    },
+    "sawedoff": {
+      "name": "Sawed-Off Shotgun",
+      "description": "Shortened double-barrel shotgun; manufacturer unspecified"
+    },
+    "shorty12g": {
+      "name": "Super-Shorty",
+      "description": "Manufacturer: Serbu Firearms_Shotgun"
+    },
+    "mosin": {
+      "name": "Mosin M91-59",
+      "description": "Manufacturer: Tula / Izhevsk arsenals_Sniper rifle"
+    },
+    "sr338": {
+      "name": "FD338",
+      "description": "Manufacturer: F&D Defense_Designated Marksman Rifle"
+    },
+    "binoculars": {
+      "name": "Thermal Binoculars",
+      "description": "4x / 8x FLIR thermal binoculars; manufacturer unspecified"
+    },
+    "sketchM1911": {
+      "name": "M1911",
+      "description": "Manufacturer: Colt_.45 ACP semi-automatic pistol"
+    },
+    "sketchM240": {
+      "name": "M240",
+      "description": "Manufacturer: FN Herstal (FN)_7.62x51mm belt-fed machine gun"
+    },
+    "aek971": {
+      "name": "AEK-971",
+      "description": "Manufacturer: Kovrov Mechanical Plant (KMZ / ZiD)_Assault Rifle"
+    },
+    "ak12": {
+      "name": "AK-12",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Assault Rifle"
+    },
+    "ak74m": {
+      "name": "AK-74M",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Assault Rifle"
+    },
+    "ak47tec": {
+      "name": "AKM",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Assault Rifle"
+    },
+    "an94": {
+      "name": "AN-94",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Assault Rifle"
+    },
+    "ash12": {
+      "name": "ASH-12",
+      "description": "Manufacturer: KBP Instrument Design Bureau (Tula)_Assault Rifle"
+    },
+    "cz805": {
+      "name": "CZ 805 BREN",
+      "description": "Manufacturer: Ceska zbrojovka (CZ)_Assault Rifle"
+    },
+    "g3a3": {
+      "name": "G3A3",
+      "description": "Manufacturer: Heckler & Koch (HK)_Assault Rifle"
+    },
+    "groza": {
+      "name": "OTs-14-1A Groza",
+      "description": "Manufacturer: KBP Instrument Design Bureau (Tula)_Assault Rifle"
+    },
+    "msbs": {
+      "name": "MSBS",
+      "description": "Manufacturer: Fabryka Broni Lucznik-Radom (FB)_Assault Rifle"
+    },
+    "a91": {
+      "name": "A-91",
+      "description": "Manufacturer: KBP Instrument Design Bureau (Tula)_Carbine Rifle"
+    },
+    "ak12u": {
+      "name": "AKU-12",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Carbine Rifle_Prototype configuration"
+    },
+    "asval": {
+      "name": "AS Val",
+      "description": "Manufacturer: TsNIITochMash / Tula Arms Plant (TOZ)_Carbine Rifle"
+    },
+    "gp30he": {
+      "name": "GP-30",
+      "description": "Manufacturer: KBP / Tula Arms Plant_Grenade Launcher"
+    },
+    "ak74lmg": {
+      "name": "AK-74M (Drum)",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Assault Rifle"
+    },
+    "pkp": {
+      "name": "PKP Pecheneg",
+      "description": "Manufacturer: Kovrov Mechanical Plant (ZiD)_Light Machine Gun"
+    },
+    "rpk12": {
+      "name": "RPK-12 (Prototype)",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Light Machine Gun_Prototype configuration"
+    },
+    "rpk": {
+      "name": "RPK",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Light Machine Gun"
+    },
+    "taurus44": {
+      "name": "Model 44",
+      "description": "Manufacturer: Taurus_Pistol"
+    },
+    "aps": {
+      "name": "APS",
+      "description": "Manufacturer: Molot_APS machine pistol; custom in-game ammunition"
+    },
+    "mp443": {
+      "name": "MP-443",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Pistol"
+    },
+    "ks12": {
+      "name": "KS-20G (Custom)",
+      "description": "Content-pack custom shotgun; real-world manufacturer unconfirmed"
+    },
+    "s12k": {
+      "name": "SAIGA-12K",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Shotgun"
+    },
+    "cz3a1": {
+      "name": "Scorpion EVO 3 A1",
+      "description": "Manufacturer: Ceska zbrojovka (CZ)_Submachine Gun"
+    },
+    "groza4": {
+      "name": "OTs-14-4A Groza",
+      "description": "Manufacturer: KBP Instrument Design Bureau (Tula)_Submachine Gun"
+    },
+    "pp19": {
+      "name": "PP-19 Bizon",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Submachine Gun"
+    },
+    "ppk20": {
+      "name": "PPK-20",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Submachine Gun"
+    },
+    "sr2": {
+      "name": "SR-2",
+      "description": "Manufacturer: TsNIITochMash / Tula Arms Plant (TOZ)_Submachine Gun"
+    },
+    "sr3m": {
+      "name": "SR-3M",
+      "description": "Manufacturer: TsNIITochMash / Tula Arms Plant (TOZ)_Submachine Gun"
+    },
+    "jng90": {
+      "name": "JNG-90",
+      "description": "Manufacturer: MKE (Makina ve Kimya Endustrisi)_Sniper rifle"
+    },
+    "sks": {
+      "name": "SKS",
+      "description": "Manufacturer: Tula Arsenal / Izhmash_Designated Marksman Rifle"
+    },
+    "sv98": {
+      "name": "SV-98",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Sniper rifle"
+    },
+    "svch338": {
+      "name": "SVCh .338",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Designated Marksman Rifle"
+    },
+    "svd12": {
+      "name": "SVDM",
+      "description": "Manufacturer: Kalashnikov Concern (Izhmash)_Designated Marksman Rifle"
+    },
+    "svu": {
+      "name": "SVU-A",
+      "description": "Manufacturer: TsKIB SOO (Tula)_Designated Marksman Rifle"
+    },
+    "vks": {
+      "name": "VKS",
+      "description": "Manufacturer: KBP Instrument Design Bureau (Tula)_Sniper rifle"
+    },
+    "qjz89": {
+      "name": "QJZ-89",
+      "description": "Manufacturer: Norinco_HMG Recipe Part"
+    },
+    "kord": {
+      "name": "Kord",
+      "description": "Manufacturer: Kovrov Mechanical Plant (ZiD)_HMG Recipe Part"
+    },
+    "m2hb50": {
+      "name": "M2HB",
+      "description": "Manufacturer: Fabrique Nationale (FN) / General Dynamics_HMG Recipe Part"
+    },
+    "tripleActionThunder": {
+      "name": "Thunder .50 BMG",
+      "description": "Manufacturer: Triple Action LLC_Single-shot .50 BMG pistol with extreme recoil"
+    },
+    "ar160": {
+      "name": "ARX160",
+      "description": "Manufacturer: Beretta_Assault Rifle"
+    },
+    "f2000": {
+      "name": "F2000",
+      "description": "Manufacturer: FN Herstal (FN)_Assault Rifle"
+    },
+    "famas": {
+      "name": "FAMAS",
+      "description": "Manufacturer: Manufacture d armes de Saint-Etienne (MAS / GIAT)_Assault Rifle"
+    },
+    "hcar": {
+      "name": "HCAR",
+      "description": "Manufacturer: Ohio Ordnance Works (OOW)_Assault Rifle"
+    },
+    "hk416": {
+      "name": "HK416",
+      "description": "Manufacturer: Heckler & Koch (HK)_Assault Rifle"
+    },
+    "l85a2": {
+      "name": "L85A2",
+      "description": "Manufacturer: Royal Ordnance / Heckler & Koch (HK upgrade)_Assault Rifle"
+    },
+    "m16a4": {
+      "name": "M16A4",
+      "description": "Manufacturer: Colt_Assault Rifle"
+    },
+    "mcx": {
+      "name": "MCX SPEAR",
+      "description": "Manufacturer: SIG Sauer_Assault Rifle"
+    },
+    "mk18": {
+      "name": "Mk 18 Mod 0",
+      "description": "Manufacturer: Colt_Assault Rifle"
+    },
+    "scarh": {
+      "name": "SCAR-H",
+      "description": "Manufacturer: FN Herstal (FN)_Assault Rifle"
+    },
+    "scarl": {
+      "name": "SCAR-L",
+      "description": "Manufacturer: FN Herstal (FN)_Assault Rifle"
+    },
+    "mk153": {
+      "name": "Mk 153 SMAW",
+      "description": "Manufacturer: General Dynamics / Talley Defense Systems_Anti-tank launcher"
+    },
+    "acwr": {
+      "name": "ACR",
+      "description": "Manufacturer: Bushmaster / Remington (Magpul design)_Carbine Rifle"
+    },
+    "m4a1": {
+      "name": "M4A1",
+      "description": "Manufacturer: Colt_Carbine Rifle"
+    },
+    "m320he": {
+      "name": "M320",
+      "description": "Manufacturer: Heckler & Koch (HK)_Grenade Launcher"
+    },
+    "m249": {
+      "name": "M249",
+      "description": "Manufacturer: FN Herstal (FN)_Light Machine Gun"
+    },
+    "m27iar": {
+      "name": "M27 IAR",
+      "description": "Manufacturer: Heckler & Koch (HK)_Light Machine Gun"
+    },
+    "m60e4": {
+      "name": "M60E4",
+      "description": "Manufacturer: US Ordnance / Saco Defense_Light Machine Gun"
+    },
+    "deagle44": {
+      "name": "Desert Eagle .44",
+      "description": "Manufacturer: Israel Weapon Industries (IWI / IMI)_Pistol"
+    },
+    "g18": {
+      "name": "GLOCK 18",
+      "description": "Manufacturer: GLOCK_Pistol"
+    },
+    "m327": {
+      "name": "Model 327",
+      "description": "Manufacturer: Smith & Wesson (S&W)_Pistol"
+    },
+    "m45a1": {
+      "name": "M45A1",
+      "description": "Manufacturer: Colt_Uses:_45ACP 8rnd Magazine_45ACP 8rnd Tracer Magazine"
+    },
+    "m9": {
+      "name": "M9",
+      "description": "Manufacturer: Beretta_Pistol"
+    },
+    "870mcs": {
+      "name": "870 MCS",
+      "description": "Manufacturer: Remington_Shotgun"
+    },
+    "aa12": {
+      "name": "AA-12",
+      "description": "Manufacturer: Military Police Systems (MPS)_Shotgun"
+    },
+    "m1014": {
+      "name": "M1014",
+      "description": "Manufacturer: Benelli_Shotgun"
+    },
+    "spas12": {
+      "name": "SPAS-12",
+      "description": "Manufacturer: Franchi_Shotgun"
+    },
+    "honeybadger": {
+      "name": "Honey Badger",
+      "description": "Manufacturer: Advanced Armament Corporation (AAC)_Submachine Gun"
+    },
+    "cbjms": {
+      "name": "CBJ-MS",
+      "description": "Manufacturer: CBJ Tech_Submachine Gun"
+    },
+    "uzi": {
+      "name": "Mini UZI",
+      "description": "Manufacturer: Israel Weapon Industries (IWI / IMI)_Submachine Gun"
+    },
+    "mp5sd": {
+      "name": "MP5SD",
+      "description": "Manufacturer: Heckler & Koch (HK)_Submachine Gun"
+    },
+    "mp7": {
+      "name": "MP7",
+      "description": "Manufacturer: Heckler & Koch (HK)_Submachine Gun"
+    },
+    "mp9": {
+      "name": "MP9",
+      "description": "Manufacturer: Brugger & Thomet (B&T)_Submachine Gun"
+    },
+    "mpx": {
+      "name": "MPX",
+      "description": "Manufacturer: SIG Sauer_Submachine Gun"
+    },
+    "p90": {
+      "name": "P90",
+      "description": "Manufacturer: FN Herstal (FN)_Submachine Gun"
+    },
+    "ro635": {
+      "name": "RO635",
+      "description": "Manufacturer: Colt_Submachine Gun"
+    },
+    "ump45": {
+      "name": "UMP45",
+      "description": "Manufacturer: Heckler & Koch (HK)_Submachine Gun"
+    },
+    "vector": {
+      "name": "Vector",
+      "description": "Manufacturer: KRISS USA (TDI)_Submachine Gun"
+    },
+    "l115": {
+      "name": "L115A3",
+      "description": "Manufacturer: Accuracy International (AI)_Sniper rifle"
+    },
+    "m24sws": {
+      "name": "M24 SWS",
+      "description": "Manufacturer: Remington_Sniper rifle"
+    },
+    "m39emr": {
+      "name": "M39 EMR",
+      "description": "Manufacturer: USMC Precision Weapons Section / Sage International_Designated Marksman Rifle"
+    },
+    "m40a5": {
+      "name": "M40A5",
+      "description": "Manufacturer: Remington_Sniper rifle"
+    },
+    "m82a3": {
+      "name": "M82A3",
+      "description": "Manufacturer: Barrett Firearms_Sniper rifle"
+    },
+    "mk11mod0": {
+      "name": "Mk 11 Mod 0",
+      "description": "Manufacturer: Knight's Armament Company (KAC)_Designated Marksman Rifle"
+    },
+    "mk20ssr": {
+      "name": "Mk 20 SSR",
+      "description": "Manufacturer: FN Herstal (FN)_Designated Marksman Rifle"
+    },
+    "sketchVHS2": {
+      "name": "VHS-2",
+      "description": "Manufacturer: HS Produkt_5.56x45mm bullpup rifle"
+    },
+    "m4a1IntegratedPulse": {
+      "name": "Integrated Pulse Rifle",
+      "description": "Fictional pulse rifle based on the Colt M4A1"
+    },
+    "m4a1PrototypeLaser": {
+      "name": "M4A1 Prototype Laser",
+      "description": "Fictional laser rifle based on the Colt M4A1"
+    }
+  },
+  "attachments": {
+    "12gsupp": {
+      "name": "12G Suppressor",
+      "description": "Suppressor for compatible 12-gauge shotguns"
+    },
+    "870mcsbarrel": {
+      "name": "14-inch Barrel",
+      "description": "14-inch barrel for the 870 MCS"
+    },
+    "umpflashhider": {
+      "name": "Flash Hider",
+      "description": "Flash hider for compatible UMP barrels"
+    },
+    "kx3": {
+      "name": "Flash Hider",
+      "description": "KX3 flash hider for compatible 5.56mm barrels"
+    },
+    "74flashhider": {
+      "name": "Flash Hider",
+      "description": "Flash hider for compatible AK-74 barrels"
+    },
+    "74uflashhider": {
+      "name": "Flash Hider",
+      "description": "Flash hider for compatible short AK barrels"
+    },
+    "kx5": {
+      "name": "Flash Hider",
+      "description": "KX5 flash hider for compatible 7.62mm barrels"
+    },
+    "dmrsilencer": {
+      "name": "Suppressor [DMR]",
+      "description": "Suppressor for compatible designated marksman rifles"
+    },
+    "duckbill": {
+      "name": "Duck Bill",
+      "description": "Duckbill shotgun attachment; widens the horizontal pellet pattern"
+    },
+    "fullchoke": {
+      "name": "Full Choke",
+      "description": "Full choke for compatible shotguns"
+    },
+    "heavybarrel": {
+      "name": "Heavy Barrel",
+      "description": "Heavy rifle barrel"
+    },
+    "ls06": {
+      "name": "LS06 Suppressor",
+      "description": "LS06 suppressor"
+    },
+    "modifiedchoke": {
+      "name": "Modified Choke",
+      "description": "Modified choke for compatible shotguns"
+    },
+    "flashhider": {
+      "name": "Muzzle Brake",
+      "description": "Muzzle brake for compatible barrels"
+    },
+    "osprey": {
+      "name": "Osprey Silencer",
+      "description": "Osprey suppressor"
+    },
+    "ots14grip": {
+      "name": "Grip Suppressor",
+      "description": "Groza grip and suppressor assembly"
+    },
+    "pbsuppressor": {
+      "name": "PB Heavy",
+      "description": "PB heavy suppressor"
+    },
+    "pbs4": {
+      "name": "PBS-4 Suppressor",
+      "description": "PBS-4 suppressor"
+    },
+    "qsw06": {
+      "name": "QSW-06 Suppressor",
+      "description": "QSW-06 suppressor"
+    },
+    "r2": {
+      "name": "R2 Suppressor",
+      "description": "R2 suppressor"
+    },
+    "silencer": {
+      "name": "Silencer",
+      "description": "General-purpose suppressor"
+    },
+    "snipersuppressor": {
+      "name": "Sniper Suppressor",
+      "description": "Suppressor for compatible sniper rifles"
+    },
+    "snipexsuppressor": {
+      "name": "Snipex Suppressor",
+      "description": "Oversized suppressor for the Alligator"
+    },
+    "speedyrifling": {
+      "name": "Speedy Rifling",
+      "description": "High-velocity rifled barrel"
+    },
+    "type4heavy": {
+      "name": "TYPE-4 Heavy",
+      "description": "Type 4 heavy suppressor"
+    },
+    "1mwlaser": {
+      "name": "1 mW Laser",
+      "description": "Visible aiming laser; beam can reveal your position"
+    },
+    "5mwlaser": {
+      "name": "5 mW Laser",
+      "description": "High-power visible aiming laser; beam can reveal your position"
+    },
+    "detector": {
+      "name": "Detector",
+      "description": "Target detector; hits mark targets for your team"
+    },
+    "irlaser": {
+      "name": "IR Laser",
+      "description": "Infrared aiming laser; visible through active night vision"
+    },
+    "lightweight": {
+      "name": "Lightweight",
+      "description": "Lightweight weapon components"
+    },
+    "tribeamlaser": {
+      "name": "Tri Beam Laser",
+      "description": "Tri-beam visible aiming laser; beam can reveal your position"
+    },
+    "afg": {
+      "name": "AFG Grip",
+      "description": "Angled foregrip"
+    },
+    "stubby": {
+      "name": "BCM Grip",
+      "description": "BCM short vertical foregrip"
+    },
+    "bipod": {
+      "name": "Bipod",
+      "description": "Bipod support attachment"
+    },
+    "ergogrip": {
+      "name": "Ergo Grip",
+      "description": "Ergonomic foregrip"
+    },
+    "irflashlight": {
+      "name": "IR Flashlight",
+      "description": "Infrared illuminator; visible through active night vision"
+    },
+    "laser": {
+      "name": "Compact Laser",
+      "description": "Compact visible aiming laser; beam can reveal your position"
+    },
+    "rvg": {
+      "name": "RVG Grip",
+      "description": "RVG vertical foregrip"
+    },
+    "bolt": {
+      "name": "Straight Pull Bolt",
+      "description": "Straight-pull bolt attachment"
+    },
+    "verticalgrip": {
+      "name": "Vertical Grip",
+      "description": "Vertical foregrip"
+    },
+    "x400": {
+      "name": "X400 Tactical Light",
+      "description": "X400 tactical flashlight; visible beam can reveal your position"
+    },
+    "acogta01": {
+      "name": "ACOG TA-01 [4x]",
+      "description": "Trijicon ACOG TA01 fixed-power optical sight"
+    },
+    "acogta31": {
+      "name": "ACOG TA-31 [4x]",
+      "description": "Trijicon ACOG TA31 fixed-power optical sight"
+    },
+    "c25scope": {
+      "name": "VMR [1x / 6x]",
+      "description": "Colt Optics VMR variable-power rifle scope; VMR reticle"
+    },
+    "c79": {
+      "name": "C79 [3.4x]",
+      "description": "ELCAN C79 optical sight; post-and-bars reticle"
+    },
+    "cl6x": {
+      "name": "CL6X [6x]",
+      "description": "CL6X fixed-power rifle scope"
+    },
+    "cnvdt": {
+      "name": "CNVD-T",
+      "description": "CNVD-T FLIR thermal sight"
+    },
+    "coyote": {
+      "name": "Coyote [RDS]",
+      "description": "Coyote unmagnified red-dot sight"
+    },
+    "holo": {
+      "name": "HOLO [1x]",
+      "description": "Holographic close-range sight"
+    },
+    "jgm4": {
+      "name": "JGM-4 [4x]",
+      "description": "JGM-4 fixed-power optical sight"
+    },
+    "kobra": {
+      "name": "Kobra [RDS]",
+      "description": "Kobra unmagnified reflex sight"
+    },
+    "m145": {
+      "name": "SpecterDR [1x / 4x]",
+      "description": "ELCAN SpecterDR dual-power optical sight"
+    },
+    "okp7": {
+      "name": "OKP-7 [RDS]",
+      "description": "OKP-7 open reflex sight"
+    },
+    "pka": {
+      "name": "PK-A [3.4x]",
+      "description": "PK-A fixed-power optical sight"
+    },
+    "pkas": {
+      "name": "PK-AS [1x]",
+      "description": "PK-AS close-range collimator sight"
+    },
+    "pks07": {
+      "name": "PKS-07 [7x]",
+      "description": "PKS-07 fixed-power rifle scope"
+    },
+    "prisma": {
+      "name": "Prisma [3.4x]",
+      "description": "Prism optical sight"
+    },
+    "pso1": {
+      "name": "PSO-1 [4x]",
+      "description": "PSO-1 fixed-power scope with rangefinding reticle"
+    },
+    "qxm7": {
+      "name": "QXM-7 [1x]",
+      "description": "QXM-7 close-range sight"
+    },
+    "reflex": {
+      "name": "Reflex [RDS]",
+      "description": "Unmagnified reflex red-dot sight"
+    },
+    "8xscope": {
+      "name": "Rifle Scope [8x]",
+      "description": "Fixed-power long-range rifle scope"
+    },
+    "variablezoomcn": {
+      "name": "CL6X VZ [6x-14x]",
+      "description": "CL6X dual-power rifle scope"
+    },
+    "variablezoomru": {
+      "name": "PKS-07 VZ [7x-14x]",
+      "description": "PKS-07 dual-power rifle scope"
+    },
+    "variablezoomus": {
+      "name": "Rifle Scope VZ [8x-14x]",
+      "description": "Dual-power long-range rifle scope"
+    },
+    "an94mount": {
+      "name": "AN94 Mount",
+      "description": "Optic mounting bracket for the AN-94"
+    },
+    "assaultstock": {
+      "name": "Assault Stock",
+      "description": "Assault rifle stock"
+    },
+    "meleestock": {
+      "name": "Melee Stock",
+      "description": "Stock configured for melee use"
+    },
+    "navalstock": {
+      "name": "Naval Stock",
+      "description": "Naval-pattern stock"
+    },
+    "nostock": {
+      "name": "No Stock",
+      "description": "Stock removal kit"
+    },
+    "skeletonstock": {
+      "name": "Skeleton Stock",
+      "description": "Skeletonized stock"
+    },
+    "stablestock": {
+      "name": "Stable Stock",
+      "description": "Stable shoulder stock"
+    },
+    "tacticalstock": {
+      "name": "Tactical Stock",
+      "description": "Tactical shoulder stock"
+    }
+  },
+  "icons": {
+    "canadaModern": "pixel_canadaModern",
+    "chinaModernBodyDesert": "pixel_chinaModernBodyDesert",
+    "chinaModernBody": "pixel_chinaModernBody",
+    "chinaModernBodyMarine": "pixel_chinaModernBodyMarine",
+    "germanArmyFleck": "pixel_germanArmyFleck",
+    "russiaEMRVKBO": "pixel_russiaEMRVKBO",
+    "ukMTP": "pixel_ukMTP",
+    "us80s": "pixel_us80s",
+    "USAOCPBody": "pixel_USAOCPBody",
+    "USAUCPBody": "pixel_USAUCPBody",
+    "usmcbodyW": "pixel_usmcbodyW",
+    "6B47": "pixel_6B47",
+    "achucp": "pixel_achucp",
+    "altyn": "pixel_altyn",
+    "boonieHatCADPATW": "pixel_boonieHatCADPATW",
+    "boonieHatDB": "pixel_boonieHatDB",
+    "boonieHatCADPATD": "pixel_boonieHatCADPATD",
+    "boonieHatEMR": "pixel_boonieHatEMR",
+    "boonieHatCE": "pixel_boonieHatCE",
+    "boonieHatDaguet": "pixel_boonieHatDaguet",
+    "boonieHatFlecktarn": "pixel_boonieHatFlecktarn",
+    "boonieHatWustentarn": "pixel_boonieHatWustentarn",
+    "boonieHatMEC": "pixel_boonieHatMEC",
+    "boonieHatOD": "pixel_boonieHatOD",
+    "boonieHat07D": "pixel_boonieHat07D",
+    "boonieHat07M": "pixel_boonieHat07M",
+    "boonieHat07U": "pixel_boonieHat07U",
+    "boonieHatChocChip": "pixel_boonieHatChocChip",
+    "boonieHatOCP": "pixel_boonieHatOCP",
+    "boonieHatUSWood": "pixel_boonieHatUSWood",
+    "boonieHatUSMC": "pixel_boonieHatUSMC",
+    "boonieHatUSMCW": "pixel_boonieHatUSMCW",
+    "CG634": "pixel_CG634",
+    "G92Woodland": "pixel_G92Woodland",
+    "IHPSvisor": "pixel_IHPSvisor",
+    "LWHwood": "pixel_LWHwood",
+    "LWH": "pixel_LWH",
+    "M1PotIraq": "pixel_M1PotIraq",
+    "PASGTChinaDesert": "pixel_PASGTChinaDesert",
+    "PASGTChinaMarine": "pixel_PASGTChinaMarine",
+    "PASGTChina": "pixel_PASGTChina",
+    "PASGT": "pixel_PASGT",
+    "balaclava2Black": "pixel_balaclava2Black",
+    "balaclava2Green": "pixel_balaclava2Green",
+    "balaclava2Tan": "pixel_balaclava2Tan",
+    "eyePro": "pixel_eyePro",
+    "6b45": "pixel_6b45",
+    "type06Vest": "pixel_type06Vest",
+    "mtv": "pixel_mtv",
+    "pasgtvest": "pixel_pasgtvest",
+    "PBAWoodland": "pixel_PBAWoodland",
+    "tapOperatorHelmet": "pixel_tapOperatorHelmet",
+    "sketchM1911": "pixel_sketchM1911",
+    "franceModern": "pixel_franceModern",
+    "franceModernD": "pixel_franceModernD",
+    "greekLizard": "pixel_greekLizard",
+    "insurgentRobeDDBU": "pixel_insurgentRobeDDBU",
+    "insurgentRobe": "pixel_insurgentRobe",
+    "iraq90s": "pixel_iraq90s",
+    "IDFModern": "pixel_IDFModern",
+    "MECBody": "pixel_MECBody",
+    "NKBody": "pixel_NKBody",
+    "rok90s": "pixel_rok90s",
+    "syriamod": "pixel_syriamod",
+    "TURKIYEBODY": "pixel_TURKIYEBODY",
+    "ukrSlavaMM14": "pixel_ukrSlavaMM14",
+    "usmcbodyD": "pixel_usmcbodyD",
+    "cadpatTransitionalHelmet": "pixel_cadpatTransitionalHelmet",
+    "cadpatTransitionalUniform": "pixel_cadpatTransitionalUniform",
+    "cadpatTransitionalVest": "pixel_cadpatTransitionalVest",
+    "6B47snow": "pixel_6B47snow",
+    "muricaTankHelmetMW": "pixel_muricaTankHelmetMW",
+    "spectraFranceWood": "pixel_spectraFranceWood",
+    "spectraFranceDesert": "pixel_spectraFranceDesert",
+    "IHPS": "pixel_IHPS",
+    "achMitznefet": "pixel_achMitznefet",
+    "mk7Ukraine": "pixel_mk7Ukraine",
+    "mk7MTP": "pixel_mk7MTP",
+    "PASGTMEC": "pixel_PASGTMEC",
+    "TYURKIYENUMERONEHELMET": "pixel_TYURKIYENUMERONEHELMET",
+    "SSH68NK": "pixel_SSH68NK",
+    "tapBelarusUniform": "pixel_tapBelarusUniform",
+    "tapBelarusVest": "pixel_tapBelarusVest",
+    "tapClonePhase2Body": "pixel_tapClonePhase2Body",
+    "tapClonePhase2Helmet": "pixel_tapClonePhase2Helmet",
+    "tapCroatiaHelmet": "pixel_tapCroatiaHelmet",
+    "tapCroatiaUniform": "pixel_tapCroatiaUniform",
+    "tapCroatiaVest": "pixel_tapCroatiaVest",
+    "tapDenmarkHelmet": "pixel_tapDenmarkHelmet",
+    "tapDenmarkUniform": "pixel_tapDenmarkUniform",
+    "tapDenmarkVest": "pixel_tapDenmarkVest",
+    "tapEstoniaSnowHelmet": "pixel_tapEstoniaSnowHelmet",
+    "tapEstoniaSnowUniform": "pixel_tapEstoniaSnowUniform",
+    "tapEstoniaSnowVest": "pixel_tapEstoniaSnowVest",
+    "tapEstoniaT5Helmet": "pixel_tapEstoniaT5Helmet",
+    "tapEstoniaT5Uniform": "pixel_tapEstoniaT5Uniform",
+    "tapEstoniaT5Vest": "pixel_tapEstoniaT5Vest",
+    "tapGhillieHood": "pixel_tapGhillieHood",
+    "tapGhillieSuit": "pixel_tapGhillieSuit",
+    "tapJapanFangHelmet": "pixel_tapJapanFangHelmet",
+    "tapJapanFangUniform": "pixel_tapJapanFangUniform",
+    "tapJapanVestMk1": "pixel_tapJapanVestMk1",
+    "tapKorea45Helmet": "pixel_tapKorea45Helmet",
+    "tapKorea45Uniform": "pixel_tapKorea45Uniform",
+    "tapKorea45Vest": "pixel_tapKorea45Vest",
+    "tapMexicoHelmet": "pixel_tapMexicoHelmet",
+    "tapMexicoUniform": "pixel_tapMexicoUniform",
+    "tapMexicoVest": "pixel_tapMexicoVest",
+    "tapMulticamBalaclava": "pixel_tapMulticamBalaclava",
+    "tapOperatorCarrier": "pixel_tapOperatorCarrier",
+    "tapOperatorOutfit": "pixel_tapOperatorOutfit",
+    "tapPolandHelmet": "pixel_tapPolandHelmet",
+    "tapPolandUniform": "pixel_tapPolandUniform",
+    "tapPolandVest": "pixel_tapPolandVest",
+    "tapRomaniaHelmet": "pixel_tapRomaniaHelmet",
+    "tapRomaniaUniform": "pixel_tapRomaniaUniform",
+    "tapRomaniaVest": "pixel_tapRomaniaVest",
+    "tapSerbiaT5Helmet": "pixel_tapSerbiaT5Helmet",
+    "tapSerbiaT5Uniform": "pixel_tapSerbiaT5Uniform",
+    "tapSerbiaT5Vest": "pixel_tapSerbiaT5Vest",
+    "tapSkullBalaclava": "pixel_tapSkullBalaclava",
+    "tapSnowGhillieHood": "pixel_tapSnowGhillieHood",
+    "tapSnowGhillieSuit": "pixel_tapSnowGhillieSuit",
+    "tapTankerHat": "pixel_tapTankerHat",
+    "tapWhiteBalaclava": "pixel_tapWhiteBalaclava",
+    "idzVest": "pixel_idzVest",
+    "IDFArmor": "pixel_IDFArmor",
+    "InterceptorBodyArmor": "pixel_InterceptorBodyArmor",
+    "IOTVUCP": "pixel_IOTVUCP",
+    "IOTVUkraine": "pixel_IOTVUkraine",
+    "IOTV": "pixel_IOTV",
+    "fragVestSORK": "pixel_fragVestSORK",
+    "ospreyMK4": "pixel_ospreyMK4",
+    "smbFelin": "pixel_smbFelin",
+    "IOTVtrk": "pixel_IOTVtrk",
+    "cnvdt": "pixel_cnvdt"
+  },
+  "original_icons": {
+    "12gsupp": "12GSupp",
+    "870mcsbarrel": "M870MCSBarrel",
+    "umpflashhider": "UMPFlashHider",
+    "kx3": "KXFlashHider",
+    "74flashhider": "74flashhider",
+    "74uflashhider": "74UFlashHider",
+    "kx5": "KX5",
+    "dmrsilencer": "SVUSilencer",
+    "duckbill": "duckbill",
+    "fullchoke": "FullChoke",
+    "heavybarrel": "HeavyBarrel",
+    "ls06": "LS06Silencer",
+    "modifiedchoke": "ModifiedChoke",
+    "flashhider": "AACFlashHider2",
+    "osprey": "ospreysilencer45",
+    "ots14grip": "OTS14Grip",
+    "pbsuppressor": "PB",
+    "pbs4": "PBS",
+    "qsw06": "QSW-06",
+    "r2": "KACQDS",
+    "silencer": "AAC9mmSD",
+    "snipersuppressor": "snipersuppressor",
+    "snipexsuppressor": "SnipexSuppressor",
+    "speedyrifling": "speedyrifling",
+    "type4heavy": "Type4heavy",
+    "1mwlaser": "1mwlaser",
+    "5mwlaser": "5mwlaser",
+    "detector": "Detector",
+    "irlaser": "1mwlaser",
+    "lightweight": "Lightweight",
+    "tribeamlaser": "tribeamlaser",
+    "afg": "AFG2",
+    "stubby": "stubbyTD",
+    "bipod": "bipod",
+    "ergogrip": "Ergogrip",
+    "irflashlight": "X400",
+    "laser": "glxlaserTD",
+    "rvg": "rvgTD",
+    "bolt": "bolt",
+    "verticalgrip": "foregripTD",
+    "x400": "X400",
+    "acogta01": "ACOGTA01",
+    "acogta31": "ACOGTA31",
+    "c25scope": "C25Scope",
+    "c79": "C79",
+    "cl6x": "CL6X",
+    "cnvdt": "CNVDT",
+    "coyote": "Coyote",
+    "holo": "eotechTD",
+    "jgm4": "JGM-4",
+    "kobra": "Kobra",
+    "m145": "m145",
+    "okp7": "OKP-7",
+    "pka": "PKA",
+    "pkas": "iconPKAS",
+    "pks07": "PKS07",
+    "prisma": "Prisma",
+    "pso1": "PSO1Scopeicon",
+    "qxm7": "QXM-7",
+    "reflex": "Reflex",
+    "8xscope": "RifleScope",
+    "variablezoomcn": "CL6XVZ",
+    "variablezoomru": "PKS07VZ",
+    "variablezoomus": "RifleScopeVZ",
+    "an94mount": "an94mount",
+    "assaultstock": "ColtStock",
+    "meleestock": "PDW",
+    "navalstock": "SCB",
+    "nostock": "NoStock",
+    "skeletonstock": "MOE",
+    "stablestock": "StableStock",
+    "tacticalstock": "UBR",
+    "test_model": "None",
+    "sketchAK308": "AK308",
+    "sketchBarrettSSRS": "BarrettSSRS",
+    "c25": "C25",
+    "c7a2": "C7A2",
+    "ace52": "ACE52",
+    "cq58": "CQ58",
+    "qbz03": "QBZ-03",
+    "qbz191": "QBZ-191",
+    "qbz811": "QBZ-81-1",
+    "qbz95": "QBZ-95",
+    "pf89": "PF89",
+    "ace21": "ACE21",
+    "qbz192": "QBZ-192",
+    "qlg10ahe": "QLG10A",
+    "qbb95": "QBB-95",
+    "type81m": "Type81M",
+    "qjy88": "QJY-88",
+    "np22": "NP22",
+    "np7": "NP7",
+    "nrp357": "NRP-357",
+    "qsz92": "QSZ-92",
+    "striker": "DAO-12",
+    "hawk12g": "HAWK12G",
+    "qbs09": "QBS-09",
+    "taps79": "TAPS79",
+    "cslr4": "CSLR4",
+    "fyjs": "FY-JS",
+    "nsg85": "NSG-85",
+    "qbu10": "QBU-10",
+    "qbu88": "QBU-88",
+    "auga3": "AUGA3",
+    "g11": "G11",
+    "m16a3": "M16A3",
+    "sa58": "SA58",
+    "avt40": "AVT40",
+    "mg3": "MG3",
+    "beowulf": "Beowulf",
+    "m110a2": "M110A2",
+    "ntw20": "NTW-20",
+    "snipexalligator": "SnipexAlligator",
+    "vss": "VSS",
+    "sketchDragunovSVD": "DragunovSVD",
+    "g53": "HK53",
+    "mg36": "MG36_Custom",
+    "m72a7": "m72a7",
+    "mbtlaw": "MBTLAW",
+    "pzf3it": "pzf3it",
+    "rpg7v2": "rpg7",
+    "lvoa": "LVOA",
+    "defibrillator": "Defibrillator",
+    "mgl140": "MGL-140",
+    "6x9": "6X9",
+    "acb90": "ACB90",
+    "bj2": "BJ2",
+    "c100": "C100",
+    "carbonfiber": "Carbonfiber",
+    "dive": "Dive",
+    "improvised": "improvised",
+    "m2sword": "m2sword",
+    "m9bayonet": "M9Bayonet",
+    "militaryshovel": "MilitaryShovel",
+    "mpl50": "MPL50",
+    "precision": "precision",
+    "qnl95": "QNL-95",
+    "shank": "Shank",
+    "survival": "Survival",
+    "type56": "Type56",
+    "weaver": "Weaver",
+    "wjq308": "WJQ308",
+    "93r": "93R",
+    "compact45": "Compact45",
+    "g17": "g17",
+    "j941": "J941",
+    "m500": "SWM500",
+    "sawedoff": "Sawed-off",
+    "shorty12g": "shorty12g",
+    "mosin": "Mosin",
+    "sr338": "SR338",
+    "binoculars": "Binocs",
+    "sketchM1911": "M1911",
+    "sketchM240": "M240",
+    "aek971": "AEK971",
+    "ak12": "AK12",
+    "ak74m": "AK74M",
+    "ak47tec": "AK47Tec",
+    "an94": "AN94",
+    "ash12": "ASH12",
+    "cz805": "CZ805",
+    "g3a3": "G3A3",
+    "groza": "Groza",
+    "msbs": "MSBS",
+    "a91": "A91",
+    "ak12u": "AK12U",
+    "asval": "ASVal",
+    "gp30he": "GP30",
+    "ak74lmg": "AK74LMG",
+    "pkp": "PKP",
+    "rpk12": "RPK12",
+    "rpk": "RPK",
+    "taurus44": "Taurus44",
+    "aps": "APS",
+    "mp443": "MP443",
+    "ks12": "KS12",
+    "s12k": "S12K",
+    "cz3a1": "CZ3A1",
+    "groza4": "Groza4",
+    "pp19": "PP19",
+    "ppk20": "PP1901",
+    "sr2": "SR2",
+    "sr3m": "SR-3M",
+    "jng90": "JNG90",
+    "sks": "SKS",
+    "sv98": "SV98",
+    "svch338": "SVCH",
+    "svd12": "SVD12",
+    "svu": "SVU",
+    "vks": "VKS",
+    "qjz89": "QJZ89",
+    "kord": "KORD",
+    "m2hb50": "M2HB",
+    "tripleActionThunder": "TripleActionThunder",
+    "ar160": "AR160",
+    "f2000": "F2000",
+    "famas": "Famas",
+    "hcar": "HCAR",
+    "hk416": "HK416",
+    "l85a2": "L85A2",
+    "m16a4": "M16A4",
+    "mcx": "MCX",
+    "mk18": "MK18",
+    "scarh": "ScarH",
+    "scarl": "SCARL",
+    "mk153": "MK153",
+    "acwr": "ACR",
+    "m4a1": "M4A1",
+    "m320he": "M320",
+    "m249": "M249",
+    "m27iar": "M27IAR",
+    "m60e4": "M60",
+    "deagle44": "DEAGLE44",
+    "g18": "Glock",
+    "m327": "M327",
+    "m45a1": "M45A1",
+    "m9": "M9",
+    "870mcs": "R870",
+    "aa12": "AA12",
+    "m1014": "M1014",
+    "spas12": "SPAS12",
+    "honeybadger": "honeybadger",
+    "cbjms": "CBJ-MS",
+    "uzi": "MiniUzi",
+    "mp5sd": "MP5SD",
+    "mp7": "MP7",
+    "mp9": "MP9",
+    "mpx": "MPX",
+    "p90": "P90",
+    "ro635": "RO635",
+    "ump45": "UMP45",
+    "vector": "Vector",
+    "l115": "L115",
+    "m24sws": "M24SWS",
+    "m39emr": "M39EMR",
+    "m40a5": "M40A5",
+    "m82a3": "M82A3",
+    "mk11mod0": "MK11MOD0",
+    "mk20ssr": "MK20SSR",
+    "sketchVHS2": "VHS2_Custom",
+    "m4a1IntegratedPulse": "M4A1_BlueLaser",
+    "m4a1PrototypeLaser": "M4A1_RedLaser"
+  },
+  "armor_icon_size": 32,
+  "item_rules": {
+    "defibrillator": {
+      "CreateItem": "false"
+    },
+    "binoculars": {
+      "InventoryCategory": "Gadgets"
+    },
+    "test_model": {
+      "HideFromCreative": "true"
+    },
+    "frag": {
+      "HideFromCreative": "true"
+    },
+    "frag1": {
+      "HideFromCreative": "true"
+    },
+    "apstank": {
+      "HideFromCreative": "true",
+      "InventoryCategory": "Gadgets"
+    },
+    "tankfire": {
+      "HideFromCreative": "true",
+      "InventoryCategory": "Gadgets"
+    },
+    "114514grenade": {
+      "HideFromCreative": "true",
+      "InventoryCategory": "Gadgets"
+    },
+    "12gauge5rdmag": {
+      "CreateItem": "false"
+    },
+    "12gaugeslug5rdmag": {
+      "CreateItem": "false"
+    },
+    "atbullet": {
+      "CreateItem": "false"
+    },
+    "atbulletGreenTracer": {
+      "CreateItem": "false"
+    },
+    "30310rdmag": {
+      "CreateItem": "false"
+    },
+    "30310rdmagTracer": {
+      "CreateItem": "false"
+    },
+    "408cheytac5rdmag": {
+      "CreateItem": "false"
+    },
+    "408cheytac5rdmagTracer": {
+      "CreateItem": "false"
+    },
+    "408cheytac7rdmag": {
+      "CreateItem": "false"
+    },
+    "408cheytac7rdmagTracer": {
+      "CreateItem": "false"
+    },
+    "44magnum1": {
+      "CreateItem": "false"
+    },
+    "44magnum1Tracer": {
+      "CreateItem": "false"
+    },
+    "47x3351rdmagburst": {
+      "CreateItem": "false"
+    },
+    "47x3351rdmagburstTracer": {
+      "CreateItem": "false"
+    },
+    "50cal30rdmag": {
+      "CreateItem": "false"
+    },
+    "50cal30rdmagTracer": {
+      "CreateItem": "false"
+    },
+    "57x2825rdmag": {
+      "CreateItem": "false"
+    },
+    "57x2825rdmagTracer": {
+      "CreateItem": "false"
+    },
+    "58x2130rdmag": {
+      "CreateItem": "false"
+    },
+    "58x2130rdmagGreenTracer": {
+      "CreateItem": "false"
+    },
+    "762x258rdmag": {
+      "CreateItem": "false"
+    },
+    "762x258rdmagGreenTracer": {
+      "CreateItem": "false"
+    },
+    "9x1840rdmag": {
+      "CreateItem": "false"
+    },
+    "9x1840rdmagGreenTracer": {
+      "CreateItem": "false"
+    },
+    "9x1944rdmag": {
+      "CreateItem": "false"
+    },
+    "9x1944rdmagTracer": {
+      "CreateItem": "false"
+    },
+    "defibrillatorammo": {
+      "CreateItem": "false"
+    },
+    "g84ammo": {
+      "CreateItem": "false"
+    },
+    "blowtorchammo": {
+      "CreateItem": "false"
+    },
+    "xm214ammo": {
+      "CreateItem": "false"
+    },
+    "xm214ammoTracer": {
+      "CreateItem": "false"
+    },
+    "25mmsmoke": {
+      "InventoryCategory": "Gadgets",
+      "CreateItem": "false"
+    },
+    "40mmflashbang": {
+      "InventoryCategory": "Ammo"
+    },
+    "40mmfrag": {
+      "InventoryCategory": "Ammo"
+    },
+    "40mmhe": {
+      "InventoryCategory": "Ammo"
+    },
+    "40mmlvg": {
+      "InventoryCategory": "Ammo"
+    },
+    "40mmpoisongas": {
+      "InventoryCategory": "Ammo"
+    },
+    "40mmsmoke": {
+      "InventoryCategory": "Ammo"
+    },
+    "84mmsmoke": {
+      "InventoryCategory": "Gadgets",
+      "CreateItem": "false"
+    },
+    "ammobagcn": {
+      "InventoryCategory": "Gadgets"
+    },
+    "ammopouchcn": {
+      "InventoryCategory": "Gadgets"
+    },
+    "apsgrenade": {
+      "InventoryCategory": "Gadgets"
+    },
+    "atgrenade": {
+      "InventoryCategory": "Gadgets"
+    },
+    "abgrenade": {
+      "InventoryCategory": "Gadgets"
+    },
+    "bouncymine": {
+      "InventoryCategory": "Gadgets"
+    },
+    "c4cn": {
+      "InventoryCategory": "Gadgets"
+    },
+    "combataxe": {
+      "InventoryCategory": "Gadgets"
+    },
+    "ds3decoy": {
+      "InventoryCategory": "Gadgets"
+    },
+    "epipen": {
+      "InventoryCategory": "Gadgets"
+    },
+    "epipen2": {
+      "InventoryCategory": "Gadgets"
+    },
+    "m116a1": {
+      "InventoryCategory": "Gadgets"
+    },
+    "m34cn": {
+      "InventoryCategory": "Gadgets"
+    },
+    "m67": {
+      "InventoryCategory": "Gadgets"
+    },
+    "m83smoke": {
+      "InventoryCategory": "Gadgets"
+    },
+    "m84": {
+      "InventoryCategory": "Gadgets"
+    },
+    "medicbagcn": {
+      "InventoryCategory": "Gadgets"
+    },
+    "mgl140ammo": {
+      "InventoryCategory": "Ammo"
+    },
+    "molotov": {
+      "InventoryCategory": "Gadgets"
+    },
+    "mtn55": {
+      "InventoryCategory": "Gadgets"
+    },
+    "rgd5": {
+      "InventoryCategory": "Gadgets"
+    },
+    "rgo": {
+      "InventoryCategory": "Gadgets"
+    },
+    "sensorgrenade": {
+      "InventoryCategory": "Gadgets"
+    },
+    "sketch30mmSmoke": {
+      "InventoryCategory": "Ammo"
+    },
+    "tanklaser": {
+      "InventoryCategory": "Gadgets"
+    },
+    "type82frag": {
+      "InventoryCategory": "Gadgets"
+    },
+    "v40": {
+      "InventoryCategory": "Gadgets"
+    },
+    "adrenaline": {
+      "InventoryCategory": "Gadgets"
+    },
+    "painkiller": {
+      "InventoryCategory": "Gadgets"
+    },
+    "c4remote": {
+      "InventoryCategory": "Gadgets"
+    }
+  }
+}

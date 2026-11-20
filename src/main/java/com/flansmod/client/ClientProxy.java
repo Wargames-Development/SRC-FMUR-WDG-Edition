@@ -60,6 +60,7 @@ public class ClientProxy extends CommonProxy {
     /* These renderers handle rendering in hand items */
     public static RenderGun gunRenderer;
     public static RenderGrenade grenadeRenderer;
+    private RenderM57 detonatorRenderer;
     public static RenderPlane planeRenderer;
     public static RenderVehicle vehicleRenderer;
     public static RenderMecha mechaRenderer;
@@ -77,10 +78,17 @@ public class ClientProxy extends CommonProxy {
     }
 
     @Override
+    public void onRemoteDetonated(EntityPlayer player, ItemStack stack) {
+        if (player == Minecraft.getMinecraft().thePlayer && detonatorRenderer != null)
+            detonatorRenderer.startPress(player, stack);
+    }
+
+    @Override
     public void load() {
         new FlansModClient().load();
         gunRenderer = new RenderGun();
         grenadeRenderer = new RenderGrenade();
+        detonatorRenderer = new RenderM57();
         planeRenderer = new RenderPlane();
         vehicleRenderer = new RenderVehicle();
         mechaRenderer = new RenderMecha();
@@ -91,6 +99,10 @@ public class ClientProxy extends CommonProxy {
 
         for (GrenadeType grenadeType : GrenadeType.grenades)
             MinecraftForgeClient.registerItemRenderer(grenadeType.item, grenadeRenderer);
+
+        com.flansmod.common.tools.ToolType detonator = com.flansmod.common.tools.ToolType.getType("c4remote");
+        if (detonator != null)
+            MinecraftForgeClient.registerItemRenderer(detonator.item, detonatorRenderer);
 
         for (PlaneType planeType : PlaneType.types)
             MinecraftForgeClient.registerItemRenderer(planeType.item, planeRenderer);

@@ -122,7 +122,16 @@ public class ItemTool extends ItemFood {
 		{
 			PlayerData data = PlayerHandler.getPlayerData(entityplayer, world.isRemote ? Side.CLIENT : Side.SERVER);
 			if(data == null)
-				return null;
+				return itemstack;
+			if ("c4remote".equals(type.shortName)) {
+				if (!entityplayer.isEntityAlive() || entityplayer.ridingEntity != null
+						|| data.shootTimeRight > 0 || data.shootTimeLeft > 0)
+					return itemstack;
+				data.shootTimeRight = 8;
+				FlansMod.proxy.onRemoteDetonated(entityplayer, itemstack);
+			}
+			// Remote explosions and tool durability are owned by the server.
+			if (world.isRemote) return itemstack;
 			Iterator<EntityGrenade> i = data.remoteExplosives.iterator();
 			while (i.hasNext())
 			{

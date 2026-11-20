@@ -25,6 +25,11 @@ RENDER_SIZE = 128
 FINAL_SIZE = 32
 
 GROUP_OFFSETS = {
+    # Native biped export already includes the parent bone transforms.
+    "nativeLeftArm": (0.0, 0.0, 0.0), "nativeRightArm": (0.0, 0.0, 0.0),
+    "nativeLeftLeg": (0.0, 0.0, 0.0), "nativeRightLeg": (0.0, 0.0, 0.0),
+    "nativeLeftCuff": (0.0, 0.0, 0.0), "nativeRightCuff": (0.0, 0.0, 0.0),
+    "nativeFaceVeil": (0.0, 0.0, 0.0), "nativeFaceWeave": (0.0, 0.0, 0.0),
     "headModel": (0.0, 0.0, 0.0),
     "bodyModel": (0.0, 0.0, 0.0),
     "leftArmModel": (5.0, 2.0, 0.0),

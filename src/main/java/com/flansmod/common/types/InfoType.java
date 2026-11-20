@@ -38,6 +38,9 @@ public abstract class InfoType implements IInfoType {
     public String texture;
     public String modelString;
     public String description;
+    public boolean createItem = true;
+    public boolean hideFromCreative;
+    public String inventoryCategory;
     public float modelScale = 1F;
     public boolean useGLTFAnimation = false;
     public boolean useRightArmGLTFAnimation = false;
@@ -96,7 +99,13 @@ public abstract class InfoType implements IInfoType {
      */
     protected void read(String[] split, TypeFile file) {
         try {
-            if (split[0].equals("Model"))
+            if (split[0].equals("CreateItem"))
+                createItem = Boolean.parseBoolean(split[1]);
+            else if (split[0].equals("HideFromCreative"))
+                hideFromCreative = Boolean.parseBoolean(split[1]);
+            else if (split[0].equals("InventoryCategory"))
+                inventoryCategory = split[1];
+            else if (split[0].equals("Model"))
                 modelString = split[1];
             else if (split[0].equals("ModelScale"))
                 modelScale = Float.parseFloat(split[1]);
@@ -165,7 +174,20 @@ public abstract class InfoType implements IInfoType {
     }
 
     public void addRecipe() {
+        if (!createItem)
+            return;
         this.addRecipe(getItem());
+    }
+
+    public void applyCreativeCategory() {
+        if (item == null)
+            return;
+        if ("Ammo".equalsIgnoreCase(inventoryCategory))
+            item.setCreativeTab(FlansMod.tabFlanAmmo);
+        else if ("Gadgets".equalsIgnoreCase(inventoryCategory))
+            item.setCreativeTab(FlansMod.tabFlanGadgets);
+        if (hideFromCreative)
+            item.setCreativeTab(null);
     }
 
     /**

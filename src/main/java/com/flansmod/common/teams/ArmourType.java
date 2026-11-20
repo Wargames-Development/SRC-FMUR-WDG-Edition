@@ -20,8 +20,6 @@ public class ArmourType extends InfoType {
     public int type;
     /** True when this content-pack item belongs in the dedicated face slot. */
     public boolean faceSlot;
-    /** Registered and usable, but omitted from vanilla Creative inventory tabs. */
-    public boolean hideFromCreative;
     /**
      * The amount of damage to absorb. From 0 to 1. Stacks additively between armour pieces
      */

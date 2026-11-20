@@ -24,7 +24,7 @@ import java.util.Comparator;
 import java.util.List;
 
 public class CreativeTabFlan extends CreativeTabs {
-    public int type; //0 = Guns, 1 = Vehicles + Planes, 2 = Teams, 3 = Parts, 4 = Mechas
+    public int type; //0 Guns, 1 Vehicles, 2 Parts, 3 Teams, 4 Mechas, 5 Blocks, 6 Attachments, 7 Ammo, 8 Gadgets
     public int icon;
     public int time = 0;
 
@@ -47,9 +47,11 @@ public class CreativeTabFlan extends CreativeTabs {
                 if(GunType.gunList.size() == 0) {
                     return new ItemStack(Blocks.wool, 1, 4);
                 } else {
-                    Item item = GunType.gunList.get(icon % GunType.gunList.size()).item;
-                    if(item != null)
-                        return new ItemStack(item);
+                    for (int offset = 0; offset < GunType.gunList.size(); offset++) {
+                        Item item = GunType.gunList.get((icon + offset) % GunType.gunList.size()).item;
+                        if (item != null && item.getCreativeTab() == this)
+                            return new ItemStack(item);
+                    }
                     return new ItemStack(Blocks.wool, 1, 4);
                 }
             case 1:
@@ -90,6 +92,24 @@ public class CreativeTabFlan extends CreativeTabs {
                         return new ItemStack(item);
                     return new ItemStack(Blocks.wool, 1, 10);
                 }
+            case 6:
+                return FlansMod.attachmentItems.isEmpty()
+                        ? new ItemStack(Blocks.wool, 1, 9)
+                        : new ItemStack(FlansMod.attachmentItems.get(icon % FlansMod.attachmentItems.size()));
+            case 7:
+                for (int offset = 0; offset < FlansMod.bulletItems.size(); offset++) {
+                    ItemBullet item = FlansMod.bulletItems.get((icon + offset) % FlansMod.bulletItems.size());
+                    if (item.getCreativeTab() == this)
+                        return new ItemStack(item);
+                }
+                return new ItemStack(Blocks.wool, 1, 8);
+            case 8:
+                for (int offset = 0; offset < FlansMod.grenadeItems.size(); offset++) {
+                    ItemGrenade item = FlansMod.grenadeItems.get((icon + offset) % FlansMod.grenadeItems.size());
+                    if (item.getCreativeTab() == this)
+                        return new ItemStack(item);
+                }
+                return new ItemStack(Blocks.wool, 1, 1);
         }
         return new ItemStack(FlansMod.workbench);
     }

@@ -36,13 +36,21 @@ public class ItemGrenade extends ItemShootable implements IFlanItem
 	public static final int THROW_PIN_PULL_TICKS = 4;
 	public static final int THROW_RELEASE_TICKS = 20;
 	public GrenadeType type;
+
+	public int getThrowAnimationTicks() {
+		return "c4cn".equals(type.shortName) ? 12 : THROW_ANIMATION_TICKS;
+	}
+
+	public int getThrowReleaseTicks() {
+		return "c4cn".equals(type.shortName) ? 4 : THROW_RELEASE_TICKS;
+	}
 	
 	public ItemGrenade(GrenadeType t) 
 	{
 		super(t);
 		type = t;
 		type.item = this;
-		setCreativeTab(FlansMod.tabFlanGuns);
+		setCreativeTab(FlansMod.tabFlanGadgets);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -146,7 +154,7 @@ public class ItemGrenade extends ItemShootable implements IFlanItem
 		{
 			//Delay the next throw / weapon fire / whatnot
 			// Shared client prediction and server enforcement, including slot changes.
-			data.shootTimeRight = Math.max(type.throwDelay, THROW_ANIMATION_TICKS);
+			data.shootTimeRight = Math.max(type.throwDelay, getThrowAnimationTicks());
 			FlansMod.proxy.onGrenadeThrown(player, stack);
 			if (!world.isRemote)
 				data.startGrenadeThrow(player, stack);

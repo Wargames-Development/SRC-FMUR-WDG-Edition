@@ -46,16 +46,7 @@ public class ItemBullet extends ItemShootable implements IFlanItem, IGunboxDescr
         setMaxStackSize(type.maxStackSize);
         setHasSubtypes(true);
         type.item = this;
-        switch (type.weaponType) {
-            case SHELL:
-            case BOMB:
-            case MINE:
-            case MISSILE:
-                setCreativeTab(FlansMod.tabFlanDriveables);
-                break;
-            default:
-                setCreativeTab(FlansMod.tabFlanGuns);
-        }
+        setCreativeTab(FlansMod.tabFlanAmmo);
     }
 
     public boolean isRepairable() {

@@ -234,7 +234,10 @@ public class FlansMod {
             tabFlanParts = new CreativeTabFlan(2),
             tabFlanTeams = new CreativeTabFlan(3),
             tabFlanMechas = new CreativeTabFlan(4),
-            tabFlanBlocks = new CreativeTabFlan(5);
+            tabFlanBlocks = new CreativeTabFlan(5),
+            tabFlanAttachments = new CreativeTabFlan(6),
+            tabFlanAmmo = new CreativeTabFlan(7),
+            tabFlanGadgets = new CreativeTabFlan(8);
 
     //Gun animations
     /**
@@ -361,9 +364,11 @@ public class FlansMod {
         GameRegistry.registerItem(handheldFlashlight, "handheld_flashlight", MODID);
 
         flag = ItemCompat.setUnlocalizedName(new ItemFlagpole(), "flagpole");
+        flag.setCreativeTab(null);
         GameRegistry.registerItem(flag, "flagpole", MODID);
 
         spawner = (BlockSpawner) (new BlockSpawner(Material.iron).setBlockName("teamsSpawner").setBlockUnbreakable().setResistance(1000000F));
+        spawner.setCreativeTab(null);
         GameRegistry.registerBlock(spawner, ItemBlockManyNames.class, "teamsSpawner");
         GameRegistry.registerTileEntity(TileEntitySpawner.class, "teamsSpawner");
 
@@ -374,6 +379,8 @@ public class FlansMod {
 
         soldierSpawner = ItemCompat.setUnlocalizedName(new ItemSoldierSpawner(), "soldierSpawner");
         corpseSpawner = ItemCompat.setUnlocalizedName(new ItemCorpseSpawner(), "corpseSpawner");
+        soldierSpawner.setCreativeTab(null);
+        corpseSpawner.setCreativeTab(null);
 
         proxy.registerRenderers();
 
@@ -796,6 +803,10 @@ public class FlansMod {
                         InfoType infoType = (typeClass.getConstructor(TypeFile.class).newInstance(typeFile));
                         infoType.read(typeFile);
                         if (infoType.shortName != null) {
+                            if (!infoType.createItem) {
+                                Sync.addHash(typeFile.lines.toString(), infoType.shortName);
+                                continue;
+                            }
                             switch (type) {
                                 case bullet:
                                     if (!((BulletType) infoType).internalProjectile)
@@ -851,6 +862,7 @@ public class FlansMod {
                                     log("Unrecognized type for " + infoType.shortName);
                                     break;
                             }
+                            infoType.applyCreativeCategory();
                             Sync.addHash(typeFile.lines.toString(), infoType.shortName);
                         }
 

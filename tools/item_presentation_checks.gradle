@@ -1,0 +1,27 @@
+// Opt-in client check. Prepare build/item-presentation-check/instance with Flan
+// and dependency mods from the development instance; no world is opened.
+gradle.projectsEvaluated {
+    def p = rootProject
+    def instance = p.file('build/item-presentation-check/instance')
+    def compile = p.tasks.create('compileItemPresentationProbe', JavaCompile) {
+        dependsOn p.tasks.compileJava
+        source p.fileTree('tools/item_presentation_checks') { include '*.java' }
+        classpath = p.sourceSets.main.runtimeClasspath
+        destinationDir = p.file('build/item-presentation-check/classes')
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+    def probe = p.tasks.create('itemPresentationProbeJar', Jar) {
+        dependsOn compile
+        from compile.destinationDir
+        destinationDir = new File(instance, 'mods')
+        archiveName = 'presentation-check.jar'
+    }
+    p.tasks.runClient.dependsOn probe
+    p.tasks.runClient.doFirst {
+        def packs = new File(instance, 'Flan').listFiles()
+        if (packs == null || packs.length == 0)
+            throw new GradleException('Prepare the isolated instance with the existing Flan packs before launching the check')
+        workingDir instance
+    }
+}

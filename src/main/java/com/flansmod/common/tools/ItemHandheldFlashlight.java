@@ -12,7 +12,7 @@ public class ItemHandheldFlashlight extends Item {
     public ItemHandheldFlashlight() {
         setUnlocalizedName("handheldFlashlight");
         setTextureName(FlansMod.MODID + ":handheld_flashlight");
-        setCreativeTab(FlansMod.tabFlanTeams);
+        setCreativeTab(FlansMod.tabFlanGuns);
         setMaxStackSize(1);
     }
 

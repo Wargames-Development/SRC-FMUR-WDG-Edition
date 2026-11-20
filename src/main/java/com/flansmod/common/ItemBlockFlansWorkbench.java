@@ -1,6 +1,7 @@
 package com.flansmod.common;
 
 import net.minecraft.block.Block;
+import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.MathHelper;
@@ -9,6 +10,11 @@ import net.minecraft.world.World;
 public class ItemBlockFlansWorkbench extends ItemBlockManyNames {
     public ItemBlockFlansWorkbench(Block block) {
         super(block);
+    }
+
+    @Override
+    public CreativeTabs[] getCreativeTabs() {
+        return new CreativeTabs[]{FlansMod.tabFlanDriveables, FlansMod.tabFlanAttachments, FlansMod.tabFlanParts};
     }
 
     @Override
