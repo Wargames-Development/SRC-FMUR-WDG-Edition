@@ -176,6 +176,7 @@ public final class ThermalScopeEffect {
             }
             if (thermal) sceneCaptured = CAMERA.captureColor(frame.framebufferObject, width, height);
             else {
+                WGCoreScopeCompat.renderBorders(view);
                 WGMapScopeCompat.renderWaypoints(partialTicks);
                 if (!mc.gameSettings.hideGUI)
                     MCHeliScopeMarkerCompat.renderCameraMarkers(mc, width, height);

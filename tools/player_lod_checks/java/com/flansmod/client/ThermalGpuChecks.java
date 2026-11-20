@@ -1,5 +1,6 @@
 package com.flansmod.client;
 
+import com.wdg.wgcore.client.territory.TerritoryBorderClientState.BorderColumn;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URLClassLoader;
@@ -65,6 +66,7 @@ public final class ThermalGpuChecks {
             primaryApertureIsolation();
             scopeMarkers();
             scopeWaypoints();
+            scopeTerritoryBorders();
             m40LensSize();
             entityReplayIsolation();
             if (System.getProperty("fmur.checks.dhRuntime") != null)
@@ -1667,6 +1669,75 @@ public final class ThermalGpuChecks {
         check(!GL11.glIsEnabled(GL11.GL_LIGHTING) && !GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK),"Waypoint replay is unlit without changing scene depth");
         GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glDisable(GL11.GL_BLEND);GL11.glColor4f(0,1,0,1);
         quad(1,0);GL11.glTranslatef(0.25F,0,0);
+    }
+
+    private static void scopeTerritoryBorders() throws Exception {
+        Method draw = WGCoreScopeCompat.class.getDeclaredMethod("drawBorders", CameraView.class, java.util.List.class);
+        draw.setAccessible(true);
+        CameraView view = new CameraView();
+        view.x = 16000000;
+        view.y = 64;
+        view.z = -16000000;
+        java.util.List<BorderColumn> columns = java.util.Arrays.asList(
+                new BorderColumn(view.x + 0.2578125, view.y - 0.5, view.z - 0.5, 1, 0, 1, 0),
+                new BorderColumn(view.x - 0.2421875, view.y - 0.5, view.z + 0.5, 1, 1, 0, 0));
+        int previousDraw = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
+        int previousRead = GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING);
+        int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+        int previousRenderbuffer = GL11.glGetInteger(GL30.GL_RENDERBUFFER_BINDING);
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        int target = fbo();
+        int color = GL30.glGetFramebufferAttachmentParameteri(GL30.GL_FRAMEBUFFER,
+                GL30.GL_COLOR_ATTACHMENT0, GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+        int depth = GL30.glGenRenderbuffers();
+        GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, depth);
+        GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER, GL14.GL_DEPTH_COMPONENT24, SIZE, SIZE);
+        GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL30.GL_RENDERBUFFER, depth);
+        GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix(); GL11.glLoadIdentity();
+        GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix(); GL11.glLoadIdentity();
+        try {
+            int lensProgram = field(ThermalScopeEffect.class, "colorLensShaderProgram").getInt(null);
+            check(lensProgram > 0, "Border fixture has a linked caller shader");
+            GL11.glViewport(0, 0, SIZE, SIZE);
+            GL11.glDisable(GL11.GL_DEPTH_TEST);
+            GL13.glActiveTexture(GL13.GL_TEXTURE1);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            for (int program : new int[] {0, lensProgram}) {
+                GL20.glUseProgram(program);
+                GL11.glDisable(GL11.GL_SCISSOR_TEST);
+                GL11.glColorMask(true, true, true, true);
+                GL11.glDepthMask(true);
+                GL11.glClearDepth(0.5);
+                GL11.glClearColor(0, 0, 0, 1);
+                GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+                GL11.glColorMask(false, false, false, false);
+                GL14.glBlendEquation(GL14.GL_FUNC_REVERSE_SUBTRACT);
+                draw.invoke(null, view, columns);
+                check((pixel(80, 64).get(1) & 255) > 200, "Exposed border keeps its color and camera-relative position");
+                check((pixel(48, 64).get(0) & 255) == 0, "Terrain depth hides the far border");
+                FloatBuffer sampledDepth = BufferUtils.createFloatBuffer(1);
+                GL11.glReadPixels(80, 64, 1, 1, GL11.GL_DEPTH_COMPONENT, GL11.GL_FLOAT, sampledDepth);
+                check(Math.abs(sampledDepth.get(0) - 0.5F) < 0.0001F, "Border replay preserves camera depth");
+                check(GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) == program
+                        && GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE) == GL13.GL_TEXTURE1
+                        && GL11.glIsEnabled(GL11.GL_TEXTURE_2D)
+                        && !GL11.glIsEnabled(GL11.GL_DEPTH_TEST)
+                        && GL11.glGetInteger(GL20.GL_BLEND_EQUATION_RGB) == GL14.GL_FUNC_REVERSE_SUBTRACT,
+                        "Border replay restores the caller's render state");
+                check(GL11.glGetError() == GL11.GL_NO_ERROR, "Border replay leaves no GL errors");
+            }
+        } finally {
+            GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPopMatrix();
+            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();
+            GL30.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, previousDraw);
+            GL30.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, previousRead);
+            GL11.glPopAttrib();
+            GL20.glUseProgram(previousProgram);
+            GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, previousRenderbuffer);
+            GL30.glDeleteFramebuffers(target);
+            GL30.glDeleteRenderbuffers(depth);
+            GL11.glDeleteTextures(color);
+        }
     }
 
     private static void m40LensSize() throws Exception {
