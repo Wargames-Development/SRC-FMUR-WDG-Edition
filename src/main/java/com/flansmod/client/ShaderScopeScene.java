@@ -55,6 +55,7 @@ final class ShaderScopeScene {
             } finally { RenderHelper.disableStandardItemLighting(); }
             scope.phase("NONE");
             if (shaderDistant && !distant.drawShadered(view, 0, scope)) return false;
+            if (!drawShaderActors(mc, view)) return false;
             scope.beginTranslucents();
             mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
@@ -68,20 +69,29 @@ final class ShaderScopeScene {
             });
             scope.phase("RAIN_SNOW"); mc.entityRenderer.enableLightmap(view.partialTicks);
             if(!CameraWeather.renderColour(mc, view, true)) return false;
-            int[] targets=scope.actorTargets();
-            if(targets!=null && DistantActorCamera.supportsShader()) {
-                if(!DistantActorCamera.beginShader(view,targets,scope.actorProjection())) return false;
-                shaderActors=DistantActorCamera.activeKinds();
-                scope.phase("ENTITIES");RenderHelper.enableStandardItemLighting();
-                try {
-                    drawActors(mc,view,shaderActors);
-                    if(DistantVisuals.supported()) ThermalRenderApi.renderCameraGeometry(view.partialTicks);
-                    else DistantActorCamera.renderDistant();
-                }
-                finally { try { DistantActorCamera.end(); } finally { RenderHelper.disableStandardItemLighting();scope.phase("NONE"); } }
-            }
-            return true;
+            // Older Angelica builds first expose the actor targets after deferred.
+            return shaderActors != 0 || drawShaderActors(mc, view);
         } finally { terrain.close(); }
+    }
+    private boolean drawShaderActors(Minecraft mc, CameraView view) {
+        int[] targets = scope.actorTargets();
+        if (targets == null || !DistantActorCamera.supportsShader()) return true;
+        if (!DistantActorCamera.beginShader(view, targets, scope.actorProjection())) return false;
+        shaderActors = DistantActorCamera.activeKinds();
+        try {
+            scope.phase("ENTITIES");
+            RenderHelper.enableStandardItemLighting();
+            drawActors(mc, view, shaderActors);
+            if (DistantVisuals.supported()) ThermalRenderApi.renderCameraGeometry(view.partialTicks);
+            else DistantActorCamera.renderDistant();
+        } finally {
+            try { DistantActorCamera.end(); }
+            finally {
+                RenderHelper.disableStandardItemLighting();
+                scope.phase("NONE");
+            }
+        }
+        return true;
     }
     /** Keep the established actor/DH depth mapping out of shaderpack temporal history. */
     boolean drawForward(Minecraft mc, CameraView view) {
