@@ -1,6 +1,7 @@
 package com.flansmod.client;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
@@ -26,9 +27,7 @@ final class ShaderScopeScene {
         try {
             if (shaderDistant && !distant.begin(view)) return false;
             if (!terrain.begin(view)) return false;
-            mc.entityRenderer.enableLightmap(view.partialTicks);
-            mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
-            GL11.glColor4f(1, 1, 1, 1); terrain.draw(0);
+            drawTerrain(mc, view, 0);
             scope.phase("ENTITIES");
             try {
                 RenderHelper.enableStandardItemLighting();
@@ -39,6 +38,7 @@ final class ShaderScopeScene {
                     if (box == null || !view.visible(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)) continue;
                     Render renderer = RenderManager.instance.getEntityRenderObject(entity);
                     if (renderer == null || forwardActor(entity)) continue;
+                    ScopeLighting.prepareEntity(entity, view.partialTicks);
                     double x = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * view.partialTicks;
                     double y = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * view.partialTicks;
                     double z = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * view.partialTicks;
@@ -57,9 +57,8 @@ final class ShaderScopeScene {
             if (shaderDistant && !distant.drawShadered(view, 0, scope)) return false;
             if (!drawShaderActors(mc, view)) return false;
             scope.beginTranslucents();
-            mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            terrain.draw(1);
+            drawTerrain(mc, view, 1);
             scope.phase("NONE");
             if (shaderDistant && !distant.drawShadered(view, 1, scope)) return false;
             scope.phase("PARTICLES");
@@ -72,6 +71,14 @@ final class ShaderScopeScene {
             // Older Angelica builds first expose the actor targets after deferred.
             return shaderActors != 0 || drawShaderActors(mc, view);
         } finally { terrain.close(); }
+    }
+    private void drawTerrain(Minecraft mc, CameraView view, int pass) {
+        ScopeLighting.prepareTerrain(mc, view.partialTicks);
+        try { terrain.draw(pass); }
+        finally {
+            // Iris terrain setup can leave the lightmap unit active. Entity and particle textures use unit zero.
+            OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
+        }
     }
     private boolean drawShaderActors(Minecraft mc, CameraView view) {
         int[] targets = scope.actorTargets();
@@ -132,6 +139,7 @@ final class ShaderScopeScene {
                 if (box == null || !view.visible(box.minX, box.minY, box.minZ, box.maxX, box.maxY, box.maxZ)) continue;
                 Render renderer = RenderManager.instance.getEntityRenderObject(entity);
                 if (renderer == null || DistantActorCamera.renderNative(entity)) continue;
+                ScopeLighting.prepareEntity(entity, view.partialTicks);
                 double x = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * view.partialTicks;
                 double y = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * view.partialTicks;
                 double z = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * view.partialTicks;

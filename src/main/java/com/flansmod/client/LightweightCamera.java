@@ -2,6 +2,7 @@ package com.flansmod.client;
 
 import java.lang.reflect.Method;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.client.renderer.entity.RenderManager;
@@ -47,8 +48,13 @@ final class LightweightCamera {
         int read = ThermalFramebuffers.canBlit() ? GL11.glGetInteger(org.lwjgl.opengl.GL30.GL_READ_FRAMEBUFFER_BINDING) : draw;
         int program = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         int matrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+        float lightX = OpenGlHelper.lastBrightnessX, lightY = OpenGlHelper.lastBrightnessY;
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         GL11.glPushClientAttrib(GL11.GL_CLIENT_VERTEX_ARRAY_BIT | GL11.GL_CLIENT_PIXEL_STORE_BIT);
+        if (colourScope) {
+            OpenGlHelper.setActiveTexture(OpenGlHelper.lightmapTexUnit);
+            GL11.glMatrixMode(GL11.GL_TEXTURE); GL11.glPushMatrix();
+        }
         GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix();
         GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix();
         try {
@@ -82,10 +88,11 @@ final class LightweightCamera {
             }
             if (!terrain.begin(view)) return null;
             if (!distant.begin(view)) { failure = "DH camera: " + distant.failure(); return null; }
-            mc.entityRenderer.enableLightmap(view.partialTicks);
+            if (colourScope) ScopeLighting.prepareTerrain(mc, view.partialTicks);
+            else mc.entityRenderer.enableLightmap(view.partialTicks);
             if (thermal) bindSensorLightmap();
             if (!(colourScope ? distant.drawColour(view, 0) : distant.draw(view, 0))) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
-            mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
+            if (!colourScope) mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glColor4f(1, 1, 1, 1);
             terrain.draw(0);
             GL20.glUseProgram(0);
@@ -104,6 +111,7 @@ final class LightweightCamera {
                 Render renderer = RenderManager.instance.getEntityRenderObject(entity);
                 if (renderer == null) continue;
                 if(DistantActorCamera.renderNative(entity)) continue;
+                if (colourScope) ScopeLighting.prepareEntity(entity, view.partialTicks);
                 double x = entity.lastTickPosX + (entity.posX - entity.lastTickPosX) * view.partialTicks;
                 double y = entity.lastTickPosY + (entity.posY - entity.lastTickPosY) * view.partialTicks;
                 double z = entity.lastTickPosZ + (entity.posZ - entity.lastTickPosZ) * view.partialTicks;
@@ -121,7 +129,8 @@ final class LightweightCamera {
             DistantActorCamera.end();
             RenderHelper.disableStandardItemLighting();
             if (distantClouds) this.sky.renderDistantClouds(mc, view);
-            mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
+            if (colourScope) ScopeLighting.prepareTerrain(mc, view.partialTicks);
+            else mc.getTextureManager().bindTexture(TextureMap.locationBlocksTexture);
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             if (thermal) bindSensorLightmap();
             if (!(colourScope ? distant.drawColour(view, 1) : distant.draw(view, 1))) { failure = "DH geometry unavailable: " + distant.failure(); return null; }
@@ -155,6 +164,11 @@ final class LightweightCamera {
                 failed = true;
             } finally {
                 mc.entityRenderer.disableLightmap(view.partialTicks);
+                if (colourScope) {
+                    OpenGlHelper.setActiveTexture(OpenGlHelper.lightmapTexUnit);
+                    GL11.glMatrixMode(GL11.GL_TEXTURE); GL11.glPopMatrix();
+                    OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, lightX, lightY);
+                }
                 GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPopMatrix();
                 GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix(); GL11.glMatrixMode(matrixMode);
                 GL20.glUseProgram(program);

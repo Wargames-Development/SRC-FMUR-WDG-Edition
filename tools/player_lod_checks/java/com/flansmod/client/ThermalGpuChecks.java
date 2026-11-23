@@ -57,6 +57,7 @@ public final class ThermalGpuChecks {
             distantCameraGeometry();
             cameraParticles();
             distantNightLighting();
+            scopeNativeLighting();
             sensorLightmap();
             cachedSensorDisplay();
             refreshRateOverlay();
@@ -1230,6 +1231,94 @@ public final class ThermalGpuChecks {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_WRAP_S,GL12.GL_CLAMP_TO_EDGE);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D,GL11.GL_TEXTURE_WRAP_T,GL12.GL_CLAMP_TO_EDGE);
         return id;
+    }
+
+    private static void scopeNativeLighting() throws Exception {
+        sun.misc.Unsafe allocator = (sun.misc.Unsafe) field(sun.misc.Unsafe.class, "theUnsafe").get(null);
+        net.minecraft.client.Minecraft mc = (net.minecraft.client.Minecraft)
+                allocator.allocateInstance(net.minecraft.client.Minecraft.class);
+        mc.entityRenderer = (net.minecraft.client.renderer.EntityRenderer)
+                allocator.allocateInstance(net.minecraft.client.renderer.EntityRenderer.class);
+        net.minecraft.util.ResourceLocation lightmapLocation = new net.minecraft.util.ResourceLocation("scope-test-lightmap");
+        field(mc.entityRenderer.getClass(), "mc").set(mc.entityRenderer, mc);
+        field(mc.entityRenderer.getClass(), "locationLightMap").set(mc.entityRenderer, lightmapLocation);
+        ScopeLitPig pig = (ScopeLitPig) allocator.allocateInstance(ScopeLitPig.class);
+        int framebuffer = GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING);
+        int matrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+        float lightX = net.minecraft.client.renderer.OpenGlHelper.lastBrightnessX;
+        float lightY = net.minecraft.client.renderer.OpenGlHelper.lastBrightnessY;
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        GL13.glActiveTexture(GL13.GL_TEXTURE1);
+        GL11.glMatrixMode(GL11.GL_TEXTURE); GL11.glPushMatrix();
+        GL13.glActiveTexture(GL13.GL_TEXTURE0);
+        GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix();
+        GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix();
+        int output = fbo(), atlas = texture(64, 128, 32, 255), lightmap = nightLightmap();
+        int colour = GL30.glGetFramebufferAttachmentParameteri(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0,
+                GL30.GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+        int program = terrainProgram("#version 120\nvarying vec2 uv, light;\n"
+                        + "void main(){gl_Position=ftransform();uv=gl_MultiTexCoord0.xy;"
+                        + "light=(gl_TextureMatrix[1]*gl_MultiTexCoord1).xy;gl_FrontColor=gl_Color;}",
+                "#version 120\nuniform sampler2D atlas,lightmap;varying vec2 uv,light;\n"
+                        + "void main(){gl_FragColor=texture2D(atlas,uv)*texture2D(lightmap,light)*gl_Color;}",
+                java.util.Collections.emptyList());
+        mc.renderEngine = new net.minecraft.client.renderer.texture.TextureManager(null) {
+            @Override public void bindTexture(net.minecraft.util.ResourceLocation resource) {
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, resource.equals(lightmapLocation) ? lightmap : atlas);
+            }
+        };
+        try {
+            GL11.glViewport(0, 0, SIZE, SIZE);
+            GL11.glDisable(GL11.GL_DEPTH_TEST); GL11.glDisable(GL11.GL_LIGHTING); GL11.glDisable(GL11.GL_BLEND);
+            GL11.glDisable(GL11.GL_ALPHA_TEST); GL11.glDisable(GL11.GL_CULL_FACE); GL11.glDisable(GL11.GL_SCISSOR_TEST);
+            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity();
+            GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadIdentity();
+            GL20.glUseProgram(program); uniform(program, "atlas", 0); uniform(program, "lightmap", 1);
+            for (int mode : new int[] {0, program}) {
+                GL20.glUseProgram(mode);
+                // An entity pass can leave the atlas on unit one and the lightmap disabled.
+                GL13.glActiveTexture(GL13.GL_TEXTURE1);
+                GL11.glBindTexture(GL11.GL_TEXTURE_2D, atlas); GL11.glDisable(GL11.GL_TEXTURE_2D);
+                ScopeLighting.prepareTerrain(mc, 0.5F);
+                check(GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE) == GL13.GL_TEXTURE0
+                                && GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D) == atlas,
+                        "Scope terrain restores the block atlas on the default unit");
+                GL13.glMultiTexCoord2f(GL13.GL_TEXTURE1, 240, 240);
+                quad(1, 0);
+                check((pixel(64, 64).get(1) & 255) == 128, "Inherited full brightness reproduces the native scope lighting error");
+                for (int lighting = 0; lighting < 3; lighting++) {
+                    pig.brightness = lighting == 1 ? 240 : 240 << 16;
+                    pig.burning = lighting == 2;
+                    GL13.glMultiTexCoord2f(GL13.GL_TEXTURE1, 240, 240);
+                    GL11.glColor4f(0, 0, 0, 1);
+                    ScopeLighting.prepareEntity(pig, 0.5F);
+                    quad(1, 0);
+                    int green = pixel(64, 64).get(1) & 255;
+                    check(Math.abs(green - (lighting == 0 ? 19 : 128)) <= 1,
+                            "Native scope entities use their night, block or burning light in mode " + mode + ", got " + green);
+                }
+            }
+            check(GL11.glGetError() == GL11.GL_NO_ERROR, "Native scope lighting setup leaves no GL errors");
+        } finally {
+            GL20.glUseProgram(0);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPopMatrix();
+            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();
+            GL13.glActiveTexture(GL13.GL_TEXTURE1);
+            GL11.glMatrixMode(GL11.GL_TEXTURE); GL11.glPopMatrix(); GL11.glMatrixMode(matrixMode);
+            net.minecraft.client.renderer.OpenGlHelper.setLightmapTextureCoords(GL13.GL_TEXTURE1, lightX, lightY);
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, framebuffer);
+            GL11.glPopAttrib();
+            GL30.glDeleteFramebuffers(output); GL20.glDeleteProgram(program);
+            GL11.glDeleteTextures(colour); GL11.glDeleteTextures(atlas); GL11.glDeleteTextures(lightmap);
+        }
+    }
+
+    private static final class ScopeLitPig extends net.minecraft.entity.passive.EntityPig {
+        int brightness;
+        boolean burning;
+        private ScopeLitPig() { super(null); }
+        @Override public int getBrightnessForRender(float partialTicks) { return brightness; }
+        @Override public boolean isBurning() { return burning; }
     }
 
     private static void distantNightLighting() throws Exception {
