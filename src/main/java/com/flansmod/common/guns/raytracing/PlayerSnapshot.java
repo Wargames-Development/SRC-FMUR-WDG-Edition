@@ -23,27 +23,43 @@ import net.minecraft.util.MathHelper;
 public class PlayerSnapshot {
 	public EntityPlayer player;
 	public Vector3f pos;
+	public final Vector3f eyePos;
 	public ArrayList<PlayerHitbox> hitboxes;
 	public long time;
-	private PlayerHitbox conservativeBodyHitbox;
+	private final PlayerHitbox conservativeBodyHitbox;
 
 	public PlayerSnapshot(EntityPlayer p) {
 		this.player = p;
 		this.time = System.nanoTime();
+		this.eyePos = new Vector3f(p.posX, p.posY + p.getEyeHeight(), p.posZ);
 		this.pos = new Vector3f(p.posX, p.posY, p.posZ);
 		if (FlansMod.proxy.isThePlayer(p)) {
 			this.pos = new Vector3f(p.posX, p.posY - 1.600000023841858D, p.posZ);
 		}
-		this.conservativeBodyHitbox = new PlayerHitbox(this.player, new RotatedAxes(),
-				new Vector3f(),
-				new Vector3f(p.boundingBox.minX - this.pos.x, p.boundingBox.minY - this.pos.y,
-						p.boundingBox.minZ - this.pos.z),
-				new Vector3f(p.boundingBox.maxX - p.boundingBox.minX,
-						Math.min(1.4D, p.boundingBox.maxY - p.boundingBox.minY),
-						p.boundingBox.maxZ - p.boundingBox.minZ),
-				EnumHitboxType.BODY);
-
 		this.hitboxes = new ArrayList<>();
+		Vector3f boundsOrigin = new Vector3f(p.boundingBox.minX - this.pos.x,
+				p.boundingBox.minY - this.pos.y, p.boundingBox.minZ - this.pos.z);
+		Vector3f boundsSize = new Vector3f(p.boundingBox.maxX - p.boundingBox.minX,
+				p.boundingBox.maxY - p.boundingBox.minY, p.boundingBox.maxZ - p.boundingBox.minZ);
+		// Modern crouch and horizontal poses expose their size through the normal entity bounds.
+		if (p.height == 1.5F || p.height == 0.6F) {
+			float headHeight = p.height == 1.5F ? Math.min(0.4F, boundsSize.y) : 0.0F;
+			boundsSize.y -= headHeight;
+			if (headHeight > 0.0F) {
+				this.hitboxes.add(new PlayerHitbox(p, new RotatedAxes(), new Vector3f(),
+						new Vector3f(boundsOrigin.x, boundsOrigin.y + boundsSize.y, boundsOrigin.z),
+						new Vector3f(boundsSize.x, headHeight, boundsSize.z), EnumHitboxType.HEAD));
+			}
+			this.hitboxes.add(new PlayerHitbox(p, new RotatedAxes(), new Vector3f(),
+					boundsOrigin, boundsSize, EnumHitboxType.BODY));
+			this.conservativeBodyHitbox = null;
+			return;
+		}
+
+		boundsSize.y = Math.min(1.4F, boundsSize.y);
+		this.conservativeBodyHitbox = new PlayerHitbox(p, new RotatedAxes(), new Vector3f(),
+				boundsOrigin, boundsSize, EnumHitboxType.BODY);
+
 		RotatedAxes bodyAxes = new RotatedAxes(p.rotationYaw, 0.0F, 0.0F);
 		RotatedAxes headAxes = new RotatedAxes(p.rotationYawHead - p.rotationYaw, 0.0F, -p.rotationPitch);
 		this.hitboxes.add(new PlayerHitbox(this.player, bodyAxes, new Vector3f(0.0F, 0.0F, 0.0F), new Vector3f(-0.25F, 0.0F, -0.15F), new Vector3f(0.5F, 1.4F, 0.3F), EnumHitboxType.BODY));
@@ -128,10 +144,12 @@ public class PlayerSnapshot {
 			}
 		}
 
-		PlayerBulletHit bodyHit = this.conservativeBodyHitbox.raytraceInterpolated(
-				older.conservativeBodyHitbox, localOrigin, motion, interpolation, padding);
-		if (isSegmentHit(bodyHit)) {
-			hits.add(bodyHit);
+		if (this.conservativeBodyHitbox != null) {
+			PlayerBulletHit bodyHit = this.conservativeBodyHitbox.raytraceInterpolated(
+					older.conservativeBodyHitbox, localOrigin, motion, interpolation, padding);
+			if (isSegmentHit(bodyHit)) {
+				hits.add(bodyHit);
+			}
 		}
 		return hits;
 	}
@@ -147,7 +165,7 @@ public class PlayerSnapshot {
 			}
 		}
 
-		if (includeConservativeBody) {
+		if (includeConservativeBody && this.conservativeBodyHitbox != null) {
 			PlayerBulletHit bodyHit = this.conservativeBodyHitbox.raytrace(localOrigin, motion, padding);
 			if (isSegmentHit(bodyHit)) {
 				hits.add(bodyHit);

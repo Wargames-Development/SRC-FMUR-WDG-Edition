@@ -118,7 +118,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     private int shotClientTick = 0;
     private long shotIntentReceivedNanos = 0L;
     private double shotClientPosX, shotClientPosY, shotClientPosZ;
-    private double shotIntentServerPosX, shotIntentServerPosY, shotIntentServerPosZ;
+    private double shotIntentServerPosX, shotIntentServerEyeY, shotIntentServerPosZ;
     private double shotServerVelocityX, shotServerVelocityZ;
     /** Offset from the physical projectile path to the server-authoritative client-shot shooter path. */
     private double playerHistoryOriginOffsetX, playerHistoryOriginOffsetY, playerHistoryOriginOffsetZ;
@@ -247,7 +247,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
         shotClientPosY = playerData.shotClientPosY;
         shotClientPosZ = playerData.shotClientPosZ;
         shotIntentServerPosX = playerData.shotIntentServerPosX;
-        shotIntentServerPosY = playerData.shotIntentServerPosY;
+        shotIntentServerEyeY = playerData.shotIntentServerEyeY;
         shotIntentServerPosZ = playerData.shotIntentServerPosZ;
         shotIntentLeft = playerData.shotIntentLeft;
         shotIntentHeld = playerData.shotIntentHeld;
@@ -270,16 +270,13 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                 shotIntentReceivedNanos - oneWayLatencyNanos);
         playerTargetHistoryOriginTimeNanos = shotIntentReceivedNanos - playerRewindNanos;
 
-        Vector3f historicalShooterPos = reconstructHistoricalShooterPosition(
+        Vector3f historicalEye = reconstructHistoricalShooterEye(
                 playerData.snapshots, playerProjectileOriginTimeNanos, shotIntentReceivedNanos,
-                shotIntentServerPosX, shotIntentServerPosY, shotIntentServerPosZ);
-        if (historicalShooterPos != null) {
-            double historicalEyeX = historicalShooterPos.x;
-            double historicalEyeY = historicalShooterPos.y + owner.getEyeHeight();
-            double historicalEyeZ = historicalShooterPos.z;
-            double offsetX = historicalEyeX - posX;
-            double offsetY = historicalEyeY - posY;
-            double offsetZ = historicalEyeZ - posZ;
+                shotIntentServerPosX, shotIntentServerEyeY, shotIntentServerPosZ);
+        if (historicalEye != null) {
+            double offsetX = historicalEye.x - posX;
+            double offsetY = historicalEye.y - posY;
+            double offsetZ = historicalEye.z - posZ;
 
             // Reject teleport / discontinuity-sized offsets instead of allowing lag
             // compensation to create a remote firing origin.
@@ -586,11 +583,11 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
     }
 
     /**
-     * Reconstruct a server-authoritative player position at a historical wall time.
+     * Reconstruct the shooter's server-authoritative eye position at a historical wall time.
      * Client coordinates never become the result: the newest sample is the server
-     * position captured when the fire intent arrived, followed by server snapshots.
+     * eye position captured when the fire intent arrived, followed by server snapshots.
      */
-    private static Vector3f reconstructHistoricalShooterPosition(PlayerSnapshot[] snapshots,
+    private static Vector3f reconstructHistoricalShooterEye(PlayerSnapshot[] snapshots,
             long targetTime, long receiptTime, double receiptX, double receiptY, double receiptZ) {
         Vector3f receiptPos = new Vector3f(receiptX, receiptY, receiptZ);
         if (targetTime >= receiptTime || snapshots == null || snapshots.length == 0) {
@@ -614,7 +611,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     }
                     float interpolation = (float) (targetTime - snapshot.time) / (float) interval;
                     Vector3f interpolated = new Vector3f();
-                    Vector3f.lerp(snapshot.pos, receiptPos,
+                    Vector3f.lerp(snapshot.eyePos, receiptPos,
                             Math.max(0.0F, Math.min(1.0F, interpolation)), interpolated);
                     return interpolated;
                 }
@@ -627,18 +624,18 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
             if (targetTime >= snapshot.time) {
                 long interval = newer.time - snapshot.time;
                 if (interval <= 0L) {
-                    return new Vector3f(newer.pos);
+                    return new Vector3f(newer.eyePos);
                 }
                 float interpolation = (float) (targetTime - snapshot.time) / (float) interval;
                 Vector3f interpolated = new Vector3f();
-                Vector3f.lerp(snapshot.pos, newer.pos,
+                Vector3f.lerp(snapshot.eyePos, newer.eyePos,
                         Math.max(0.0F, Math.min(1.0F, interpolation)), interpolated);
                 return interpolated;
             }
             newer = snapshot;
         }
 
-        return oldest == null ? receiptPos : new Vector3f(oldest.pos);
+        return oldest == null ? receiptPos : new Vector3f(oldest.eyePos);
     }
 
     private static long calculatePlayerRewindNanos(int shooterPing) {

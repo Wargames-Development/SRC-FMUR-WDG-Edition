@@ -82,7 +82,7 @@ public class PlayerData {
 	public int shotIntentSequence, shotClientTick;
 	public double shotClientPosX, shotClientPosY, shotClientPosZ;
 	public long shotIntentReceivedNanos;
-	public double shotIntentServerPosX, shotIntentServerPosY, shotIntentServerPosZ;
+	public double shotIntentServerPosX, shotIntentServerEyeY, shotIntentServerPosZ;
 	public boolean shotIntentLeft, shotIntentHeld, shotIntentServerScoped, hasShotContext;
 	/** Server-owned monotonically increasing identifier for authoritative gun shots. */
 	public long nextServerShotId;

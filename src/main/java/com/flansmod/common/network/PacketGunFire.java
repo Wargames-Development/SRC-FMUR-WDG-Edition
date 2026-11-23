@@ -94,7 +94,7 @@ public class PacketGunFire extends PacketBase {
             data.hasShotAim = true;
 
             // Position sent by the client is intent context only. Keep the server's
-            // receipt position alongside it and reject implausible coordinates before
+            // receipt eye position alongside it and reject implausible coordinates before
             // preserving the context for later historical-origin reconstruction.
             double deltaX = clientPosX - playerEntity.posX;
             double deltaY = clientPosY - playerEntity.posY;
@@ -109,7 +109,7 @@ public class PacketGunFire extends PacketBase {
                 data.shotClientPosZ = clientPosZ;
                 data.shotIntentReceivedNanos = System.nanoTime();
                 data.shotIntentServerPosX = playerEntity.posX;
-                data.shotIntentServerPosY = playerEntity.posY;
+                data.shotIntentServerEyeY = playerEntity.posY + playerEntity.getEyeHeight();
                 data.shotIntentServerPosZ = playerEntity.posZ;
                 data.shotIntentLeft = left;
                 data.shotIntentHeld = held;
