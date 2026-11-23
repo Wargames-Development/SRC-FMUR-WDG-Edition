@@ -2,6 +2,7 @@ package com.flansmod.client;
 
 import com.flansmod.common.PlayerData;
 import com.flansmod.common.PlayerHandler;
+import com.flansmod.common.playerlod.EfrPlayerPose;
 import com.flansmod.common.playerlod.PlayerLodSnapshot;
 import com.flansmod.common.teams.PlayerEquipmentInventory;
 import cpw.mods.fml.common.FMLCommonHandler;
@@ -236,7 +237,13 @@ public final class PlayerLodRenderer {
             GL11.glEnable(GL11.GL_BLEND);
             if (precision) GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA,
                     GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            renderer.doRender(contact.visual, 0, 0, 0, contact.visual.rotationYaw, partialTicks);
+            Runnable endPose = contact.visual == contact.actor
+                    ? EfrPlayerPose.begin(contact.actor, contact.latest.bedYaw) : null;
+            try {
+                renderer.doRender(contact.visual, 0, 0, 0, contact.visual.rotationYaw, partialTicks);
+            } finally {
+                if (endPose != null) endPose.run();
+            }
         } finally {
             GL11.glPopMatrix(); GL11.glPopAttrib();
             OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, oldLightX, oldLightY);
@@ -385,7 +392,7 @@ public final class PlayerLodRenderer {
         VisualPlayer(World world, com.mojang.authlib.GameProfile profile) { super(world, profile); }
         @Override public boolean isRiding() { return (flags & 16) != 0; }
         @Override public boolean isPlayerSleeping() { return (flags & 32) != 0; }
-        @Override public float getBedOrientationInDegrees() { return bedYaw; }
+        @Override public float getBedOrientationInDegrees() { return isPlayerSleeping() ? bedYaw : 0F; }
         @Override public int getBrightnessForRender(float partialTicks) { return brightness; }
         @Override public float getBrightness(float partialTicks) {
             int block = (brightness & 65535) >> 4;

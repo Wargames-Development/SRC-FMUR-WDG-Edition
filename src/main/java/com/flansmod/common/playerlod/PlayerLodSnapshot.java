@@ -79,7 +79,7 @@ public final class PlayerLodSnapshot {
             yaw = player.rotationYaw; pitch = player.rotationPitch;
             headYaw = player.rotationYawHead; bodyYaw = player.renderYawOffset;
             limb = player.limbSwing; limbAmount = player.limbSwingAmount;
-            swing = player.swingProgress; bedYaw = bedYaw(player);
+            swing = player.swingProgress; bedYaw = EfrPlayerPose.capture(player, bedYaw(player));
             flags = (player.isSneaking() ? 1 : 0) | (player.isSprinting() ? 2 : 0)
                     | (player.isInvisible() ? 4 : 0) | (player.isBurning() ? 8 : 0)
                     | (player.isRiding() ? 16 : 0) | (player.isPlayerSleeping() ? 32 : 0)
