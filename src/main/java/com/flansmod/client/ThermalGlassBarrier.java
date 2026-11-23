@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.RenderBlocks;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.NibbleArray;
 import net.minecraft.world.chunk.storage.ExtendedBlockStorage;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
@@ -18,8 +19,21 @@ import org.lwjgl.opengl.GL20;
 @SideOnly(Side.CLIENT)
 final class ThermalGlassBarrier {
     private final RenderBlocks blocks = new RenderBlocks();
+    private int[] glassIdBits;
+
+    void reset() { glassIdBits = null; }
 
     void render(Minecraft minecraft, CameraView view) {
+        if (glassIdBits == null) {
+            // A low byte can match up to 16 numeric block IDs. Cache that set once
+            // per world so dense terrain does not do a registry lookup per voxel.
+            glassIdBits = new int[256];
+            for (int id = 0; id < 4096; id++) {
+                Block block = Block.getBlockById(id);
+                if (block != null && block.getMaterial() == Material.glass)
+                    glassIdBits[id & 255] |= 1 << (id >> 8);
+            }
+        }
         int radius = Math.max(1, Math.min(32, minecraft.gameSettings.renderDistanceChunks)) + 1;
         int centerX = net.minecraft.util.MathHelper.floor_double(view.x) >> 4;
         int centerZ = net.minecraft.util.MathHelper.floor_double(view.z) >> 4;
@@ -60,10 +74,13 @@ final class ThermalGlassBarrier {
                                     || !view.visible(cx * 16D, baseY, cz * 16D,
                                     cx * 16D + 16, baseY + 16, cz * 16D + 16)) continue;
                             byte[] ids = storage.getBlockLSBArray();
-                            boolean extendedIds = storage.getBlockMSBArray() != null;
+                            NibbleArray highIds = storage.getBlockMSBArray();
                             for (int index = 0; index < 4096; index++) {
-                                if (ids[index] == 0 && !extendedIds) continue;
+                                int matches = glassIdBits[ids[index] & 255];
+                                if (matches == 0) continue;
                                 int x = index & 15, y = index >> 8, z = (index >> 4) & 15;
+                                int highId = highIds == null ? 0 : highIds.get(x, y, z);
+                                if ((matches & (1 << highId)) == 0) continue;
                                 Block block = storage.getBlockByExtId(x, y, z);
                                 if (block != null && block.getMaterial() == Material.glass)
                                     blocks.renderBlockByRenderType(block, cx * 16 + x, baseY + y, cz * 16 + z);

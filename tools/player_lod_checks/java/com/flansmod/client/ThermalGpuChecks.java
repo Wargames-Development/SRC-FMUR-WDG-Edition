@@ -743,9 +743,14 @@ public final class ThermalGpuChecks {
         GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER,GL30.GL_DEPTH_ATTACHMENT,GL30.GL_RENDERBUFFER,depth);
         mc.renderEngine=new ParticleTextures(transparent);
         ThermalGlassBarrier glass=new ThermalGlassBarrier();field(ThermalGlassBarrier.class,"blocks").set(glass,new GlassBlocks());
+        int[] glassIdBits = new int[256];
+        glassIdBits[1] = 1 | (1 << 3);
+        field(ThermalGlassBarrier.class, "glassIdBits").set(glass, glassIdBits);
         try {
-            for(int scenario=0;scenario<4;scenario++) {
+            for(int scenario=0;scenario<6;scenario++) {
                 section.block=new GlassBlock(scenario==2?net.minecraft.block.material.Material.rock:net.minecraft.block.material.Material.glass);
+                section.lookups = 0;
+                if (scenario >= 4) section.createBlockMSBArray().set(0, 0, 13, scenario == 4 ? 3 : 4);
                 world.loaded=scenario!=3;world.queries=0;
                 GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);GL11.glViewport(0,0,SIZE,SIZE);
                 GL11.glColorMask(true,true,true,true);GL11.glDepthMask(true);
@@ -761,13 +766,15 @@ public final class ThermalGpuChecks {
                 glass.render(mc,view);
                 check(GL11.glIsEnabled(GL11.GL_BLEND) && GL11.glIsEnabled(GL11.GL_ALPHA_TEST),"Glass pass restores color-camera blend/alpha state");
                 check(world.queries<=25,"Thermal glass lookup remains bounded by the loaded view radius");
+                check(section.lookups == (scenario == 3 || scenario == 5 ? 0 : 1),
+                        "Dense non-glass sections only resolve possible glass IDs; case=" + scenario);
                 ThermalCamera sensor=ThermalCamera.INSTANCE;
                 check(sensor.prepareDepth(output,SIZE,SIZE),"Glass thermal occlusion depth prepares");
                 final boolean inFront=scenario==1;
                 sensor.renderHeat(() -> {GL11.glDisable(GL11.GL_TEXTURE_2D);GL11.glColor4f(1,1,1,1);quad(1,inFront?-1:-5);});
                 GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,field(ThermalCamera.class,"framebuffer").getInt(sensor));
                 int heat=pixel(64,64).get(3)&255;
-                check(scenario==0?heat==0:heat==255,"Transparent glass blocks heat behind it, while front targets, non-glass and absent chunks remain unchanged; case="+scenario);
+                check(scenario==0||scenario==4?heat==0:heat==255,"Transparent glass blocks heat behind it, while front targets, non-glass and absent chunks remain unchanged; case="+scenario);
                 check(GL11.glGetError()==GL11.GL_NO_ERROR,"Thermal glass pass leaves no GL errors");
             }
         } finally {
@@ -781,9 +788,10 @@ public final class ThermalGpuChecks {
     }
     private static final class GlassSection extends net.minecraft.world.chunk.storage.ExtendedBlockStorage {
         net.minecraft.block.Block block;
-        GlassSection() { super(0,false);getBlockLSBArray()[13<<4]=1; }
+        int lookups;
+        GlassSection() { super(0,false);java.util.Arrays.fill(getBlockLSBArray(), (byte)2);getBlockLSBArray()[13<<4]=1; }
         @Override public boolean isEmpty() { return false; }
-        @Override public net.minecraft.block.Block getBlockByExtId(int x,int y,int z) { return block; }
+        @Override public net.minecraft.block.Block getBlockByExtId(int x,int y,int z) { lookups++; return block; }
     }
     private static final class GlassWorld extends net.minecraft.client.multiplayer.WorldClient {
         net.minecraft.world.chunk.Chunk chunk;boolean loaded;int queries;

@@ -43,6 +43,31 @@ public final class ThermalSensorChecks {
         clock = new ThermalSensorClock();
         check(clock.tryAcquire(first, 10, Long.MAX_VALUE - 50000000L), "Clock near wrap");
         check(clock.tryAcquire(first, 10, Long.MIN_VALUE + 50000000L), "nanoTime wrap uses elapsed time");
+        for (int[] rates : new int[][] {{30, 30}, {60, 30}, {144, 60}, {60, 20}, {60, 15}}) {
+            for (boolean jitter : new boolean[] {false, true}) {
+                int gameFps = rates[0], vehicleFps = rates[1], samples = 0;
+                clock = new ThermalSensorClock();
+                for (int frame = 0; frame < gameFps * 10; frame++) {
+                    long now = frame * 1000000000L / gameFps;
+                    if (jitter) now += frame % 3 * 500000L;
+                    if (clock.tryAcquireVehicle(first, vehicleFps, now)) samples++;
+                    check(!clock.tryAcquireVehicle(first, vehicleFps, now), "Vehicle samples at most once per display frame");
+                }
+                if (gameFps == vehicleFps && jitter) {
+                    // Varying frame time can delay the scheduled sample by a frame.
+                    check(samples >= vehicleFps * 10 - 1 && samples <= vehicleFps * 10, "Vehicle cadence across equal-rate jitter");
+                } else {
+                    check(samples == vehicleFps * 10, "Vehicle cadence at " + gameFps + " FPS, " + vehicleFps + " Hz, jitter=" + jitter);
+                }
+            }
+        }
+        clock = new ThermalSensorClock();
+        check(clock.tryAcquireVehicle(first, 10, 0), "Initial vehicle sample");
+        check(!clock.tryAcquireVehicle(first, 10, 99999999L), "Re-entering the same vehicle view preserves its deadline");
+        check(clock.tryAcquireVehicle(second, 10, 99999999L), "Vehicle devices keep independent deadlines");
+        check(clock.tryAcquireVehicle(first, 10, 5400000000L), "Vehicle admits one sample after a stall");
+        check(!clock.tryAcquireVehicle(first, 10, 5499999999L), "Vehicle drops missed slots after a stall");
+        check(clock.tryAcquireVehicle(first, 10, 5500000000L), "Vehicle resumes on its next deadline");
         check(ThermalProfile.DEFAULT.maxFramesPerSecond == 30, "Legacy definitions use 30 FPS");
         ThermalProfile profile = ThermalProfile.DEFAULT.with("ThermalResolution", "320 256")
                 .with("ThermalMaxFPS", "15").with("ThermalPalette", "IRONBOW")

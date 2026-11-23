@@ -89,7 +89,11 @@ final class LightweightCamera {
             GL11.glColor4f(1, 1, 1, 1);
             terrain.draw(0);
             GL20.glUseProgram(0);
-            if (thermal) glass.render(mc, view);
+            if (thermal) {
+                mc.mcProfiler.startSection("thermalGlass");
+                try { glass.render(mc, view); }
+                finally { mc.mcProfiler.endSection(); }
+            }
             if(!DistantActorCamera.begin(view,false)) { failure="DH isolated actor view is not ready";return null; }
             RenderHelper.enableStandardItemLighting();
             for (Object object : mc.theWorld.loadedEntityList) {
@@ -234,6 +238,7 @@ final class LightweightCamera {
 
     void destroy() {
         sky.reset();
+        glass.reset();
         distant.destroy();
         if (terrain != null) terrain.destroy();
         terrain = null;

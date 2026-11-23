@@ -106,10 +106,15 @@ public final class ThermalScopeEffect {
         if (isColorPictureInPictureDisplay() || !isActive(mc) || mc.theWorld == null
                 || !GLContext.getCapabilities().OpenGL20 || !OpenGlHelper.isFramebufferEnabled()) return;
         if (!tryBeginThermalSample()) return;
-        renderScopedWorld(mc, partialTicks);
-        if (sceneCaptured && !isThermalCapture()) {
-            renderCameraDisplay(mc, isModelLensDisplay(), true, isBinocularDisplay(), isVehicleDisplay(),
-                    flirEnabled, false, 1F, false, null, partialTicks);
+        mc.mcProfiler.startSection("sensorCamera");
+        try {
+            renderScopedWorld(mc, partialTicks);
+            if (sceneCaptured && !isThermalCapture()) {
+                renderCameraDisplay(mc, isModelLensDisplay(), true, isBinocularDisplay(), isVehicleDisplay(),
+                        flirEnabled, false, 1F, false, null, partialTicks);
+            }
+        } finally {
+            mc.mcProfiler.endSection();
         }
     }
 
@@ -159,6 +164,7 @@ public final class ThermalScopeEffect {
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix();
         GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix();
+        if (thermal) mc.mcProfiler.startSection("scene");
         try {
             Framebuffer frame = CameraRenderManager.INSTANCE.render(mc, width, height, magnification,
                     thermal, isModelLensDisplay(), isVehicleDisplay(), shaderScope);
@@ -167,15 +173,17 @@ public final class ThermalScopeEffect {
             CameraView view = CameraRenderManager.INSTANCE.currentView();
             GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadMatrix(view.projection);
             GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadMatrix(view.modelView);
-            if (thermal && !CAMERA.prepareDepth(frame.framebufferObject, width, height)) return;
             if (thermal) {
+                mc.mcProfiler.endStartSection("depth");
+                if (!CAMERA.prepareDepth(frame.framebufferObject, width, height)) return;
+                mc.mcProfiler.endStartSection("heatAndParticles");
                 CAMERA.updateSun(mc, partialTicks);
                 if(!DistantActorCamera.begin(view,true)) return;
                 try { CAMERA.renderHeat(partialTicks, isVehicleDisplay()); }
                 finally { DistantActorCamera.end(); }
-            }
-            if (thermal) sceneCaptured = CAMERA.captureColor(frame.framebufferObject, width, height);
-            else {
+                mc.mcProfiler.endStartSection("resolve");
+                sceneCaptured = CAMERA.captureColor(frame.framebufferObject, width, height);
+            } else {
                 WGCoreScopeCompat.renderBorders(view);
                 WGMapScopeCompat.renderWaypoints(partialTicks);
                 if (!mc.gameSettings.hideGUI)
@@ -190,6 +198,7 @@ public final class ThermalScopeEffect {
                         true, true, 1F, false, view, partialTicks);
             }
         } finally {
+            if (thermal) mc.mcProfiler.endSection();
             GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPopMatrix();
             GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix(); GL11.glMatrixMode(matrixMode);
             if (ThermalFramebuffers.canBlit()) {
@@ -439,7 +448,9 @@ public final class ThermalScopeEffect {
         ThermalProfile profile = activeProfile();
         if (profile == null) return false;
         // Throttle acquisition, while the cached lens follows the weapon every frame.
-        if ((isVehicleDisplay() || isModelLensDisplay())
+        if (isVehicleDisplay()) {
+            if (!SENSOR_CLOCK.tryAcquireVehicle(sensorDevice, profile.maxFramesPerSecond, System.nanoTime())) return false;
+        } else if (isModelLensDisplay()
                 && !SENSOR_CLOCK.tryAcquire(sensorDevice, profile.maxFramesPerSecond, System.nanoTime())) return false;
         CAMERA.beginSample(profile);
         return true;
