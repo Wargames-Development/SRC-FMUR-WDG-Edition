@@ -70,10 +70,10 @@ public class ModelCustomArmour extends ModelBiped {
             float skirtZ = (bipedLeftLeg.rotationPointZ + bipedRightLeg.rotationPointZ) / 2F;
             render(skirtFrontModel, skirtX, skirtY, skirtZ,
                     Math.min(bipedLeftLeg.rotateAngleX, bipedRightLeg.rotateAngleX),
-                    bipedLeftLeg.rotateAngleY, bipedLeftLeg.rotateAngleZ, f5, type.modelScale);
+                    bipedLeftLeg.rotateAngleY, bipedLeftLeg.rotateAngleZ, f5, type.modelScale, false);
             render(skirtRearModel, skirtX, skirtY, skirtZ,
                     Math.max(bipedLeftLeg.rotateAngleX, bipedRightLeg.rotateAngleX),
-                    bipedLeftLeg.rotateAngleY, bipedLeftLeg.rotateAngleZ, f5, type.modelScale);
+                    bipedLeftLeg.rotateAngleY, bipedLeftLeg.rotateAngleZ, f5, type.modelScale, false);
         } finally {
             ModelRendererTurbo.endRenderBatch();
             GL11.glPopMatrix();
@@ -114,12 +114,13 @@ public class ModelCustomArmour extends ModelBiped {
 
     public void render(ModelRendererTurbo[] models, ModelRenderer bodyPart, float f5, float scale) {
         render(models, bodyPart.rotationPointX, bodyPart.rotationPointY, bodyPart.rotationPointZ,
-                bodyPart.rotateAngleX, bodyPart.rotateAngleY, bodyPart.rotateAngleZ, f5, scale);
+                bodyPart.rotateAngleX, bodyPart.rotateAngleY, bodyPart.rotateAngleZ, f5, scale,
+                bodyPart == bipedHead);
     }
 
     private void render(ModelRendererTurbo[] models, float rotationPointX, float rotationPointY,
                         float rotationPointZ, float rotateAngleX, float rotateAngleY,
-                        float rotateAngleZ, float worldScale, float modelScale) {
+                        float rotateAngleZ, float worldScale, float modelScale, boolean head) {
         if (models == null || models.length == 0) {
             return;
         }
@@ -132,6 +133,11 @@ public class ModelCustomArmour extends ModelBiped {
             GL11.glTranslatef(rotationPointX / modelScale * worldScale,
                     rotationPointY / modelScale * worldScale,
                     rotationPointZ / modelScale * worldScale);
+            if (head && rotateAngleZ != 0F) {
+                // Match ModelRenderer's head rotation order for helmets copied from the skin pose.
+                GL11.glRotatef(rotateAngleZ * 57.29578F, 0F, 0F, 1F);
+                rotateAngleZ = 0F;
+            }
             if (rotateAngleY != 0F) {
                 GL11.glRotatef(rotateAngleY * 57.29578F, 0F, 1F, 0F);
             }
