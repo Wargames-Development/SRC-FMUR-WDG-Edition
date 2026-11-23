@@ -1,10 +1,16 @@
 package com.flansmod.client.model;
 
 import com.flansmod.client.tmt.ModelRendererTurbo;
+import com.flansmod.common.mob.EntityCorpse;
 import com.flansmod.common.mob.EntitySoldier;
+import com.flansmod.common.mob.RenderCorpse;
 import com.flansmod.common.teams.ArmourType;
+import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.model.ModelRenderer;
+import net.minecraft.client.renderer.entity.Render;
+import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.client.renderer.entity.RenderPlayer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -76,9 +82,34 @@ public class ModelCustomArmour extends ModelBiped {
 
     @Override
     public void setRotationAngles(float limb, float amount, float age, float yaw, float pitch, float scale, Entity entity) {
+        // Vanilla does not overwrite leg roll after this shared model draws a corpse.
+        bipedLeftLeg.rotateAngleZ = 0F;
+        bipedRightLeg.rotateAngleZ = 0F;
         super.setRotationAngles(limb, amount, age, yaw, pitch, scale, entity);
-        if (entity instanceof com.flansmod.common.mob.EntityCorpse)
-            com.flansmod.common.mob.RenderCorpse.applyPose(this, (com.flansmod.common.mob.EntityCorpse) entity);
+        if (entity instanceof EntityCorpse) {
+            RenderCorpse.applyPose(this, (EntityCorpse) entity);
+        } else if (entity instanceof AbstractClientPlayer) {
+            Render renderer = RenderManager.instance.getEntityRenderObject(entity);
+            if (renderer instanceof RenderPlayer) {
+                // The player model has already resolved crouch, crawl and other animation hooks.
+                ModelBiped playerModel = ((RenderPlayer) renderer).modelBipedMain;
+                copyPose(playerModel.bipedHead, bipedHead);
+                copyPose(playerModel.bipedBody, bipedBody);
+                copyPose(playerModel.bipedLeftArm, bipedLeftArm);
+                copyPose(playerModel.bipedRightArm, bipedRightArm);
+                copyPose(playerModel.bipedLeftLeg, bipedLeftLeg);
+                copyPose(playerModel.bipedRightLeg, bipedRightLeg);
+            }
+        }
+    }
+
+    private static void copyPose(ModelRenderer source, ModelRenderer target) {
+        target.rotationPointX = source.rotationPointX;
+        target.rotationPointY = source.rotationPointY;
+        target.rotationPointZ = source.rotationPointZ;
+        target.rotateAngleX = source.rotateAngleX;
+        target.rotateAngleY = source.rotateAngleY;
+        target.rotateAngleZ = source.rotateAngleZ;
     }
 
     public void render(ModelRendererTurbo[] models, ModelRenderer bodyPart, float f5, float scale) {

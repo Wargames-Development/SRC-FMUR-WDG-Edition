@@ -1,11 +1,7 @@
 package com.flansmod.client.model.NewTapArmor;
 
 import com.flansmod.client.model.ModelCustomArmour;
-import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.model.ModelRenderer;
-import net.minecraft.client.renderer.entity.Render;
-import net.minecraft.client.renderer.entity.RenderManager;
-import net.minecraft.client.renderer.entity.RenderPlayer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -336,18 +332,6 @@ public class ModelGhillieBase extends ModelCustomArmour {
             if (action == EnumAction.bow) aimedBow = true;
         }
         setRotationAngles(f, f1, f2, f3, f4, f5, entity);
-        if (entity instanceof EntityPlayer) {
-            Render renderer = RenderManager.instance.getEntityRenderObject(entity);
-            if (renderer instanceof RenderPlayer) {
-                ModelBiped playerModel = ((RenderPlayer) renderer).modelBipedMain;
-                copyPose(playerModel.bipedHead, bipedHead);
-                copyPose(playerModel.bipedBody, bipedBody);
-                copyPose(playerModel.bipedLeftArm, bipedLeftArm);
-                copyPose(playerModel.bipedRightArm, bipedRightArm);
-                copyPose(playerModel.bipedLeftLeg, bipedLeftLeg);
-                copyPose(playerModel.bipedRightLeg, bipedRightLeg);
-            }
-        }
         GL11.glPushMatrix();
         try {
             GL11.glScalef(type.modelScale, type.modelScale, type.modelScale);
@@ -391,15 +375,6 @@ public class ModelGhillieBase extends ModelCustomArmour {
         } finally {
             GL11.glPopMatrix();
         }
-    }
-
-    private void copyPose(ModelRenderer from, ModelRenderer to) {
-        to.rotationPointX = from.rotationPointX;
-        to.rotationPointY = from.rotationPointY;
-        to.rotationPointZ = from.rotationPointZ;
-        to.rotateAngleX = from.rotateAngleX;
-        to.rotateAngleY = from.rotateAngleY;
-        to.rotateAngleZ = from.rotateAngleZ;
     }
 
     /** The first-person gun renderer has already drawn the player's skin arm. */
