@@ -630,13 +630,8 @@ public final class ThermalGpuChecks {
         sun.misc.Unsafe allocator=(sun.misc.Unsafe)field(sun.misc.Unsafe.class,"theUnsafe").get(null);
         net.minecraft.client.Minecraft mc=(net.minecraft.client.Minecraft)allocator.allocateInstance(net.minecraft.client.Minecraft.class);
         RateFont font=(RateFont)allocator.allocateInstance(RateFont.class);
-        mc.fontRenderer=font;mc.gameSettings=new net.minecraft.client.settings.GameSettings();
-        mc.displayWidth=SIZE;mc.displayHeight=SIZE;
-        field(net.minecraft.client.Minecraft.class,"mcLanguageManager").set(mc,
-                new net.minecraft.client.resources.LanguageManager(null,"en_US"));
+        mc.fontRenderer=font;
         Object previousProfile=field(ThermalRenderApi.class,"vehicleProfile").get(null);
-        Method labelMethod=ThermalScopeEffect.class.getDeclaredMethod("refreshRateLabel",com.flansmod.common.guns.ThermalProfile.class);
-        labelMethod.setAccessible(true);
         int output=fbo();
         try {
             GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER,output);
@@ -648,16 +643,21 @@ public final class ThermalGpuChecks {
                 GL11.glColorMask(false,false,false,false);
                 GL13.glActiveTexture(GL13.GL_TEXTURE3);
                 GL11.glMatrixMode(GL11.GL_PROJECTION);
-                String label=(String)labelMethod.invoke(null,ThermalRenderApi.vehicleSensorProfile());
-                ThermalScopeEffect.drawRefreshRate(mc,label,4,4,SIZE,SIZE);
-                check((fps+"Hz").equals(font.label),"Vehicle overlay reads resolved device rate "+fps);
-                check(font.x==4 && font.y==4,"Vehicle rate is at top left");
-                check((pixel(5,SIZE-5).get(0)&255)>240,"Late rate survives inherited clipping/color mask");
+                ThermalScopeEffect.drawRefreshRate(mc,ThermalRenderApi.vehicleSensorProfile(),SIZE,SIZE,true,true);
+                check(("CAP: "+fps+"hz").equals(font.label),"Vehicle overlay reads resolved device rate "+fps);
+                int left=Math.round((SIZE-font.getStringWidth(font.label)*1.5F)*0.5F);
+                check((pixel(left-2,SIZE-5).get(0)&255)==0 && (pixel(left+1,SIZE-5).get(0)&255)>240,
+                        "Vehicle rate is centered at the top and survives inherited clipping/color mask");
+                check((pixel(left+10,SIZE-15).get(0)&255)>240,"Vehicle rate is drawn at 150% scale");
                 check(GL11.glIsEnabled(GL11.GL_SCISSOR_TEST),"Rate restores clipping state");
                 check(GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE)==GL13.GL_TEXTURE3,"Rate restores active sampler");
                 check(GL11.glGetInteger(GL11.GL_MATRIX_MODE)==GL11.GL_PROJECTION,"Rate restores matrix mode");
                 check(GL11.glGetInteger(GL30.GL_FRAMEBUFFER_BINDING)==output,"Rate preserves output framebuffer");
             }
+            GL13.glActiveTexture(GL13.GL_TEXTURE0);
+            ThermalScopeEffect.drawModelLensRefreshRate(mc,com.flansmod.common.guns.ThermalProfile.DEFAULT,192);
+            check("CAP: 30hz".equals(font.label),"PiP shows the configured optic cap");
+            check(font.x==(192-font.getStringWidth(font.label))/2 && font.y==7,"PiP cap is inset at the top center of the aperture");
             check(GL11.glGetError()==GL11.GL_NO_ERROR,"Rate overlay has no GL errors");
         } finally {
             field(ThermalRenderApi.class,"vehicleProfile").set(null,previousProfile);

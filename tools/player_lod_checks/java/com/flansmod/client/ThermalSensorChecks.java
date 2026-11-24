@@ -9,24 +9,15 @@ public final class ThermalSensorChecks {
     public static void main(String[] args) {
         for (int gameFps : new int[] {20, 30, 60, 144, 240}) {
             for (int sensorFps : new int[] {1, 15, 30, 60, 240}) {
-                ThermalSensorClock clock = new ThermalSensorClock();
-                Object device = new Object();
-                int samples = 0;
-                long previous = Long.MIN_VALUE;
-                long interval = (1000000000L + sensorFps - 1) / sensorFps;
-                for (int frame = 0; frame < gameFps * 10; frame++) {
-                    long now = frame * 1000000000L / gameFps;
-                    if (clock.tryAcquire(device, sensorFps, now)) {
-                        if (samples > 0) check(now - previous >= interval, "Sensor sampled too soon");
-                        previous = now;
-                        samples++;
-                        check(!clock.tryAcquire(device, sensorFps, now), "Duplicate camera callback sampled again");
-                    }
-                }
+                int samples = opticSamples(gameFps, sensorFps, false);
                 check(samples <= sensorFps * 10 && samples <= gameFps * 10, "Sensor/game FPS ceiling");
                 check(samples > 0, "Sensor made progress");
             }
         }
+        check(opticSamples(30, 30, false) >= 299, "30 Hz optic follows a steady 30 FPS client");
+        check(opticSamples(60, 30, false) == 300, "30 Hz optic does not slip to 20 Hz at steady 60 FPS");
+        check(opticSamples(60, 30, true) >= 290, "30 Hz optic stays near its cap under frame jitter");
+        check(opticSamples(144, 30, true) >= 290, "30 Hz optic stays near its cap at high game FPS");
         ThermalSensorClock clock = new ThermalSensorClock();
         Object world = new Object(), first = new Object(), second = new Object();
         check(clock.setWorld(world), "World starts a new sensor session");
@@ -43,6 +34,10 @@ public final class ThermalSensorChecks {
         clock = new ThermalSensorClock();
         check(clock.tryAcquire(first, 10, Long.MAX_VALUE - 50000000L), "Clock near wrap");
         check(clock.tryAcquire(first, 10, Long.MIN_VALUE + 50000000L), "nanoTime wrap uses elapsed time");
+        clock = new ThermalSensorClock();
+        check(clock.tryAcquire(first, 2, 0L) && clock.tryAcquire(first, 2, 500000000L), "Optic samples before a rate change");
+        check(!clock.tryAcquire(first, 1, 1499999999L), "Lower optic rate accounts for previous samples");
+        check(clock.tryAcquire(first, 1, 1500000000L), "Optic samples once the previous sample clears the window");
         for (int[] rates : new int[][] {{30, 30}, {60, 30}, {144, 60}, {60, 20}, {60, 15}}) {
             for (boolean jitter : new boolean[] {false, true}) {
                 int gameFps = rates[0], vehicleFps = rates[1], samples = 0;
@@ -89,6 +84,28 @@ public final class ThermalSensorChecks {
             } catch (IllegalArgumentException expected) { checks++; }
         }
         System.out.println("PASS: " + checks + " thermal profile/admission checks.");
+    }
+
+    private static int opticSamples(int gameFps, int sensorFps, boolean jitter) {
+        ThermalSensorClock clock = new ThermalSensorClock();
+        Object device = new Object();
+        long[] starts = new long[gameFps * 10];
+        int samples = 0;
+        long random = 131314;
+        for (int frame = 0; frame < starts.length; frame++) {
+            long now = frame * 1000000000L / gameFps;
+            if (jitter) {
+                random = (random * 1664525 + 1013904223) & 0xffffffffL;
+                now += random % 5000000;
+            }
+            if (!clock.tryAcquire(device, sensorFps, now)) continue;
+            if (samples >= sensorFps) {
+                check(now - starts[samples - sensorFps] >= 1000000000L, "Optic exceeds its cap in a rolling second");
+            }
+            starts[samples++] = now;
+            check(!clock.tryAcquire(device, sensorFps, now), "Duplicate camera callback sampled again");
+        }
+        return samples;
     }
 
     private static void check(boolean condition, String message) {

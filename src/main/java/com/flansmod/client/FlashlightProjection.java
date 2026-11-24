@@ -47,31 +47,31 @@ final class FlashlightProjection {
             + " float fade=clamp((range-distance)/(range*0.2),0.0,1.0);\n"
             + " float light=falloff*fade/(1.0+distance*distance/225.0)*strength*shadow;\n"
             + " gl_FragColor=vec4(vec3(1.0,0.96,0.85),light); }\n";
-    private static final IntBuffer VIEWPORT = BufferUtils.createIntBuffer(16);
+    private final IntBuffer viewport = BufferUtils.createIntBuffer(16);
     private static final FloatBuffer MATRIX = BufferUtils.createFloatBuffer(16);
     // Angelica redirects glTexSubImage2D but has no FloatBuffer overload.
     // Keep float precision while using its supported ByteBuffer entry point.
     private static final ByteBuffer SHADOW = BufferUtils.createByteBuffer(81 * 4);
     private static final FloatBuffer SHADOW_FLOATS = SHADOW.asFloatBuffer();
-    private static int program, depthTexture, shadowTexture, width, height;
-    private static boolean failed, ready;
-    private static float depthScale = 1F, depthBias;
+    private int program, depthTexture, shadowTexture, width, height;
+    private boolean failed, ready;
+    private float depthScale = 1F, depthBias;
 
-    static void setDepthTransform(float scale, float bias) {
+    void setDepthTransform(float scale, float bias) {
         depthScale = scale;
         depthBias = bias;
     }
 
-    static float transformDepth(float ndc) {
+    float transformDepth(float ndc) {
         return ndc * depthScale + depthBias;
     }
 
-    private static void depthUniform() {
+    private void depthUniform() {
         GL20.glUniform2f(GL20.glGetUniformLocation(program, "depthTransform"),
                 depthScale, (1F + depthBias - depthScale) * 0.5F);
     }
 
-    static void begin(Matrix4f clip) {
+    void begin(Matrix4f clip) {
         setDepthTransform(1F, 0F);
         ready = false;
         if (failed || !GLContext.getCapabilities().OpenGL20) return;
@@ -79,19 +79,19 @@ final class FlashlightProjection {
         GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
         try {
             if (program == 0) initialise();
-            GL11.glGetInteger(GL11.GL_VIEWPORT, VIEWPORT);
-            int w = VIEWPORT.get(2), h = VIEWPORT.get(3);
+            GL11.glGetInteger(GL11.GL_VIEWPORT, viewport);
+            int w = viewport.get(2), h = viewport.get(3);
             Matrix4f inverse = Matrix4f.invert(clip, null);
             if (inverse == null || w <= 0 || h <= 0) return;
             GL13.glActiveTexture(GL13.GL_TEXTURE0);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, depthTexture);
             if (width != w || height != h) {
                 GL11.glCopyTexImage2D(GL11.GL_TEXTURE_2D, 0, GL14.GL_DEPTH_COMPONENT24,
-                        VIEWPORT.get(0), VIEWPORT.get(1), w, h, 0);
+                        viewport.get(0), viewport.get(1), w, h, 0);
                 width = w; height = h;
             } else {
                 GL11.glCopyTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, 0,
-                        VIEWPORT.get(0), VIEWPORT.get(1), w, h);
+                        viewport.get(0), viewport.get(1), w, h);
             }
             int error = GL11.glGetError();
             if (error != GL11.GL_NO_ERROR) throw new IllegalStateException("Depth copy GL error " + error);
@@ -99,7 +99,7 @@ final class FlashlightProjection {
             MATRIX.clear(); inverse.store(MATRIX); MATRIX.flip();
             GL20.glUniformMatrix4(GL20.glGetUniformLocation(program, "inverseView"), false, MATRIX);
             GL20.glUniform4f(GL20.glGetUniformLocation(program, "viewport"),
-                    VIEWPORT.get(0), VIEWPORT.get(1), w, h);
+                    viewport.get(0), viewport.get(1), w, h);
             GL20.glUniform1i(GL20.glGetUniformLocation(program, "depthMap"), 0);
             GL20.glUniform1i(GL20.glGetUniformLocation(program, "shadowMap"), 1);
             ready = true;
@@ -112,7 +112,7 @@ final class FlashlightProjection {
         }
     }
 
-    static boolean draw(Vec3 origin, Vec3 forward, Vec3 right, Vec3 up, float spread,
+    boolean draw(Vec3 origin, Vec3 forward, Vec3 right, Vec3 up, float spread,
                         float range, float strength, float[] depths, boolean shadow) {
         if (!ready) return false;
         int previous = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
@@ -160,7 +160,7 @@ final class FlashlightProjection {
         }
     }
 
-    static boolean drawLaserSpot(Vec3 origin, Vec3 direction, AxisAlignedBB bounds, Matrix4f clip,
+    boolean drawLaserSpot(Vec3 origin, Vec3 direction, AxisAlignedBB bounds, Matrix4f clip,
                                  float radius, float brightness, float r, float g, float b) {
         if (!ready) return false;
         // Limit the shader to the target's projected bounds instead of adding a fullscreen pass per dot.
@@ -192,7 +192,7 @@ final class FlashlightProjection {
             GL20.glUniform3f(GL20.glGetUniformLocation(program, "laserColor"), r, g, b);
             scalar("laser", 1F); scalar("spotRadius", radius); scalar("brightness", brightness);
             GL11.glEnable(GL11.GL_SCISSOR_TEST);
-            GL11.glScissor(VIEWPORT.get(0) + x, VIEWPORT.get(1) + y, w, h);
+            GL11.glScissor(viewport.get(0) + x, viewport.get(1) + y, w, h);
             GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDepthFunc(GL11.GL_LEQUAL); GL11.glDepthMask(false);
             GL11.glDisable(GL11.GL_ALPHA_TEST); GL11.glDisable(GL11.GL_CULL_FACE);
             GL11.glDisable(GL11.GL_POLYGON_OFFSET_FILL);
@@ -211,16 +211,16 @@ final class FlashlightProjection {
         }
     }
 
-    private static void vector(String name, Vec3 value) {
+    private void vector(String name, Vec3 value) {
         GL20.glUniform3f(GL20.glGetUniformLocation(program, name),
                 (float) value.xCoord, (float) value.yCoord, (float) value.zCoord);
     }
 
-    private static void scalar(String name, float value) {
+    private void scalar(String name, float value) {
         GL20.glUniform1f(GL20.glGetUniformLocation(program, name), value);
     }
 
-    private static void initialise() {
+    private void initialise() {
         int vertex = compile(GL20.GL_VERTEX_SHADER, VERTEX);
         int fragment = compile(GL20.GL_FRAGMENT_SHADER, FRAGMENT);
         program = GL20.glCreateProgram();

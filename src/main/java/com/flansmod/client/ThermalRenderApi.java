@@ -132,7 +132,7 @@ public final class ThermalRenderApi {
             }
         };
     }
-    private static final class CameraSamplerBindings implements AutoCloseable {
+    static final class CameraSamplerBindings implements AutoCloseable {
         private final int[] saved=new int[8];private int count;
         CameraSamplerBindings() {
             if(!org.lwjgl.opengl.GLContext.getCapabilities().OpenGL33)return;

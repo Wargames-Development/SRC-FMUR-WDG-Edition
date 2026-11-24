@@ -28,6 +28,7 @@ import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL14;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GLContext;
 import org.lwjgl.BufferUtils;
@@ -38,6 +39,7 @@ import org.lwjgl.util.vector.Vector4f;
 @SideOnly(Side.CLIENT)
 public final class AttachmentLightRenderer {
     private static final int GRID = 9;
+    private static final int MAX_FLASHLIGHTS = 4;
     private static final int[] NX = {0, 0, 0, 0, -1, 1};
     private static final int[] NY = {-1, 1, 0, 0, 0, 0};
     private static final int[] NZ = {0, 0, -1, 1, 0, 0};
@@ -48,6 +50,10 @@ public final class AttachmentLightRenderer {
     private static final IntBuffer VIEWPORT_BUFFER = BufferUtils.createIntBuffer(16);
     private static final Matrix4f WORLD_CLIP = new Matrix4f();
     private static final Matrix4f WORLD_PROJECTION = new Matrix4f();
+    private static final FlashlightProjection WORLD_LIGHT = new FlashlightProjection();
+    private static final FlashlightProjection SCOPE_LIGHT = new FlashlightProjection();
+    private static final ScopeCone[] scopeCones = new ScopeCone[MAX_FLASHLIGHTS];
+    private static final Map<AttachmentType, HandPose> SCOPE_HAND_POSES = new IdentityHashMap<>();
     private static final Map<AttachmentType, Vec3> HAND_ORIGINS = new IdentityHashMap<>();
     private static final Map<EntityPlayer, Map<AttachmentType, Emitter>> EMITTERS = new WeakHashMap<>();
     private static Vec3 cameraPosition;
@@ -56,14 +62,23 @@ public final class AttachmentLightRenderer {
     private static boolean projectionPrepared;
     private static float renderPartial;
     private static boolean nightVisionActive;
+    private static boolean captureScopeCones;
+    private static int scopeConeCount;
 
     private AttachmentLightRenderer() {
     }
 
+    static void beginFrame() {
+        scopeConeCount = 0;
+        SCOPE_HAND_POSES.clear();
+    }
+
     public static void render(RenderWorldLastEvent event) {
+        scopeConeCount = 0;
         Minecraft mc = Minecraft.getMinecraft();
         EntityLivingBase camera = mc.renderViewEntity;
         if (mc.theWorld == null || mc.thePlayer == null || camera == null) return;
+        captureScopeCones = ThermalScopeEffect.isColorPictureInPictureDisplay();
         if (renderedWorld != mc.theWorld) { EMITTERS.clear(); renderedWorld = mc.theWorld; }
         HAND_ORIGINS.clear();
         handheldEyeOrigin = null;
@@ -102,7 +117,7 @@ public final class AttachmentLightRenderer {
             GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
             GL11.glPolygonOffset(-1F, -1F);
             // Local attachments get priority. Bound expensive cone traces independently of lasers.
-            int lights = 4 - renderPlayer(mc.thePlayer, event.partialTicks, nightVision, 4);
+            int lights = MAX_FLASHLIGHTS - renderPlayer(mc.thePlayer, event.partialTicks, nightVision, MAX_FLASHLIGHTS);
             int players = 1;
             for (Object object : mc.theWorld.playerEntities) {
                 EntityPlayer player = (EntityPlayer) object;
@@ -111,9 +126,88 @@ public final class AttachmentLightRenderer {
                 lights -= renderPlayer(player, event.partialTicks, nightVision, lights);
             }
         } finally {
+            captureScopeCones = false;
             GL11.glPopMatrix();
             GL11.glPopAttrib();
         }
+    }
+
+    /** The scope target and its camera matrices are bound by the caller. */
+    static void renderScope(CameraView view) {
+        if (scopeConeCount == 0) return;
+        int program = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        GL11.glPushClientAttrib(GL11.GL_CLIENT_VERTEX_ARRAY_BIT | GL11.GL_CLIENT_PIXEL_STORE_BIT);
+        GL11.glPushMatrix();
+        try (ThermalRenderApi.CameraSamplerBindings ignored = new ThermalRenderApi.CameraSamplerBindings()) {
+            GL20.glUseProgram(0);
+            OpenGlHelper.setActiveTexture(OpenGlHelper.lightmapTexUnit);
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glDisable(GL11.GL_LIGHTING);
+            GL11.glDisable(GL11.GL_FOG);
+            GL11.glDisable(GL11.GL_ALPHA_TEST);
+            GL11.glDisable(GL11.GL_CULL_FACE);
+            GL11.glDisable(GL11.GL_SCISSOR_TEST);
+            GL11.glDisable(GL11.GL_STENCIL_TEST);
+            GL11.glColorMask(true, true, true, true);
+            GL11.glEnable(GL11.GL_DEPTH_TEST);
+            GL11.glDepthFunc(GL11.GL_LEQUAL);
+            GL11.glDepthRange(0D, 1D);
+            GL11.glDepthMask(false);
+            GL11.glEnable(GL11.GL_BLEND);
+            GL14.glBlendEquation(GL14.GL_FUNC_ADD);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+            GL11.glShadeModel(GL11.GL_SMOOTH);
+            GL11.glEnable(GL11.GL_POLYGON_OFFSET_FILL);
+            GL11.glPolygonOffset(-1F, -1F);
+            SCOPE_LIGHT.begin(Matrix4f.mul(matrix(GL11.GL_PROJECTION_MATRIX), matrix(GL11.GL_MODELVIEW_MATRIX), null));
+            GL11.glTranslated(-view.x, -view.y, -view.z);
+            for (int i = 0; i < scopeConeCount; i++) {
+                ScopeCone cone = scopeCones[i];
+                if (cone.handAttachment != null) drawScopeHandCone(view, cone);
+                else if (!projectScopeCone(view, cone.origin, cone.forward, cone.right, cone.up, cone.spread,
+                        cone.range, cone.strength, cone.depths, cone.shadow)) {
+                    drawFlashlightMesh(cone.hits, cone.alpha);
+                }
+            }
+        } finally {
+            GL20.glUseProgram(program);
+            GL11.glPopMatrix();
+            GL11.glPopClientAttrib();
+            GL11.glPopAttrib();
+        }
+    }
+
+    private static void drawScopeHandCone(CameraView view, ScopeCone cone) {
+        AttachmentType attachment = cone.handAttachment;
+        HandPose hand = SCOPE_HAND_POSES.get(attachment);
+        Minecraft mc = Minecraft.getMinecraft();
+        EntityPlayer player = mc.thePlayer;
+        if (hand == null || player == null || player.getHeldItem() != hand.stack) return;
+        Matrix4f inverse = Matrix4f.invert(WORLD_CLIP, null);
+        Vector4f start = handClip(hand.eye, hand.projection), tip = handClip(hand.tipEye, hand.projection);
+        if (inverse == null || start == null || tip == null || start.w <= 0.05F) return;
+        Vec3 muzzle = unproject(inverse, start), end = unproject(inverse, tip);
+        if (muzzle == null || end == null || traceBetween(player.worldObj, cone.origin, muzzle) != null) return;
+        Vec3 forward = laserDirection(muzzle, cone.origin, player.getLook(view.partialTicks),
+                directionBetween(muzzle, end), hand.pose);
+        Vec3 right = flashlightRight(forward), up = forward.crossProduct(right).normalize();
+        float range = bounded(attachment.flashlightRange, 10F, 1F, 64F);
+        double spread = flashlightSpread(attachment.flashlightConeAngle);
+        float strength = flashlightIntensity(attachment.flashlightStrength);
+        boolean shadow = mc.renderViewEntity != player;
+        if (shadow) sampleFlashlight(player, muzzle, forward, right, up, range, spread, attachment.flashlightStrength);
+        if (projectScopeCone(view, muzzle, forward, right, up, (float) spread, range, strength, DEPTHS, shadow)) return;
+        if (!shadow) sampleFlashlight(player, muzzle, forward, right, up, range, spread, attachment.flashlightStrength);
+        drawFlashlightMesh(HITS, ALPHA);
+    }
+
+    private static boolean projectScopeCone(CameraView view, Vec3 origin, Vec3 forward, Vec3 right, Vec3 up,
+                                            float spread, float range, float strength, float[] depths, boolean shadow) {
+        Vec3 relative = origin.addVector(-view.x, -view.y, -view.z);
+        return SCOPE_LIGHT.draw(relative, forward, right, up, spread, range, strength, depths, shadow);
     }
 
     private static boolean hasNightVisionScope(EntityPlayer player) {
@@ -180,6 +274,11 @@ public final class AttachmentLightRenderer {
             if (attachment.flashlight && lights < budget) {
                 if (handModel) {
                     HAND_ORIGINS.put(attachment, origin);
+                    if (captureScopeCones && scopeConeCount < scopeCones.length) {
+                        ScopeCone cone = nextScopeCone();
+                        cone.handAttachment = attachment;
+                        cone.origin = origin;
+                    }
                     prepareProjection();
                 } else {
                     Vec3 muzzle = origin, direction = forward;
@@ -254,7 +353,7 @@ public final class AttachmentLightRenderer {
     }
 
     private static void prepareProjection() {
-        if (!projectionPrepared) { FlashlightProjection.begin(WORLD_CLIP); projectionPrepared = true; }
+        if (!projectionPrepared) { WORLD_LIGHT.begin(WORLD_CLIP); projectionPrepared = true; }
     }
 
     private static void drawLaser(EntityPlayer player, AttachmentType light, Vec3 origin, Vec3 forward, Vec3 right) {
@@ -319,7 +418,7 @@ public final class AttachmentLightRenderer {
                         origin.yCoord - cameraPosition.yCoord, origin.zCoord - cameraPosition.zCoord);
                 AxisAlignedBB relativeBounds = bounds.getOffsetBoundingBox(-cameraPosition.xCoord,
                         -cameraPosition.yCoord, -cameraPosition.zCoord);
-                if (FlashlightProjection.drawLaserSpot(relative, direction, relativeBounds, WORLD_CLIP,
+                if (WORLD_LIGHT.drawLaserSpot(relative, direction, relativeBounds, WORLD_CLIP,
                         0.036F * size, brightness, r, g, b)) return;
             }
             drawDisc(hit, 0.036F * size, r, g, b, Math.min(0.7F, brightness * 0.16F));
@@ -401,11 +500,22 @@ public final class AttachmentLightRenderer {
 
     private static void drawPosedFlashlight(EntityPlayer player, AttachmentType light, Vec3 origin, Vec3 forward) {
         if (light != null && light.infrared && !nightVisionActive) return;
-        Vec3 right = Vec3.createVectorHelper(forward.zCoord, 0D, -forward.xCoord);
-        if (right.lengthVector() < 0.00001D) right = Vec3.createVectorHelper(1D, 0D, 0D);
-        right = right.normalize();
+        Vec3 right = flashlightRight(forward);
         if (light == null) drawFlashlight(player, origin, forward, right, forward.crossProduct(right).normalize(), 32F, 50F, 15);
         else drawFlashlight(player, light, origin, forward, right, forward.crossProduct(right).normalize());
+    }
+
+    private static Vec3 flashlightRight(Vec3 forward) {
+        Vec3 right = Vec3.createVectorHelper(forward.zCoord, 0D, -forward.xCoord);
+        return right.lengthVector() < 0.00001D ? Vec3.createVectorHelper(1D, 0D, 0D) : right.normalize();
+    }
+
+    private static double flashlightSpread(float angle) {
+        return Math.tan(Math.toRadians(bounded(angle, 50F, 3F, 65F)));
+    }
+
+    private static float flashlightIntensity(int strength) {
+        return Math.max(0, Math.min(15, strength)) / 15F;
     }
 
     private static void drawFlashlight(EntityPlayer player, AttachmentType light, Vec3 origin,
@@ -417,7 +527,23 @@ public final class AttachmentLightRenderer {
     private static void drawFlashlight(EntityPlayer player, Vec3 origin, Vec3 forward, Vec3 right, Vec3 up,
                                        float lightRange, float angle, int strength) {
         float range = bounded(lightRange, 10F, 1F, 64F);
-        double spread = Math.tan(Math.toRadians(bounded(angle, 50F, 3F, 65F)));
+        double spread = flashlightSpread(angle);
+        float intensity = flashlightIntensity(strength);
+        sampleFlashlight(player, origin, forward, right, up, range, spread, strength);
+        prepareProjection();
+        Minecraft mc = Minecraft.getMinecraft();
+        boolean needsShadow = player != mc.thePlayer || mc.gameSettings.thirdPersonView != 0
+                || mc.renderViewEntity != mc.thePlayer;
+        Vec3 relativeOrigin = origin.addVector(-cameraPosition.xCoord, -cameraPosition.yCoord, -cameraPosition.zCoord);
+        if (captureScopeCones && scopeConeCount < scopeCones.length) {
+            recordScopeCone(origin, forward, right, up, (float) spread, range, intensity, needsShadow);
+        }
+        if (WORLD_LIGHT.draw(relativeOrigin, forward, right, up, (float) spread, range, intensity, DEPTHS, needsShadow)) return;
+        drawFlashlightMesh(HITS, ALPHA);
+    }
+
+    private static void sampleFlashlight(EntityPlayer player, Vec3 origin, Vec3 forward, Vec3 right, Vec3 up,
+                                         float range, double spread, int strength) {
         for (int y = 0; y < GRID; y++) {
             for (int x = 0; x < GRID; x++) {
                 int index = y * GRID + x;
@@ -443,39 +569,59 @@ public final class AttachmentLightRenderer {
                 }
             }
         }
-        prepareProjection();
-        Minecraft mc = Minecraft.getMinecraft();
-        boolean needsShadow = player != mc.thePlayer || mc.gameSettings.thirdPersonView != 0
-                || mc.renderViewEntity != mc.thePlayer;
-        Vec3 relativeOrigin = Vec3.createVectorHelper(origin.xCoord - cameraPosition.xCoord,
-                origin.yCoord - cameraPosition.yCoord, origin.zCoord - cameraPosition.zCoord);
-        if (FlashlightProjection.draw(relativeOrigin, forward, right, up, (float) spread, range,
-                Math.max(0, Math.min(15, strength)) / 15F, DEPTHS, needsShadow)) return;
+    }
+
+    private static ScopeCone nextScopeCone() {
+        ScopeCone cone = scopeCones[scopeConeCount];
+        if (cone == null) scopeCones[scopeConeCount] = cone = new ScopeCone();
+        scopeConeCount++;
+        return cone;
+    }
+
+    private static void recordScopeCone(Vec3 origin, Vec3 forward, Vec3 right, Vec3 up,
+                                       float spread, float range, float strength, boolean shadow) {
+        // Reuse the world-pass rays for shadowing and the mesh fallback.
+        ScopeCone cone = nextScopeCone();
+        cone.handAttachment = null;
+        cone.origin = origin;
+        cone.forward = forward;
+        cone.right = right;
+        cone.up = up;
+        cone.spread = spread;
+        cone.range = range;
+        cone.strength = strength;
+        cone.shadow = shadow;
+        System.arraycopy(HITS, 0, cone.hits, 0, HITS.length);
+        System.arraycopy(ALPHA, 0, cone.alpha, 0, ALPHA.length);
+        System.arraycopy(DEPTHS, 0, cone.depths, 0, DEPTHS.length);
+    }
+
+    private static void drawFlashlightMesh(MovingObjectPosition[] hits, float[] alpha) {
         Tessellator tess = Tessellator.instance;
         tess.startDrawing(GL11.GL_TRIANGLES);
         tess.setBrightness(15728880);
         for (int y = 0; y < GRID - 1; y++) {
             for (int x = 0; x < GRID - 1; x++) {
                 int a = y * GRID + x;
-                triangle(tess, a, a + 1, a + GRID);
-                triangle(tess, a + 1, a + GRID + 1, a + GRID);
+                triangle(tess, hits, alpha, a, a + 1, a + GRID);
+                triangle(tess, hits, alpha, a + 1, a + GRID + 1, a + GRID);
             }
         }
         tess.draw();
     }
 
-    private static void triangle(Tessellator tess, int a, int b, int c) {
-        MovingObjectPosition first = HITS[a], second = HITS[b], third = HITS[c];
+    private static void triangle(Tessellator tess, MovingObjectPosition[] hits, float[] alpha, int a, int b, int c) {
+        MovingObjectPosition first = hits[a], second = hits[b], third = hits[c];
         if (first == null || second == null || third == null) return;
         int side = first.sideHit;
         // Never stretch a projected triangle across a corner or a depth discontinuity.
         if (second.sideHit != side || third.sideHit != side
                 || planeDistance(first, second) > 0.01D || planeDistance(first, third) > 0.01D) return;
-        tess.setColorRGBA_F(1F, 0.96F, 0.85F, ALPHA[a]);
+        tess.setColorRGBA_F(1F, 0.96F, 0.85F, alpha[a]);
         surfaceVertex(tess, first, 0D, 0D);
-        tess.setColorRGBA_F(1F, 0.96F, 0.85F, ALPHA[b]);
+        tess.setColorRGBA_F(1F, 0.96F, 0.85F, alpha[b]);
         surfaceVertex(tess, second, 0D, 0D);
-        tess.setColorRGBA_F(1F, 0.96F, 0.85F, ALPHA[c]);
+        tess.setColorRGBA_F(1F, 0.96F, 0.85F, alpha[c]);
         surfaceVertex(tess, third, 0D, 0D);
     }
 
@@ -522,10 +668,14 @@ public final class AttachmentLightRenderer {
     /** Called inside the attachment's complete pose/scale transform, before its housing draws. */
     public static void renderEmitter(AttachmentType attachment, ModelAttachment model, ItemStack gun,
                                      EntityLivingBase owner, float scale, boolean firstPerson, float pose, float partial) {
-        if (!(owner instanceof EntityPlayer) || attachment.infrared && !nightVisionActive
+        if (!(owner instanceof EntityPlayer)
                 || !attachment.isLaserPointer && !attachment.flashlight || !FlashlightState.isEnabled(gun)
                 || gun != ((EntityPlayer) owner).getHeldItem()
                 || ThermalScopeEffect.isRenderingScopedWorld()) return;
+        boolean captureHand = firstPerson && attachment.flashlight && owner == Minecraft.getMinecraft().thePlayer
+                && ThermalScopeEffect.isColorPictureInPictureDisplay();
+        boolean infraredHidden = attachment.infrared && !nightVisionActive;
+        if (infraredHidden && !captureHand) return;
         Matrix4f view = matrix(GL11.GL_MODELVIEW_MATRIX);
         Matrix4f projection = matrix(GL11.GL_PROJECTION_MATRIX);
         Vector4f socket = model.laserEmitter == null ? new Vector4f(0F, 0F, 0F, 1F)
@@ -534,6 +684,9 @@ public final class AttachmentLightRenderer {
         Vector4f eye = Matrix4f.transform(view, socket, null);
         Vector4f start = Matrix4f.transform(projection, eye, null);
         Vector4f tipEye = Matrix4f.transform(view, new Vector4f(socket.x + scale, socket.y, socket.z, 1F), null);
+        // Angelica can draw the hand before RenderWorldLast supplies this frame's world matrices.
+        if (captureHand) SCOPE_HAND_POSES.put(attachment, new HandPose(gun, eye, tipEye, projection, pose));
+        if (infraredHidden) return;
         if (!firstPerson) {
             Map<AttachmentType, Emitter> emitters = EMITTERS.get(owner);
             if (emitters == null) {
@@ -616,7 +769,7 @@ public final class AttachmentLightRenderer {
             GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
             drawPosedFlashlight(player, light, muzzle, direction);
         } finally {
-            FlashlightProjection.setDepthTransform(1F, 0F);
+            WORLD_LIGHT.setDepthTransform(1F, 0F);
             if (shaders) GL20.glUseProgram(previousProgram);
             GL11.glPopMatrix(); GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();
             GL11.glPopAttrib(); GL11.glMatrixMode(matrixMode);
@@ -631,7 +784,7 @@ public final class AttachmentLightRenderer {
             scale = hand.m32 / WORLD_PROJECTION.m32;
             bias = scale * WORLD_PROJECTION.m22 - hand.m22;
         }
-        FlashlightProjection.setDepthTransform(scale, bias);
+        WORLD_LIGHT.setDepthTransform(scale, bias);
         Matrix4f clip = new Matrix4f(WORLD_CLIP);
         clip.m02 = scale * WORLD_CLIP.m02 + bias * WORLD_CLIP.m03;
         clip.m12 = scale * WORLD_CLIP.m12 + bias * WORLD_CLIP.m13;
@@ -655,8 +808,8 @@ public final class AttachmentLightRenderer {
                                       AttachmentType attachment, MovingObjectPosition hit, Vec3 muzzle, Vec3 direction) {
         if (attachment != null && attachment.infrared && !nightVisionActive) return;
         Matrix4f depthClip = beginHandDepthProjection();
-        start = new Vector4f(start.x, start.y, FlashlightProjection.transformDepth(start.z), start.w);
-        end = new Vector4f(end.x, end.y, FlashlightProjection.transformDepth(end.z), end.w);
+        start = new Vector4f(start.x, start.y, WORLD_LIGHT.transformDepth(start.z), start.w);
+        end = new Vector4f(end.x, end.y, WORLD_LIGHT.transformDepth(end.z), end.w);
         GL11.glGetInteger(GL11.GL_VIEWPORT, VIEWPORT_BUFFER);
         boolean shaders = GLContext.getCapabilities().OpenGL20;
         int previousProgram = shaders ? GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM) : 0;
@@ -689,7 +842,7 @@ public final class AttachmentLightRenderer {
                         Math.min(1F, b + 0.3F), 0.9F);
             }
         } finally {
-            FlashlightProjection.setDepthTransform(1F, 0F);
+            WORLD_LIGHT.setDepthTransform(1F, 0F);
             if (shaders) GL20.glUseProgram(previousProgram);
             GL11.glPopMatrix(); GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();
             GL11.glPopAttrib();
@@ -715,6 +868,31 @@ public final class AttachmentLightRenderer {
     private static Emitter emitter(EntityPlayer player, AttachmentType attachment) {
         Map<AttachmentType, Emitter> emitters = EMITTERS.get(player);
         return emitters == null ? null : emitters.get(attachment);
+    }
+
+    private static final class ScopeCone {
+        final MovingObjectPosition[] hits = new MovingObjectPosition[GRID * GRID];
+        final float[] alpha = new float[GRID * GRID];
+        final float[] depths = new float[GRID * GRID];
+        AttachmentType handAttachment;
+        Vec3 origin, forward, right, up;
+        float spread, range, strength;
+        boolean shadow;
+    }
+
+    private static final class HandPose {
+        final ItemStack stack;
+        final Vector4f eye, tipEye;
+        final Matrix4f projection;
+        final float pose;
+
+        HandPose(ItemStack stack, Vector4f eye, Vector4f tipEye, Matrix4f projection, float pose) {
+            this.stack = stack;
+            this.eye = eye;
+            this.tipEye = tipEye;
+            this.projection = projection;
+            this.pose = pose;
+        }
     }
 
     private static final class Emitter {

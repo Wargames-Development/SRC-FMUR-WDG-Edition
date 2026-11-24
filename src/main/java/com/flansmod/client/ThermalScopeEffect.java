@@ -48,6 +48,7 @@ public final class ThermalScopeEffect {
             "}\n";
 
     private static final int MODEL_LENS_SIZE = 1024;
+    private static final int MODEL_LENS_CAP_Y = 7;
     private static final int POST_COMPOSITE_LENS_SEGMENTS = 32;
     /** Keep the post-composite image just inside the physical model aperture. */
     private static final float POST_COMPOSITE_LENS_INSET = 0.97F;
@@ -97,6 +98,7 @@ public final class ThermalScopeEffect {
     private static boolean postCompositeLensGeometryValid;
     private static boolean flirEnabled = true;
     private static ThermalProfile rateLabelProfile;
+    private static boolean rateLabelShowsCap;
     private static String rateLabel;
 
     private ThermalScopeEffect() {
@@ -184,6 +186,7 @@ public final class ThermalScopeEffect {
                 mc.mcProfiler.endStartSection("resolve");
                 sceneCaptured = CAMERA.captureColor(frame.framebufferObject, width, height);
             } else {
+                if (isColorPictureInPictureDisplay()) AttachmentLightRenderer.renderScope(view);
                 WGCoreScopeCompat.renderBorders(view);
                 WGMapScopeCompat.renderWaypoints(partialTicks);
                 if (!mc.gameSettings.hideGUI)
@@ -551,7 +554,7 @@ public final class ThermalScopeEffect {
                 && ((GunType)FlansModClient.currentScope).magnification > 0F;
     }
 
-    private static boolean isColorPictureInPictureDisplay() {
+    static boolean isColorPictureInPictureDisplay() {
         if (isVehicleDisplay()) return false;
         if (hasThermalVision()) {
             return false;
@@ -582,6 +585,7 @@ public final class ThermalScopeEffect {
 
     public static void beginModelLensFrame() {
         postCompositeLensGeometryValid = false;
+        AttachmentLightRenderer.beginFrame();
         CameraRenderManager.INSTANCE.beginFrame(Minecraft.getMinecraft());
         synchronizeThermalSensor(Minecraft.getMinecraft());
         if(!isActive(Minecraft.getMinecraft())) cameraWaitingSince=Long.MIN_VALUE;
@@ -935,17 +939,19 @@ public final class ThermalScopeEffect {
     /** Draw after other mods' vehicle/sight HUDs, which can cover the helmet overlay. */
     public static void renderRefreshRate(Minecraft mc) {
         if (!isActive(mc) || isModelLensDisplay() || !hasThermalVision() || !sensorDisplayValid) return;
-        String label = refreshRateLabel(activeProfile());
-        if (label == null) return;
         ScaledResolution scaled = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight);
-        int width = scaled.getScaledWidth();
-        int height = scaled.getScaledHeight();
-        int x = isBinocularDisplay() ? 4 : Math.max(4, Math.round(width * 0.5F - height * 0.30F));
-        int y = isBinocularDisplay() ? 4 : Math.round(height * 0.36F);
-        drawRefreshRate(mc, label, x, y, width, height);
+        drawRefreshRate(mc, activeProfile(), scaled.getScaledWidth(), scaled.getScaledHeight(),
+                isVehicleDisplay(), isBinocularDisplay());
     }
 
-    static void drawRefreshRate(Minecraft mc, String label, int x, int y, int width, int height) {
+    static void drawRefreshRate(Minecraft mc, ThermalProfile profile, int width, int height,
+                                boolean vehicle, boolean binocular) {
+        String label = refreshRateLabel(profile, vehicle);
+        if (label == null) return;
+        float scale = vehicle ? 1.5F : 1F;
+        float x = vehicle ? (width - mc.fontRenderer.getStringWidth(label) * scale) * 0.5F
+                : binocular ? 4 : Math.max(4, Math.round(width * 0.5F - height * 0.30F));
+        int y = vehicle || binocular ? 4 : Math.round(height * 0.36F);
         int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         int previousMatrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
         int previousActiveTexture = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
@@ -971,7 +977,9 @@ public final class ThermalScopeEffect {
             GL11.glColorMask(true, true, true, true);
             GL11.glEnable(GL11.GL_BLEND);
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            mc.fontRenderer.drawStringWithShadow(label, x, y, 0xFFFFFF);
+            GL11.glTranslatef(x, y, 0F);
+            GL11.glScalef(scale, scale, 1F);
+            mc.fontRenderer.drawStringWithShadow(label, 0, 0, 0xFFFFFF);
         } finally {
             popOrthoProjection();
             GL20.glUseProgram(previousProgram);
@@ -981,11 +989,12 @@ public final class ThermalScopeEffect {
         }
     }
 
-    private static String refreshRateLabel(ThermalProfile profile) {
+    private static String refreshRateLabel(ThermalProfile profile, boolean showCap) {
         if (profile == null) return null;
-        if (profile != rateLabelProfile) {
+        if (profile != rateLabelProfile || showCap != rateLabelShowsCap) {
             rateLabelProfile = profile;
-            rateLabel = profile.maxFramesPerSecond + "Hz";
+            rateLabelShowsCap = showCap;
+            rateLabel = showCap ? "CAP: " + profile.maxFramesPerSecond + "hz" : profile.maxFramesPerSecond + "Hz";
         }
         return rateLabel;
     }
@@ -1096,16 +1105,10 @@ public final class ThermalScopeEffect {
         GL11.glScalef(textScale, textScale, 1F);
         int scaledWidth = (int)(width / textScale);
         int textX = (scaledWidth - mc.fontRenderer.getStringWidth(text)) / 2;
-        int textY = (int)(height * 0.14F / textScale);
+        int textY = MODEL_LENS_CAP_Y + mc.fontRenderer.FONT_HEIGHT + 5;
         mc.fontRenderer.drawStringWithShadow(text, textX, textY,
                 flirEnabled ? 0xFFF4D0 : 0xC9C9C9);
-        String label = refreshRateLabel(activeProfile());
-        if (label != null) {
-            // Inset from the square texture's corner so the circular lens retains the label.
-            int rateX = (int)(width * 0.26F / textScale);
-            int rateY = (int)(height * 0.25F / textScale);
-            mc.fontRenderer.drawStringWithShadow(label, rateX, rateY, 0xFFFFFF);
-        }
+        drawModelLensRefreshRate(mc, activeProfile(), scaledWidth);
         GL11.glPopMatrix();
 
         GL11.glDisable(GL11.GL_TEXTURE_2D);
@@ -1140,6 +1143,14 @@ public final class ThermalScopeEffect {
         }
         GL11.glEnd();
         GL11.glColor4f(1F, 1F, 1F, 1F);
+    }
+
+    static void drawModelLensRefreshRate(Minecraft mc, ThermalProfile profile, int width) {
+        String label = refreshRateLabel(profile, true);
+        if (label == null) return;
+        // Leave enough room for both ends of the label inside the circular aperture.
+        int x = (width - mc.fontRenderer.getStringWidth(label)) / 2;
+        mc.fontRenderer.drawStringWithShadow(label, x, MODEL_LENS_CAP_Y, 0xFFFFFF);
     }
 
 	private static void drawScopeReticle(Minecraft mc, int width, int height) {

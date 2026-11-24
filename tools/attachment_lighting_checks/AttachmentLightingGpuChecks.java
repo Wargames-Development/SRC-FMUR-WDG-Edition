@@ -9,6 +9,9 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.opengl.GL33;
+import org.lwjgl.opengl.GLContext;
 import org.lwjgl.opengl.Pbuffer;
 import org.lwjgl.opengl.PixelFormat;
 import org.lwjgl.util.glu.GLU;
@@ -18,14 +21,19 @@ import org.lwjgl.util.vector.Vector4f;
 /** Actual off-screen GLSL/depth checks, including a discontinuity that broke the old mesh. */
 public final class AttachmentLightingGpuChecks {
     private static final int SIZE = 128;
+    private static FlashlightProjection worldLight;
     public static void main(String[] args) throws Exception {
         Pbuffer context = new Pbuffer(SIZE, SIZE, new PixelFormat().withDepthBits(24), null, null);
         try {
             context.makeCurrent();
             net.minecraft.client.renderer.OpenGlHelper.defaultTexUnit = GL13.GL_TEXTURE0;
             net.minecraft.client.renderer.OpenGlHelper.lightmapTexUnit = GL13.GL_TEXTURE1;
+            java.lang.reflect.Field projection = AttachmentLightRenderer.class.getDeclaredField("WORLD_LIGHT");
+            projection.setAccessible(true);
+            worldLight = (FlashlightProjection) projection.get(null);
             checkSurface(128);
             checkSurface(64);
+            checkScopeProjection();
             checkHandBeam();
             checkLaserModes();
             checkSightTransparency();
@@ -36,6 +44,88 @@ public final class AttachmentLightingGpuChecks {
             System.out.println("PASS: GPU depth reconstruction, continuous light over depth steps, circular cutoff,"
                     + " shadow rejection, gun occlusion, close-sight depth, translucent sight transmission, visible/IR laser modes, entity laser surface/bounds, resize, hand beam start, reticle sway, corpse armor pose, coplanar gun sleeve layers, handheld OBJ/texture and GL state restoration");
         } finally { context.destroy(); }
+    }
+
+    private static void checkScopeProjection() throws Exception {
+        int size = 64;
+        GL13.glActiveTexture(GL13.GL_TEXTURE0);
+        GL11.glViewport(0, 0, SIZE, SIZE);
+        GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity();
+        GLU.gluPerspective(70F, 1F, 0.05F, 64F);
+        FloatBuffer buffer = BufferUtils.createFloatBuffer(16);
+        GL11.glGetFloat(GL11.GL_PROJECTION_MATRIX, buffer);
+        Matrix4f primaryClip = new Matrix4f(); primaryClip.load(buffer);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadIdentity();
+        GL11.glDisable(GL11.GL_TEXTURE_2D); GL11.glDisable(GL11.GL_BLEND);
+        GL11.glDepthMask(true); GL11.glDepthFunc(GL11.GL_LESS);
+        GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+        GL11.glColor3f(0F, 0F, 0F); quad(-8F, -8F, 8F, 8F, -2F);
+        worldLight.begin(primaryClip);
+
+        int framebuffer = GL30.glGenFramebuffers();
+        int color = GL30.glGenRenderbuffers(), depth = GL30.glGenRenderbuffers();
+        int sampler = GLContext.getCapabilities().OpenGL33 ? GL33.glGenSamplers() : 0;
+        try {
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, framebuffer);
+            GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, color);
+            GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER, GL11.GL_RGBA8, size, size);
+            GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER, GL30.GL_COLOR_ATTACHMENT0, GL30.GL_RENDERBUFFER, color);
+            GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, depth);
+            GL30.glRenderbufferStorage(GL30.GL_RENDERBUFFER, org.lwjgl.opengl.GL14.GL_DEPTH_COMPONENT24, size, size);
+            GL30.glFramebufferRenderbuffer(GL30.GL_FRAMEBUFFER, GL30.GL_DEPTH_ATTACHMENT, GL30.GL_RENDERBUFFER, depth);
+            check(GL30.glCheckFramebufferStatus(GL30.GL_FRAMEBUFFER) == GL30.GL_FRAMEBUFFER_COMPLETE, "Scope fixture framebuffer incomplete");
+            GL11.glViewport(0, 0, size, size);
+            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity();
+            GLU.gluPerspective(30F, 1F, 0.05F, 64F);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            CameraView view = new CameraView();
+            view.capture(1234D, 65D, -567D, 0F);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
+            GL11.glColor3f(0.1F, 0.1F, 0.1F); quad(-0.6F, -2F, 0.6F, 2F, -5F);
+            int center = (size / 2 * size + size / 2) * 4;
+            int wall = read(size).get(center) & 255;
+            AttachmentLightRenderer.beginFrame();
+            java.lang.reflect.Method record = AttachmentLightRenderer.class.getDeclaredMethod("recordScopeCone",
+                    Vec3.class, Vec3.class, Vec3.class, Vec3.class, float.class, float.class, float.class, boolean.class);
+            record.setAccessible(true);
+            record.invoke(null, Vec3.createVectorHelper(view.x, view.y, view.z), Vec3.createVectorHelper(0D, 0D, -1D),
+                    Vec3.createVectorHelper(1D, 0D, 0D), Vec3.createVectorHelper(0D, 1D, 0D), 0.5F, 32F, 0.5F, false);
+            if (sampler != 0) {
+                GL33.glSamplerParameteri(sampler, org.lwjgl.opengl.GL14.GL_TEXTURE_COMPARE_MODE,
+                        org.lwjgl.opengl.GL14.GL_COMPARE_R_TO_TEXTURE);
+                GL33.glBindSampler(0, sampler);
+            }
+            GL13.glActiveTexture(GL13.GL_TEXTURE3);
+            AttachmentLightRenderer.renderScope(view);
+            ByteBuffer pixels = read(size);
+            check((pixels.get(center) & 255) > wall + 65, "Flashlight did not brighten the magnified scope wall");
+            check((pixels.get(center + 25 * 4) & 255) == 0, "Scope used primary depth and illuminated empty pixels");
+            check(GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING) == framebuffer
+                    && GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING) == framebuffer, "Scope changed framebuffer bindings");
+            check(GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE) == GL13.GL_TEXTURE3
+                    && GL11.glGetInteger(GL11.GL_DEPTH_FUNC) == GL11.GL_LESS
+                    && GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK), "Scope flashlight leaked GL state");
+            if (sampler != 0) {
+                GL13.glActiveTexture(GL13.GL_TEXTURE0);
+                check(GL11.glGetInteger(GL33.GL_SAMPLER_BINDING) == sampler, "Scope replaced the caller's sampler");
+            }
+            AttachmentLightRenderer.beginFrame();
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+            AttachmentLightRenderer.renderScope(view);
+            check((read(size).get(center) & 255) == 0, "Previous frame flashlight persisted in the scope");
+        } finally {
+            if (sampler != 0) GL33.glDeleteSamplers(sampler);
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
+            GL30.glBindRenderbuffer(GL30.GL_RENDERBUFFER, 0);
+            GL30.glDeleteRenderbuffers(depth); GL30.glDeleteRenderbuffers(color);
+            GL30.glDeleteFramebuffers(framebuffer);
+        }
+        GL11.glViewport(0, 0, SIZE, SIZE);
+        float[] shadows = new float[81]; Arrays.fill(shadows, 1F);
+        check(draw(shadows, false) && (read(SIZE).get((64 * SIZE + 64) * 4) & 255) > 100,
+                "Scope invalidated the primary flashlight's depth or projection");
+        check(GL11.glGetError() == GL11.GL_NO_ERROR, "Scope flashlight produced a GL error");
+        System.out.println("PASS: flashlight on magnified scope depth, frame reset and independent primary projection");
     }
 
     private static void checkSurface(int size) {
@@ -60,7 +150,7 @@ public final class AttachmentLightingGpuChecks {
         GL11.glVertex3f(10F, 10F, -3F); GL11.glVertex3f(0F, 10F, -3F);
         GL11.glEnd();
         GL13.glActiveTexture(GL13.GL_TEXTURE3);
-        FlashlightProjection.begin(clip);
+        worldLight.begin(clip);
         float[] shadows = new float[81]; Arrays.fill(shadows, 1F);
         check(draw(shadows, false), "Depth projection unexpectedly fell back to the old mesh");
         check(GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE) == GL13.GL_TEXTURE3, "Active texture changed");
@@ -81,7 +171,7 @@ public final class AttachmentLightingGpuChecks {
         check(tested > 500, "Coverage fixture did not test enough pixels");
         check((pixels.get(0) & 255) < 5, "Circular cutoff lit the screen corner");
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
-        check(FlashlightProjection.drawLaserSpot(Vec3.createVectorHelper(0D, 0D, 0D),
+        check(worldLight.drawLaserSpot(Vec3.createVectorHelper(0D, 0D, 0D),
                 Vec3.createVectorHelper(0D, 0D, -1D), AxisAlignedBB.getBoundingBox(-0.5D, -1D, -5.5D,
                         0.5D, 1D, -4.5D), clip, 0.5F, 2F, 1F, 0F, 0F), "Entity spot shader unavailable");
         pixels = read(size);
@@ -116,7 +206,7 @@ public final class AttachmentLightingGpuChecks {
     }
 
     private static boolean draw(float[] depths, boolean shadow) {
-        return FlashlightProjection.draw(Vec3.createVectorHelper(0D, 0D, 0D),
+        return worldLight.draw(Vec3.createVectorHelper(0D, 0D, 0D),
                 Vec3.createVectorHelper(0D, 0D, -1D), Vec3.createVectorHelper(1D, 0D, 0D),
                 Vec3.createVectorHelper(0D, 1D, 0D), (float) Math.tan(Math.toRadians(50D)),
                 32F, 1F, depths, shadow);
@@ -214,7 +304,7 @@ public final class AttachmentLightingGpuChecks {
         GL11.glColor3f(0F, 0F, 0F);
         quad(-1F, -1F, 1F, 1F, 0.5F);
         Matrix4f clip = new Matrix4f();
-        FlashlightProjection.begin(clip);
+        worldLight.begin(clip);
         GL11.glColor3f(0.25F, 0F, 0F);
         quad(-0.8F, -0.4F, -0.4F, 0.4F, -0.5F);
         GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
@@ -233,7 +323,7 @@ public final class AttachmentLightingGpuChecks {
         check(GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK), "Sight pass leaked its depth-write mask");
         float[] shadows = new float[81]; Arrays.fill(shadows, 1F);
         Vec3 origin = Vec3.createVectorHelper(0D, 0D, 1D), forward = Vec3.createVectorHelper(0D, 0D, -1D);
-        check(FlashlightProjection.draw(origin, forward, Vec3.createVectorHelper(1D, 0D, 0D),
+        check(worldLight.draw(origin, forward, Vec3.createVectorHelper(1D, 0D, 0D),
                 Vec3.createVectorHelper(0D, 1D, 0D), 1F, 32F, 0.25F, shadows, false), "Sight flashlight unavailable");
         ByteBuffer pixels = read(SIZE);
         check((pixels.get((63 * SIZE + 63) * 4) & 255) > 20, "Sight glass blocked the flashlight");
@@ -242,7 +332,7 @@ public final class AttachmentLightingGpuChecks {
                 "Sight transparency exposed the solid gun to flashlight projection");
         int dot = (63 * SIZE + 63) * 4 + 1;
         int before = pixels.get(dot) & 255;
-        check(FlashlightProjection.drawLaserSpot(origin, forward,
+        check(worldLight.drawLaserSpot(origin, forward,
                 AxisAlignedBB.getBoundingBox(-0.3D, -0.3D, 0.45D, 0.3D, 0.3D, 0.55D),
                 clip, 0.2F, 2F, 0F, 1F, 0F), "Sight laser spot unavailable");
         check((read(SIZE).get(dot) & 255) > before + 20, "Sight glass blocked the laser dot");
@@ -271,7 +361,7 @@ public final class AttachmentLightingGpuChecks {
         GL11.glDepthMask(true); GL11.glDepthFunc(GL11.GL_LESS);
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
         GL11.glColor3f(0F, 0F, 0F); quad(-5F, -5F, 5F, 5F, -0.5F);
-        FlashlightProjection.begin(worldClip);
+        worldLight.begin(worldClip);
         GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity();
         GLU.gluPerspective(70F, 1F, 0.01F, 64F);
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
@@ -283,7 +373,7 @@ public final class AttachmentLightingGpuChecks {
         java.lang.reflect.Method depth = AttachmentLightRenderer.class.getDeclaredMethod("beginHandDepthProjection");
         depth.setAccessible(true); depth.invoke(null);
         float[] shadows = new float[81]; Arrays.fill(shadows, 1F);
-        check(FlashlightProjection.draw(Vec3.createVectorHelper(0D, 0D, 0D), Vec3.createVectorHelper(0D, 0D, -1D),
+        check(worldLight.draw(Vec3.createVectorHelper(0D, 0D, 0D), Vec3.createVectorHelper(0D, 0D, -1D),
                 Vec3.createVectorHelper(1D, 0D, 0D), Vec3.createVectorHelper(0D, 1D, 0D), 1F,
                 32F, 0.1F, shadows, false), "Close-sight flashlight unavailable");
         ByteBuffer pixels = read(SIZE);
@@ -297,7 +387,7 @@ public final class AttachmentLightingGpuChecks {
         pixels = read(SIZE);
         check((pixels.get(solid + 1) & 255) == 0, "Laser beam appeared through the solid optic with a close near plane");
         check((pixels.get(aperture + 1) & 255) > 40, "Laser beam vanished through the open aperture");
-        check(FlashlightProjection.transformDepth(0.3F) == 0.3F, "Hand depth conversion leaked into world rendering");
+        check(worldLight.transformDepth(0.3F) == 0.3F, "Hand depth conversion leaked into world rendering");
         worldProjection.load(savedProjection); worldClip.load(savedClip);
         check(GL11.glGetError() == GL11.GL_NO_ERROR, "Close-sight depth produced an OpenGL error");
     }
