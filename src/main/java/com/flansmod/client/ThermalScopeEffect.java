@@ -1178,7 +1178,7 @@ public final class ThermalScopeEffect {
 		tessellator.draw();
 	}
 
-	private static String getPictureInPictureReticle(IScope scope) {
+	static String getPictureInPictureReticle(IScope scope) {
 		if (scope instanceof AttachmentType) {
 			return ((AttachmentType)scope).pictureInPictureReticle;
 		}

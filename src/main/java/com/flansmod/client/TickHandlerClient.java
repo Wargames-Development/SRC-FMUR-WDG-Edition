@@ -13,6 +13,7 @@ import com.flansmod.common.driveables.mechas.EntityMecha;
 import com.flansmod.common.guns.EntityShootable;
 import com.flansmod.common.guns.EnumFireMode;
 import com.flansmod.common.guns.FlashlightState;
+import com.flansmod.common.guns.IScope;
 import com.flansmod.common.guns.item.ItemGrenade;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.item.ItemShootable;
@@ -41,6 +42,13 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.RenderItem;
+import net.minecraft.client.renderer.texture.ITextureObject;
+import net.minecraft.client.renderer.texture.SimpleTexture;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.client.renderer.texture.TextureUtil;
+import net.minecraft.client.resources.IReloadableResourceManager;
+import net.minecraft.client.resources.IResourceManager;
+import net.minecraft.client.resources.IResourceManagerReloadListener;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Slot;
@@ -68,7 +76,7 @@ import java.util.Map;
 import java.util.Random;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class TickHandlerClient {
+public class TickHandlerClient implements IResourceManagerReloadListener {
     private static final float MAX_ALLOWED_GAMMA = 1F;
     public static final ResourceLocation offHand = new ResourceLocation("flansmod", "gui/offHand.png");
     public static final ResourceLocation aps = new ResourceLocation("flansmod", "gui/aps.png");
@@ -124,6 +132,9 @@ public class TickHandlerClient {
     static ResourceLocation vehicleCross = new ResourceLocation("flansmod", "textures/items/cross5.png");
     static ResourceLocation flash = new ResourceLocation("flansmod", "gui/flash.png");
     static ResourceLocation flashBlack = new ResourceLocation("flansmod", "gui/flash2.png");
+    private static final ResourceLocation[] BUILTIN_OVERLAYS = {
+            offHand, aps, tvm, sprintCross, genericCross, circleCross, grenadeCross, vehicleCross, flash, flashBlack
+    };
     private static GuiScreen guiDriveableController = null;
     int tickCount = 0;
     int tickCountFlash = 0;
@@ -133,11 +144,66 @@ public class TickHandlerClient {
     public static int apsMarkerTime;
     private int deathScreenDisplayWidth = -1;
     private int deathScreenDisplayHeight = -1;
+    private boolean overlayReloadListenerRegistered;
 
 
     public TickHandlerClient() {
         FMLCommonHandler.instance().bus().register(this);
         MinecraftForge.EVENT_BUS.register(this);
+    }
+
+    private void registerOverlayReloadListener(Minecraft mc) {
+        if (overlayReloadListenerRegistered || mc.getTextureManager() == null) return;
+        IResourceManager resources = mc.getResourceManager();
+        if (resources instanceof IReloadableResourceManager) {
+            // Registration invokes the listener immediately. The texture manager must be ready first.
+            overlayReloadListenerRegistered = true;
+            ((IReloadableResourceManager) resources).registerReloadListener(this);
+        }
+    }
+
+    @Override
+    public void onResourceManagerReload(IResourceManager resources) {
+        TextureManager manager = Minecraft.getMinecraft().getTextureManager();
+        if (manager == null) return;
+        for (ResourceLocation overlay : BUILTIN_OVERLAYS) {
+            ITextureObject loaded = manager.getTexture(overlay);
+            if (loaded == null || loaded == TextureUtil.missingTexture) {
+                manager.loadTexture(overlay, new SimpleTexture(overlay));
+            }
+        }
+    }
+
+    private static void preloadActiveOverlay(Minecraft mc) {
+        if (mc.thePlayer == null || mc.currentScreen != null) return;
+        TextureManager manager = mc.getTextureManager();
+        IScope scope = FlansModClient.currentScope;
+        if (scope != null) {
+            if (ThermalScopeEffect.usesModelScopeLens(scope)) {
+                if (preloadOverlay(manager, ThermalScopeEffect.getPictureInPictureReticle(scope))) return;
+            } else {
+                if (scope.hasZoomOverlay() && preloadOverlay(manager, scope.getZoomOverlay())) return;
+                if (preloadOverlay(manager, scope.getDotOverlayTexture())) return;
+            }
+        }
+        ItemStack helmet = mc.thePlayer.inventory.armorInventory[3];
+        if (helmet != null && helmet.getItem() instanceof ItemTeamArmour) {
+            preloadOverlay(manager, ((ItemTeamArmour) helmet.getItem()).type.overlay);
+        }
+    }
+
+    private static boolean preloadOverlay(TextureManager manager, String name) {
+        if (name == null || name.isEmpty()) return false;
+        ResourceLocation overlay = FlansModResourceHandler.getScope(name);
+        if (manager.getTexture(overlay) != null) return false;
+        // One cold content-pack overlay per tick, ahead of the HUD zoom thresholds.
+        int previous = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
+        try {
+            manager.loadTexture(overlay, new SimpleTexture(overlay));
+        } finally {
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, previous);
+        }
+        return true;
     }
 
     /**
@@ -1272,6 +1338,7 @@ public class TickHandlerClient {
      * Handle client ticks and remaining projectile/vehicle block light overrides.
      */
     public void clientTickStart(Minecraft mc) {
+        registerOverlayReloadListener(mc);
         enforceGammaLimit(mc);
         if (ClientProxy.grenadeRenderer != null) ClientProxy.grenadeRenderer.tick(mc);
         KeyInputHandler.checkLightKeyBinding(mc);
@@ -1537,6 +1604,7 @@ public class TickHandlerClient {
         }
         RenderFlag.angle += 2F;
         FlansModClient.tick();
+        preloadActiveOverlay(minecraft);
     }
 
     public void renderTickStart(Minecraft mc, float smoothing) {

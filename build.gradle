@@ -50,13 +50,21 @@ repositories {
     }
 }
 
+// Optional machine-specific paths for both the Gradle wrapper and IntelliJ.
+def localProperties = new Properties()
+def localPropertiesFile = file('local.properties')
+if (localPropertiesFile.isFile()) {
+    localPropertiesFile.withReader('UTF-8') { localProperties.load(it) }
+}
+def angelicaCompilePath = findProperty('angelicaCompileJar') ?: localProperties.getProperty('angelicaCompileJar')
+
 dependencies {
     // Pin one MCP-mapped WGCore jar so older copies cannot shadow the explosion API.
     compile files('lib/WGCore-2.7.5_X217-dev.jar')
     compile fileTree(dir: 'lib', include: ['*.jar'], exclude: ['WGCore-*.jar'])
     // Always ship our optional runtime adapter; compile dependencies are never bundled.
-    if (project.hasProperty('angelicaCompileJar')) {
-        def cameraAngelicaJar = file(project.property('angelicaCompileJar'))
+    if (angelicaCompilePath) {
+        def cameraAngelicaJar = file(angelicaCompilePath)
         compileOnly files(cameraAngelicaJar)
         compileOnly fileTree(dir: new File(cameraAngelicaJar.parentFile.parentFile, 'falsepattern'),
                 includes: ['org.joml-joml-*.jar', 'it.unimi.dsi-fastutil-*.jar', '*jvmdowngrader-java-api-*-8.jar'])
@@ -81,6 +89,32 @@ dependencies {
 }
 
 sourceSets.main.java.srcDir 'src/angelica/java'
+
+idea {
+    project {
+        ipr.withXml {
+            def projectXml = asNode()
+            def configurations = projectXml.component.find { it.@name == 'ProjectRunConfigurationManager' }
+            if (configurations == null) {
+                configurations = projectXml.appendNode('component', [name: 'ProjectRunConfigurationManager'])
+            }
+            if (!configurations.configuration.any { it.@name == 'Build Mod' && it.@type == 'ShConfigurationType' }) {
+                def build = configurations.appendNode('configuration', [name: 'Build Mod', type: 'ShConfigurationType'])
+                boolean windows = System.getProperty('os.name').startsWith('Windows')
+                def interpreter = windows ? (System.getenv('ComSpec') ?: 'C:/Windows/System32/cmd.exe').replace('\\', '/') : '/bin/sh'
+                build.appendNode('option', [name: 'SCRIPT_PATH', value: windows ? '$PROJECT_DIR$/gradlew.bat' : '$PROJECT_DIR$/gradlew'])
+                build.appendNode('option', [name: 'SCRIPT_OPTIONS',
+                        value: gradle.startParameter.offline ? 'build --console=plain --offline' : 'build --console=plain'])
+                build.appendNode('option', [name: 'SCRIPT_WORKING_DIRECTORY', value: '$PROJECT_DIR$'])
+                build.appendNode('option', [name: 'INTERPRETER_PATH', value: interpreter])
+                build.appendNode('option', [name: 'INTERPRETER_OPTIONS', value: windows ? '/d /c call' : ''])
+                build.appendNode('option', [name: 'EXECUTE_SCRIPT_FILE', value: 'true'])
+                build.appendNode('option', [name: 'EXECUTE_IN_TERMINAL', value: 'false'])
+                build.appendNode('method', [v: '2'])
+            }
+        }
+    }
+}
 
 processResources {
     inputs.property "version", project.version

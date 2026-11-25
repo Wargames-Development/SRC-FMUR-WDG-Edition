@@ -188,10 +188,22 @@ However, We hope you have some understanding of modding and therefore are giving
 
 3. Depending on your editor of choice follow one of the below:
 
-* Intellij Idea:
-    1. Generate idea files by running `gradlew idea` in the cmd.
+* IntelliJ IDEA:
+    1. Set `JAVA_HOME` to a JDK 8 installation and run
+       `.\gradlew.bat setupDecompWorkspace idea` from the repository root.
+       Add `--offline` when the Forge workspace and dependencies are cached.
+       The generated build configuration inherits offline mode.
+    2. Open `SRC-FMUR-WDG-Edition.ipr` and select JDK 8 as the Project SDK.
+    3. Enable the Shell Script plugin and run **Build Mod** from the Run
+       Configurations menu. IntelliJ uses the Java 8 Gradle wrapper to package
+       and verify the reobfuscated jar in `build/libs`.
 
-    2. Open the .ipr file in the explorer to intellij Idea.
+    To compile against an installed Wargames copy of Angelica, put
+    `angelicaCompileJar=C:/path/to/minecraft/mods/angelica.jar` in the
+    repository's ignored `local.properties` before generating the project.
+    Use forward slashes. Gradle also picks up the required libraries in the
+    instance's `minecraft/falsepattern` directory. The existing
+    `-PangelicaCompileJar=...` argument overrides this local setting.
 
 * Eclipse Users:
     1. Generate eclipse files by running  `gradlew eclipse` in the cmd.
