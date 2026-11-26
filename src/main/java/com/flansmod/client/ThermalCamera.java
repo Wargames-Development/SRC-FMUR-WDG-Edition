@@ -343,7 +343,6 @@ final class ThermalCamera {
         framebuffer = 0; heatTexture = 0; sceneTexture = 0; particleTexture = 0;
         width = 0; height = 0; heatValid = false; depthPrepared = false; particlesValid = false;
         ThermalFramebuffers.destroyDepth();
-        CameraParticles.destroy();
     }
 
     private static int texture(int w, int h, int filter) {
@@ -363,8 +362,10 @@ final class ThermalCamera {
         } else ThermalFramebuffers.bind(GL30.GL_FRAMEBUFFER,draw);
     }
 
+    static boolean hasShader() { return program != 0 && particleProgram != 0; }
+
     static boolean ensureShader() {
-        if (program != 0 && particleProgram != 0) return true;
+        if (hasShader()) return true;
         if (shaderFailed) return false;
         int vertex=compile(GL20.GL_VERTEX_SHADER,VERTEX_SHADER), fragment=compile(GL20.GL_FRAGMENT_SHADER,FRAGMENT_SHADER);
         if (vertex != 0 && fragment != 0) {

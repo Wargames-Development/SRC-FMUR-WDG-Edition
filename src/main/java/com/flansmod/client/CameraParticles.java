@@ -40,7 +40,7 @@ final class CameraParticles {
     static void render(Runnable particles, boolean thermalMask) {
         int previous = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         try {
-            if (!thermalMask && program == 0) program = createProgram();
+            if (!thermalMask) warmup();
             int active = thermalMask ? previous : program;
             GL20.glUseProgram(active);
             prepare(active);
@@ -111,8 +111,7 @@ final class CameraParticles {
         return shader;
     }
 
-    static void destroy() {
-        if (program != 0) GL20.glDeleteProgram(program);
-        program = 0;
+    static void warmup() {
+        if (program == 0) program = createProgram();
     }
 }

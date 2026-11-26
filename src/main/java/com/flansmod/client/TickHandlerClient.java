@@ -17,9 +17,12 @@ import com.flansmod.common.guns.IScope;
 import com.flansmod.common.guns.item.ItemGrenade;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.item.ItemShootable;
+import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
+import com.flansmod.common.guns.type.ShootableType;
 import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketTeamInfo;
+import com.flansmod.common.teams.ArmourType;
 import com.flansmod.common.teams.ItemTeamArmour;
 import com.flansmod.common.teams.PlayerEquipmentInventory;
 import com.flansmod.common.types.InfoType;
@@ -135,6 +138,7 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
     private static final ResourceLocation[] BUILTIN_OVERLAYS = {
             offHand, aps, tvm, sprintCross, genericCross, circleCross, grenadeCross, vehicleCross, flash, flashBlack
     };
+    private static final ClientTextureWarmup SCOPE_TEXTURES = new ClientTextureWarmup("FMUR scope texture decoder");
     private static GuiScreen guiDriveableController = null;
     int tickCount = 0;
     int tickCountFlash = 0;
@@ -166,43 +170,46 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
     public void onResourceManagerReload(IResourceManager resources) {
         TextureManager manager = Minecraft.getMinecraft().getTextureManager();
         if (manager == null) return;
+        SCOPE_TEXTURES.reset();
         for (ResourceLocation overlay : BUILTIN_OVERLAYS) {
             ITextureObject loaded = manager.getTexture(overlay);
             if (loaded == null || loaded == TextureUtil.missingTexture) {
                 manager.loadTexture(overlay, new SimpleTexture(overlay));
             }
         }
+        for (GunType gun : GunType.guns.values()) preloadScope(manager, gun, false);
+        for (AttachmentType attachment : AttachmentType.attachments) preloadScope(manager, attachment, false);
+        for (ArmourType armour : ArmourType.armours) preloadOverlay(manager, armour.overlay, false);
     }
 
     private static void preloadActiveOverlay(Minecraft mc) {
         if (mc.thePlayer == null || mc.currentScreen != null) return;
         TextureManager manager = mc.getTextureManager();
-        IScope scope = FlansModClient.currentScope;
-        if (scope != null) {
-            if (ThermalScopeEffect.usesModelScopeLens(scope)) {
-                if (preloadOverlay(manager, ThermalScopeEffect.getPictureInPictureReticle(scope))) return;
-            } else {
-                if (scope.hasZoomOverlay() && preloadOverlay(manager, scope.getZoomOverlay())) return;
-                if (preloadOverlay(manager, scope.getDotOverlayTexture())) return;
-            }
-        }
+        preloadScope(manager, FlansModClient.currentScope, true);
         ItemStack helmet = mc.thePlayer.inventory.armorInventory[3];
         if (helmet != null && helmet.getItem() instanceof ItemTeamArmour) {
-            preloadOverlay(manager, ((ItemTeamArmour) helmet.getItem()).type.overlay);
+            preloadOverlay(manager, ((ItemTeamArmour) helmet.getItem()).type.overlay, true);
         }
     }
 
-    private static boolean preloadOverlay(TextureManager manager, String name) {
-        if (name == null || name.isEmpty()) return false;
-        ResourceLocation overlay = FlansModResourceHandler.getScope(name);
-        if (manager.getTexture(overlay) != null) return false;
-        // One cold content-pack overlay per tick, ahead of the HUD zoom thresholds.
-        int previous = GL11.glGetInteger(GL11.GL_TEXTURE_BINDING_2D);
-        try {
-            manager.loadTexture(overlay, new SimpleTexture(overlay));
-        } finally {
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, previous);
+    private static void preloadScope(TextureManager manager, IScope scope, boolean urgent) {
+        if (scope == null) return;
+        if (ThermalScopeEffect.usesModelScopeLens(scope)) {
+            preloadOverlay(manager, ThermalScopeEffect.getPictureInPictureReticle(scope), urgent);
+        } else {
+            if (scope.hasZoomOverlay()) preloadOverlay(manager, scope.getZoomOverlay(), urgent);
+            preloadOverlay(manager, scope.getDotOverlayTexture(), urgent);
         }
+    }
+
+    private static boolean preloadOverlay(TextureManager manager, String name, boolean urgent) {
+        if (name == null || name.isEmpty()) return false;
+        return SCOPE_TEXTURES.request(manager, FlansModResourceHandler.getScope(name), urgent);
+    }
+
+    static boolean bindScopeOverlay(Minecraft mc, String name) {
+        if (!preloadOverlay(mc.getTextureManager(), name, true)) return false;
+        mc.getTextureManager().bindTexture(FlansModResourceHandler.getScope(name));
         return true;
     }
 
@@ -462,7 +469,7 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
             }
 
             //绘制瞄具贴图
-            if (overlayTexture != null) {
+            if (bindScopeOverlay(mc, overlayTexture)) {
                 FlansModClient.minecraft.entityRenderer.setupOverlayRendering();
                 GL11.glEnable(3042 /* GL_BLEND */);
                 GL11.glDisable(2929 /* GL_DEPTH_TEST */);
@@ -470,8 +477,6 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
                 GL11.glBlendFunc(770, 771);
                 GL11.glColor4f(1F, 1F, 1F, 1.0F);
                 GL11.glDisable(3008 /* GL_ALPHA_TEST */);
-
-                mc.renderEngine.bindTexture(FlansModResourceHandler.getScope(overlayTexture));
 
                 float shakeOffsetX = (float) (Math.abs(Math.sin(FlansModClient.playerRecoilPitch * 3)) * 20.0F);
                 float shakeOffsetY = shakeOffsetX / 2.0F;
@@ -1049,7 +1054,7 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
 
     private static void renderScopeReticle(Minecraft minecraft, int screenWidth,
                                             int screenHeight, String dotTexture) {
-        if (dotTexture == null || FlansModClient.currentScope == null) {
+        if (FlansModClient.currentScope == null || !bindScopeOverlay(minecraft, dotTexture)) {
             return;
         }
         minecraft.entityRenderer.setupOverlayRendering();
@@ -1057,7 +1062,6 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
         GL11.glDisable(GL11.GL_DEPTH_TEST);
         GL11.glDepthMask(false);
         GL11.glDisable(GL11.GL_ALPHA_TEST);
-        minecraft.renderEngine.bindTexture(FlansModResourceHandler.getScope(dotTexture));
 
         double size = 10D * FlansModClient.currentScope.getDotOverlayTextureScale();
         boolean greenReticle = isOkp7Scope();
@@ -1274,6 +1278,7 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
     public void renderTick(TickEvent.RenderTickEvent event) {
         switch (event.phase) {
             case START:
+                SCOPE_TEXTURES.uploadReady(Minecraft.getMinecraft());
                 RenderGun.beginReticleFrame();
                 ThermalScopeEffect.beginModelLensFrame();
                 NightVisionGogglesBrightness.beginFrame(Minecraft.getMinecraft());
@@ -1367,6 +1372,10 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
         }
         BulletHoleDecalRenderer.tick();
         TracerRicochetRenderer.tick();
+        updateProjectileAndVehicleLights(mc);
+    }
+
+    private static void updateProjectileAndVehicleLights(Minecraft mc) {
         if (FlansMod.ticker % lightOverrideRefreshRate == 0 && mc.theWorld != null) {
             //Check graphics setting and adjust refresh rate
             lightOverrideRefreshRate = mc.gameSettings.fancyGraphics ? 10 : 20;
@@ -1381,7 +1390,9 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
             for (Object obj : mc.theWorld.loadedEntityList) {
                 if (obj instanceof EntityShootable) {
                     EntityShootable bullet = (EntityShootable) obj;
-                    if (!bullet.isDead && bullet.getType().hasDynamicLight) {
+                    if (bullet.isDead) continue;
+                    ShootableType bulletType = bullet.getType();
+                    if (bulletType != null && bulletType.hasDynamicLight) {
                         int x = (int) bullet.posX;
                         int y = (int) bullet.posY;
                         int z = (int) bullet.posZ;
@@ -1401,9 +1412,10 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
                     int x = MathHelper.floor_double(mecha.posX);
                     int y = MathHelper.floor_double(mecha.posY);
                     int z = MathHelper.floor_double(mecha.posZ);
-                    if (mecha.lightLevel() > 0) {
+                    int lightLevel = mecha.lightLevel();
+                    if (lightLevel > 0) {
                         blockLightOverrides.add(new Vector3i(x, y, z));
-                        mc.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z, Math.max(mc.theWorld.getBlockLightValue(x, y, z), mecha.lightLevel()));
+                        mc.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z, Math.max(mc.theWorld.getBlockLightValue(x, y, z), lightLevel));
                         mc.theWorld.updateLightByType(EnumSkyBlock.Block, x + 1, y, z);
                         mc.theWorld.updateLightByType(EnumSkyBlock.Block, x - 1, y + 1, z);
                         mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y + 1, z);

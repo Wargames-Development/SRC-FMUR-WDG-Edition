@@ -1015,7 +1015,7 @@ public final class ThermalScopeEffect {
 
     static boolean ensureShader() { return ThermalCamera.ensureShader(); }
 
-    private static boolean ensureColorLensShader() {
+    static boolean ensureColorLensShader() {
         if (colorLensShaderProgram >= 0) {
             return true;
         }
@@ -1155,11 +1155,10 @@ public final class ThermalScopeEffect {
 
 	private static void drawScopeReticle(Minecraft mc, int width, int height) {
 		String reticle = getPictureInPictureReticle(FlansModClient.currentScope);
-		if (reticle == null) {
+		if (!TickHandlerClient.bindScopeOverlay(mc, reticle)) {
 			return;
 		}
 
-		mc.getTextureManager().bindTexture(FlansModResourceHandler.getScope(reticle));
 		GL11.glEnable(GL11.GL_TEXTURE_2D);
 		GL11.glEnable(GL11.GL_BLEND);
 		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);

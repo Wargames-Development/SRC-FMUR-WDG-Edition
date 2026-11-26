@@ -8,6 +8,8 @@ import net.minecraft.client.renderer.entity.RenderManager;
 import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.client.resources.IResourceManager;
 import net.minecraft.client.resources.IResourceManagerReloadListener;
+import org.lwjgl.opengl.Display;
+import org.lwjgl.opengl.GLContext;
 
 /** Shared render-thread camera service for optics and vehicle sensors. */
 @SideOnly(Side.CLIENT)
@@ -62,6 +64,16 @@ public final class CameraRenderManager implements IResourceManagerReloadListener
         shaderFailed = false;
         captured = false;
         reportedFailure = null;
+        // These shader sources are independent of pack and world state.
+        if (Display.isCreated() && GLContext.getCapabilities().OpenGL20 && ThermalFramebuffers.isAvailable()) {
+            ThermalCamera.ensureShader();
+            ThermalScopeEffect.ensureColorLensShader();
+            try {
+                CameraParticles.warmup();
+            } catch (RuntimeException failure) {
+                FlansMod.log("[Thermal] camera particle shader warmup failed: " + failure);
+            }
+        }
     }
 
     void capture(float partialTicks) {

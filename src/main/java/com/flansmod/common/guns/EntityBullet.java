@@ -514,8 +514,6 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         (type.lockOnToPlanes && (isPlane(entity))) ||
                         (type.lockOnToPlayers && entity instanceof EntityPlayer) ||
                         (type.lockOnToLivings && entity instanceof EntityLivingBase)) {
-                    if (FlansModRaytracer.hasBlock(worldObj, Vec3.createVectorHelper(posX, posY + 1.5F, posZ), Vec3.createVectorHelper(entity.posX, entity.posY + 1, entity.posZ)))
-                        continue;
                     if (entity instanceof EntityPlayer) {
                         if (owner instanceof EntityPlayer && ((EntityLivingBase) entity).isOnSameTeam((EntityLivingBase) owner))
                             continue;
@@ -527,7 +525,9 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         relPosVec = new Vector3f(entity.posX - posX, entity.posY - posY, entity.posZ - posZ);
                     }
                     float angle = Math.abs(Vector3f.angle(motionVec, relPosVec));
-                    if (angle < closestAngle) {
+                    if (angle < closestAngle && !FlansModRaytracer.hasBlock(worldObj,
+                            Vec3.createVectorHelper(posX, posY + 1.5F, posZ),
+                            Vec3.createVectorHelper(entity.posX, entity.posY + 1, entity.posZ))) {
                         closestEntity = entity;
                         closestAngle = angle;
                     }
