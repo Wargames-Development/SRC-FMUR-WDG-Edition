@@ -40,7 +40,8 @@ public class BlockFlansWorkbench extends Block
         if (tab == FlansMod.tabFlanDriveables) {
             par3List.add(new ItemStack(item, 1, 0));
             par3List.add(new ItemStack(item, 1, 2));
-        } else if (tab == FlansMod.tabFlanAttachments) {
+        } else if (tab == null || tab == FlansMod.tabFlanAttachments) {
+            // Creative search requests subtypes without a tab.
             par3List.add(new ItemStack(item, 1, 1));
         }
     }

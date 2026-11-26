@@ -593,7 +593,7 @@ public class RenderGun implements IItemRenderer {
         AttachmentType barrelAttachment = gunType.getBarrel(item);
         AttachmentType stockAttachment = gunType.getStock(item);
         AttachmentType gripAttachment = gunType.getGrip(item);
-        AttachmentType gadgetAttachment = gunType.getGadget(item);
+        AttachmentType gadgetAttachment = gunType.isGadgetOnOppositeRail(item) ? null : gunType.getGadget(item);
         AttachmentType slideAttachment = gunType.getSlide(item);
         AttachmentType pumpAttachment = gunType.getPump(item);
         AttachmentType accessoryAttachment = gunType.getAccessory(item);
@@ -602,7 +602,6 @@ public class RenderGun implements IItemRenderer {
         ItemStack barrelItemStack = gunType.getBarrelItemStack(item);
         ItemStack stockItemStack = gunType.getStockItemStack(item);
         ItemStack gripItemStack = gunType.getGripItemStack(item);
-        ItemStack gadgetItemStack = gunType.getGadgetItemStack(item);
         ItemStack slideItemStack = gunType.getSlideItemStack(item);
         ItemStack pumpItemStack = gunType.getPumpItemStack(item);
         ItemStack accessoryItemStack = gunType.getAccessoryItemStack(item);
@@ -1604,14 +1603,23 @@ public class RenderGun implements IItemRenderer {
 
         // Gadget
         if (gadgetAttachment != null) {
+            boolean opposite = gunType.isGadgetOnOppositeRail(item);
+            if (opposite) GL11.glPushAttrib(GL11.GL_POLYGON_BIT);
             GL11.glPushMatrix();
-            {
-                preRenderAttachment(gadgetAttachment, gadgetItemStack, model.gadgetAttachPoint, gunType, f);
+            try {
+                preRenderAttachment(gadgetAttachment, gadgetItemStack, model.getGadgetAttachPoint(opposite), gunType, f);
                 if (model.gadgetIsOnPump)
                     GL11.glTranslatef(-(1 - Math.abs(animations.lastPumped + (animations.pumped - animations.lastPumped) * smoothing)) * model.pumpHandleDistance, 0F, 0F);
+                if (opposite) {
+                    // Reflect the housing and emitter together, keeping face culling correct.
+                    GL11.glScalef(1F, 1F, -1F);
+                    GL11.glFrontFace(GL11.glGetInteger(GL11.GL_FRONT_FACE) == GL11.GL_CCW ? GL11.GL_CW : GL11.GL_CCW);
+                }
                 postRenderAttachment(gadgetAttachment, gadgetItemStack, f, rtype);
+            } finally {
+                GL11.glPopMatrix();
+                if (opposite) GL11.glPopAttrib();
             }
-            GL11.glPopMatrix();
         }
 
         // Accessory

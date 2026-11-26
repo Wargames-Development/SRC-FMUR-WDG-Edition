@@ -58,9 +58,18 @@ public class ModelGun extends ModelBase {
     public Vector3f stockAttachPoint = new Vector3f();
     public Vector3f gripAttachPoint = new Vector3f();
     public Vector3f gadgetAttachPoint = new Vector3f();
+    public Vector3f oppositeGadgetAttachPoint;
+    private final Vector3f mirroredGadgetAttachPoint = new Vector3f();
     public Vector3f slideAttachPoint = new Vector3f();
     public Vector3f pumpAttachPoint = new Vector3f();
     public Vector3f accessoryAttachPoint = new Vector3f();
+
+    public Vector3f getGadgetAttachPoint(boolean opposite) {
+        if (!opposite || gadgetAttachPoint == null) return gadgetAttachPoint;
+        if (oppositeGadgetAttachPoint != null) return oppositeGadgetAttachPoint;
+        mirroredGadgetAttachPoint.set(gadgetAttachPoint.x, gadgetAttachPoint.y, -gadgetAttachPoint.z);
+        return mirroredGadgetAttachPoint;
+    }
     //Muzzle flash models
     public Vector3f defaultBarrelFlashPoint = null;
     public Vector3f muzzleFlashPoint = null;

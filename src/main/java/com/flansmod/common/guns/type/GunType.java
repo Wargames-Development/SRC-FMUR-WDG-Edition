@@ -25,6 +25,7 @@ import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +35,32 @@ import java.util.Set;
 public class GunType extends PaintableType implements IScope, IMarkable {
 
     public static final Random rand = new Random();
+    // Defaults for pack models with paired mounts. Content definitions can override them.
+    private static final Set<String> DUAL_SIDE_RAIL_MODELS = new HashSet<>(Arrays.asList(
+            "BFMCpack.A91", "BFMCpack.ACE21", "BFMCpack.ACE52", "BFMCpack.ACWR", "BFMCpack.AR160",
+            "BFMCpack.AUGA3", "BFMCpack.Beowulf", "BFMCpack.C25", "BFMCpack.C7A2", "BFMCpack.CQA3",
+            "BFMCpack.CZ3A1", "BFMCpack.CZ805", "BFMCpack.HK416", "BFMCpack.JNG90", "BFMCpack.K10",
+            "BFMCpack.L85A2", "BFMCpack.M16A4", "BFMCpack.M249", "BFMCpack.M27IAR", "BFMCpack.M39EMR",
+            "BFMCpack.M4A1", "BFMCpack.MCX", "BFMCpack.MG36", "BFMCpack.MK11MOD0", "BFMCpack.MK18MOD0",
+            "BFMCpack.MK20SSR", "BFMCpack.MP7", "BFMCpack.MP9", "BFMCpack.MPX", "BFMCpack.P90",
+            "BFMCpack.PPK20", "BFMCpack.QBS09", "BFMCpack.QBZ191", "BFMCpack.QBZ192", "BFMCpack.SA58",
+            "BFMCpack.SCARH", "BFMCpack.SCARL", "BFMCpack.Type81M", "BFMCpack.UMP45", "BFMCpack.VHS2",
+            "MT.AK74M"));
+    private static final String OPPOSITE_GADGET_RAIL = "gadgetOppositeRail";
+    public static final float STOCKLESS_HANDLING_MULTIPLIER = 1.20F;
+    // Includes stocks baked into the body mesh as well as separate default stock parts.
+    private static final Set<String> BUILT_IN_STOCK_MODELS = new HashSet<>(Arrays.asList(
+            "BFMCpack.AA12", "BFMCpack.ACWR", "BFMCpack.AEK971", "BFMCpack.AK12", "BFMCpack.AK12U",
+            "BFMCpack.AK308", "BFMCpack.AK74LMG", "BFMCpack.AK74M", "BFMCpack.AN94", "BFMCpack.AR160",
+            "BFMCpack.ASVAL", "BFMCpack.AUGA3", "BFMCpack.C25", "BFMCpack.CQA3", "BFMCpack.CZ805",
+            "BFMCpack.F2000", "BFMCpack.G3A3", "BFMCpack.HAWK12G", "BFMCpack.HCAR", "BFMCpack.HoneyBadger",
+            "BFMCpack.JNG90", "BFMCpack.K10", "BFMCpack.KS20G", "BFMCpack.L85A2", "BFMCpack.LVOA",
+            "BFMCpack.M1014", "BFMCpack.M249", "BFMCpack.M39EMR", "BFMCpack.M4A1", "BFMCpack.M4A1_BlueEnergy",
+            "BFMCpack.M4A1_Energy", "BFMCpack.MCX", "BFMCpack.MG3", "BFMCpack.MPX", "BFMCpack.MSBS",
+            "BFMCpack.P90", "BFMCpack.PKP", "BFMCpack.PP19", "BFMCpack.PPK20", "BFMCpack.QBZ191",
+            "BFMCpack.QBZ811", "BFMCpack.RO635", "BFMCpack.RPK12", "BFMCpack.RPKM", "BFMCpack.SA58",
+            "BFMCpack.SCARH", "BFMCpack.SCARL", "BFMCpack.SKS", "BFMCpack.SPAS12", "BFMCpack.SV98",
+            "BFMCpack.SVD12", "BFMCpack.Saiga12K", "BFMCpack.Type81M", "BFMCpack.UMP45", "BFMCpack.VSS", "MT.AK74M"));
     /**
      * The static hashmap of all guns by shortName
      */
@@ -501,6 +528,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
     public boolean allowBarrelAttachments = false, allowScopeAttachments = false,
             allowStockAttachments = false, allowGripAttachments = false, allowGadgetAttachments = false,
             allowSlideAttachments = false, allowPumpAttachments = false, allowAccessoryAttachments = false;
+    private Boolean builtInStock;
+    private Boolean allowOppositeSideRail;
     /**
      * The number of generic attachment slots there are on this gun
      */
@@ -617,6 +646,9 @@ public class GunType extends PaintableType implements IScope, IMarkable {
     public void postRead(TypeFile file) {
         super.postRead(file);
 
+        // Classify the authored model identifier on both sides without loading the client model.
+        if (builtInStock == null) builtInStock = BUILT_IN_STOCK_MODELS.contains(modelString);
+        if (allowOppositeSideRail == null) allowOppositeSideRail = DUAL_SIDE_RAIL_MODELS.contains(modelString);
         gunList.add(this);
         guns.put(shortName, this);
     }
@@ -1073,10 +1105,14 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 allowScopeAttachments = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("AllowStockAttachments"))
                 allowStockAttachments = Boolean.parseBoolean(split[1]);
+            else if (split[0].equals("BuiltInStock"))
+                builtInStock = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("AllowGripAttachments"))
                 allowGripAttachments = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("AllowGadgetAttachments"))
                 allowGadgetAttachments = Boolean.parseBoolean(split[1]);
+            else if (split[0].equals("AllowOppositeSideRail"))
+                allowOppositeSideRail = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("AllowSlideAttachments"))
                 allowSlideAttachments = Boolean.parseBoolean(split[1]);
             else if (split[0].equals("AllowPumpAttachments"))
@@ -1130,6 +1166,9 @@ public class GunType extends PaintableType implements IScope, IMarkable {
                 break;
             case "animGadgetAttachPoint":
                 model.gadgetAttachPoint = parseVector3f(split);
+                break;
+            case "animOppositeGadgetAttachPoint":
+                model.oppositeGadgetAttachPoint = parseVector3f(split);
                 break;
             case "animSlideAttachPoint":
                 model.slideAttachPoint = parseVector3f(split);
@@ -1738,12 +1777,36 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         return getAttachment(gun, "stock");
     }
 
+    public boolean canMountStock() {
+        return allowStockAttachments && !Boolean.TRUE.equals(builtInStock);
+    }
+
+    private float stockHandlingMultiplier(ItemStack stack) {
+        return canMountStock() && getStock(stack) == null ? STOCKLESS_HANDLING_MULTIPLIER : 1F;
+    }
+
     public AttachmentType getGrip(ItemStack gun) {
         return getAttachment(gun, "grip");
     }
 
     public AttachmentType getGadget(ItemStack gun) {
         return getAttachment(gun, "gadget");
+    }
+
+    public boolean hasOppositeSideRail() {
+        return allowGadgetAttachments && Boolean.TRUE.equals(allowOppositeSideRail);
+    }
+
+    public boolean isGadgetOnOppositeRail(ItemStack gun) {
+        return hasOppositeSideRail() && gun.hasTagCompound() && gun.getTagCompound().getBoolean(OPPOSITE_GADGET_RAIL);
+    }
+
+    public boolean selectGadgetRail(ItemStack gun, boolean opposite) {
+        if (!hasOppositeSideRail()) return false;
+        checkForTags(gun);
+        if (opposite) gun.getTagCompound().setBoolean(OPPOSITE_GADGET_RAIL, true);
+        else gun.getTagCompound().removeTag(OPPOSITE_GADGET_RAIL);
+        return true;
     }
 
     public AttachmentType getSlide(ItemStack gun) {
@@ -1916,6 +1979,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         //此处进行改动，下挂武器配件的子弹散布不应该受主武器影响
         if (getGrip(stack) != null && getSecondaryFire(stack))
             stackSpread = getGrip(stack).secondarySpread;
+        else
+            stackSpread *= stockHandlingMultiplier(stack);
 
         stackSpread = Math.max(stackSpread, minSpread);
 
@@ -1945,6 +2010,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         //此处进行改动，下挂武器配件的子弹散布不应该受主武器影响
         if (getGrip(stack) != null && getSecondaryFire(stack))
             stackSpread = getGrip(stack).secondarySpread;
+        else
+            stackSpread *= stockHandlingMultiplier(stack);
 
         if (sprinting) {
             stackSpread *= sprintSpreadMultiplier;
@@ -1976,6 +2043,8 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         //此处进行改动，下挂武器配件的子弹散布不应该受主武器影响
         if (getGrip(stack) != null && getSecondaryFire(stack))
             stackSpread = getGrip(stack).secondaryDefaultSpread;
+        else
+            stackSpread *= stockHandlingMultiplier(stack);
 
         stackSpread = Math.max(stackSpread, minSpread);
 
@@ -1990,7 +2059,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         for (AttachmentType attachment : getCurrentAttachments(stack)) {
             stackRecoil *= attachment.recoilMultiplier;
         }
-        return stackRecoil * getHeatPenaltyMultiplier(stack, heatRecoilPenalty);
+        return stackRecoil * stockHandlingMultiplier(stack) * getHeatPenaltyMultiplier(stack, heatRecoilPenalty);
     }
 
     /**
@@ -2015,7 +2084,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         } else if (sprinting) {
             stackRecoil *= recoilSprintingMultiplier;
         }
-        return stackRecoil * getHeatPenaltyMultiplier(stack, heatRecoilPenalty);
+        return stackRecoil * stockHandlingMultiplier(stack) * getHeatPenaltyMultiplier(stack, heatRecoilPenalty);
     }
 
     /**
@@ -2039,7 +2108,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
             stackRecoilYaw *= recoilSprintingMultiplierYaw;
         }
 
-        return stackRecoilYaw * getHeatPenaltyMultiplier(stack, heatRecoilPenalty);
+        return stackRecoilYaw * stockHandlingMultiplier(stack) * getHeatPenaltyMultiplier(stack, heatRecoilPenalty);
     }
 
     private float getHeatPenaltyMultiplier(ItemStack stack, float maximumPenalty) {
@@ -2067,7 +2136,7 @@ public class GunType extends PaintableType implements IScope, IMarkable {
             stackRecoilYaw *= recoilSprintingMultiplierYaw;
         }
 
-        return stackRecoilYaw;
+        return stackRecoilYaw * stockHandlingMultiplier(stack);
     }
 
     /*** TV90

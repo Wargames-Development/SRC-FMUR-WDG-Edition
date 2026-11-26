@@ -22,6 +22,9 @@ public class SlotGun extends Slot
 
     public boolean isItemValid(ItemStack stack)
     {
+        // Keep the legacy slots for saved attachments and container indexing.
+        // Shift-click and direct placement must not install into hidden slots.
+        if (slotID > 6) return false;
         if (stack == null) return true;
         if (slotID == 0)
             return stack.getItem() instanceof ItemGun && !((ItemGun) stack.getItem()).type.deployable;
@@ -33,14 +36,11 @@ public class SlotGun extends Slot
         {
             case 1: return gunType.allowBarrelAttachments && type == EnumAttachmentType.barrel;
             case 2: return gunType.allowScopeAttachments && type == EnumAttachmentType.sights;
-            case 3: return gunType.allowStockAttachments && type == EnumAttachmentType.stock;
+            case 3: return gunType.canMountStock() && type == EnumAttachmentType.stock;
             case 4: return gunType.allowGripAttachments && type == EnumAttachmentType.grip;
             case 5: return gunType.allowGadgetAttachments && type == EnumAttachmentType.gadget;
             case 6: return gunType.allowSlideAttachments && type == EnumAttachmentType.slide;
-            case 7: return gunType.allowPumpAttachments && type == EnumAttachmentType.pump;
-            case 8: return gunType.allowAccessoryAttachments && type == EnumAttachmentType.accessory;
-            default: return slotID - 9 + ((InventoryGunModTable) inventory).genericScroll * 4
-                    < gunType.numGenericAttachmentSlots && type == EnumAttachmentType.generic;
+            default: return false;
         }
     }
 

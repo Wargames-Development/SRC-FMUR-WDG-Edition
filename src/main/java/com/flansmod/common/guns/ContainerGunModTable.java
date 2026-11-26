@@ -14,6 +14,7 @@ import net.minecraft.world.World;
 public class ContainerGunModTable extends Container 
 {
 	private static final int PLAYER_SLOTS_START = 17;
+    public static final int SELECT_PRIMARY_RAIL = 0, SELECT_OPPOSITE_RAIL = 1;
 
 	private InventoryGunModTable inventory;
 	public InventoryPlayer playerInv;
@@ -69,6 +70,16 @@ public class ContainerGunModTable extends Container
 	{
 		return true;
 	}
+
+    @Override
+    public boolean enchantItem(EntityPlayer player, int action) {
+        // The vanilla container button packet is scoped to the player's open window.
+        if (player != playerInv.player || player.openContainer != this
+                || (action != SELECT_PRIMARY_RAIL && action != SELECT_OPPOSITE_RAIL)) return false;
+        ItemStack gun = inventory.getStackInSlot(0);
+        if (gun == null || !(gun.getItem() instanceof ItemGun)) return false;
+        return ((ItemGun) gun.getItem()).type.selectGadgetRail(gun, action == SELECT_OPPOSITE_RAIL);
+    }
 	
 	@Override
     public ItemStack transferStackInSlot(EntityPlayer player, int slotID)

@@ -5,21 +5,18 @@ import com.flansmod.common.guns.type.GunType;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.item.ItemStack;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
+
+import static com.flansmod.client.gui.GunPreviewStyle.*;
 
 @SideOnly(Side.CLIENT)
 public class GuiInspectGun extends GuiScreen {
     private final ItemStack gunStack;
     private final GunType gunType;
-    private float yaw;
-    private float pitch = 160F;
-    private float zoom = 1F;
-    private int lastMouseX;
-    private int lastMouseY;
-    private boolean dragging;
+    private final GunPreviewRenderer preview = new GunPreviewRenderer(180F);
 
     public GuiInspectGun(ItemStack stack) {
         gunStack = stack.copy();
@@ -28,27 +25,43 @@ public class GuiInspectGun extends GuiScreen {
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        drawDefaultBackground();
-        if (Mouse.isButtonDown(0)) {
-            if (dragging) {
-                yaw += (mouseX - lastMouseX) * 0.6F;
-                pitch = Math.max(20F, Math.min(340F, pitch + (mouseY - lastMouseY) * 0.6F));
-            }
-            dragging = true;
-        } else {
-            dragging = false;
+        int inset = Math.max(8, width / 12);
+        GL11.glPushAttrib(GL11.GL_SCISSOR_BIT | GL11.GL_ENABLE_BIT | GL11.GL_CURRENT_BIT);
+        try {
+            GL11.glDisable(GL11.GL_LIGHTING);
+            GL11.glDisable(GL11.GL_DEPTH_TEST);
+            drawDefaultBackground();
+            panel(inset, 8, width - inset, height - 8, PANEL, BORDER);
+            panel(inset + 5, 29, width - inset - 5, height - 27, GRID, BORDER);
+            title(fontRendererObj, gunStack.getDisplayName(), width / 2, 14, width - 2 * inset - 12);
+            drawCenteredString(fontRendererObj, "Drag to rotate  /  Scroll to zoom  /  Esc to close",
+                    width / 2, height - 21, MUTED);
+
+            int scale = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight).getScaleFactor();
+            GL11.glScissor((inset + 6) * scale, mc.displayHeight - (height - 28) * scale,
+                    (width - 2 * inset - 12) * scale, (height - 58) * scale);
+            GL11.glEnable(GL11.GL_SCISSOR_TEST);
+            preview.render(gunStack, gunType, width / 2F, (height + 2) / 2F, width - 2 * inset - 12, height - 58);
+        } finally {
+            GL11.glPopAttrib();
         }
-        lastMouseX = mouseX;
-        lastMouseY = mouseY;
+    }
 
-        drawCenteredString(fontRendererObj, gunStack.getDisplayName(), width / 2, 16, 0xFFFFFF);
-        drawCenteredString(fontRendererObj, "Drag to rotate  |  Scroll to zoom  |  Esc to close",
-                width / 2, height - 18, 0xCCCCCC);
+    @Override
+    protected void mouseClicked(int x, int y, int button) {
+        super.mouseClicked(x, y, button);
+        if (button == 0) preview.beginDrag(x, y);
+    }
 
-        GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
-        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240F, 240F);
-        GunPreviewRenderer.render(gunStack, gunType, width / 2F, height / 2F,
-                width * 0.65F, height * 0.55F, yaw, pitch, zoom);
+    @Override
+    protected void mouseClickMove(int x, int y, int button, long elapsed) {
+        if (button == 0 && preview.isDragging()) preview.drag(x, y);
+    }
+
+    @Override
+    protected void mouseMovedOrUp(int x, int y, int button) {
+        super.mouseMovedOrUp(x, y, button);
+        if (button == 0) preview.endDrag();
     }
 
     @Override
@@ -56,7 +69,7 @@ public class GuiInspectGun extends GuiScreen {
         super.handleMouseInput();
         int wheel = Mouse.getEventDWheel();
         if (wheel != 0) {
-            zoom = Math.max(0.5F, Math.min(2.5F, zoom * (wheel > 0 ? 1.1F : 0.9F)));
+            preview.zoom(wheel);
         }
     }
 

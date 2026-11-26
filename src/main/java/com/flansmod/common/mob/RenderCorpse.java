@@ -1,6 +1,5 @@
 package com.flansmod.common.mob;
 
-import com.flansmod.utils.RenderUtils;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.teams.ItemTeamArmour;
 import net.minecraft.item.ItemArmor;
@@ -72,6 +71,7 @@ public class RenderCorpse extends Render {
         }
 
         applyPose(modelBiped, entity);
+        modelBiped.bipedHeadwear.showModel = !hasHelmet(entity);
 
         // 渲染模型
         modelBiped.render(entity, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0625F);
@@ -89,11 +89,12 @@ public class RenderCorpse extends Render {
         }
 
         GL11.glPopMatrix();
+    }
 
-        if (entity.getPlayerDisplayName() != null) {
-            RenderUtils.renderNameTag(entity, x, y - 1.5 , z, entity.getPlayerDisplayName(), 16, this.renderManager);
-        }
-
+    private boolean hasHelmet(EntityCorpse corpse) {
+        ItemStack helmet = corpse.getCorpseArmour(3);
+        return helmet != null && helmet.getItem() instanceof ItemArmor
+                && ((ItemArmor) helmet.getItem()).armorType == 0;
     }
 
     @Override

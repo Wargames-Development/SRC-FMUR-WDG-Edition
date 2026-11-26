@@ -10,6 +10,8 @@ import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.ResourceLocation;
 import org.lwjgl.opengl.GL11;
+import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector3f;
 
 import java.util.*;
 
@@ -1890,15 +1892,25 @@ public class ModelRendererTurbo extends ModelRenderer {
         copyTo(verts, poly, true);
     }
 
-    /** Expands model-space bounds without exposing the mutable vertex array. */
+    /** Expands model-space bounds using the gun renderer's YZX part transform. */
     public void includeVertexBounds(float[] bounds) {
+        Matrix4f rotation = new Matrix4f();
+        if (rotateAngleY != 0F) rotation.rotate(rotateAngleY, new Vector3f(0F, 1F, 0F));
+        if (rotateAngleZ != 0F) rotation.rotate(rotateAngleZ, new Vector3f(0F, 0F, 1F));
+        if (rotateAngleX != 0F) rotation.rotate(rotateAngleX, new Vector3f(1F, 0F, 0F));
         for (PositionTextureVertex vertex : vertices) {
-            bounds[0] = Math.min(bounds[0], (float) vertex.vector3D.xCoord + rotationPointX);
-            bounds[1] = Math.max(bounds[1], (float) vertex.vector3D.xCoord + rotationPointX);
-            bounds[2] = Math.min(bounds[2], (float) vertex.vector3D.yCoord + rotationPointY);
-            bounds[3] = Math.max(bounds[3], (float) vertex.vector3D.yCoord + rotationPointY);
-            bounds[4] = Math.min(bounds[4], (float) vertex.vector3D.zCoord + rotationPointZ);
-            bounds[5] = Math.max(bounds[5], (float) vertex.vector3D.zCoord + rotationPointZ);
+            float x = (float) vertex.vector3D.xCoord;
+            float y = (float) vertex.vector3D.yCoord;
+            float z = (float) vertex.vector3D.zCoord;
+            float partX = rotationPointX + rotation.m00 * x + rotation.m10 * y + rotation.m20 * z;
+            float partY = rotationPointY + rotation.m01 * x + rotation.m11 * y + rotation.m21 * z;
+            float partZ = rotationPointZ + rotation.m02 * x + rotation.m12 * y + rotation.m22 * z;
+            bounds[0] = Math.min(bounds[0], partX);
+            bounds[1] = Math.max(bounds[1], partX);
+            bounds[2] = Math.min(bounds[2], partY);
+            bounds[3] = Math.max(bounds[3], partY);
+            bounds[4] = Math.min(bounds[4], partZ);
+            bounds[5] = Math.max(bounds[5], partZ);
         }
     }
 

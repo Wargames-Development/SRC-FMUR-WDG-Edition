@@ -1,7 +1,9 @@
 package com.flansmod.common.guns.item;
 
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.guns.EnumAttachmentType;
 import com.flansmod.common.guns.type.AttachmentType;
+import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.paintjob.IPaintableItem;
 import com.flansmod.common.paintjob.PaintableType;
 import com.flansmod.common.paintjob.Paintjob;
@@ -19,6 +21,7 @@ import net.minecraft.util.IIcon;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 public class ItemAttachment extends Item implements IPaintableItem
 {
@@ -84,7 +87,17 @@ public class ItemAttachment extends Item implements IPaintableItem
 		{
             Collections.addAll(lines, type.description.split("_"));
 		}
+        if (type.type == EnumAttachmentType.stock) {
+            lines.add("Compared with no stock");
+            lines.add("Spread " + stockChange(type.spreadMultiplier));
+            lines.add("Vertical recoil " + stockChange(type.recoilMultiplier));
+            lines.add("Horizontal recoil " + stockChange(type.recoilYawMultiplier));
+        }
 	}
+
+    private static String stockChange(float multiplier) {
+        return String.format(Locale.ROOT, "%+.0f%%", (multiplier / GunType.STOCKLESS_HANDLING_MULTIPLIER - 1F) * 100F);
+    }
 	
 	@Override
 	public InfoType getInfoType() { return type; }
