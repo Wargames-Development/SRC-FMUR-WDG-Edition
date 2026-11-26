@@ -30,6 +30,11 @@ gradle.projectsEvaluated {
         classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
         main = 'com.flansmod.client.AuxiliaryViewChecks'
     }
+    p.tasks.create('muzzleFlashLightChecks', JavaExec) {
+        dependsOn compileChecks
+        classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath
+        main = 'com.flansmod.client.MuzzleFlashLightChecks'
+    }
     p.tasks.create('cameraMatrixChecks', JavaExec) {
         dependsOn compileChecks
         classpath = p.files(compileChecks.destinationDir) + p.sourceSets.main.runtimeClasspath

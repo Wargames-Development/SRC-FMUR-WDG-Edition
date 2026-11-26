@@ -313,6 +313,10 @@ final class ScopeRenderCompatibility {
         }
     }
 
+    static void prewarm() {
+        initialiseIrisReflection();
+    }
+
     private static void initialiseIrisReflection() {
         if (irisChecked) {
             return;
@@ -455,9 +459,7 @@ final class ScopeRenderCompatibility {
             } catch (LinkageError ignored) {
                 clearShaderShadowReflection();
             }
-        } catch (ReflectiveOperationException ignored) {
-            clearIrisReflection();
-        } catch (LinkageError ignored) {
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             clearIrisReflection();
         }
     }
