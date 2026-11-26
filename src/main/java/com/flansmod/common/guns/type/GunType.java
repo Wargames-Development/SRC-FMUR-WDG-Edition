@@ -1701,8 +1701,6 @@ public class GunType extends PaintableType implements IScope, IMarkable {
     public ArrayList<AttachmentType> getCurrentAttachments(ItemStack gun) {
         checkForTags(gun);
         ArrayList<AttachmentType> attachments = new ArrayList<AttachmentType>();
-        NBTTagCompound attachmentTags = gun.stackTagCompound.getCompoundTag("attachments");
-        NBTTagList genericsList = attachmentTags.getTagList("generics", (byte) 10);
         for (int i = 0; i < numGenericAttachmentSlots; i++) {
             appendToList(gun, "generic_" + i, attachments);
         }
@@ -2123,8 +2121,12 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * @return
      */
     public float getAimTimeConstant(ItemStack stack) {
+        return getAimTimeConstantFromAttachments(getCurrentAttachments(stack));
+    }
+
+    public float getAimTimeConstantFromAttachments(List<AttachmentType> attachments) {
         float stackAimTimeConstant = this.aimTimeConstant;
-        for (AttachmentType attachment : getCurrentAttachments(stack))
+        for (AttachmentType attachment : attachments)
             stackAimTimeConstant *= attachment.aimingTimeMultiplier;
         return Math.min(stackAimTimeConstant, 0.95F);
     }
@@ -2135,8 +2137,12 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * @return
      */
     public float getRunPosTime(ItemStack stack) {
+        return getRunPosTimeFromAttachments(getCurrentAttachments(stack));
+    }
+
+    public float getRunPosTimeFromAttachments(List<AttachmentType> attachments) {
         float stackRunPosTime = this.runPosTime;
-        for (AttachmentType attachment : getCurrentAttachments(stack))
+        for (AttachmentType attachment : attachments)
             stackRunPosTime *= attachment.runPosTimeMultiplier;
         return stackRunPosTime;
     }
@@ -2147,8 +2153,12 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * @return
      */
     public float getRunCrouchTime(ItemStack stack) {
+        return getRunCrouchTimeFromAttachments(getCurrentAttachments(stack));
+    }
+
+    public float getRunCrouchTimeFromAttachments(List<AttachmentType> attachments) {
         float stackRunCrouchTime = this.runCrouchTime;
-        for (AttachmentType attachment : getCurrentAttachments(stack))
+        for (AttachmentType attachment : attachments)
             stackRunCrouchTime *= attachment.runCrouchTimeMultiplier;
         return stackRunCrouchTime;
     }
@@ -2303,16 +2313,24 @@ public class GunType extends PaintableType implements IScope, IMarkable {
      * Get the movement speed of a specific gun, taking into account attachments
      */
     public float getMovementSpeed(ItemStack stack) {
+        return getMovementSpeedFromAttachments(getCurrentAttachments(stack));
+    }
+
+    public float getMovementSpeedFromAttachments(List<AttachmentType> attachments) {
         float stackMovement = moveSpeedModifier;
-        for (AttachmentType attachment : getCurrentAttachments(stack)) {
+        for (AttachmentType attachment : attachments) {
             stackMovement *= attachment.moveSpeedMultiplier;
         }
         return stackMovement;
     }
 
     public float getCameraShakeModifier(ItemStack stack) {
+        return getCameraShakeModifierFromAttachments(getCurrentAttachments(stack));
+    }
+
+    public float getCameraShakeModifierFromAttachments(List<AttachmentType> attachments) {
         float stackMovement = cameraShakeModifier;
-        for (AttachmentType attachment : getCurrentAttachments(stack)) {
+        for (AttachmentType attachment : attachments) {
             stackMovement *= attachment.cameraShakeMultiplier;
         }
         return stackMovement;

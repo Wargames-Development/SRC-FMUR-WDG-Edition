@@ -149,6 +149,8 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
     private int deathScreenDisplayWidth = -1;
     private int deathScreenDisplayHeight = -1;
     private boolean overlayReloadListenerRegistered;
+    private IScope preloadedScope;
+    private ArmourType preloadedHelmet;
 
 
     public TickHandlerClient() {
@@ -171,6 +173,8 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
         TextureManager manager = Minecraft.getMinecraft().getTextureManager();
         if (manager == null) return;
         SCOPE_TEXTURES.reset();
+        preloadedScope = null;
+        preloadedHelmet = null;
         for (ResourceLocation overlay : BUILTIN_OVERLAYS) {
             ITextureObject loaded = manager.getTexture(overlay);
             if (loaded == null || loaded == TextureUtil.missingTexture) {
@@ -182,13 +186,20 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
         for (ArmourType armour : ArmourType.armours) preloadOverlay(manager, armour.overlay, false);
     }
 
-    private static void preloadActiveOverlay(Minecraft mc) {
+    private void preloadActiveOverlay(Minecraft mc) {
         if (mc.thePlayer == null || mc.currentScreen != null) return;
         TextureManager manager = mc.getTextureManager();
-        preloadScope(manager, FlansModClient.currentScope, true);
+        IScope scope = FlansModClient.currentScope;
+        if (scope != preloadedScope) {
+            preloadedScope = scope;
+            preloadScope(manager, scope, true);
+        }
         ItemStack helmet = mc.thePlayer.inventory.armorInventory[3];
-        if (helmet != null && helmet.getItem() instanceof ItemTeamArmour) {
-            preloadOverlay(manager, ((ItemTeamArmour) helmet.getItem()).type.overlay, true);
+        ArmourType type = helmet != null && helmet.getItem() instanceof ItemTeamArmour
+                ? ((ItemTeamArmour) helmet.getItem()).type : null;
+        if (type != preloadedHelmet) {
+            preloadedHelmet = type;
+            if (type != null) preloadOverlay(manager, type.overlay, true);
         }
     }
 
