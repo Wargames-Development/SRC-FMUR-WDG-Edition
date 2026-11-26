@@ -1703,7 +1703,7 @@ public class ModelP90 extends ModelGun //Same as Filename
         translateGun = new Vector3f(0.0F, -0.0625F, -0.1875F);
         translateClip = new Vector3f(0.0F, -0.625F, 0.0F);
         flashScale = 0.4F;
-        muzzleFlashPoint = new Vector3f(1.7F, 0.65F, 0.0F);
+        setMuzzleFlashPoint(66F, 23F, 0F);
         translateAll(0.0F, 0.0F, 0.0F);
         hasFlash = true;
         hasArms = true;

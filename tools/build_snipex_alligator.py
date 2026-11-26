@@ -196,6 +196,9 @@ def suppressor_mesh():
                (16.26, 1.81), (18.18, 1.81), (18.45, 1.65), (18.45, .27),
                (18.20, .27), (18.20, 0)]
     angles = np.linspace(0, 2*np.pi, 17)
+    # Match the reference's slender tube while retaining the barrel collar and bore.
+    profile = [(x, radius if radius <= .88 else .88 + (radius - .88) * .38)
+               for x, radius in profile]
     for (x0, r0), (x1, r1) in zip(profile, profile[1:]):
         material = 'recess' if r0 <= .27 else 'hardware' if r1 <= .27 else 'suppressor'
         u, v = TILES[material]

@@ -16,7 +16,6 @@ public class ModelC7A2 extends ModelGun {
         defaultBarrelModel = part("_muzzle");
         scopeAttachPoint = point(1.5F, 6.47F, 0F);
         barrelAttachPoint = point(19.4F, 5.29F, 0F);
-        muzzleFlashPoint = point(20.55F, 5.29F, 0F);
         gripAttachPoint = point(9.5F, 4.10F, 0F);
         gadgetAttachPoint = point(12.3F, 5.29F, -1.10F);
         mirrorThirdPerson = false;
@@ -53,6 +52,7 @@ public class ModelC7A2 extends ModelGun {
         ShakeDistance = 0.2F;
         hasFlash = true;
         flashScale = 0.4F;
+        muzzleFlashPoint = point(20.55F / flashScale, 5.29F / flashScale, 0F);
         caseScale = 0.2F;
         // This pass scales before translating; hide the idle casing inside the port.
         casingAttachPoint = point(2.8F / caseScale, 5.4F / caseScale, 0.3F / caseScale);

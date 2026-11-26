@@ -128,7 +128,7 @@ public final class ThermalScopeEffect {
             return;
         }
         boolean render = !colorPictureInPictureActiveLastFrame || !modelLensValid
-                || (colorPictureInPictureFrame++ & 1) == 0;
+                || ScopeZoom.isAdjusting(FlansModClient.currentScope) || (colorPictureInPictureFrame++ & 1) == 0;
         colorPictureInPictureActiveLastFrame = true;
         if (!render) return;
         renderScopedWorld(mc, partialTicks);
@@ -147,7 +147,7 @@ public final class ThermalScopeEffect {
         ThermalProfile profile = activeProfile();
         int width = thermal ? profile.width : MODEL_LENS_SIZE;
         int height = thermal ? profile.height : MODEL_LENS_SIZE;
-        float magnification = isModelLensDisplay() ? getSecondaryCameraMagnification() : 1F;
+        float magnification = isModelLensDisplay() ? getSecondaryCameraMagnification(partialTicks) : 1F;
         sceneCaptured = false;
         scopedSceneCaptured = false;
         cameraUnavailable = true;
@@ -511,14 +511,10 @@ public final class ThermalScopeEffect {
                 || usesModelScopeLens(FlansModClient.currentScope)));
     }
 
-    private static float getModelMagnification() {
-        return FlansModClient.currentScope == null ? 1F
-                : Math.max(1F, FlansModClient.lastZoomLevel
-                * FlansModClient.currentScope.getFOVFactor());
-    }
-
-    private static float getSecondaryCameraMagnification() {
-        float desiredMagnification = getModelMagnification();
+    private static float getSecondaryCameraMagnification(float partialTicks) {
+        IScope scope = FlansModClient.currentScope;
+        float desiredMagnification = scope == null ? 1F
+                : Math.max(1F, ScopeZoom.factor(scope, partialTicks) * scope.getFOVFactor());
         if (!usesExplicitMagnification()) {
             return desiredMagnification;
         }
@@ -1162,19 +1158,23 @@ public final class ThermalScopeEffect {
 		GL11.glEnable(GL11.GL_TEXTURE_2D);
 		GL11.glEnable(GL11.GL_BLEND);
 		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-		GL11.glColor4f(1F, 1F, 1F, 1F);
 		float reticleScale = getPictureInPictureReticleScale(FlansModClient.currentScope);
 		double left = width * (1D - reticleScale) * 0.5D;
 		double top = height * (1D - reticleScale) * 0.5D;
 		double right = left + width * reticleScale;
 		double bottom = top + height * reticleScale;
 		Tessellator tessellator = Tessellator.instance;
-		tessellator.startDrawingQuads();
-		tessellator.addVertexWithUV(left, bottom, -89D, 0D, 1D);
-		tessellator.addVertexWithUV(right, bottom, -89D, 1D, 1D);
-		tessellator.addVertexWithUV(right, top, -89D, 1D, 0D);
-		tessellator.addVertexWithUV(left, top, -89D, 0D, 0D);
-		tessellator.draw();
+		boolean colorApplied = ScopeReticle.beginTexture(reticle);
+		try {
+			tessellator.startDrawingQuads();
+			tessellator.addVertexWithUV(left, bottom, -89D, 0D, 1D);
+			tessellator.addVertexWithUV(right, bottom, -89D, 1D, 1D);
+			tessellator.addVertexWithUV(right, top, -89D, 1D, 0D);
+			tessellator.addVertexWithUV(left, top, -89D, 0D, 0D);
+			tessellator.draw();
+		} finally {
+			if (colorApplied) GL11.glPopAttrib();
+		}
 	}
 
 	static String getPictureInPictureReticle(IScope scope) {

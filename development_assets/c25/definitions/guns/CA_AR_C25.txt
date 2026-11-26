@@ -1,6 +1,6 @@
 Name C25
 ShortName c25
-Icon C25
+Icon pixel_c25
 Description Tan C25 rifle_Uses existing 5.56x45mm STANAG magazines_Factory Colt Optics VMR [1-6x] scope
 Colour 255 255 255
 Ammo 556x4530rdmag

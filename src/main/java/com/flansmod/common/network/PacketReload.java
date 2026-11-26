@@ -160,25 +160,34 @@ public class PacketReload extends PacketBase {
     //服务端处理逻辑
     @Override
     public void handleServerSide(EntityPlayerMP playerEntity) {
+        PlayerHandler.getPlayerData(playerEntity).requestReload(this);
+    }
 
-        PlayerData data = PlayerHandler.getPlayerData(playerEntity); //获取玩家data
+    public void applyReloadIntent(EntityPlayerMP playerEntity, PlayerData data) {
+        if (!playerEntity.isEntityAlive())
+            return;
+        int slot = playerEntity.inventory.currentItem;
         ItemStack gunStack = playerEntity.getCurrentEquippedItem(); // 获取玩家目前手持物品的物品堆
 
-        if (left && data.offHandGunSlot != 0) { // 如果为左手换弹且有左手 , 执行左手换弹逻辑
-            gunStack = playerEntity.inventory.getStackInSlot(data.offHandGunSlot - 1); // 获取副手枪械stack
+        if (left) {
+            if (data.offHandGunSlot <= 0 || data.offHandGunSlot > 9 || gunStack == null
+                    || !(gunStack.getItem() instanceof ItemGun) || !((ItemGun) gunStack.getItem()).type.getOneHanded())
+                return;
+            slot = data.offHandGunSlot - 1;
+            if (slot == playerEntity.inventory.currentItem)
+                return;
+            gunStack = playerEntity.inventory.getStackInSlot(slot);
         }
 
-        if (data != null && gunStack != null && gunStack.getItem() instanceof ItemGun) { // 如果data不为空 gunstack不为空 且 gunstack确实为枪械
+        if ((gunSlot == -1 || gunSlot == slot) && gunStack != null && gunStack.getItem() instanceof ItemGun) {
             GunType type = ((ItemGun) gunStack.getItem()).type; // 获取枪械类型
+            if ((!gunTypeShortName.isEmpty() && !gunTypeShortName.equals(type.shortName))
+                    || data.isReloading(gunStack) || data.hasReloadInHand(left))
+                return;
             if (type.useHeatSystem) {
                 ItemGun.tryEarlyCooldown(gunStack, type, playerEntity);
                 return;
             }
-            //检查枪械是否为空仓
-            if (data.cancelSingleReload(playerEntity, gunStack, left))
-                return;
-            if (data.isReloading(gunStack) || data.hasReloadInHand(left))
-                return;
             boolean empty = true;
             for (int i = 0; i < type.getNumAmmoItemsInGun(gunStack); i++) { // 遍历枪械的所有弹药槽
                 ItemStack bulletStack = ((ItemGun) gunStack.getItem()).getBulletItemStack(gunStack, i); // 获取该弹药槽
@@ -218,16 +227,16 @@ public class PacketReload extends PacketBase {
                 }
 
                 int reloadTicks = Math.max(1, (int) Math.ceil(reloadTime));
-                data.startReload(gunStack, reloadTicks, reloadCount, left, true, combineAmmo, ammoToUpperInventory);
+                if (!data.tryStartReload(gunStack, reloadTicks, reloadCount, left, true, combineAmmo, ammoToUpperInventory))
+                    return;
                 //Set the reload delay
                 if (left)
                     data.reloadingLeft = true;
                 else data.reloadingRight = true;
                 //Send reload packet to induce reload effects client side
 
-                int reloadSlot = left ? data.offHandGunSlot - 1 : playerEntity.inventory.currentItem;
                 PacketReload animationPacket = new PacketReload(left, reloadCount, reloadTicks,
-                        singlesReload, combineAmmo, ammoToUpperInventory, reloadSlot, type.shortName, !empty,
+                        singlesReload, combineAmmo, ammoToUpperInventory, slot, type.shortName, !empty,
                         playerEntity.getEntityId());
                 FlansMod.getPacketHandler().sendToAllAround(animationPacket, playerEntity.posX, playerEntity.posY,
                         playerEntity.posZ, ANIMATION_SYNC_RANGE, playerEntity.dimension);

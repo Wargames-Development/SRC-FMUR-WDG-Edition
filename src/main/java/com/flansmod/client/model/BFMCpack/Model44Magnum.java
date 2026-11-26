@@ -2056,11 +2056,7 @@ public class Model44Magnum extends ModelGun //Same as Filename
 
         hasFlash = true;
         flashScale = 4F;
-        muzzleFlashPoint = new Vector3f(
-                barrelAttachPoint.x / flashScale,
-                barrelAttachPoint.y / flashScale,
-                barrelAttachPoint.z / flashScale
-        );
+        setMuzzleFlashPoint(179F, 125.5F, 0F);
         flipAll();
     }
 }

@@ -1301,7 +1301,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
 
                     if (FlansMod.DEBUG)
                         worldObj.spawnEntityInWorld(new EntityDebugDot(worldObj, new Vector3f(posX + motionX * driveableHit.intersectTime, posY + motionY * driveableHit.intersectTime, posZ + motionZ * driveableHit.intersectTime), 100, 0F, 0F, 1F));
-                    setDead();
+                    finishEntityImpact(hitX, hitY, hitZ);
                     break;
                 }
 
@@ -1344,7 +1344,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         }
                     }
 
-                    setDead();
+                    finishEntityImpact(hitX, hitY, hitZ);
                     break;
                 }
 
@@ -1370,7 +1370,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                     penetratingPower = playerHit.hitbox.hitByBullet(this, penetratingPower, distanceDamageModifier);
                     spawnBloodParticles(playerHit.hitbox.soldier, hitX, hitY, hitZ, motionX, motionY, motionZ, playerHit.hitbox.type);
                     penetrationLosses.add(new PenetrationLoss((prevPenetratingPower - penetratingPower), PenetrationLoss.PenetrationLossType.PLAYER));
-                    setDead();
+                    finishEntityImpact(hitX, hitY, hitZ);
                     break;
                 }
 
@@ -1451,7 +1451,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         }
                     }
 
-                    setDead();
+                    finishEntityImpact(hitX, hitY, hitZ);
                     break;
                 }
 
@@ -1695,7 +1695,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         if (bounceNum < type.bounceLimit) {
                             bounceNum++;
                         } else {
-                            setPosition(hitVec.xCoord, hitVec.yCoord, hitVec.zCoord);
+                            setBlockImpactPosition(raytraceResult);
                             setVelocity(0, 0, 0);
                             if (type.detonateOnBouncinessLimit) {
                                 setDead();
@@ -1703,7 +1703,7 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                         }
 
                     } else {
-                        setPosition(hitVec.xCoord, hitVec.yCoord, hitVec.zCoord);
+                        setBlockImpactPosition(raytraceResult);
                         setDead();
                     }
                     break;
@@ -2328,6 +2328,22 @@ public class EntityBullet extends EntityShootable implements IEntityAdditionalSp
                             0D, 0D, 0D, 1.0F),
                     x, y, z, 64F, dimension);
         }
+    }
+
+    private void finishEntityImpact(double x, double y, double z) {
+        if (!worldObj.isRemote && type.explosionRadius > 0.1F)
+            setPosition(x, y, z);
+        setDead();
+    }
+
+    private void setBlockImpactPosition(MovingObjectPosition hit) {
+        Vec3 position = hit.hitVec;
+        if (!worldObj.isRemote && type.explosionRadius > 0.1F) {
+            // A blast on the solid side of the face is occluded even from exposed players.
+            double[] normal = getHitNormal(hit.sideHit);
+            position = position.addVector(normal[0] * 0.001D, normal[1] * 0.001D, normal[2] * 0.001D);
+        }
+        setPosition(position.xCoord, position.yCoord, position.zCoord);
     }
 
     public DamageSource getBulletDamage(boolean headshot) {

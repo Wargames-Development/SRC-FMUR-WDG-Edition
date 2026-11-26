@@ -212,6 +212,10 @@ public class ModelCoyote extends ModelAttachment //Same as Filename
         attachmentModel[46].setRotationPoint(-11F, -6F, -5F);
         flipAll();
 
+        setReticleLens(11.25F,
+                6.5F, -4.5F, 11.5F, -5F, 13.5F, -2F, 13.5F, 2F,
+                11.5F, 5F, 6.5F, 4.5F);
+
         this.renderOffset = 0.2F;
     }
 }

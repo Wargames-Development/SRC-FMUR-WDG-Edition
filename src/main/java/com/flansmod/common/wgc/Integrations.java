@@ -60,6 +60,13 @@ public final class Integrations {
         return WGCoreCompat.canHarmPlayer(actingPlayerId, targetPlayerId, world);
     }
 
+    public static boolean isExplosionDamageAllowedAtWGC(World world, Entity actingEntity,
+                                                         double x, double y, double z, String type) {
+        ExplosionResult result = evaluateExplosionWGC(world, actingEntity, null, x, y, z, type,
+                Collections.<ChunkPosition>emptyList());
+        return result != null && result.isExplosionAllowed() && result.isEntityDamageAllowed();
+    }
+
     public static ExplosionResult evaluateExplosionWGC(World world,
                                                        Entity actingEntity,
                                                        Explosion explosion,

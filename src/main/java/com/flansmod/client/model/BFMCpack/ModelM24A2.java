@@ -952,7 +952,7 @@ public class ModelM24A2 extends ModelGun //Same as Filename
         chargeModifier = new Vector3f(16F, 8F, 4F);
         rightHandBolt = true;
         flashScale = 1.0F;
-        muzzleFlashPoint = new Vector3f(1.8F, 0.1F, 0.0F);
+        setMuzzleFlashPoint(134.75F, 23F, 0F);
         casingAttachPoint = new Vector3f(1.7F, 1.7F, 0.0F);
         casingAnimDistance = new Vector3f(0.0F, 5F, 10.75F);
         casingAnimSpread = new Vector3f(0.0F, 0.0F, 0.0F);

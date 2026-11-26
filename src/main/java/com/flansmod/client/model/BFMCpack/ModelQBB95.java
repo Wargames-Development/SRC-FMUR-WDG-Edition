@@ -2374,7 +2374,7 @@ public class ModelQBB95 extends ModelGun //Same as Filename
         casingDelay = 1;
         flashScale = 4.0F;
         casingAnimSpread = new Vector3f(1.5F, 1.8F, 1.5F);
-        muzzleFlashPoint = new Vector3f(3.0F, 0.4F, 0.0F);
+        setMuzzleFlashPoint(142F, 45.5F, 0F);
         hasArms = true;
         hasFlash = true;
         leftArmPos = new Vector3f(0F, -0.4F, -0.05F);

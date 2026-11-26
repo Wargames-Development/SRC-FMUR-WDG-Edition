@@ -117,21 +117,38 @@ def main():
         return bool(np.any((u>1e-5)&(v>1e-5)&(u+v<1-1e-5)))
     for x,y in ((-7.2,3.25),(-6.6,3.45)):
         assert not covers(body,x,y),'Stock opening filled'
+    for x in (8.0,9.0,10.0):
+        assert covers(body,x,4.22),'Bottom rail mounting web disconnected'
     side=body[np.max(body[:,:,2],axis=1)<-.62]
-    for bottom,top,count in ((4.28,4.70,6),(4.70,5.48,5),(5.48,5.91,6)):
-        for i in range(count):
-            x=5.04+(i+.5)*(13.35-5.04)/count
-            # The rear fastening collar and short gadget rail intentionally mask some holes.
-            if 8.5<x<9.7 and bottom<5.2:continue
-            assert not covers(side,x,(bottom+top)/2),'Handguard slot filled'
+    for x,y in ((10.6,5.02),(12.0,5.02),(12.5,5.5)):
+        assert not covers(side,x,y),'SPEAR handguard vent filled'
     assert 'Magnification 1.0' in definition and 'Magnification2 6.0' in definition and 'PictureInPictureAutoDepth true' in definition
     assert 'PictureInPictureReticle PIP\\C25Scope' in definition
     scope=obj(OUT/'C25_scope.obj',1.15)
     standalone=obj(OUT/'C25Scope.obj',1)
     assert np.max(np.abs(scope[:,:,:3]-standalone[:,:,:3]-(1.5,6.43,0)))<2e-6
+    # Project along the optical axis: housing/turrets must leave the clear bore open.
+    yz=standalone[:,:,[1,2,0]]
+    for angle in np.linspace(0,2*np.pi,9):
+        assert not covers(yz,1.65+.43*np.cos(angle),.43*np.sin(angle)), 'Scope bore obstructed'
+    assert not covers(yz,1.65,0),'Scope centerline obstructed'
+    p=standalone[:,:,:3].reshape(-1,3)
+    rear=p[p[:,0]<-2.85];front=p[p[:,0]>4.8]
+    radius=lambda points:np.max(np.linalg.norm(points[:,1:]-(1.65,0),axis=1))
+    assert radius(rear)>.76 and radius(front)<.62,'Ocular/objective proportions reversed'
     for icon in ('C25Icon','C25ScopeIcon'):
         p=np.asarray(oiio.ImageBuf(str(OUT/(icon+'.png'))).get_pixels(oiio.UINT8))
         assert p.shape==(32,32,4) and set(np.unique(p[:,:,3]))=={0,255}
+    catalog=json.loads((ROOT/'development_assets/item_presentation/catalog.json').read_text())
+    for short,name,definition_path in (('c25','C25','guns/CA_AR_C25.txt'),
+                                       ('c25scope','C25Scope','attachments/SCOPE_C25.txt')):
+        icon=catalog['icons'][short]
+        source=ROOT/'development_assets/item_presentation/icons'/(icon+'.png')
+        assert digest(OUT/(name+'Icon.png'))==digest(source),'Reviewed icon overwritten'
+        assert digest(PACK/('assets/flansmod/textures/items/'+icon+'.png'))==digest(source)
+        for root in (ASSET/'definitions',PACK):
+            assert re.search(r'^Icon '+re.escape(icon)+r'\s*$',
+                             (root/definition_path).read_text(),re.M),'Reviewed icon binding reset'
     for path in (ASSET/'original').iterdir():report['donor_sha256'][path.name]=digest(path)
     (ASSET/'validation').mkdir(exist_ok=True)
     (ASSET/'validation/checks.json').write_text(json.dumps(report,indent=2)+'\n')

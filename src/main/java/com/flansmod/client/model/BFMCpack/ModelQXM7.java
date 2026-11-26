@@ -235,6 +235,10 @@ public class ModelQXM7 extends ModelAttachment //Same as Filename
 
         flipAll();
 
+        setReticleLens(-5F,
+                8.2F, -3.8F, 8.7F, -4.1F, 11.4F, -4.1F, 12.6F, -3.65F, 12.6F, 3.65F,
+                11.4F, 4.1F, 8.7F, 4.1F, 8.2F, 3.8F);
+
         this.renderOffset = 0.2F;
     }
 }

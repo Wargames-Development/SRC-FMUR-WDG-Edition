@@ -1,3 +1,163 @@
+# Reviewed inventory icon restoration
+
+The model exporter incorrectly regenerated its retired placeholder icons and
+reset the Icon fields, overwriting the reviewed presentation added afterward.
+Restored the canonical pixel_c25.png (and the catalog-owned VMR icon) from
+development_assets/item_presentation/icons. Updated the durable definitions
+to Icon pixel_c25 / pixel_c25scope and restored both canonical and legacy
+texture paths in the development pack and disposable test instance.
+
+tools/build_c25.py now copies the reviewed catalog artwork instead of drawing
+placeholder sprites. Both its model outputs and install paths use that artwork.
+tools/c25/verify.py now compares the source, generated and installed icon hashes
+and checks both source/runtime Icon bindings against the presentation catalog.
+The icon-generation function was actually executed in Blender; the complete
+Python asset verification and git diff --check passed afterward. No Java or
+model geometry changed for this correction, so no compilation/client launch
+was needed. Restart the client to refresh cached textures as the manual check.
+No commits, pushes or publishing. The previous modeling reports follow.
+
+---
+
+# Bottom rail correction — November 26
+
+B1, fixed: the old rail teeth ended at Y 4.10, below the refitted SPEAR
+underside/lips at about Y 4.337. The missing mounting web left a visible gap.
+
+Changed tools/build_c25.py to add a continuous steel rail web from X 7.5 to
+10.55, Y 4.10 to 4.36, Z +/- .40. It joins the teeth to the handguard's lower
+lips. The grip attachment plane and all existing gameplay/optic settings stay
+unchanged. Regenerated/installed the body OBJ, packed scene and studio views.
+Added three web-occupancy regression samples in tools/c25/verify.py.
+
+Blender exporter/install, gradlew.bat -I tools/c25_geometry.gradle
+checkC25Geometry --offline (including compileJava prerequisites) and bundled
+Python tools/c25/verify.py all passed. The opposite-side studio render was
+inspected and shows the rail connected. Verdict: ACCEPTABLE for this bounded
+geometry fix. Evidence is in validation/nov26-rail/. No new live client run
+was performed for this small correction. Restart the client, inspect the
+underside and fit a grip as the remaining in-game check. No IDs, mounts,
+network/save formats or gameplay behavior changed; no commit/push was made.
+
+---
+
+# November 26 — SPEAR handguard and VMR housing revision
+
+## Implementer report
+
+Requested scope: improve the C25 handguard using MCX SPEAR, M4A1 and HK416
+pack references, and rebuild the VMR housing/mount from the supplied photos.
+
+Files changed and why:
+- tools/build_c25.py: replaced the authored flat fore-end with selected actual
+  Java-loaded BFMC MCX SPEAR fore-end parts. Refit its native angled vents,
+  forward slot rows, facets and underside to the existing C25 interfaces.
+  Added collar fasteners and rebuilt the optic as stepped ocular/main tube/
+  objective, round turret drums, curved rings, zoom band, ring-top rails,
+  clamp bolts and an open shaped cantilever bridge.
+- tools/c25/C25GeometryCheck.java: added the actual HK416 to donor extraction
+  for comparison with M4A1 and MCX. This task changed no production Java.
+- tools/c25/verify.py: updated vent samples for the SPEAR geometry and added
+  projected clear-bore rays and ocular/objective proportion checks.
+- development_assets/c25/README.md: documents the final construction,
+  handguard selection/transforms and current 1x/6x settings.
+- development_assets/c25/model/: regenerated body, fitted/standalone optic,
+  packed editable Blender scene, measurements and five studio renders;
+  added handguard_selection.json. Other exported groups, atlas, icons and
+  reticle were regenerated deterministically and remain unchanged in Git.
+- references/VMR-housing-1.png through -3.png: archived the user references.
+  Their authorship/license was not supplied; they are not projected textures.
+- This report and validation/nov26/: current results, live/baseline captures,
+  reference renders and logs. validation/nov26-before preserves prior studio
+  views and bounds. Earlier reports below are historical.
+
+Donor selection: MCX gunModel 412-507, 522-728 and 807-811. First undo its
+1.15 dump scale and apply configured .1 model scale. Effective source X
+[6.7,16.7] maps to C25 [5.04,13.35], Y [4,6.45] maps to [4.08,6.18], and Z
+scales by 1.04. Retain original donor UVs in the existing right atlas column.
+Exclude the source rail teeth, irons, barrel and gas block. Keep the C25 rail,
+barrel and accessory anchors. These part IDs are specific to this archive.
+The retained MCX archive/pack provenance remains TV90/BFMC, with no supplied
+individual donor license or named model creator.
+
+Stock, receiver, grip/magazine/bolt, gameplay stats/ammo/reload, saved item IDs,
+reticle, 1x/6x endpoint behavior, lens-disc location/radius and scope swaps
+remain unchanged. The rear housing is wider while the clear opening remains
+.49 radius; therefore the visible rim is thicker in ADS. Flip caps were not
+added, leaving the lens open as in the first supplied scope photograph.
+
+## Reviewer / fixer report
+
+B1 — fixed: first-pass mount upright tops entered the clear bore. Their
+seats now terminate below the clear aperture; turret bases sit outside the
+main tube's exterior. Center and perimeter-ray projection tests now pass.
+The visual review also reduced the mount's continuous lower bulk to the
+open bridge and separate clamps seen in the photos.
+
+B2 — observed existing presentation issue: horizontal sky bands appeared in
+PiP during the new-model run. A second launch used only the previous committed
+C25_scope.obj and C25Scope.obj in the disposable fixture, keeping the same
+current definitions/reticle/renderer. It reproduced the same sky bands.
+This isolates the issue from the new optic geometry; no shared rendering
+code was changed to conceal it. The latest asset set was restored afterward.
+Baseline captures and log are saved alongside new-model evidence.
+
+T1 — manual backlog retained: ordinary physical zoom-key input, normal-input
+firing and empty/tactical reload, every hand contact/device combination,
+saved-world reload, dropped/item-frame views, dedicated-server/multiplayer
+and unusual FOV/shader/Angelica configurations remain untested here.
+
+Verdict: ACCEPTABLE WITH MINOR ISSUES (B2 existing PiP presentation and T1).
+No common/server source, network protocol, registry IDs, NBT format, gameplay
+authority or existing pack definitions changed. Existing workspace edits in
+other models and shared rendering/gameplay classes were preserved.
+
+## Test / verification report
+
+Commands actually run successfully:
+- Blender 5.2 -b --factory-startup --python-exit-code 1 --python
+  tools/build_c25.py -- --install, including the final bore-clearance fix.
+- gradlew.bat -I tools/c25_geometry.gradle checkC25Geometry --offline.
+  This includes compileJava and the focused checker compilation prerequisites.
+- Blender bundled Python tools/c25/verify.py, including the final run after
+  restoring the disposable instance to the new model.
+- Bundled Python tools/c25/setup_live.py, then gradlew.bat -I
+  tools/c25/live.gradle runClient --offline (new model).
+- A second identical runClient invocation for the old-model sky-band comparison.
+- git diff --check on the changed source and README.
+
+Focused checks passed for actual Java-loaded versus exported geometry,
+normal/winding consistency, occupied UVs/opacity, installed hashes, unique IDs,
+reticle/icon checks, stock opening, new handguard vent samples, clear optic
+bore, larger-ocular/smaller-objective proportions, fitted/standalone optic
+placement, factory-muzzle separation and effective flash/tracer origins.
+Both live launches finished BUILD SUCCESSFUL. The new-model run passed fresh
+factory-scope selection, 1x/6x getter checks for factory and attachment scopes,
+model/ammo/combined-device compatibility and saved attachment lookup. It
+captured hip, ADS blend, both zoom endpoints, scripted reload, held third
+person and factory restoration after removal of the optional scope/devices.
+Hip, reload, studio opposite/underside and PiP captures were visually reviewed.
+The scripted run does not establish normal-input gameplay acceptance.
+
+New model evidence is in validation/nov26/; baseline-* files show the older
+optic comparison and should not be mistaken for the final housing. Raw scene
+slimes remain visible in some captures. The test runs refreshed the local
+validation JAR at build number 246; gradle.properties stayed at 246.
+Nothing was committed, pushed, published or uploaded.
+
+## In-game regression steps
+
+Restart the matching development client to clear cached meshes. Obtain C25
+and inspect the SPEAR-style fore-end and VMR from hip, reload and held views.
+Aim with its factory scope and use Switch Scope Magnification (default Z)
+for 1x/6x. Fit another optic and remove it to confirm the factory scope swaps
+back. Check grip/laser/muzzle fit and normal empty/tactical reload/firing.
+Repeat on matching multiplayer/dedicated-server packs when available.
+
+---
+
+Earlier reports below describe previous versions and historical test runs.
+
 # Colt Optics VMR [1-6x] reticle and zoom update
 
 ## Implementer report

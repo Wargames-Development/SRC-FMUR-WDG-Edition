@@ -79,11 +79,7 @@ public class ModelRPKM extends ModelGun //Same as Filename
 
         hasFlash = true;
         flashScale = 4F;
-        muzzleFlashPoint = new Vector3f(
-                barrelAttachPoint.x / flashScale,
-                barrelAttachPoint.y / flashScale,
-                barrelAttachPoint.z / flashScale
-        );
+        setMuzzleFlashPoint(114.625F, 23F, 0F);
 
         zoomOffset = 0.275F;
         zoomOffsetY = -0.026F;

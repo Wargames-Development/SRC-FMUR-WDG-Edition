@@ -1,10 +1,17 @@
 # C25 with factory tan scope
 
-The revised C25 uses a detailed BFMC MCX stock conversion, retains a genuinely
-open triangular lower frame, and has a continuous chamfered handguard with
-three rows of rounded through-slots. The MCX cheekpiece, buttpad, adjustment
-latch and surface detail replace the original plain stock. Its filled lower
-web is replaced by an authored diagonal frame to preserve the reference's hole.
+The C25 retains the detailed MCX stock conversion and genuinely open triangular
+lower frame. The November 26 revision replaces the flat capsule-slot fore-end
+with selected actual BFMC MCX SPEAR handguard geometry, refitted to the C25's
+length, roof height and width. Angled rear vents, recessed forward rows,
+corner facets and the underside structure now follow the native pack model.
+M4A1 and HK416 Java-loaded models were also rendered for comparison.
+
+The Colt Optics VMR housing and mount are rebuilt from the three supplied
+scope photographs: larger rear ocular, black adjustment band, faceted zoom
+ring, slim tube, compact objective, round windage/elevation turrets, curved
+scope rings, small ring-top rails, clamp screws and an open cantilever bridge.
+The lens axis, rear disc, reticle, eye relief and 1x/6x selector are preserved.
 
 The iron sights are removed. The Colt Optics VMR [1-6x] PiP scope is now the default scope on a
 fresh C25: no separate attachment is needed. It uses the existing gun-level
@@ -24,19 +31,24 @@ factory muzzle is still replaceable. The loose sling is omitted.
   three-column UV mapping independently of that model's later atlas revisions.
 - src/main/java/com/flansmod/client/model/BFMCpack/ModelC25.java: binds the
   factory scope group, with no iron-sight group or bare-iron pose correction.
-- definitions/guns/CA_AR_C25.txt: gun-level 4x PiP settings.
+- definitions/guns/CA_AR_C25.txt: gun-level 1x/6x PiP settings.
 - original/M16A4.mesh and M16A4.png: archived BFMC receiver donor.
 - original/MCX.mesh and MCX.png: actual Java-loaded BFMC stock donor and atlas.
   The archive is recorded at scale 1.15; MCX's installed definition is 0.1.
   Stock conversion applies 0.1/1.15, fits X from [-10.6,-3.6] to [-8.66,-2.6],
   Y from [2.35,6.1] to [1.55,5.94], and scales Z by .95.
+- model/handguard_selection.json: selected MCX gunModel parts 412-507,
+  522-728 and 807-811. Source effective X [6.7,16.7] maps to [5.04,13.35],
+  Y [4,6.45] maps to [4.08,6.18], and Z scales by 1.04 after .1/1.15.
+  The source rail, irons, gas block and barrel are excluded; C25 keeps its
+  own rail, barrel and accessory interfaces. These indices are donor-specific.
 - model/stock_selection.json: retained MCX defaultStockModel parts 0-23 and
   41-80. Parts 24-40 are replaced by the authored hollow lower frame.
 - model/donor_selection.json: retained M16A4 receiver, magazine and bolt IDs.
 - model/: editable packed C25.blend, six OBJ exports, atlas, inventory icons,
   VMR reticle, measurements and five studio renders. C25_scope is fitted in gun
   coordinates; C25Scope is the independently usable attachment export.
-- references/: both user-supplied C25 photos, for reference only. Their
+- references/: C25, reticle and VMR housing photos, for reference only. Their
   authorship/license was not supplied, and they are not projected as textures.
 
 The original BFMC pack credits TV90/BFMC. Individual donor authorship/license
@@ -85,3 +97,7 @@ In game, restart, obtain C25, load an existing 5.56x45 STANAG magazine and aim.
 The factory scope should be fitted immediately. Fit another sight to check
 replacement, then remove it to restore the factory scope. Check the stock hole
 and rounded fore-end slots from both sides and during a normal reload.
+
+Inventory artwork is owned by development_assets/item_presentation/catalog.json.
+The exporter copies its reviewed pixel_c25/pixel_c25scope artwork and preserves
+those Icon bindings; it must not regenerate the retired placeholder sprites.

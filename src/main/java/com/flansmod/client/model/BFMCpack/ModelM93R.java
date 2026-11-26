@@ -2282,11 +2282,7 @@ public class ModelM93R extends ModelGun //Same as Filename
 
         hasFlash = true;
         flashScale = 4F;
-        muzzleFlashPoint = new Vector3f(
-                129 / flashScale,
-                106 / flashScale,
-                0 / flashScale
-        );
+        setMuzzleFlashPoint(139F, 106F, 0F);
 
         flipAll();
         zoomOffset = 0.15F;

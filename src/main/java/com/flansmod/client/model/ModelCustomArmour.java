@@ -19,6 +19,7 @@ import net.minecraft.item.ItemStack;
 import org.lwjgl.opengl.GL11;
 
 public class ModelCustomArmour extends ModelBiped {
+    private static final ModelBiped CORPSE_POSE_BACKUP = new ModelBiped();
     public ArmourType type;
 
     private final ModelRendererTurbo.RenderBatchCache renderBatchCache = new ModelRendererTurbo.RenderBatchCache();
@@ -31,6 +32,25 @@ public class ModelCustomArmour extends ModelBiped {
     public ModelRendererTurbo[] rightLegModel = new ModelRendererTurbo[0];
     public ModelRendererTurbo[] skirtFrontModel = new ModelRendererTurbo[0]; //Acts like a leg piece, but its pitch is set to the maximum of the two legs
     public ModelRendererTurbo[] skirtRearModel = new ModelRendererTurbo[0]; //Acts like a leg piece, but its pitch is set to the minimum of the two legs
+
+    public void renderCorpse(EntityCorpse corpse, float scale) {
+        // Armour definitions share this model with the living player renderer.
+        copyBipedPose(this, CORPSE_POSE_BACKUP);
+        boolean wasSneaking = isSneak;
+        boolean wasRiding = isRiding;
+        boolean wasAiming = aimedBow;
+        int previousHeldItem = heldItemRight;
+        isRiding = false;
+        try {
+            render(corpse, 0F, 0F, 0F, 0F, 0F, scale);
+        } finally {
+            copyBipedPose(CORPSE_POSE_BACKUP, this);
+            isSneak = wasSneaking;
+            isRiding = wasRiding;
+            aimedBow = wasAiming;
+            heldItemRight = previousHeldItem;
+        }
+    }
 
     public void render(Entity entity, float f, float f1, float f2, float f3, float f4, float f5) {
         GL11.glPushMatrix();
@@ -92,15 +112,19 @@ public class ModelCustomArmour extends ModelBiped {
             Render renderer = RenderManager.instance.getEntityRenderObject(entity);
             if (renderer instanceof RenderPlayer) {
                 // The player model has already resolved crouch, crawl and other animation hooks.
-                ModelBiped playerModel = ((RenderPlayer) renderer).modelBipedMain;
-                copyPose(playerModel.bipedHead, bipedHead);
-                copyPose(playerModel.bipedBody, bipedBody);
-                copyPose(playerModel.bipedLeftArm, bipedLeftArm);
-                copyPose(playerModel.bipedRightArm, bipedRightArm);
-                copyPose(playerModel.bipedLeftLeg, bipedLeftLeg);
-                copyPose(playerModel.bipedRightLeg, bipedRightLeg);
+                copyBipedPose(((RenderPlayer) renderer).modelBipedMain, this);
             }
         }
+    }
+
+    private static void copyBipedPose(ModelBiped source, ModelBiped target) {
+        copyPose(source.bipedHead, target.bipedHead);
+        copyPose(source.bipedHeadwear, target.bipedHeadwear);
+        copyPose(source.bipedBody, target.bipedBody);
+        copyPose(source.bipedLeftArm, target.bipedLeftArm);
+        copyPose(source.bipedRightArm, target.bipedRightArm);
+        copyPose(source.bipedLeftLeg, target.bipedLeftLeg);
+        copyPose(source.bipedRightLeg, target.bipedRightLeg);
     }
 
     private static void copyPose(ModelRenderer source, ModelRenderer target) {

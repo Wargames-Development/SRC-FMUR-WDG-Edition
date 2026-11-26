@@ -1,0 +1,8 @@
+Name Nokia Detonator
+ShortName wdg_nokia
+Icon WDG_Nokia
+Model BFMCpack.Nokia
+Texture WDG_Nokia
+InventoryCategory Gadgets
+Description Hold use to dial your oldest armed IED in range_Release use to cancel the call
+ExplosiveRemote true

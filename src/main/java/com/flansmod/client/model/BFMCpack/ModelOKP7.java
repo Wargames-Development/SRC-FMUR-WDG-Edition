@@ -268,6 +268,11 @@ public class ModelOKP7 extends ModelAttachment //Same as Filename
 
         flipAll();
 
+        setReticleLens(14.5F,
+                5.4F, -1.8F, 7F, -4.1F, 9.5F, -5F, 12.2F, -4.4F,
+                14.2F, -2.6F, 15F, 0F, 14.2F, 2.6F, 12.2F, 4.4F,
+                9.5F, 5F, 7F, 4.1F, 5.4F, 1.8F);
+
         this.renderOffset = 0.2F;
     }
 }

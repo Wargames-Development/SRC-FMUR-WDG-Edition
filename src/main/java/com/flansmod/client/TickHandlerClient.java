@@ -35,6 +35,7 @@ import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.settings.GameSettings;
 import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
@@ -418,8 +419,18 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
             }
             return;
         }
-        if (player.getCurrentEquippedItem() != null && player.getCurrentEquippedItem().getItem() instanceof ItemGun) {
-            if (((ItemGun) player.getCurrentEquippedItem().getItem()).type.oneHanded && Keyboard.isKeyDown(Minecraft.getMinecraft().gameSettings.keyBindSneak.getKeyCode()) && Math.abs(event.dwheel) > 0)
+        if (event.dwheel == 0 || player == null) return;
+        ItemStack held = player.getHeldItem();
+        if (held != null && held.getItem() instanceof ItemGun) {
+            GunType gun = ((ItemGun) held.getItem()).type;
+            IScope scope = FlansModClient.currentScope;
+            if (scope != null && minecraft.currentScreen == null && player.ridingEntity == null
+                    && gun.getCurrentScope(held) == scope && GameSettings.isKeyDown(KeyInputHandler.zoomSwitchKey)
+                    && ScopeZoom.scroll(scope, event.dwheel)) {
+                event.setCanceled(true);
+                return;
+            }
+            if (gun.oneHanded && GameSettings.isKeyDown(minecraft.gameSettings.keyBindSneak))
                 event.setCanceled(true);
         }
     }
@@ -1062,13 +1073,20 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
         if (FlansModClient.currentScope == null || !bindScopeOverlay(minecraft, dotTexture)) {
             return;
         }
+        double x = screenWidth * 0.5D, y = screenHeight * 0.5D;
+        if (RenderGun.hasModelReticle(FlansModClient.currentScope)) {
+            x += RenderGun.dotReticleX * screenWidth * 0.5D;
+            y -= RenderGun.dotReticleY * screenHeight * 0.5D;
+        }
+        double size = 10D * FlansModClient.currentScope.getDotOverlayTextureScale();
+        if (!DotReticleLens.prepare(FlansModClient.currentScope, screenWidth, screenHeight, x, y, size)) return;
+
         minecraft.entityRenderer.setupOverlayRendering();
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_DEPTH_TEST);
         GL11.glDepthMask(false);
         GL11.glDisable(GL11.GL_ALPHA_TEST);
 
-        double size = 10D * FlansModClient.currentScope.getDotOverlayTextureScale();
         boolean greenReticle = isOkp7Scope();
         float reticleRed = greenReticle ? 0F : dotR;
         float reticleGreen = greenReticle ? 1F : dotG;
@@ -1082,12 +1100,12 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
 
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glColor4f(reticleRed, reticleGreen, reticleBlue, dotA);
-        drawCenteredReticleQuad(tessellator, screenWidth, screenHeight, size);
+        DotReticleLens.draw(tessellator);
 
         if (glowStrength > 0F) {
             GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
             GL11.glColor4f(redStrength, greenStrength, 0F, glowStrength * 0.5F);
-            drawCenteredReticleQuad(tessellator, screenWidth, screenHeight, size);
+            DotReticleLens.draw(tessellator);
         }
 
         GL11.glDepthMask(true);
@@ -1100,26 +1118,9 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
         if (!(FlansModClient.currentScope instanceof InfoType)) {
             return false;
         }
-        String shortName = ((InfoType)FlansModClient.currentScope).shortName;
+        String shortName = ((InfoType) FlansModClient.currentScope).shortName;
         return shortName != null
                 && "okp7".equalsIgnoreCase(shortName.replace("_", "").replace("-", ""));
-    }
-
-    private static void drawCenteredReticleQuad(Tessellator tessellator,
-                                                 int screenWidth, int screenHeight,
-                                                 double size) {
-        double x = (screenWidth - size) / 2D;
-        double y = (screenHeight - size) / 2D;
-        if (RenderGun.hasModelReticle(FlansModClient.currentScope)) {
-            x += RenderGun.dotReticleX * screenWidth / 2D;
-            y -= RenderGun.dotReticleY * screenHeight / 2D;
-        }
-        tessellator.startDrawingQuads();
-        tessellator.addVertexWithUV(x, y + size, -90D, 0D, 1D);
-        tessellator.addVertexWithUV(x + size, y + size, -90D, 1D, 1D);
-        tessellator.addVertexWithUV(x + size, y, -90D, 1D, 0D);
-        tessellator.addVertexWithUV(x, y, -90D, 0D, 0D);
-        tessellator.draw();
     }
 
     private static void renderHipFireCrosshair(Minecraft minecraft, ItemGun gun,
@@ -1284,6 +1285,7 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
             case START:
                 SCOPE_TEXTURES.uploadReady(Minecraft.getMinecraft());
                 RenderGun.beginReticleFrame();
+                DotReticleLens.beginFrame();
                 ThermalScopeEffect.beginModelLensFrame();
                 NightVisionGogglesBrightness.beginFrame(Minecraft.getMinecraft());
                 RenderGun.smoothing = event.renderTickTime;

@@ -73,7 +73,7 @@ public class ModelSPAS12 extends ModelGun //Same as Filename
         caseScale = 0.25F;
         casingDelay = 0;
         flashScale = 0.6F;
-        muzzleFlashPoint = new Vector3f(2.1F, 0.6F, 0.0F);
+        setMuzzleFlashPoint(345F, 63.5F, 0F);
         numBulletsInReloadAnimation = 9.0F;
         pumpDelayAfterReload = 150;
         pumpDelay = 7;

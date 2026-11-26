@@ -61,7 +61,7 @@ public class ModelM4A1_BlueEnergy extends ModelM4A1 {
         slideModel = roles.get(4).toArray(new ModelRendererTurbo[roles.get(4).size()]);
         hasFlash = true;
         flashScale = 1F;
-        muzzleFlashPoint = new Vector3f(11.8F / 16F, 4.55F / 16F, 0F);
+        setMuzzleFlashPoint(11.8F, 4.57F, 0F);
         gripIsOnPump = false;
         gripAttachPoint = new Vector3f(7.67F / 16F, 3.55F / 16F, 0F);
         barrelAttachPoint = new Vector3f(11.80F / 16F, 4.55F / 16F, 0F);

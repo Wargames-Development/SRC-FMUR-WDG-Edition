@@ -1,6 +1,6 @@
 Name Colt Optics VMR [1-6x]
 ShortName c25scope
-Icon C25Scope
+Icon pixel_c25scope
 AttachmentType sights
 Description Colt Optics VMR_1x and 6x picture-in-picture_Switch Scope Magnification (default Z)_Black VMR reticle
 Silencer false

@@ -1319,7 +1319,7 @@ public class ModelASVAL extends ModelGun //Same as Filename
         caseScale = 0.2F;
         casingDelay = 0;
         flashScale = 0.4F;
-        muzzleFlashPoint = new Vector3f(4.0F, 0.7F, 0.0F);
+        setMuzzleFlashPoint(16.5F, 4.8F, 0F);
         thirdPersonOffset = new Vector3f(-0.12F, -0.1F, 0.0F);
 
         //修正模型位移

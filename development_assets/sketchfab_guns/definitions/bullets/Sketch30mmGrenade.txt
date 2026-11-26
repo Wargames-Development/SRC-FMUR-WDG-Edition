@@ -1,4 +1,4 @@
-Name 30mm Grenade Magazine
+Name 30mm HE
 ShortName sketch30mmGrenade
 Description Six 30mm high-explosive grenades for Barrett SSRS
 Icon Sketch30mmGrenade

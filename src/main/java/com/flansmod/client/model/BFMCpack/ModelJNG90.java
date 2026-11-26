@@ -95,11 +95,7 @@ public class ModelJNG90 extends ModelGun //Same as Filename
 
         hasFlash = true;
         flashScale = 5F;
-        muzzleFlashPoint = new Vector3f(
-                barrelAttachPoint.x / flashScale,
-                barrelAttachPoint.y / flashScale,
-                barrelAttachPoint.z / flashScale
-        );
+        setMuzzleFlashPoint(419F, 79.5F, 0F);
 
         pumpHandlePoint = new Vector3f(0.0F, 79F / 16F, 0.0F);
     }

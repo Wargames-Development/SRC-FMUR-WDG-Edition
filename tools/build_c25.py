@@ -78,50 +78,33 @@ def stock():
     return m
 
 
-def vent_row(m, bottom, top, count, length, height, stagger=0):
-    """Extrude contiguous wall cells around actual capsule-shaped openings."""
-    left,right=5.04,13.35
-    step=(right-left)/count
-    radius=height/2
-    center=(bottom+top)/2+stagger
-    for side in (-1,1):
-        z0,z1=sorted((side*.63,side*.75))
-        for i in range(count):
-            L,R=left+i*step,left+(i+1)*step
-            a,b=(L+R-length)/2,(L+R+length)/2
-            m.box('olive',(L,bottom,z0),(a,top,z1))
-            m.box('olive',(b,bottom,z0),(R,top,z1))
-            xs=sorted(set([a,b,a+radius,b-radius]+
-                          [a+radius-radius*math.cos(t) for t in np.linspace(0,math.pi/2,6)]+
-                          [b-radius+radius*math.sin(t) for t in np.linspace(0,math.pi/2,6)]))
-            def edge(x):
-                d=max(a+radius-x,0,x-(b-radius))
-                return math.sqrt(max(0,radius*radius-d*d))
-            for x,X in zip(xs,xs[1:]):
-                if X-x<1e-7:continue
-                h,H=edge(x),edge(X)
-                m.profile('olive',((x,center+h),(X,center+H),(X,top),(x,top)),z0,z1)
-                m.profile('olive',((x,bottom),(X,bottom),(X,center-H),(x,center-h)),z0,z1)
-
-
 def handguard():
-    m=Mesh()
-    vent_row(m,4.28,4.70,6,1.03,.14)
-    vent_row(m,4.70,5.48,5,1.28,.27)
-    vent_row(m,5.48,5.91,6,1.03,.14)
-    # Roof/floor chamfers join the thin side walls around the barrel channel.
-    # Longitudinal chamfers are profiles in Y/Z, extruded along X.
-    for profile in (((5.91,-.75),(6.10,-.50),(6.10,.50),(5.91,.75),
-                     (5.91,.63),(5.98,.46),(5.98,-.46),(5.91,-.63)),
-                    ((4.28,-.75),(4.28,-.63),(4.20,-.46),(4.20,.46),
-                     (4.28,.63),(4.28,.75),(4.08,.50),(4.08,-.50))):
-        section=Mesh();section.profile('olive',profile,5.04,13.35)
-        for mat,p in section.faces:
-            m.faces.append((mat,p[:,[2,0,1]]))
-    # Full-height rear fastening collar, with small inset dark screw heads.
-    for z in (-.77,.75):
-        m.box('steel',(5.04,4.30,z),(5.47,5.89,z+.02))
-        for y in (4.48,5.69):m.box('dark',(5.19,y,z-.002),(5.30,y+.10,z+.023))
+    """Refit the Java-loaded SPEAR fore-end, preserving its recessed native detail."""
+    m=Mesh();selected=[]
+    for line in (ASSET/'original/MCX.mesh').read_text().splitlines():
+        words=line.split()
+        if not words[0].startswith('gunModel#'):continue
+        index=int(words[0].split('#')[1])
+        if not (412<=index<=507 or 522<=index<=728 or 807<=index<=811):continue
+        face=np.array([list(map(float,w.split(','))) for w in words[1:]])
+        p=face[:,:3]*(.1/1.15)
+        p[:,0]=5.04+(p[:,0]-6.7)*(8.31/10)
+        p[:,1]=4.08+(p[:,1]-4)*(2.10/2.45)
+        p[:,2]*=1.04
+        if words[0] not in selected:selected.append(words[0])
+        for j in range(1,len(face)-1):
+            ids=[0,j,j+1];tri=p[ids]
+            if np.linalg.norm(np.cross(tri[1]-tri[0],tri[2]-tri[0]))<1e-8:continue
+            key='foreend_'+str(len(base.M4_UV));base.M4_UV[key]=face[ids,3:5]
+            m.faces.append((key,tri))
+    # Clamp screws and their pads follow the pack's mechanical hardware treatment.
+    for z in (-.80,.76):
+        m.profile('steel',((5.08,4.35),(5.54,4.35),(5.70,4.58),
+                           (5.70,5.83),(5.50,6.04),(5.08,6.04)),z,z+.04)
+        for y in (4.62,5.70):
+            cylinder(m,'dark',((0,.09),(.02,.09)),
+                     (5.34,y,-.805 if z<0 else .805),'-z' if z<0 else 'z',segments=12)
+    (OUT/'handguard_selection.json').write_text(json.dumps(selected,indent=2)+'\n')
     return m
 
 
@@ -139,6 +122,9 @@ def rifle():
         body.profile('edge',((x,6.18),(x+.22,6.18),(x+.27,6.30),
                             (x+.22,6.43),(x,6.43),(x-.05,6.30)),-.57,.57)
     # Compact lower and side accessory rails use existing pack slots.
+    # The SPEAR floor sits above the old rail teeth; seat a mounting web into
+    # its lower side lips while retaining the existing grip attachment plane.
+    body.box('steel',(7.5,4.10,-.40),(10.55,4.36,.40))
     for x in np.arange(7.5,10.7,.40):
         body.box('steel',(x,3.91,-.55),(x+.23,4.10,.55))
     for x in (8.6,9.0,9.4):
@@ -155,27 +141,60 @@ def rifle():
             'C25_scope':fixed_scope,'C25_muzzle':muzzle}
 
 
+def cylinder(m, material, rings, center, axis, inner=None, segments=24):
+    piece=Mesh();piece.tube(material,rings,y=0,inner=inner,segments=segments)
+    for mat,p in piece.faces:
+        # All three maps are proper rotations, preserving outward winding.
+        if axis=='y':p=np.column_stack((p[:,1],p[:,0],-p[:,2]))
+        elif axis=='z':p=p[:,[1,2,0]]
+        elif axis=='-z':p=np.column_stack((p[:,1],-p[:,2],-p[:,0]))
+        m.faces.append((mat,p+center))
+
+
 def optic():
-    m = Mesh()
-    # Cantilever mount and rings follow the supplied side photo.
-    m.box('steel',(-1.8,0,-.48),(2.4,.24,.48))
-    m.profile('olive',((-1.65,.24),(-1.65,1.35),(-1.36,1.35),
-                       (-1.36,.56),(2.18,.56),(2.18,1.35),(2.45,1.35),(2.45,.24)), -.28,.28)
-    m.tube('olive',((-3.0,.62),(-2.65,.62),(2.8,.62),(3.0,.76),
-                     (5.05,.76)),y=1.65,inner=.49,segments=24)
-    for x in (-1.65,2.08):
-        m.tube('rib',((x,.74),(x+.44,.74)),y=1.65,inner=.63,segments=16)
-        m.box('olive',(x,2.27,-.54),(x+.44,2.58,.54))
-        for z in (-.57,.54):m.box('dark',(x+.10,2.31,z),(x+.30,2.45,z+.03))
-    # Turret stacks and eyepiece knurling stay restrained at pack scale.
-    m.box('steel',(-.25,1.70,-.75),(.75,2.51,.75))
-    m.box('rib',(-.35,2.51,-.61),(.85,2.69,.61))
-    turret = Mesh()
-    turret.tube('rib',((.70,.46),(.92,.46)),y=0,segments=16)
-    for material,p in turret.faces:
-        # Turn the axial cylinder onto the camera-facing windage axis.
-        m.faces.append((material,np.column_stack((p[:,1]+.25,-p[:,2]+1.95,-p[:,0]))))
-    for x in (3.12,3.30):m.tube('rib',((x,.79),(x+.10,.79)),y=1.65,inner=.76)
+    m=Mesh()
+    # Larger ocular at the rear, slim main tube and compact forward objective.
+    # Keep the existing clear lens, optical axis and eye-relief interface.
+    m.tube('olive',((-3,.73),(-2.92,.77),(-1.32,.77),(-1.22,.71),
+                    (-1.10,.67),(-.90,.55),(4.68,.55),(4.80,.60),
+                    (4.98,.60),(5.05,.56)),y=1.65,inner=.49,segments=32)
+    m.tube('dark',((-1.37,.775),(-1.23,.775)),y=1.65,inner=.77)
+    m.tube('rib',((-1.20,.72),(-1.12,.80),(-.91,.80),(-.82,.69)),
+           y=1.65,inner=.55,segments=12)
+    m.tube('edge',((-2.98,.735),(-2.90,.78),(-2.80,.78)),y=1.65,inner=.73)
+    # Open cantilever bridge, angled uprights and separate rail clamps.
+    m.profile('olive',((-.94,.32),(-.86,.47),(-.42,1.10),(-.06,1.10),
+                       (-.37,.47),(2.79,.47),(2.96,1.10),(3.38,1.10),
+                       (3.38,.48),(3.14,.32)),-.28,.28)
+    for x in (-.45,3.18):
+        m.profile('olive',((x-.42,.02),(x+.42,.02),(x+.48,.27),
+                           (x+.32,.38),(x-.32,.38),(x-.48,.27)),-.62,.62)
+        for side in (-1,1):
+            cylinder(m,'dark',((0,.17),(.045,.17)),(x,.20,side*.625),
+                     'z' if side>0 else '-z',segments=6)
+        # Rings retain curved caps and visible split lines instead of square blocks.
+        m.tube('olive',((x-.28,.66),(x-.22,.70),(x+.22,.70),(x+.28,.66)),
+               y=1.65,inner=.552,segments=24)
+        for z in (-.64,.52):
+            m.box('edge',(x-.24,1.66,z),(x+.24,1.73,z+.12))
+        m.profile('olive',((x-.35,2.24),(x+.35,2.24),(x+.42,2.38),
+                           (x+.32,2.44),(x-.32,2.44),(x-.42,2.38)),-.50,.50)
+        for rail_x in (x-.27,x-.03,x+.21):
+            m.box('rib',(rail_x,2.44,-.51),(rail_x+.12,2.54,.51))
+        for screw_x in (x-.14,x+.14):
+            cylinder(m,'dark',((0,.09),(.025,.09)),(screw_x,2.19,-.58),'-z',segments=12)
+    # Round windage/elevation drum housings and stepped adjustment caps.
+    cylinder(m,'olive',((0,.59),(.16,.65),(.36,.65),(.41,.58)),
+             (1.33,1.65,-.55),'-z')
+    cylinder(m,'steel',((0,.45),(.018,.45)),(1.33,1.65,-.97),'-z')
+    cylinder(m,'olive',((0,.51),(.16,.54),(.20,.63),(.37,.63),(.41,.57)),
+             (1.33,2.20,0),'y')
+    cylinder(m,'edge',((0,.48),(.02,.48)),(1.33,2.61,0),'y')
+    # Subtle tube seams and index marks remain subordinate to the housing geometry.
+    for x in (-2.76,4.60):
+        m.tube('mag_rib',((x,.773 if x<0 else .553),
+                          (x+.025,.773 if x<0 else .553)),y=1.65,inner=.55)
+    m.box('dark',(-1.395,2.415,-.015),(-1.255,2.432,.015))
     return m
 
 
@@ -219,22 +238,12 @@ def textures():
             for x in (512-offset,512+offset):
                 r[512-half:512+half,x-2:x+2]=black
     base.png('C25Scope_reticle.png',r)
-    for name in ('C25','C25Scope'):
-        p=np.zeros((32,32,4),np.uint8)
-        def rect(x,y,X,Y,c):p[y:Y,x:X]=(*base.PALETTE[c],255)
-        if name=='C25':
-            rect(1,12,8,15,'olive');rect(1,15,3,19,'olive')
-            for i in range(5):rect(3+i,18-i,5+i,19-i,'olive')
-            rect(8,12,16,17,'steel');rect(10,17,12,21,'olive')
-            rect(14,17,17,22,'mag');rect(15,21,18,23,'mag')
-            rect(16,12,26,16,'olive');rect(26,14,29,15,'dark');rect(28,12,32,16,'olive')
-            for x in (17,20,23):rect(x,14,x+2,15,'dark')
-            rect(8,11,26,12,'edge')
-        else:
-            rect(3,12,29,18,'olive');rect(22,11,30,19,'rib')
-            rect(8,11,10,20,'rib');rect(18,11,20,20,'rib')
-            rect(12,10,16,13,'edge');rect(8,20,22,23,'steel')
-        base.png(name+'Icon.png',p)
+    # Inventory art is owned by the reviewed item-presentation catalog.
+    # A geometry rebuild must never regenerate the retired placeholder sprites.
+    catalog=json.loads((ROOT/'development_assets/item_presentation/catalog.json').read_text())
+    for short,name in (('c25','C25'),('c25scope','C25Scope')):
+        source=ROOT/'development_assets/item_presentation/icons'/(catalog['icons'][short]+'.png')
+        shutil.copy2(source,OUT/(name+'Icon.png'))
 
 
 def scene(parts):
@@ -295,8 +304,11 @@ def main():
     if '--install' in sys.argv:
         copies={OUT/(name+'.obj'):ROOT/'eclipse/Flan/BFMCpack'/(name+'.obj') for name in parts}
         copies[OUT/'C25.png']=PACK/'assets/flansmod/skins/C25.png'
-        for name in ('C25','C25Scope'):
+        catalog=json.loads((ROOT/'development_assets/item_presentation/catalog.json').read_text())
+        for short,name in (('c25','C25'),('c25scope','C25Scope')):
             copies[OUT/(name+'Icon.png')]=PACK/('assets/flansmod/textures/items/'+name+'.png')
+            icon=catalog['icons'][short]
+            copies[ROOT/'development_assets/item_presentation/icons'/(icon+'.png')]=PACK/('assets/flansmod/textures/items/'+icon+'.png')
         copies[OUT/'C25Scope_reticle.png']=PACK/'assets/flansmod/gui/PIP/C25Scope.png'
         for path in (ASSET/'definitions').rglob('*'):
             if path.is_file():copies[path]=PACK/path.relative_to(ASSET/'definitions')

@@ -197,6 +197,10 @@ public class ModelKobra extends ModelAttachment //Same as Filename
         attachmentModel[44].setRotationPoint(14F, -14F, -2F);
         flipAll();
 
+        setReticleLens(14.25F,
+                7F, -3F, 8F, -4F, 12F, -4F, 13.5F, -2F, 13.5F, 2F,
+                12F, 4F, 8F, 4F, 7F, 3F);
+
         this.renderOffset = 0.2F;
     }
 }

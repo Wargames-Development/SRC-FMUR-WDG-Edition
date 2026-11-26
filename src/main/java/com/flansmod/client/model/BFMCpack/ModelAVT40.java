@@ -683,7 +683,7 @@ public class ModelAVT40 extends ModelGun {
         slideModel[11].setRotationPoint(24.0F, -28.0F, -4.5F);
         slideModel[12].addShapeBox(0.0F, 0.0F, 0.0F, 1, 1, 1, 0.0F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.5F, 0.0F, 0.0F, -0.25F, 0.0F, 0.0F, -0.25F);
         slideModel[12].setRotationPoint(25.0F, -28.0F, -4.5F);
-        muzzleFlashPoint = new Vector3f(0.0F, 0.0F, 0.0F);
+        setMuzzleFlashPoint(121.5F, 18.75F, 0F);
         hasFlash = true;
         hasArms = true;
         leftArmPos = new Vector3f(-0.05F, -0.48F, -0.13F);

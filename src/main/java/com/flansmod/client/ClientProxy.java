@@ -26,6 +26,8 @@ import com.flansmod.common.network.*;
 import com.flansmod.common.paintjob.TileEntityPaintjobTable;
 import com.flansmod.common.teams.*;
 import com.flansmod.common.tools.EntityParachute;
+import com.flansmod.common.tools.ItemTool;
+import com.flansmod.common.tools.ToolType;
 import com.flansmod.common.types.InfoType;
 import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.client.registry.ClientRegistry;
@@ -84,6 +86,12 @@ public class ClientProxy extends CommonProxy {
     }
 
     @Override
+    public void onNokiaRinging(EntityPlayer player, ItemStack stack) {
+        if (player == Minecraft.getMinecraft().thePlayer)
+            RenderNokia.playRingtone(player, stack);
+    }
+
+    @Override
     public void load() {
         new FlansModClient().load();
         gunRenderer = new RenderGun();
@@ -100,9 +108,12 @@ public class ClientProxy extends CommonProxy {
         for (GrenadeType grenadeType : GrenadeType.grenades)
             MinecraftForgeClient.registerItemRenderer(grenadeType.item, grenadeRenderer);
 
-        com.flansmod.common.tools.ToolType detonator = com.flansmod.common.tools.ToolType.getType("c4remote");
+        ToolType detonator = ToolType.getType("c4remote");
         if (detonator != null)
             MinecraftForgeClient.registerItemRenderer(detonator.item, detonatorRenderer);
+        ToolType phone = ToolType.getType(ItemTool.NOKIA);
+        if (phone != null)
+            MinecraftForgeClient.registerItemRenderer(phone.item, new RenderNokia());
 
         for (PlaneType planeType : PlaneType.types)
             MinecraftForgeClient.registerItemRenderer(planeType.item, planeRenderer);

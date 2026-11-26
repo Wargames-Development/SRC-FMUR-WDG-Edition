@@ -7,6 +7,7 @@ import com.flansmod.common.guns.EntityBullet;
 import com.flansmod.common.guns.EntityGrenade;
 import com.flansmod.common.guns.EntityShootable;
 import com.flansmod.common.guns.type.GrenadeType;
+import com.flansmod.common.tools.ItemTool;
 import com.flansmod.common.types.IFlanItem;
 import com.flansmod.common.types.InfoType;
 import com.flansmod.common.vector.Vector3f;
@@ -38,11 +39,15 @@ public class ItemGrenade extends ItemShootable implements IFlanItem
 	public GrenadeType type;
 
 	public int getThrowAnimationTicks() {
-		return "c4cn".equals(type.shortName) ? 12 : THROW_ANIMATION_TICKS;
+		return usesChargeThrow() ? 12 : THROW_ANIMATION_TICKS;
 	}
 
 	public int getThrowReleaseTicks() {
-		return "c4cn".equals(type.shortName) ? 4 : THROW_RELEASE_TICKS;
+		return usesChargeThrow() ? 4 : THROW_RELEASE_TICKS;
+	}
+
+	public boolean usesChargeThrow() {
+		return "c4cn".equals(type.shortName) || ItemTool.IED.equals(type.shortName);
 	}
 	
 	public ItemGrenade(GrenadeType t) 

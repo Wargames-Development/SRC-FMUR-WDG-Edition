@@ -1344,7 +1344,7 @@ public class ModelMosin extends ModelGun //Same as Filename
         rightHandBolt = true;
         crouchZoom = -0.3F;
         flashScale = 1.0F;
-        muzzleFlashPoint = new Vector3f(1.8F, 0.1F, 0.0F);
+        setMuzzleFlashPoint(19.2F, 5.625F, 0F);
         casingAttachPoint = new Vector3f(1.2F, 1.7F, 0.0F);
         casingAnimDistance = new Vector3f(0.0F, 10.0F, 8.75F);
         casingAnimSpread = new Vector3f(0.0F, 0.0F, 0.0F);

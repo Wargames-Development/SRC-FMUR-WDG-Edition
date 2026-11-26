@@ -518,6 +518,7 @@ public class ModelShorty12G extends ModelGun {
 
         translateAll(0.0F, -1.1F, 0.0F);
         flipAll();
+        setMuzzleFlashPoint(10F, 5.325F, 0F);
         crouchZoom = -0.1F;
         ShakeDistance = 1.1F;
     }

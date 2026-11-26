@@ -1995,7 +1995,7 @@ public class ModelQBS09 extends ModelGun //Same as Filename
         caseScale = 0.25F;
         casingDelay = 0;
         flashScale = 0.6F;
-        muzzleFlashPoint = new Vector3f(2.1F, 0.6F, 0.0F);
+        setMuzzleFlashPoint(151.5F, 41.17F, 0F);
         gunOffset = -0.3F;
         gunOffsetX = -2F;
         crouchZoom = -0.05F;

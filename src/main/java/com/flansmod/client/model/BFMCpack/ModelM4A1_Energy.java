@@ -66,7 +66,7 @@ public class ModelM4A1_Energy extends ModelM4A1 {
         slideModel = new ModelRendererTurbo[0];
         hasFlash = true;
         flashScale = 1F;
-        muzzleFlashPoint = new Vector3f(14.9F / 16F, 4.5F / 16F, 0F);
+        setMuzzleFlashPoint(15.6F, 4.5F, 0F);
         gripIsOnPump = false;
         gripAttachPoint = new Vector3f(7.23F / 16F, 2.82F / 16F, 0F);
         energyObjectNames = names.toArray(new String[names.size()]);

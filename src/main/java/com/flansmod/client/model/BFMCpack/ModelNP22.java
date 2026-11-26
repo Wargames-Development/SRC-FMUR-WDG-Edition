@@ -647,10 +647,6 @@ public class ModelNP22 extends ModelGun {
 
         hasFlash = true;
         flashScale = 3F;
-        muzzleFlashPoint = new Vector3f(
-                barrelAttachPoint.x / flashScale,
-                barrelAttachPoint.y / flashScale,
-                barrelAttachPoint.z / flashScale
-        );
+        setMuzzleFlashPoint(54.0F, 46F, 0F);
     }
 }

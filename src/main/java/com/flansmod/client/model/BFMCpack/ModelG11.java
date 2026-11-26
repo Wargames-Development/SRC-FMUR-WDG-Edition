@@ -1065,8 +1065,8 @@ public class ModelG11 extends ModelGun //Same as Filename
 
         hasFlash = true;
         hasArms = true;
-        muzzleFlashPoint = new Vector3f(35 / 16F, 10F / 16F, 0F / 16F);
         flashScale = 0.4F;
+        setMuzzleFlashPoint(10.7F, 4.55F, 0F);
         leftArmPos = new Vector3f(0.05F, -0.4F, -0.05F);
         leftArmRot = new Vector3f(80.0F, 50.0F, 0.0F);
         leftArmReloadPos = new Vector3f(-0.15F, -0.55F, 0.05F);

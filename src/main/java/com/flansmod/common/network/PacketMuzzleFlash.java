@@ -92,7 +92,9 @@ public class PacketMuzzleFlash extends PacketBase
 
                 boolean defaultMuzzleFlash = "flansmod.muzzleflash".equals(type);
                 boolean customSmokeParticle = type.toLowerCase(Locale.ROOT).contains("smoke");
-                if (defaultMuzzleFlash || customSmokeParticle) {
+                boolean modelEnergyFlash = g.useHeatSystem && ("flansmod.redmuzzleflash".equals(type)
+                        || "flansmod.bluemuzzleflash".equals(type));
+                if (defaultMuzzleFlash || customSmokeParticle || modelEnergyFlash) {
                     return;
                 }
 
@@ -104,7 +106,10 @@ public class PacketMuzzleFlash extends PacketBase
                 RotatedAxes axes = new RotatedAxes(entityPlayer.rotationYawHead+90, entityPlayer.rotationPitch, 0);
 
                 Vector3f shoulderOffset = firstPerson ? new Vector3f(0, -22F/16F, 0) : new Vector3f(0, 0, 0);
-                Vector3f handOffset = getMuzzleModelOffset(g, barrelAttachment);
+                Vector3f handOffset = g.model.getMuzzleFlashOffset(barrelAttachment != null,
+                        barrelAttachment == null ? null : barrelAttachment.model);
+                if (handOffset == null)
+                    return;
 
                 Vector3f.add(shoulderOffset, g.muzzleFlashParticlesShoulderOffset, shoulderOffset);
 
@@ -137,20 +142,8 @@ public class PacketMuzzleFlash extends PacketBase
         }
     }
 
-    private static Vector3f getMuzzleModelOffset(GunType gun, AttachmentType barrelAttachment) {
-        Vector3f offset = gun.model.muzzleFlashPoint == null
-                ? new Vector3f(0.5F, 0.22F, 0F)
-                : new Vector3f(gun.model.muzzleFlashPoint);
-        if (barrelAttachment != null && barrelAttachment.model != null
-                && barrelAttachment.model.attachmentFlashOffset != null) {
-            Vector3f.add(offset, barrelAttachment.model.attachmentFlashOffset, offset);
-        } else if (gun.model.defaultBarrelFlashPoint != null) {
-            Vector3f.add(offset, gun.model.defaultBarrelFlashPoint, offset);
-        }
-        return offset;
-    }
-
     /** Mirrors RenderGun's EQUIPPED transform so model units do not become world blocks. */
+    @SideOnly(Side.CLIENT)
     private static Vector3f transformThirdPersonMuzzleOffset(GunType gun, Vector3f modelOffset) {
         float muzzleScale = gun.modelScale * gun.model.flashScale;
         float x = 0.75F + gun.model.thirdPersonOffset.x + modelOffset.x * muzzleScale;

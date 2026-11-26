@@ -32,7 +32,7 @@ public final class C25GeometryCheck {
         net.minecraft.launchwrapper.Launch.blackboard.put("fml.deobfuscatedEnvironment", true);
         Path output = Paths.get(args[0]); Files.createDirectories(output);
         Field faces = ModelRendererTurbo.class.getDeclaredField("faces"); faces.setAccessible(true);
-        for (String name : new String[] {"M16A4", "M4A1", "MCX", "HoneyBadger", "C25"}) {
+        for (String name : new String[] {"M16A4", "M4A1", "HK416", "MCX", "HoneyBadger", "C25"}) {
             ModelGun model = (ModelGun) Class.forName("com.flansmod.client.model.BFMCpack.Model" + name).newInstance();
             try (PrintWriter out = new PrintWriter(output.resolve(name + ".mesh").toFile())) {
                 for (String group : new String[] {"gunModel", "ammoModel", "slideModel", "defaultScopeModel", "defaultBarrelModel", "defaultStockModel"})

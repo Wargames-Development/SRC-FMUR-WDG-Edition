@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 
 public class PlayerData {
 	private static final String RELOAD_ID_TAG = "FMURReloadId";
@@ -104,7 +105,8 @@ public class PlayerData {
 	/** Reloading booleans */
 	public boolean reloadingRight, reloadingLeft;
 	/** Reload state is attached to the gun stack and the hand that started it. */
-	private ReloadState reloadRight, reloadLeft;
+	private volatile ReloadState reloadRight, reloadLeft;
+	private final AtomicReferenceArray<PacketReload> pendingReloads = new AtomicReferenceArray<>(2);
 	/** When remote explosives are thrown they are added to this list. When the player uses a remote, the first one from this list detonates */
 	public ArrayList<EntityGrenade> remoteExplosives = new ArrayList<>();
 	public Set<EntityBullet> playerControlledBullets = new HashSet<>();
@@ -185,11 +187,20 @@ public class PlayerData {
 				&& ((ItemGun) rightGun.getItem()).type.getOneHanded();
 		if (offHandActive && offHandGunSlot > 0 && offHandGunSlot <= player.inventory.getSizeInventory())
 			leftGun = player.inventory.getStackInSlot(offHandGunSlot - 1);
+		if (leftGun == rightGun)
+			leftGun = null;
 
 		tickReload(player, rightGun, false);
-		if (leftGun != rightGun)
-			tickReload(player, leftGun, true);
+		tickReload(player, leftGun, true);
 
+		if (player instanceof EntityPlayerMP) {
+			// Coalesce repeated input per hand and validate it on the inventory tick.
+			for (int hand = 0; hand < 2; hand++) {
+				PacketReload request = pendingReloads.getAndSet(hand, null);
+				if (request != null)
+					request.applyReloadIntent((EntityPlayerMP) player, this);
+			}
+		}
 		reloadingRight = isReloading(rightGun, false);
 		reloadingLeft = isReloading(leftGun, true);
 
@@ -218,6 +229,10 @@ public class PlayerData {
 
 	public void requestAirburstProgram(int slot) {
 		pendingAirburstSlot.set(slot);
+	}
+
+	public void requestReload(PacketReload request) {
+		pendingReloads.set(request.left ? 1 : 0, request);
 	}
 
 	private void tickAirburstProgram(EntityPlayer player, ItemStack gun) {
@@ -272,8 +287,14 @@ public class PlayerData {
 
 	public void startReload(ItemStack gunStack, float reloadTime, int reloadCount, boolean left, boolean forceReload,
 			boolean combineAmmo, boolean ammoToUpperInventory) {
-		if (gunStack == null || reloadTime <= 0F)
-			return;
+		tryStartReload(gunStack, reloadTime, reloadCount, left, forceReload, combineAmmo, ammoToUpperInventory);
+	}
+
+	public synchronized boolean tryStartReload(ItemStack gunStack, float reloadTime, int reloadCount, boolean left, boolean forceReload,
+			boolean combineAmmo, boolean ammoToUpperInventory) {
+		if (gunStack == null || !(gunStack.getItem() instanceof ItemGun) || reloadTime <= 0F
+				|| getReloadState(left) != null || isReloading(gunStack))
+			return false;
 		if (!gunStack.hasTagCompound())
 			gunStack.setTagCompound(new NBTTagCompound());
 		String reloadId = UUID.randomUUID().toString();
@@ -284,6 +305,13 @@ public class PlayerData {
 		else
 			reloadRight = new ReloadState(gunStack, reloadId, reloadTime, forceReload,
 					combineAmmo, ammoToUpperInventory, reloadCount);
+		if (getReloadState(left).shellsToLoad > 0) {
+			if (left)
+				burstRoundsRemainingLeft = 0;
+			else
+				burstRoundsRemainingRight = 0;
+		}
+		return true;
 	}
 
 	public boolean hasReloadInHand(boolean left) {
@@ -299,52 +327,50 @@ public class PlayerData {
 	}
 
 	public float getReloadTime(ItemStack gunStack) {
-		if (isReloading(reloadRight, gunStack))
-			return reloadRight.timeLeft;
-		if (isReloading(reloadLeft, gunStack))
-			return reloadLeft.timeLeft;
+		ReloadState right = reloadRight;
+		ReloadState left = reloadLeft;
+		if (isReloading(right, gunStack))
+			return right.timeLeft;
+		if (isReloading(left, gunStack))
+			return left.timeLeft;
 		return 0F;
 	}
 
-	private void tickReload(EntityPlayer player, ItemStack gunStack, boolean left) {
+	private synchronized void tickReload(EntityPlayer player, ItemStack gunStack, boolean left) {
 		ReloadState reloadState = getReloadState(left);
 		if (reloadState == null)
 			return;
 
-		ItemStack inventoryStack = gunStack;
-		if (!player.worldObj.isRemote) {
-			inventoryStack = findReloadStack(player, reloadState);
-			if (inventoryStack == null || !isReloading(reloadState, gunStack)) {
-				cancelReload(player, reloadState, inventoryStack, left);
-				return;
-			}
-		}
-		if (!isReloading(reloadState, gunStack))
+		if (!isReloading(reloadState, gunStack) || !player.isEntityAlive()
+				|| !(gunStack.getItem() instanceof ItemGun)
+				|| ((ItemGun) gunStack.getItem()).type.getSecondaryFire(gunStack) != reloadState.secondaryFire) {
+			if (!player.worldObj.isRemote)
+				cancelReload(player, reloadState, findReloadStack(player, reloadState), left);
 			return;
+		}
 
 		reloadState.timeLeft--;
 		if (!player.worldObj.isRemote && reloadState.shellsToLoad > 0) {
-			ItemGun gunItem = (ItemGun) inventoryStack.getItem();
+			ItemGun gunItem = (ItemGun) gunStack.getItem();
 			int completed = (int) ((reloadState.totalTime - Math.max(0F, reloadState.timeLeft))
 					* reloadState.shellsToLoad / reloadState.totalTime);
 			while (reloadState.shellsLoaded < completed) {
-				if (!gunItem.reloadOne(inventoryStack, gunItem.type, player.worldObj, player,
+				if (!gunItem.reloadOne(gunStack, gunItem.type, player.worldObj, player,
 						reloadState.forceReload, reloadState.combineAmmo, reloadState.ammoToUpperInventory)) {
-					cancelReload(player, reloadState, inventoryStack, left);
+					cancelReload(player, reloadState, gunStack, left);
 					return;
 				}
 				reloadState.shellsLoaded++;
 			}
 		}
 		if (reloadState.timeLeft <= 0F) {
-			if (!player.worldObj.isRemote && reloadState.shellsToLoad == 0
-					&& inventoryStack.getItem() instanceof ItemGun) {
-				ItemGun gunItem = (ItemGun) inventoryStack.getItem();
-				gunItem.reload(inventoryStack, gunItem.type, player.worldObj, player,
+			if (!player.worldObj.isRemote && reloadState.shellsToLoad == 0) {
+				ItemGun gunItem = (ItemGun) gunStack.getItem();
+				gunItem.reload(gunStack, gunItem.type, player.worldObj, player,
 						reloadState.forceReload, left, reloadState.combineAmmo,
 						reloadState.ammoToUpperInventory);
 			}
-			clearReload(reloadState, inventoryStack, left);
+			clearReload(reloadState, gunStack, left);
 		}
 	}
 
@@ -354,11 +380,11 @@ public class PlayerData {
 			syncReloadCancellation(player, left);
 	}
 
-	public boolean cancelSingleReload(EntityPlayer player, ItemStack gunStack, boolean left) {
+	public synchronized boolean cancelSingleReload(EntityPlayer player, ItemStack gunStack, boolean left) {
 		ReloadState reloadState = getReloadState(left);
 		if (reloadState == null || reloadState.shellsToLoad == 0 || !isReloading(reloadState, gunStack))
 			return false;
-		cancelReload(player, reloadState, findReloadStack(player, reloadState), left);
+		cancelReload(player, reloadState, gunStack, left);
 		return true;
 	}
 
@@ -369,6 +395,7 @@ public class PlayerData {
 	private boolean isReloading(ReloadState reloadState, ItemStack gunStack) {
 		return reloadState != null
 				&& gunStack != null
+				&& reloadState.gunStack.getItem() == gunStack.getItem()
 				&& reloadState.timeLeft > 0F
 				&& (reloadState.gunStack == gunStack
 				|| reloadState.reloadId.equals(getReloadId(gunStack)));
@@ -406,9 +433,11 @@ public class PlayerData {
 	}
 
 	/** Clear transient weapon state before a server-side loadout replacement. */
-	public void resetWeaponState(EntityPlayer player) {
+	public synchronized void resetWeaponState(EntityPlayer player) {
 		pendingGrenade = null;
 		pendingAirburstSlot.set(-1);
+		pendingReloads.set(0, null);
+		pendingReloads.set(1, null);
 		if (reloadRight != null)
 			clearReload(reloadRight, findReloadStack(player, reloadRight), false);
 		if (reloadLeft != null)
@@ -446,8 +475,9 @@ public class PlayerData {
 		private final boolean ammoToUpperInventory;
 		private final float totalTime;
 		private final int shellsToLoad;
+		private final boolean secondaryFire;
 		private int shellsLoaded;
-		private float timeLeft;
+		private volatile float timeLeft;
 
 		private ReloadState(ItemStack gunStack, String reloadId, float timeLeft, boolean forceReload,
 				boolean combineAmmo, boolean ammoToUpperInventory, int reloadCount) {
@@ -458,9 +488,9 @@ public class PlayerData {
 			this.combineAmmo = combineAmmo;
 			this.ammoToUpperInventory = ammoToUpperInventory;
 			this.totalTime = timeLeft;
-			this.shellsToLoad = gunStack.getItem() instanceof ItemGun
-					&& ((ItemGun) gunStack.getItem()).type.getNumAmmoItemsInGun(gunStack) > 1
-					? reloadCount : 0;
+			GunType gunType = ((ItemGun) gunStack.getItem()).type;
+			this.shellsToLoad = gunType.getNumAmmoItemsInGun(gunStack) > 1 ? reloadCount : 0;
+			this.secondaryFire = gunType.getSecondaryFire(gunStack);
 		}
 	}
 

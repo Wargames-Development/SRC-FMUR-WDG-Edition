@@ -6,6 +6,7 @@ import com.flansmod.client.gui.GuiInspectGun;
 import com.flansmod.client.gui.GuiNightVisionSettings;
 import com.flansmod.client.gui.GuiSelectAmmo;
 import com.flansmod.common.guns.item.ItemGun;
+import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.FlansMod;
 import com.flansmod.common.eventhandlers.EnumBFMCKeyType;
 import com.flansmod.common.guns.FlashlightState;
@@ -71,6 +72,7 @@ public class KeyInputHandler {
     private static boolean lightKeyChecked;
 
     public static KeyBinding zoomSwitchKey = new KeyBinding("Switch Scope Magnification", Keyboard.KEY_Z, "FMUR Guns");
+    public static KeyBinding reticleColorKey = new KeyBinding("Toggle Scope Reticle Color", Keyboard.KEY_U, "FMUR Guns");
     public static KeyBinding thermalScopeKey = new KeyBinding("Toggle FLIR Mode", Keyboard.KEY_H, "FMUR Guns");
     public static KeyBinding coSightSwitchKey = new KeyBinding("Toggle Co-Sight", Keyboard.KEY_C, "FMUR Guns");
     public static KeyBinding missileUpKey = new KeyBinding("Missile Aim Up", Keyboard.KEY_UP, "FMUR Guns");
@@ -124,6 +126,7 @@ public class KeyInputHandler {
         ClientRegistry.registerKeyBinding(secondaryKey);
         ClientRegistry.registerKeyBinding(lightSwitchKey);
         ClientRegistry.registerKeyBinding(zoomSwitchKey);
+        ClientRegistry.registerKeyBinding(reticleColorKey);
         ClientRegistry.registerKeyBinding(thermalScopeKey);
         ClientRegistry.registerKeyBinding(coSightSwitchKey);
         ClientRegistry.registerKeyBinding(modelDebugKey);
@@ -235,10 +238,18 @@ public class KeyInputHandler {
 //            return;
 //        }
 
-        if (reloadKey.isPressed() && (FlansModClient.shootTime(false) <= 0
-                || FlansModClient.reloadTime(false) > 0)) {
-            FlansMod.getPacketHandler().sendToServer(new PacketReload(false, FlansModClient.combineAmmoOnReload, FlansModClient.ammoToUpperInventoryOnReload));
-            return;
+        if (reloadKey.isPressed()) {
+            ItemStack held = mc.thePlayer.getHeldItem();
+            if (held != null && held.getItem() instanceof ItemGun) {
+                GunType gun = ((ItemGun) held.getItem()).type;
+                if (gun.getNumAmmoItemsInGun(held) > 1 || FlansModClient.shootTime(false) <= 0
+                        || FlansModClient.reloadTime(false) > 0) {
+                    FlansMod.getPacketHandler().sendToServer(new PacketReload(false, 0, 0, false,
+                            FlansModClient.combineAmmoOnReload, FlansModClient.ammoToUpperInventoryOnReload,
+                            mc.thePlayer.inventory.currentItem, gun.shortName, false));
+                    return;
+                }
+            }
         }
         if (selectPreferredAmmo.isPressed() && FlansModClient.shootTime(false) <= 0) {
             ItemStack held = mc.thePlayer == null ? null : mc.thePlayer.getHeldItem();
@@ -263,8 +274,16 @@ public class KeyInputHandler {
             FlansModClient.isFlashLight = enabled;
             FlansMod.getPacketHandler().sendToServer(new PacketToggleFlashlight(enabled));
         }
-        if (zoomSwitchKey.isPressed()) {
-            FlansMod.switchedFOV = !FlansMod.switchedFOV;
+        if (zoomSwitchKey.isPressed() && ridingEntity == null) {
+            ItemStack held = player.getHeldItem();
+            if (held != null && held.getItem() instanceof ItemGun
+                    && ((ItemGun) held.getItem()).type.getCurrentScope(held) == FlansModClient.currentScope) {
+                ScopeZoom.toggleElcan(FlansModClient.currentScope);
+            }
+        }
+        if (reticleColorKey.isPressed() && ScopeReticle.toggleColor()) {
+            mc.getSoundHandler().playSound(new PositionedSoundRecord(FlansModResourceHandler.getSound("fireswitch"),
+                    0.6F, 1.15F, (float) player.posX, (float) player.posY, (float) player.posZ));
         }
         if (thermalScopeKey.isPressed() && ThermalScopeEffect.isThermalScopeActive(mc)) {
             ThermalScopeEffect.toggleFlir();

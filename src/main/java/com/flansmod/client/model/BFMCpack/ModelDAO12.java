@@ -1942,10 +1942,6 @@ public class ModelDAO12 extends ModelGun //Same as Filename
 
         hasFlash = true;
         flashScale = 5F;
-        muzzleFlashPoint = new Vector3f(
-                barrelAttachPoint.x / flashScale,
-                barrelAttachPoint.y / flashScale,
-                barrelAttachPoint.z / flashScale
-        );
+        setMuzzleFlashPoint(178.5F, 64F, 0F);
     }
 }

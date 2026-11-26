@@ -104,7 +104,7 @@ public class RenderGrenade extends Render implements IItemRenderer {
 
     static void renderThrowPose(EntityPlayer player, float progress, ItemStack grenade) {
         if (grenade != null && grenade.getItem() instanceof ItemGrenade
-                && "c4cn".equals(((ItemGrenade) grenade.getItem()).type.shortName)) {
+                && ((ItemGrenade) grenade.getItem()).usesChargeThrow()) {
             renderChargePose(player, progress, grenade);
             return;
         }
@@ -348,7 +348,7 @@ public class RenderGrenade extends Render implements IItemRenderer {
                         idleProjectionPlayer = Minecraft.getMinecraft().thePlayer;
                         GL11.glLoadIdentity();
                         FirstPersonHands.applyViewBobbing(Minecraft.getMinecraft().thePlayer, RenderGun.smoothing);
-                        if ("c4cn".equals(grenadeType.shortName)) {
+                        if (((ItemGrenade) item.getItem()).usesChargeThrow()) {
                             renderChargePose(Minecraft.getMinecraft().thePlayer, 0F, item);
                             GL11.glPopMatrix();
                             return;

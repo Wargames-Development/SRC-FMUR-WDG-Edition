@@ -2574,7 +2574,7 @@ public class ModelQBZ951 extends ModelGun //Same as Filename
         caseScale = 0.6F;
         casingDelay = 1;
         flashScale = 1.5F;
-        muzzleFlashPoint = new Vector3f(1.9F, 0.45F, 0.0F);
+        setMuzzleFlashPoint(126F, 45.7F, 0F);
         animationType = EnumAnimationType.CUSTOM;
         tiltGun = 5.0F;
         rotateGunVertical = 40.0F;

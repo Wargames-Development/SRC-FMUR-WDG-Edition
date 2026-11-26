@@ -115,7 +115,7 @@ public class RenderCorpse extends Render {
                     GL11.glColor4f(1F, 1F, 1F, 1F);
                 }
                 if (item instanceof ItemTeamArmour && ((ItemTeamArmour) item).type.model != null) {
-                    ((ItemTeamArmour) item).type.model.render(corpse, 0F, 0F, 0F, 0F, 0F, 0.0625F);
+                    ((ItemTeamArmour) item).type.model.renderCorpse(corpse, 0.0625F);
                 } else {
                     ModelBiped model = slot == 1 ? armourLeggings : armourOuter;
                     applyPose(model, corpse);

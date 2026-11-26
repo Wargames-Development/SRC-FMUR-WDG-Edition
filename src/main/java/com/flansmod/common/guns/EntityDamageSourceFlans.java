@@ -13,10 +13,13 @@ import net.minecraft.util.IChatComponent;
 
 public class EntityDamageSourceFlans extends EntityDamageSourceIndirect {
 
+    public static final String PLAYER_BLAST_IMPACT = "fmur.combatImpact";
+
     public InfoType weapon;
     public EntityLivingBase shooter;
     public boolean headshot;
     public boolean melee;
+    private boolean selfBlast;
 
     // NEW: flag used by FMUR / explosion checks
     public boolean flansExplosion = false;
@@ -50,6 +53,23 @@ public class EntityDamageSourceFlans extends EntityDamageSourceIndirect {
 
     public Entity getDamageSourceEntity() {
         return this.damageSourceEntity;
+    }
+
+    static EntityDamageSourceFlans playerBlast(Entity explosive, EntityPlayer player, InfoType weapon,
+                                               boolean playerCombat, boolean selfBlast) {
+        EntityDamageSourceFlans source = new EntityDamageSourceFlans(
+                playerCombat ? PLAYER_BLAST_IMPACT : weapon.shortName, explosive, player,
+                weapon, false, false, !playerCombat);
+        source.flansExplosion = true;
+        source.selfBlast = selfBlast;
+        return source;
+    }
+
+    @Override
+    public Entity getEntity() {
+        // Minecraft applies scoreboard friendly-fire rules to indirect damage from a player,
+        // including attacks against the same player. Keep the explosive and shooter for attribution.
+        return selfBlast ? null : super.getEntity();
     }
 
     @Override

@@ -279,6 +279,7 @@ public class FlansModClient extends FlansMod {
 
         if (minecraft.thePlayer == null || minecraft.theWorld == null) {
             isOperator = false;
+            ScopeZoom.reset();
             restoreScopedMouseSensitivity();
             return;
         }
@@ -477,9 +478,11 @@ public class FlansModClient extends FlansMod {
         } else {
             zoomProgress = 1.0F - (1.0F - zoomProgress) * 0.66F;
         }
+        ScopeZoom.tick(currentScope);
         if (currentScope != null) {
+            lastZoomLevel = ScopeZoom.factor(currentScope, 1F);
             lastFOVZoomLevel = currentScope.getFOVFactor();
-            MouseSenNedToChange = gamingMouseSensitivity - gamingMouseSensitivity / currentScope.getFOVFactor() / currentScope.getZoomFactor();
+            MouseSenNedToChange = gamingMouseSensitivity - gamingMouseSensitivity / lastFOVZoomLevel / lastZoomLevel;
         }
 
         PlayerData playerData = PlayerHandler.getPlayerData(minecraft.getSession().getUsername());
@@ -505,11 +508,6 @@ public class FlansModClient extends FlansMod {
                     if (playerData.sprintProgress < 0.0F)
                         playerData.sprintProgress = 0.0F;
                 }
-            }
-
-            if (currentScope != null) {
-                lastZoomLevel = currentScope.getZoomFactor();
-                lastFOVZoomLevel = currentScope.getFOVFactor();
             }
 
             /**  涉及下蹲时间的改动  */
@@ -579,7 +577,7 @@ public class FlansModClient extends FlansMod {
 
             /** 屏息 & 抖动参数 **/
             float shake = currentScope != null && currentScope.getZoomOverlay() != null
-                    && currentScope.getZoomFactor() * currentScope.getFOVFactor() >= 4F
+                    && lastZoomLevel * lastFOVZoomLevel >= 4F
                     ? gunType.getCameraShakeModifierFromAttachments(heldAttachments) : 0F;
             if (shake > 0F) {
                 double speed = (1.0 + minecraft.thePlayer.motionZ + minecraft.thePlayer.motionX) * stableSightProgress;
@@ -731,7 +729,7 @@ public class FlansModClient extends FlansMod {
             return;
         }
 
-        double scopeMagnification = (double) currentScope.getZoomFactor() * currentScope.getFOVFactor();
+        double scopeMagnification = (double) ScopeZoom.factor(currentScope, 1F) * currentScope.getFOVFactor();
         if (Double.isNaN(scopeMagnification) || Double.isInfinite(scopeMagnification)
                 || scopeMagnification <= 1D) {
             restoreScopedMouseSensitivity();
@@ -783,12 +781,12 @@ public class FlansModClient extends FlansMod {
     public static void renderTick(float smoothing) {
         //If the zoom has changed sufficiently, update it via reflection
         //if (Math.abs(zoomProgress - lastZoomProgress) > 0.0001F) {
-        float actualZoomProgress = lastZoomProgress + (zoomProgress - lastZoomProgress) * smoothing;
         float botchedZoomProgress = zoomProgress > 0.92F ? 1F : 0F;
         boolean physicalScopeLens = ThermalScopeEffect.usesModelScopeLens(currentScope);
+        float zoomFactor = ScopeZoom.isVariable(currentScope)
+                ? ScopeZoom.factor(currentScope, smoothing) * currentScope.getFOVFactor() : lastZoomLevel;
         double zoomLevel = physicalScopeLens ? 1.0D
-                : botchedZoomProgress * lastZoomLevel + (1 - botchedZoomProgress);
-        float FOVZoomLevel = actualZoomProgress * lastFOVZoomLevel + (1 - actualZoomProgress);
+                : botchedZoomProgress * zoomFactor + (1 - botchedZoomProgress);
         if (Math.abs(zoomLevel - 1F) < 0.01F)
             zoomLevel = 1.0D;
         try {

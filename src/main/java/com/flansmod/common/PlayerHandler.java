@@ -10,6 +10,7 @@ import com.flansmod.common.network.PacketRequestDebug;
 import com.flansmod.common.teams.PlayerStats;
 import com.flansmod.common.teams.TeamsManager;
 import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.eventhandler.EventPriority;
 import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent;
 import cpw.mods.fml.common.gameevent.PlayerEvent.PlayerLoggedInEvent;
@@ -89,6 +90,16 @@ public class PlayerHandler {
 
                 event.setCanceled(true);
             }
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void applyPlayerBlastProtection(LivingHurtEvent event) {
+        if (!event.entityLiving.worldObj.isRemote && event.source instanceof EntityDamageSourceFlans
+                && ((EntityDamageSourceFlans) event.source).flansExplosion
+                && EntityDamageSourceFlans.PLAYER_BLAST_IMPACT.equals(event.source.getDamageType())) {
+            // WGCore classifies the attack as PvP. Vanilla then uses blast protection for the damage.
+            event.source.setExplosion();
         }
     }
 

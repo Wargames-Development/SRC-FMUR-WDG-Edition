@@ -5,15 +5,21 @@ const root = path.resolve(__dirname, '..');
 const source = path.join(root, 'development_assets/demolition');
 const output = path.join(root, 'src/main/resources/assets/flansmod/models/demolition');
 fs.mkdirSync(output, { recursive: true });
-for (const [name, target] of [['m57', 'm57'], ['M112demo', 'm112']]) {
+// The phone export orders the mesh parts from the bottom of the keypad up.
+const phoneParts = ['body', 'star', 'zero', 'hash', 'nine', 'eight', 'seven',
+    'six', 'five', 'four', 'three', 'two', 'one', 'call', 'screen'];
+for (const [name, target] of [['m57', 'm57'], ['M112demo', 'm112'], ['IED', 'ied'], ['NOKIA', 'nokia']]) {
     const lines = ['# Supplied Blockbench export; decimal coordinates and textured triangles.'];
     let part = -1;
     for (const line of fs.readFileSync(path.join(source, name + '.obj'), 'utf8').split(/\r?\n/)) {
         if (/^o /.test(line)) {
             part++;
             // The ninth exported object is the long M57 squeeze handle.
-            if (part === 0) lines.push('g body');
-            if (name === 'm57' && part === 8) lines.push('g handle');
+            if (name === 'NOKIA') {
+                if (!phoneParts[part]) throw new Error('Unexpected phone mesh part ' + part);
+                lines.push('g ' + phoneParts[part]);
+            } else if (part === 0) lines.push('g body');
+            else if (name === 'm57' && part === 8) lines.push('g handle');
         } else if (/^(v|vt|vn) /.test(line)) {
             const [kind, ...values] = line.trim().split(/\s+/);
             lines.push(kind + ' ' + values.map(v => Number(v).toFixed(8)).join(' '));
@@ -23,6 +29,10 @@ for (const [name, target] of [['m57', 'm57'], ['M112demo', 'm112']]) {
                 lines.push('f ' + [vertices[0], vertices[i], vertices[i + 1]].join(' '));
         }
     }
-    fs.writeFileSync(path.join(output, target + '_runtime.obj'), lines.join('\n') + '\n');
+    if (name === 'NOKIA' && part !== phoneParts.length - 1) throw new Error('Phone mesh is missing parts');
+    const targetFile = path.join(output, target + '_runtime.obj');
+    const converted = lines.join('\n') + '\n';
+    if (!fs.existsSync(targetFile) || fs.readFileSync(targetFile, 'utf8').replace(/\r\n/g, '\n') !== converted)
+        fs.writeFileSync(targetFile, converted);
     console.log('Converted ' + name + ': ' + lines.filter(l => l.startsWith('f ')).length + ' triangles');
 }

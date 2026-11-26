@@ -111,3 +111,29 @@ the final exact 32x32 transparent PNG, which was inspected at its final size.
 Final prompt:
 
 > Create a single Minecraft inventory item sprite: M112 demolition charge, olive drab rectangular soft wrapped brick with a small dark detonating cord connector on top, inspired by provided olive texture reference (not a texture atlas). Crisp authentic hand drawn 32 by 32 pixel art, limited olive green palette, dark outline, highlights on top-left face, front long face visible, slightly isometric three-quarter view. Single centered isolated item occupies most canvas. Transparent background. No hands, lettering, text, shadows outside sprite, grid or other items. Render the sprite as a 32x32 logical pixel grid enlarged using only nearest-neighbor hard square pixels.
+
+## IED and Nokia detonator
+
+The local development instance has the `WDG IED` pack installed under
+`eclipse/Flan`. For another instance, copy
+`development_assets/demolition/ied_pack` into its `Flan` directory as `WDG IED`
+and run the updated mod on the client and server. The mod contains the supplied
+models and textures, inventory icons rendered from those models, and the
+supplied ringtone by frasse converted to mono Ogg Vorbis. Both items are
+available in Gadgets.
+
+1. In a test world, give yourself `flansmod:wdg_ied` and `flansmod:wdg_nokia`.
+   Right-click with the IED to toss it onto a surface, then step back.
+2. Hold right-click with the Nokia. In first person, check that the digits
+   appear as the keys depress. The ringtone starts at 4 seconds, after the
+   call key goes down. A full call takes 7.2 seconds at 20 TPS.
+3. Repeat and release right-click midway through the ringtone, then try
+   switching slots mid-dial. Both interruptions should leave the charge armed.
+4. On a dedicated server, have two players throw charges. Each Nokia should
+   reach its owner's oldest armed, loaded IED within 96 blocks. Use the M57 to
+   trigger a separately placed M112. The IED uses a 12-block blast setting and
+   higher damage multipliers. Test both in the same terrain with block damage
+   enabled to compare them.
+
+The phone's link to a thrown charge is session-scoped. Reconnecting or
+reloading the charge from a save requires throwing a new IED.

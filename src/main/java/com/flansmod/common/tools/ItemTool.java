@@ -16,10 +16,12 @@ import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.item.EnumAction;
 import net.minecraft.item.ItemFood;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.ChatComponentTranslation;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.Vec3;
@@ -30,6 +32,12 @@ import java.util.Iterator;
 import java.util.List;
 
 public class ItemTool extends ItemFood {
+	public static final String NOKIA = "wdg_nokia";
+	public static final String IED = "wdg_ied";
+	public static final int NOKIA_CALL_TICKS = 144;
+	public static final int NOKIA_RING_START = 80;
+	private static final double NOKIA_RANGE_SQUARED = 96D * 96D;
+
 	public ToolType type;
 
 
@@ -123,6 +131,12 @@ public class ItemTool extends ItemFood {
 			PlayerData data = PlayerHandler.getPlayerData(entityplayer, world.isRemote ? Side.CLIENT : Side.SERVER);
 			if(data == null)
 				return itemstack;
+			if (isNokia()) {
+				if (entityplayer.isEntityAlive() && entityplayer.ridingEntity == null && !entityplayer.isUsingItem()
+						&& data.shootTimeRight <= 0 && data.shootTimeLeft <= 0)
+					entityplayer.setItemInUse(itemstack, NOKIA_CALL_TICKS);
+				return itemstack;
+			}
 			if ("c4remote".equals(type.shortName)) {
 				if (!entityplayer.isEntityAlive() || entityplayer.ridingEntity != null
 						|| data.shootTimeRight > 0 || data.shootTimeLeft > 0)
@@ -141,14 +155,14 @@ public class ItemTool extends ItemFood {
 					i.remove();
 				}
 			}
-			//If we have some remote explosives out there
-			if(data.remoteExplosives.size() > 0)
+			// Legacy remotes keep their normal queue order and skip phone-linked charges.
+			i = data.remoteExplosives.iterator();
+			while (i.hasNext())
 			{
-				//Detonate it
-				data.remoteExplosives.get(0).detonate();
-				//Remove it from the list to detonate
-				if(data.remoteExplosives.get(0).detonated)
-					data.remoteExplosives.remove(0);
+				EntityGrenade grenade = i.next();
+				if (grenade.type != null && IED.equals(grenade.type.shortName)) continue;
+				grenade.detonate();
+				if (grenade.detonated) i.remove();
 				
 				//If not in creative and the tool should decay, damage it
 				if(!entityplayer.capabilities.isCreativeMode && type.toolLife > 0)
@@ -263,7 +277,59 @@ public class ItemTool extends ItemFood {
 		}
         return itemstack;
     }
-	
+
+	private boolean isNokia() {
+		return type.remote && NOKIA.equals(type.shortName);
+	}
+
+	@Override
+	public int getMaxItemUseDuration(ItemStack stack) {
+		return isNokia() ? NOKIA_CALL_TICKS : super.getMaxItemUseDuration(stack);
+	}
+
+	@Override
+	public EnumAction getItemUseAction(ItemStack stack) {
+		return isNokia() ? EnumAction.none : super.getItemUseAction(stack);
+	}
+
+	@Override
+	public void onUsingTick(ItemStack stack, EntityPlayer player, int remaining) {
+		if (!isNokia()) return;
+		if (!player.isEntityAlive() || player.ridingEntity != null)
+			player.clearItemInUse();
+		else if (player.worldObj.isRemote && remaining == NOKIA_CALL_TICKS - NOKIA_RING_START)
+			FlansMod.proxy.onNokiaRinging(player, stack);
+	}
+
+	@Override
+	public ItemStack onEaten(ItemStack stack, World world, EntityPlayer player) {
+		if (!isNokia()) return super.onEaten(stack, world, player);
+		if (world.isRemote || !player.isEntityAlive() || player.ridingEntity != null
+				|| player.getHeldItem() != stack || player.getItemInUse() != stack || player.getItemInUseCount() > 0)
+			return stack;
+
+		PlayerData data = PlayerHandler.getPlayerData(player, Side.SERVER);
+		if (data == null) return stack;
+		Iterator<EntityGrenade> charges = data.remoteExplosives.iterator();
+		while (charges.hasNext()) {
+			EntityGrenade charge = charges.next();
+			if (charge.isDead) {
+				charges.remove();
+				continue;
+			}
+			if (charge.type == null || !IED.equals(charge.type.shortName) || charge.detonated
+					|| charge.ticksExisted < charge.type.primeDelay || charge.thrower != player
+					|| charge.worldObj != world || charge.getDistanceSqToEntity(player) > NOKIA_RANGE_SQUARED
+					|| world.getEntityByID(charge.getEntityId()) != charge)
+				continue;
+			charges.remove();
+			charge.detonate();
+			return stack;
+		}
+		player.addChatMessage(new ChatComponentTranslation("flansmod.nokia.noCharge"));
+		return stack;
+	}
+
 	@Override
 	public String toString()
 	{

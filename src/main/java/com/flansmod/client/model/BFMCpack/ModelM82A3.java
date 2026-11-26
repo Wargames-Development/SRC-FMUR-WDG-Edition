@@ -1603,10 +1603,6 @@ public class ModelM82A3 extends ModelGun //Same as Filename
 
         hasFlash = true;
         flashScale = 0.6F;
-        muzzleFlashPoint = new Vector3f(
-                barrelAttachPoint.x / flashScale,
-                barrelAttachPoint.y / flashScale,
-                barrelAttachPoint.z / flashScale
-        );
+        setMuzzleFlashPoint(21.95F, 4.45F, 0F);
     }
 }

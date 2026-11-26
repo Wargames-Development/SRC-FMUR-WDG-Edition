@@ -36,6 +36,8 @@ public class CommonProxy {
 
     public void onRemoteDetonated(EntityPlayer player, ItemStack stack) { }
 
+    public void onNokiaRinging(EntityPlayer player, ItemStack stack) { }
+
     /**
      * Returns the list of content pack files, and on the client, adds the content pack resources and models to the classpath
      *

@@ -14,7 +14,6 @@ import net.minecraft.block.Block;
 import net.minecraft.enchantment.EnchantmentProtection;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.item.EntityTNTPrimed;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
@@ -214,29 +213,47 @@ public class FlansModExplosion extends Explosion
 		int l1 = MathHelper.floor_double(explosionY + explosionSize + 1.0D);
 		int i2 = MathHelper.floor_double(explosionZ - explosionSize - 1.0D);
 		int j2 = MathHelper.floor_double(explosionZ + explosionSize + 1.0D);
-		List list = worldObj.getEntitiesWithinAABBExcludingEntity(exploder, AxisAlignedBB.getBoundingBox(i, k, i2, j, l1, j2));
+		List<Entity> list = worldObj.getEntitiesWithinAABBExcludingEntity(exploder, AxisAlignedBB.getBoundingBox(i, k, i2, j, l1, j2));
+		Entity actingEntity = getWGCoreActingEntity();
+		boolean checkPlayerCombat = player != null && type != null && !list.isEmpty()
+				&& Integrations.isWGCoreIntegrationEnabled() && wgcoreExplosionDecision != null
+				&& Integrations.isExplosionDamageAllowedAtWGC(worldObj, actingEntity,
+						explosionX, explosionY, explosionZ, getWGCoreExplosionTypeId());
+		Set<Entity> playerCombatTargets = checkPlayerCombat ? new LinkedHashSet<>() : Collections.emptySet();
+		if (checkPlayerCombat) {
+			for (Iterator<Entity> it = list.iterator(); it.hasNext();) {
+				Entity entity = it.next();
+				if (entity instanceof EntityPlayer && entity.getDistance(explosionX, explosionY, explosionZ) <= explosionSize
+						&& Integrations.canHarmPlayerWGC(actingEntity, entity, worldObj)) {
+					playerCombatTargets.add(entity);
+					it.remove();
+				}
+			}
+		}
+		// WGCore's detonation listener applies block-explosion rules to players.
+		// Resolve approved player splash through the PvP damage events instead.
 		net.minecraftforge.event.ForgeEventFactory.onExplosionDetonate(this.worldObj, this, list, this.explosionSize);
+		list.addAll(playerCombatTargets);
 		Vec3 vec3 = Vec3.createVectorHelper(explosionX, explosionY, explosionZ);
 
-		Entity actingEntity = getWGCoreActingEntity();
+		DamageSource blastDamage = player == null || type == null ? DamageSource.setExplosionSource(this)
+				: new EntityDamageSourceFlans(type.shortName, exploder, player, type, false, false, true);
 
-		for (Object aList : list) {
-			Entity entity = (Entity) aList;
+		for (Entity entity : list) {
 			double d7 = entity.getDistance(explosionX, explosionY, explosionZ) / explosionSize;
 
 			if (d7 <= 1.0D) {
-				if (!allowExplosionEntityDamage) {
-					continue;
-				}
-
-				if (entity instanceof EntityPlayer && !Integrations.canHarmPlayerWGC(actingEntity, entity, worldObj)) {
+				boolean playerCombat = playerCombatTargets.contains(entity);
+				if (!playerCombat && (!allowExplosionEntityDamage
+						|| !Integrations.canHarmPlayerWGC(actingEntity, entity, worldObj))) {
 					continue;
 				}
 
 				d0 = entity.posX - explosionX;
 				d1 = entity.posY + entity.getEyeHeight() - explosionY;
 				d2 = entity.posZ - explosionZ;
-				double d8 = MathHelper.sqrt_double(d0 * d0 + d1 * d1 + d2 * d2);
+				// A charge can be attached at the exact vehicle origin and still deal damage.
+				double d8 = Math.max(1.0E-7D, MathHelper.sqrt_double(d0 * d0 + d1 * d1 + d2 * d2));
 
 				if (d8 != 0.0D) {
 					d0 /= d8;
@@ -265,8 +282,12 @@ public class FlansModExplosion extends Explosion
 
 					if( damage > 0.5F)
 					{
-						boolean b = entity.attackEntityFrom(player == null || type == null ? DamageSource.setExplosionSource(this) : new EntityDamageSourceFlans(type.shortName, entity, player, type, false, false), damage);
-						if(b && !worldObj.isRemote && player instanceof EntityPlayerMP)
+						boolean selfBlast = entity == player && type != null && !player.canAttackPlayer(player);
+						DamageSource source = playerCombat || selfBlast
+								? EntityDamageSourceFlans.playerBlast(exploder, player, type, playerCombat, selfBlast)
+								: blastDamage;
+						boolean damaged = entity.attackEntityFrom(source, damage);
+						if (damaged && !worldObj.isRemote && player instanceof EntityPlayerMP)
 						{
 							FlansMod.getPacketHandler().sendTo(new PacketHitMarker(false, 1F, true), (EntityPlayerMP) player);
 						}
@@ -274,10 +295,10 @@ public class FlansModExplosion extends Explosion
 						entity.motionX += d0 * d11;
 						entity.motionY += d1 * d11;
 						entity.motionZ += d2 * d11;
-					}
-
-					if (entity instanceof EntityPlayer) {
-						playerLocations.put((EntityPlayer) entity, Vec3.createVectorHelper(d0 * d10, d1 * d10, d2 * d10));
+						if (d11 > 0D)
+							entity.velocityChanged = true;
+						if (entity instanceof EntityPlayer)
+							playerLocations.put((EntityPlayer) entity, Vec3.createVectorHelper(d0 * d10, d1 * d10, d2 * d10));
 					}
 				}
 			}
@@ -440,19 +461,16 @@ public class FlansModExplosion extends Explosion
         return playerLocations;
     }
 
-    public EntityLivingBase func_94613_c()
+    @Override
+    public EntityLivingBase getExplosivePlacedBy()
     {
-        return exploder == null ? null : (exploder instanceof EntityTNTPrimed ? ((EntityTNTPrimed)exploder).getTntPlacedBy() : (exploder instanceof EntityLivingBase ? (EntityLivingBase)exploder : null));
+        return player == null ? super.getExplosivePlacedBy() : player;
     }
 
 	public static void clientExplosion(World worldObj, float explosionSize,
 			double explosionX, double explosionY, double explosionZ, boolean breakBlocks, boolean breakBreakableBlocks)
 	{
 		List affectedBlockPositions = new ArrayList();
-		Entity exploder = null;
-
-		Explosion explosion = new Explosion(worldObj, exploder, explosionX, explosionY, explosionZ, explosionSize);
-
 		if(explosionSize < 2)
 		{
 			explosionX += explosionRNG.nextFloat() - 0.5F;
@@ -463,7 +481,6 @@ public class FlansModExplosion extends Explosion
 
 		//	doExplosionA
 		{
-			final float f = explosionSize;
 			HashSet hashset = new HashSet();
 			int i;
 			int j;
@@ -501,11 +518,10 @@ public class FlansModExplosion extends Explosion
 
 //								if (block.getMaterial() != Material.air)
 								{
-									float f3 = 0;//exploder != null ? exploder.func_145772_a(explosion, worldObj, j1, k1, l1, block) : block.getExplosionResistance(exploder, worldObj, j1, k1, l1, explosionX, explosionY, explosionZ);
-									f1 -= (f3 + 0.3F) * f2;
+									f1 -= 0.3F * f2;
 								}
 
-								if (f1 > 0.0F && (exploder == null || exploder.func_145774_a(explosion, worldObj, j1, k1, l1, block, f1)))
+								if (f1 > 0.0F)
 								{
 
 									if(breakBlocks && breakBreakableBlocks) {
@@ -528,45 +544,6 @@ public class FlansModExplosion extends Explosion
 			}
 
 			affectedBlockPositions.addAll(hashset);
-			explosionSize *= 2.0F;
-			i = MathHelper.floor_double(explosionX - (double)explosionSize - 1.0D);
-			j = MathHelper.floor_double(explosionX + (double)explosionSize + 1.0D);
-			k = MathHelper.floor_double(explosionY - (double)explosionSize - 1.0D);
-			int i2 = MathHelper.floor_double(explosionY + (double)explosionSize + 1.0D);
-			int l = MathHelper.floor_double(explosionZ - (double)explosionSize - 1.0D);
-			int j2 = MathHelper.floor_double(explosionZ + (double)explosionSize + 1.0D);
-			List list = worldObj.getEntitiesWithinAABBExcludingEntity(exploder, AxisAlignedBB.getBoundingBox((double)i, (double)k, (double)l, (double)j, (double)i2, (double)j2));
-			Vec3 vec3 = Vec3.createVectorHelper(explosionX, explosionY, explosionZ);
-
-			for (int i1 = 0; i1 < list.size(); ++i1)
-			{
-				Entity entity = (Entity)list.get(i1);
-				double d4 = entity.getDistance(explosionX, explosionY, explosionZ) / (double)explosionSize;
-
-				if (d4 <= 1.0D)
-				{
-					d5 = entity.posX - explosionX;
-					d6 = entity.posY + (double)entity.getEyeHeight() - explosionY;
-					d7 = entity.posZ - explosionZ;
-					double d9 = (double)MathHelper.sqrt_double(d5 * d5 + d6 * d6 + d7 * d7);
-
-					if (d9 != 0.0D)
-					{
-						d5 /= d9;
-						d6 /= d9;
-						d7 /= d9;
-						double d10 = (double)worldObj.getBlockDensity(vec3, entity.boundingBox);
-						double d11 = (1.0D - d4) * d10;
-//						entity.attackEntityFrom(DamageSource.setExplosionSource(explosion), (float)((int)((d11 * d11 + d11) / 2.0D * 8.0D * (double)explosionSize + 1.0D)));
-						double d8 = EnchantmentProtection.func_92092_a(entity, d11);
-						entity.motionX += d5 * d8;
-						entity.motionY += d6 * d8;
-						entity.motionZ += d7 * d8;
-					}
-				}
-			}
-
-			explosionSize = f;
 		}
 		//	doExplosionB
 		{

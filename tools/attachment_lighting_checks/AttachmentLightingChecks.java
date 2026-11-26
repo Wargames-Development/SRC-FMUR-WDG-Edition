@@ -1,5 +1,6 @@
 package com.flansmod.client;
 
+import com.flansmod.common.guns.type.AttachmentType;
 import java.lang.reflect.Field;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
@@ -69,8 +70,39 @@ public final class AttachmentLightingChecks {
         checkHandheldFlashlight((Unsafe) field.get(null));
         checkGammaLimit((Unsafe) field.get(null));
         checkGrenadeRelease((Unsafe) field.get(null));
+        checkScopeZoom((Unsafe) field.get(null));
         checkDemolitionAssets();
         System.out.println("PASS: cone rays, preserved origins, zeroing/pose, entity occlusion/interpolation, tri-beam spacing, corpse armor synchronization, corpse damage feedback/persistence, non-overlapping tinnitus, handheld light state and vanilla brightness range");
+    }
+
+    private static void checkScopeZoom(Unsafe allocator) throws InstantiationException {
+        AttachmentType rifle = (AttachmentType) allocator.allocateInstance(AttachmentType.class);
+        rifle.magnification = 8F;
+        rifle.magnification2 = 14F;
+        check(ScopeZoom.scroll(rifle, 360), "Variable optic should accept the wheel");
+        ScopeZoom.tick(rifle);
+        check(ScopeZoom.factor(rifle, 0F) == 8F && ScopeZoom.factor(rifle, 0.5F) == 8.375F,
+                "Variable optic should interpolate between ticks");
+        for (int tick = 0; tick < 16; tick++) ScopeZoom.tick(rifle);
+        check(ScopeZoom.factor(rifle, 1F) == 9.5F, "Variable optic should settle at an intermediate setting");
+        ScopeZoom.scroll(rifle, 24000);
+        for (int tick = 0; tick < 16; tick++) ScopeZoom.tick(rifle);
+        check(ScopeZoom.factor(rifle, 1F) == 14F, "Magnification should stop at the upper endpoint");
+        ScopeZoom.scroll(rifle, -24000);
+        for (int tick = 0; tick < 16; tick++) ScopeZoom.tick(rifle);
+        check(ScopeZoom.factor(rifle, 1F) == 8F, "Magnification should stop at the lower endpoint");
+
+        AttachmentType elcan = (AttachmentType) allocator.allocateInstance(AttachmentType.class);
+        elcan.shortName = "m145";
+        elcan.magnification = 1F;
+        elcan.magnification2 = 4F;
+        check(!ScopeZoom.scroll(elcan, 120), "ELCAN should leave the wheel available");
+        ScopeZoom.toggleElcan(elcan);
+        check(ScopeZoom.factor(elcan, 0F) == 4F && ScopeZoom.factor(elcan, 1F) == 4F, "ELCAN should switch directly to 4x");
+        ScopeZoom.toggleElcan(elcan);
+        check(ScopeZoom.factor(elcan, 0F) == 1F && ScopeZoom.factor(elcan, 1F) == 1F, "ELCAN should switch directly to 1x");
+        ScopeZoom.reset();
+        System.out.println("PASS: smooth intermediate zoom, endpoint limits and direct ELCAN switching");
     }
 
     private static void checkGrenadeRelease(Unsafe allocator) throws Exception {

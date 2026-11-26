@@ -1451,7 +1451,7 @@ public class ModelMK18MOD0 extends ModelGun {
         caseScale = 0.2F;
         casingDelay = 0;
         flashScale = 0.4F;
-        muzzleFlashPoint = new Vector3f(2.4F, 0.67F, 0.0F);
+        setMuzzleFlashPoint(12.8F, 4.6F, 0F);
         thirdPersonOffset = new Vector3f(-0.1F, -0.05F, 0.0F);
         //修正模型位移
         Vector3f vec3 = new Vector3f(-1.5F, 0F, 0F);

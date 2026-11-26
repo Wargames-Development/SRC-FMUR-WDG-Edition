@@ -10,6 +10,7 @@ import com.flansmod.common.eventhandlers.AmmoSupplyEvent;
 import com.flansmod.common.eventhandlers.HealSupplyEvent;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.item.ItemShootable;
+import com.flansmod.common.guns.raytracing.FlansModRaytracer;
 import com.flansmod.common.guns.type.BulletType;
 import com.flansmod.common.guns.type.GrenadeType;
 import com.flansmod.common.guns.type.GunType;
@@ -31,8 +32,11 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.registry.GameRegistry;
 import cpw.mods.fml.common.registry.IEntityAdditionalSpawnData;
 import cpw.mods.fml.common.registry.IThrowableEntity;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.block.Block;
+import net.minecraft.block.BlockDoor;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.particle.EntityFX;
@@ -52,10 +56,12 @@ import net.minecraft.util.EntityDamageSourceIndirect;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.MovingObjectPosition;
 import net.minecraft.util.MovingObjectPosition.MovingObjectType;
+import net.minecraft.util.Vec3;
 import net.minecraft.world.World;
 import net.minecraft.world.ChunkPosition;
 import net.minecraft.world.Explosion;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.util.ForgeDirection;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -63,6 +69,8 @@ import java.util.Objects;
 import java.util.Random;
 
 public class EntityGrenade extends EntityShootable implements IEntityAdditionalSpawnData, IThrowableEntity, ILockable {
+
+    private static final double MIN_RENDER_DISTANCE = 64D;
 
     public GrenadeType type;
     /**
@@ -156,6 +164,13 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
 
     public ShootableType getType() {
         return type;
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public boolean isInRangeToRenderDist(double distanceSq) {
+        // Vanilla derives render range from the collision box, which can be only 0.01 blocks wide.
+        return distanceSq < MIN_RENDER_DISTANCE * MIN_RENDER_DISTANCE || super.isInRangeToRenderDist(distanceSq);
     }
 
     @Override
@@ -515,12 +530,15 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
                 setDead();
         }
 
+        boolean rgoImpact = "rgo".equals(type.shortName);
+        boolean detonatesOnContact = type.explodeOnImpact || type.isMolotov() || rgoImpact;
+
         //Detonation conditions
         if (!worldObj.isRemote) {
             if (ticksExisted > type.fuse && type.fuse > 0)
                 detonate();
             //If this grenade has a proximity trigger, check for living entities within it's range
-            if (!type.isMolotov() && (type.livingProximityTrigger > 0 || type.driveableProximityTrigger > 0)) {
+            if (!type.isMolotov() && !rgoImpact && (type.livingProximityTrigger > 0 || type.driveableProximityTrigger > 0)) {
                 float checkRadius = Math.max(type.livingProximityTrigger, type.driveableProximityTrigger);
                 List list = worldObj.getEntitiesWithinAABBExcludingEntity(this, boundingBox.expand(checkRadius, checkRadius, checkRadius));
                 for (Object obj : list) {
@@ -573,7 +591,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
             stuck = false;
 
         //Physics and motion (Don't move if stuck)
-        if (!stuck && !type.stickToThrower && !(type.isMolotov() && detonated)) {
+        if (!stuck && !type.stickToThrower && !(detonatesOnContact && detonated)) {
             prevRotationYaw = axes.getYaw();
             prevRotationPitch = axes.getPitch();
             prevRotationRoll = axes.getRoll();
@@ -585,7 +603,7 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
             Vector3f nextPosVec = Vector3f.add(posVec, motVec, null);
 
             //Raytrace the motion of this grenade
-            MovingObjectPosition hit = worldObj.rayTraceBlocks(posVec.toVec3(), nextPosVec.toVec3());
+            MovingObjectPosition hit = traceBlockImpact(posVec.toVec3(), nextPosVec.toVec3());
             // Break glass before deciding whether this impact should detonate or bounce.
             // Retrace so a wall behind the window still stops the grenade this tick.
             if (!worldObj.isRemote && type.breaksGlass && TeamsManager.canBreakGlass) {
@@ -594,34 +612,40 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
                     if (glass.getMaterial() != Material.glass
                             || !worldObj.setBlockToAir(hit.blockX, hit.blockY, hit.blockZ)) break;
                     FlansMod.proxy.playBlockBreakSound(hit.blockX, hit.blockY, hit.blockZ, glass, dimension);
-                    hit = worldObj.rayTraceBlocks(posVec.toVec3(), nextPosVec.toVec3());
+                    hit = traceBlockImpact(posVec.toVec3(), nextPosVec.toVec3());
                 }
             }
 
-            // Molotovs burst on contact rather than using the pack's proximity trigger.
-            if (!worldObj.isRemote && type.isMolotov() && !detonated) {
+            // The RGO contact fuse also works with older packs that define a delayed impact fuse.
+            if (!worldObj.isRemote && detonatesOnContact && (rgoImpact || ticksExisted >= type.primeDelay)) {
+                Vec3 start = posVec.toVec3();
+                Vec3 end = nextPosVec.toVec3();
                 MovingObjectPosition impact = hit != null && hit.typeOfHit == MovingObjectType.BLOCK
                         && worldObj.getBlock(hit.blockX, hit.blockY, hit.blockZ).getMaterial().blocksMovement() ? hit : null;
-                double distance = impact == null ? Double.MAX_VALUE : posVec.toVec3().squareDistanceTo(impact.hitVec);
+                double distance = impact == null ? Double.MAX_VALUE : start.squareDistanceTo(impact.hitVec);
                 List entities = worldObj.getEntitiesWithinAABBExcludingEntity(this,
                         boundingBox.addCoord(motionX, motionY, motionZ).expand(0.3D, 0.3D, 0.3D));
                 for (Object obj : entities) {
                     Entity entity = (Entity) obj;
                     if (!entity.canBeCollidedWith() || (entity == thrower && ticksExisted < 10)) continue;
                     MovingObjectPosition entityHit = entity.boundingBox.expand(0.3D, 0.3D, 0.3D)
-                            .calculateIntercept(posVec.toVec3(), nextPosVec.toVec3());
-                    if (entityHit != null && posVec.toVec3().squareDistanceTo(entityHit.hitVec) < distance) {
+                            .calculateIntercept(start, end);
+                    if (entityHit != null && start.squareDistanceTo(entityHit.hitVec) < distance) {
                         impact = entityHit;
-                        distance = posVec.toVec3().squareDistanceTo(entityHit.hitVec);
+                        distance = start.squareDistanceTo(entityHit.hitVec);
                     }
                 }
                 if (impact != null) {
-                    setPosition(impact.hitVec.xCoord, impact.hitVec.yCoord, impact.hitVec.zCoord);
-                    detonate();
-                    if (detonated) {
-                        motionX = motionY = motionZ = 0;
-                        return;
+                    Vec3 contact = impact.hitVec;
+                    if (impact == hit) {
+                        // Sample blast exposure on the outside of the struck block.
+                        ForgeDirection face = ForgeDirection.getOrientation(impact.sideHit);
+                        contact = contact.addVector(face.offsetX * 0.001D, face.offsetY * 0.001D, face.offsetZ * 0.001D);
                     }
+                    setPosition(contact.xCoord, contact.yCoord, contact.zCoord);
+                    motionX = motionY = motionZ = 0D;
+                    detonateArmed();
+                    return;
                 }
             }
             //If we hit block
@@ -629,17 +653,12 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
                 if (tickAfterFirstImpact == 0) tickAfterFirstImpact = 1;
                 tickAfterOnGround++;
 
-                //If this grenade detonates on impact, do so
-                if (type.explodeOnImpact)
-                    detonate();
-
                 /** 允许召唤炮击 */
                 if (!worldObj.isRemote && type.enableCallArtillery && !artilleryCalled) {
                     canCallArtillery = true;
                 }
 
                 //If this grenade does not penetrate blocks, hit the block instead
-                //The grenade cannot bounce if it detonated on impact, so hence the "else" condition
                 else if (!type.penetratesBlocks) {
                     Vector3f hitVec = new Vector3f(hit.hitVec);
                     //Motion of the grenade pre-hit
@@ -993,7 +1012,10 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
         //Do not detonate before grenade is primed
         if (ticksExisted < type.primeDelay)
             return;
+        detonateArmed();
+    }
 
+    private void detonateArmed() {
         //Stop repeat detonations
         if (detonated)
             return;
@@ -1078,6 +1100,26 @@ public class EntityGrenade extends EntityShootable implements IEntityAdditionalS
             FlansMod.getPacketHandler().sendToAllAround(new PacketFlashBang(type.flashTime), posX, posY, posZ, type.flashRange, dimension);
             setDead();
         }
+    }
+
+    private MovingObjectPosition traceBlockImpact(Vec3 start, Vec3 end) {
+        MovingObjectPosition hit = worldObj.rayTraceBlocks(
+                Vec3.createVectorHelper(start.xCoord, start.yCoord, start.zCoord), end);
+        if (hit == null || !isOpenDoor(hit))
+            return hit;
+
+        for (MovingObjectPosition candidate : FlansModRaytracer.rayTraceAllBlocks(worldObj, start, end,
+                false, false, false)) {
+            if (!isOpenDoor(candidate))
+                return candidate;
+        }
+        return null;
+    }
+
+    private boolean isOpenDoor(MovingObjectPosition hit) {
+        Block block = worldObj.getBlock(hit.blockX, hit.blockY, hit.blockZ);
+        return block instanceof BlockDoor
+                && ((BlockDoor) block).func_150015_f(worldObj, hit.blockX, hit.blockY, hit.blockZ);
     }
 
     public boolean impactedBlock() {

@@ -1407,7 +1407,7 @@ public class ModelMP5SD extends ModelGun //Same as Filename
         caseScale = 0.2F;
         casingDelay = 0;
         flashScale = 0.4F;
-        muzzleFlashPoint = new Vector3f(1.8F, 0.75F, 0.0F);
+        setMuzzleFlashPoint(14.6F, 5.25F, 0F);
         thirdPersonOffset = new Vector3f(-0.06F, -0.08F, 0.0F);
         crouchZoom = -0.05F;
         zoomOffset = 0.1F;

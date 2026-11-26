@@ -21,33 +21,56 @@ Reapply after replacing the pack or regenerating its optic definitions.
 | Elcan Spectre (formerly M145) | 1x / 4x |
 | Coyote, HOLO, Kobra, OKP-7, PKA-S, QXM-7, Reflex | 1x |
 
-The existing **Switch Scope Magnification** binding (default **Z**) selects the
-two endpoints on variable optics. This retains the existing two-position zoom
-system. It does not add continuous adjustment. The M145 display name changes in
-the definition and installed language files, while its `m145` ID, filename,
-model, textures and existing saved attachments remain compatible.
+Aim and hold **Switch Scope Magnification** (default **Z**), then scroll up to
+increase magnification or down to decrease it. The view eases to the selected
+magnification within the optic's configured range. Tap **Z** while aiming the
+ELCAN SpecterDR to switch directly between 1× and 4×. The ELCAN uses the existing
+`m145` attachment ID.
 
 PiP scopes use `Magnification` / `Magnification2` to enable the renderer's existing
 lens-size compensation. Legacy `ZoomLevel` / `FOVZoomLevel` are normalized to 1;
 legacy secondary zoom fields are removed. Surrounding vision stays at 1x.
-No Java, networking or save-format changes are required. Built-in gun sights
-without an advertised optic name are outside this attachment update.
+The zoom control uses the loaded magnification range locally, including
+built-in variable optics, so existing worlds and content definitions remain compatible.
 
 ## Verification
 
 Run `python tools/test_scope_magnification.py`. Tests cover all optic entries,
-two-position magnification, identity/model preservation, non-UTF-8 descriptions,
+magnification endpoints, identity/model preservation, non-UTF-8 descriptions,
 language updates, idempotence, and rejection before writes for incomplete or
 duplicate definitions.
 
 In game, aim each listed optic at a stationary distant target. Compare its
 apparent size inside the lens with the surrounding unzoomed world: a 4x optic
 should show roughly four times the target's angular size. Check the TA31 first,
-then the other fixed scopes and the thermal scope. Press Z while aiming each
-variable optic and check both listed endpoints. Check that 1x sights no longer
-add world zoom. Equip a saved gun with an M145: it should retain the attachment,
-display Elcan Spectre [1-4x], and switch between 1x and 4x. Repeat with another
-player observing to confirm only the aiming player's presentation changes.
+then the other fixed scopes and the thermal scope. Hold Z while aiming each
+continuous variable optic, scroll to an intermediate setting, then check both
+endpoints. On the ELCAN, tap Z to test both positions. Repeat with another player
+observing to confirm only the aiming player's presentation changes.
 
 Live visual magnification still requires this in-game check; the content tests
 do not validate GPU rendering or a running client's installed pack.
+
+## BFMC ADS fixes
+
+Run `python tools/install_bfmc_optic_fixes.py` with the updated FMUR build.
+Use `--pack "path/to/BFMC Gun Pack"` for another installation, then restart the
+client. The installer updates the affected definitions. The FMUR build
+provides the JGM-4, Prisma, PK-A, PK-AS, Rifle Scope and PSO-1 reticles and CNVD-T skin.
+
+Aim through an eligible BFMC picture-in-picture optic and press **Toggle Scope
+Reticle Color** (default **U**) to switch between black and red. The switch uses
+the flashlight/laser click. Both Rifle Scope variants, the PSO-1 and the PKS-07
+support the toggle. Holographic sights and green reticles keep their own colors.
+Check the redrawn reticles on the 8× and 8–14× Rifle Scopes and the PSO-1.
+
+Aim through the JGM-4, Prisma, PK-A and PK-AS to check the reticle and the fit of
+the PiP image inside the housing. PK-AS uses a ring and dot at 1x. Inspect
+the CNVD-T from the side for the housing, control and lens-ring finishes, then
+aim to check the thermal image. Aim through the Coyote, Reflex, Kobra, HOLO,
+QXM-7 and OKP-7 while turning quickly. As a reticle crosses the edge, only the
+portion within the lens opening should be visible, including with night vision on.
+
+For the grenade render-distance check, throw an M67 or M83 across open terrain
+and follow it past 10 blocks. The grenade model has a minimum culling distance
+of 64 blocks.

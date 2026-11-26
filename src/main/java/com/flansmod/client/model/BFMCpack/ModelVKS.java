@@ -1721,7 +1721,7 @@ public class ModelVKS extends ModelGun //Same as Filename
         caseScale = 0.2F;
         casingDelay = 0;
         flashScale = 0.4F;
-        muzzleFlashPoint = new Vector3f(0.9F, 0.57F, 0.0F);
+        setMuzzleFlashPoint(193.5F, 49F, 0F);
         thirdPersonOffset = new Vector3f(-0.05F, -0.04F, 0.0F);
         gunOffset = 0.1F;
         crouchZoom = -0.05F;

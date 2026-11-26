@@ -18,12 +18,14 @@ public class ModelSnipexAlligator extends ModelGun {
 
         barrelAttachPoint = new Vector3f(40.790F * PACK_UNIT, 6.038F * PACK_UNIT, 0F);
         scopeAttachPoint = new Vector3f(10.5F * PACK_UNIT, 7.619F * PACK_UNIT, 0F);
+        thirdPersonScopeAttachPoint = new Vector3f(4.8F * PACK_UNIT, 7.619F * PACK_UNIT, 0F);
         // The tracer length uses a 0.05 divisor floor inside the scaled gun pass.
         flashScale = 0.05F / MODEL_SCALE;
         muzzleFlashPoint = new Vector3f(barrelAttachPoint);
         muzzleFlashPoint.scale(1F / flashScale);
         defaultBarrelFlashPoint = new Vector3f((45.664F - 40.790F) * PACK_UNIT / flashScale, 0F, 0F);
         mirrorThirdPerson = false;
+        thirdPersonOffset = new Vector3f(-4F / 16F, 0F, 0F);
 
         pumpDelayAfterReload = 60;
         pumpDelay = 10;

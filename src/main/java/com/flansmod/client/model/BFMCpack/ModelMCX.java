@@ -77,7 +77,7 @@ public class ModelMCX extends ModelGun //Same as Filename
         caseScale = 0.2F;
         casingDelay = 0;
         flashScale = 0.4F;
-        muzzleFlashPoint = new Vector3f(2.7F, 0.7F, 0.0F);
+        setMuzzleFlashPoint(205F, 52.25F, 0F);
         thirdPersonOffset = new Vector3f(-0.1F, -0.05F, 0.0F);
 
         flipAll();

@@ -55,6 +55,8 @@ public class ModelGun extends ModelBase {
     //These designate the locations of 3D attachment models on the gun
     public Vector3f barrelAttachPoint = new Vector3f();
     public Vector3f scopeAttachPoint = new Vector3f();
+    /** Optional optic mount for held third-person views, in the same units as scopeAttachPoint. */
+    public Vector3f thirdPersonScopeAttachPoint;
     public Vector3f stockAttachPoint = new Vector3f();
     public Vector3f gripAttachPoint = new Vector3f();
     public Vector3f gadgetAttachPoint = new Vector3f();
@@ -74,6 +76,30 @@ public class ModelGun extends ModelBase {
     public Vector3f defaultBarrelFlashPoint = null;
     public Vector3f muzzleFlashPoint = null;
     public boolean hasFlash = false;
+
+    protected void setMuzzleFlashPoint(float pixelX, float pixelY, float pixelZ) {
+        float units = 16F * flashScale;
+        muzzleFlashPoint = new Vector3f(pixelX / units, pixelY / units, pixelZ / units);
+    }
+
+    /** Returns the origin in the same scaled coordinates as authored flash offsets. */
+    public Vector3f getMuzzleFlashOffset(boolean hasBarrelAttachment, ModelAttachment barrelModel) {
+        Vector3f origin;
+        boolean hasMount = barrelAttachPoint != null && barrelAttachPoint.lengthSquared() > 0F && flashScale > 0F;
+        if (muzzleFlashPoint != null && (barrelModel == null || !hasMount)) {
+            origin = new Vector3f(muzzleFlashPoint);
+        } else if (hasMount) {
+            origin = new Vector3f(barrelAttachPoint);
+            origin.scale(1F / flashScale);
+        } else {
+            return null;
+        }
+        Vector3f extension = hasBarrelAttachment
+                ? (barrelModel == null ? null : barrelModel.attachmentFlashOffset)
+                : defaultBarrelFlashPoint;
+        return extension == null ? origin : Vector3f.add(origin, extension, origin);
+    }
+
     //Arms rendering
     public boolean hasArms = false;
     public Vector3f leftArmPos = new Vector3f(0, 0, 0);

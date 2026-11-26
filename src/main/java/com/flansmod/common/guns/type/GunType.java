@@ -649,8 +649,46 @@ public class GunType extends PaintableType implements IScope, IMarkable {
         // Classify the authored model identifier on both sides without loading the client model.
         if (builtInStock == null) builtInStock = BUILT_IN_STOCK_MODELS.contains(modelString);
         if (allowOppositeSideRail == null) allowOppositeSideRail = DUAL_SIDE_RAIL_MODELS.contains(modelString);
+        applyLegacyLauncherOptic();
         gunList.add(this);
         guns.put(shortName, this);
+    }
+
+    private void applyLegacyLauncherOptic() {
+        if (pictureInPicture || !hasScopeOverlay || shortName == null)
+            return;
+        switch (shortName) {
+            case "pf89":
+                useLauncherLens("BFMCpack.PF89", "PF-89", "PIP/PF-89", -0.02F, 46F, -0.5F, 3.2F);
+                break;
+            case "mbtlaw":
+                useLauncherLens("BFMCpack.MBTLAW", "MBTLAW", "PIP/MBTLAW", -13.03F, 27.75F, -3.6F, 2.66F);
+                break;
+            case "pzf3it":
+                useLauncherLens("BFMCpack.Panzerfaust3", "PzF3", "PIP/PzF3", -28.64F, 62.8F, -12.3F, 4.25F);
+                break;
+            case "mgl140":
+                useLauncherLens("BFMCpack.MGL140", "MGL-140", "PIP/mgl140-ranging", 2.98F, 92F, -0.5F, 3.4F);
+                break;
+        }
+    }
+
+    private void useLauncherLens(String modelName, String overlay, String reticle, float x, float y, float z, float radius) {
+        if (!modelName.equals(modelString) || !overlay.equals(defaultScopeTexture))
+            return;
+        pictureInPicture = true;
+        pictureInPictureX = x;
+        pictureInPictureY = y;
+        pictureInPictureZ = z;
+        pictureInPictureRadius = radius;
+        pictureInPictureAutoDepth = true;
+        if (pictureInPictureReticle == null)
+            pictureInPictureReticle = reticle;
+        if (magnification <= 0F) {
+            magnification = Math.max(1F, zoomLevel * FOVFactor);
+            if (magnification2 <= 0F && zoomLevel2 > 0F)
+                magnification2 = Math.max(1F, zoomLevel2 * FOVFactor);
+        }
     }
 
     @Override

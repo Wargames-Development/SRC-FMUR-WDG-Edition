@@ -28,6 +28,7 @@ public final class AttachmentLightingGpuChecks {
             context.makeCurrent();
             net.minecraft.client.renderer.OpenGlHelper.defaultTexUnit = GL13.GL_TEXTURE0;
             net.minecraft.client.renderer.OpenGlHelper.lightmapTexUnit = GL13.GL_TEXTURE1;
+            checkRedDotAperture();
             java.lang.reflect.Field projection = AttachmentLightRenderer.class.getDeclaredField("WORLD_LIGHT");
             projection.setAccessible(true);
             worldLight = (FlashlightProjection) projection.get(null);
@@ -44,6 +45,52 @@ public final class AttachmentLightingGpuChecks {
             System.out.println("PASS: GPU depth reconstruction, continuous light over depth steps, circular cutoff,"
                     + " shadow rejection, gun occlusion, close-sight depth, translucent sight transmission, visible/IR laser modes, entity laser surface/bounds, resize, hand beam start, reticle sway, corpse armor pose, coplanar gun sleeve layers, handheld OBJ/texture and GL state restoration");
         } finally { context.destroy(); }
+    }
+
+    private static void checkRedDotAperture() throws Exception {
+        java.lang.reflect.Field field = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+        field.setAccessible(true);
+        sun.misc.Unsafe allocator = (sun.misc.Unsafe) field.get(null);
+        com.flansmod.common.guns.type.AttachmentType scope = (com.flansmod.common.guns.type.AttachmentType)
+                allocator.allocateInstance(com.flansmod.common.guns.type.AttachmentType.class);
+        scope.model = new com.flansmod.client.model.ModelAttachment();
+        scope.model.reticleLensOutline = new float[] { 0F, -24F, 24F, 0F, 0F, 24F, -24F, 0F };
+
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix();
+        GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix();
+        try {
+            GL11.glViewport(0, 0, SIZE, SIZE);
+            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadIdentity();
+            GL11.glOrtho(0D, SIZE, SIZE, 0D, -1000D, 1000D);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadIdentity();
+            GL11.glTranslatef(64F, 64F, -4F);
+            GL11.glRotatef(90F, 0F, 1F, 0F);
+            DotReticleLens.beginFrame();
+            DotReticleLens.capture(scope, scope.model, 1F);
+            // The lens ends at x=88. A 20-pixel reticle centered at x=90 still overlaps it.
+            check(DotReticleLens.prepare(scope, SIZE, SIZE, 90D, 64D, 20D), "Partially visible reticle vanished");
+            GL11.glLoadIdentity();
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            GL11.glDisable(GL11.GL_DEPTH_TEST);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+            GL11.glColor3f(1F, 1F, 1F);
+            DotReticleLens.draw(net.minecraft.client.renderer.Tessellator.instance);
+            ByteBuffer pixels = read(SIZE);
+            check((pixels.get((64 * SIZE + 82) * 4) & 255) == 255, "Visible portion of reticle missing");
+            check((pixels.get((64 * SIZE + 78) * 4) & 255) == 0, "Reticle shifted inward at the lens edge");
+            check((pixels.get((64 * SIZE + 89) * 4) & 255) == 0, "Glow drew outside the right edge");
+            check((pixels.get((70 * SIZE + 85) * 4) & 255) == 0, "Mask ignored the diagonal edge");
+            check(!DotReticleLens.prepare(scope, SIZE, SIZE, 112D, 64D, 20D), "Reticle stayed visible outside the lens");
+            check(DotReticleLens.prepare(scope, SIZE, SIZE, 64D, 64D, 20D), "Reticle failed to reappear inside the lens");
+            DotReticleLens.beginFrame();
+            check(!DotReticleLens.prepare(scope, SIZE, SIZE, 64D, 64D, 20D), "Stale lens survived a new frame");
+        } finally {
+            GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPopMatrix();
+            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();
+            GL11.glPopAttrib();
+        }
+        System.out.println("PASS: partial red-dot clipping, full occlusion, re-entry, and frame reset");
     }
 
     private static void checkScopeProjection() throws Exception {

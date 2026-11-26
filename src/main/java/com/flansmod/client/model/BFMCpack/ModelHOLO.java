@@ -419,6 +419,10 @@ public class ModelHOLO extends ModelAttachment //Same as Filename
 
         flipAll();
 
+        setReticleLens(-5F,
+                8.1F, -3.6F, 12.1F, -3.6F, 12.55F, -3.15F, 12.55F, 3.15F,
+                12.1F, 3.6F, 8.1F, 3.6F);
+
         this.renderOffset = 0.2F;
 
     }

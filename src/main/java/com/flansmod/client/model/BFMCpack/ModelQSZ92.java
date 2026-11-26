@@ -1465,7 +1465,7 @@ public class ModelQSZ92
         leftHandAmmo = true;
         slideLockOnEmpty = true;
         flashScale = 0.3F;
-        muzzleFlashPoint = new Vector3f(1.6F, 1.2F, 0.0F);
+        setMuzzleFlashPoint(71.5F, 44.5F, 0F);
         casingAttachPoint = new Vector3f(0.4F, 1.2F, 0.0F);
         casingAnimDistance = new Vector3f(0.0F, 4.0F, 4.75F);
         casingAnimSpread = new Vector3f(3.0F, 2.0F, 3.0F);

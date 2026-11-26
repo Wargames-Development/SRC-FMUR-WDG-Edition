@@ -1630,5 +1630,6 @@ public class ModelGroza4 extends ModelGun //Same as Filename
         zoomOffsetY = -0.065F;
 
         flipAll();
+        setMuzzleFlashPoint(12F, 4.75F, 0F);
     }
 }

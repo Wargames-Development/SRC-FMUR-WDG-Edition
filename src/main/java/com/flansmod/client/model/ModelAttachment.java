@@ -10,6 +10,9 @@ public class ModelAttachment extends ModelBase
 	public ModelRendererTurbo[] attachmentModel = new ModelRendererTurbo[0];
 	public ModelRendererTurbo[] ammoModel = new ModelRendererTurbo[0];
 	public ModelRendererTurbo[] zDepthModel = new ModelRendererTurbo[0];
+	/** Convex lens outline, ordered Y/Z pairs in model pixels after flipAll. */
+	public float[] reticleLensOutline;
+	public float reticleLensX;
 	public EnumAnimationType secondaryAnimType = EnumAnimationType.NONE;
 	public float tiltGunTime = 0.15F, unloadClipTime = 0.35F, loadClipTime = 0.35F, untiltGunTime = 0.15F;
 	/** For rifles and shotguns. Currently a generic reload animation regardless of how full the internal magazine already is */
@@ -29,6 +32,11 @@ public class ModelAttachment extends ModelBase
 	/** 组合镜 */
 	public float coSightRenderOffset = 0.0F;
 	public float renderOffsetX = 0.0F;
+
+	protected final void setReticleLens(float x, float... outline) {
+		reticleLensX = x;
+		reticleLensOutline = outline;
+	}
 
 	public void renderAttachment(float f)
 	{

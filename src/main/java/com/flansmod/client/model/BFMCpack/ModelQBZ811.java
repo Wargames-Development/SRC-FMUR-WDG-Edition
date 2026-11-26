@@ -1120,7 +1120,7 @@ public class ModelQBZ811 extends ModelGun //Same as Filename
         caseScale = 0.2F;
         casingDelay = 0;
         flashScale = 0.4F;
-        muzzleFlashPoint = new Vector3f(2.75F, 0.725F, 0.0F);
+        setMuzzleFlashPoint(15.1F, 4.4F, 0F);
         thirdPersonOffset = new Vector3f(-0.06F, -0.1F, 0.0F);
         crouchZoom = -0.05F;
         zoomOffset = 0.2F;

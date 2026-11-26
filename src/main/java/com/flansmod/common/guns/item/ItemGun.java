@@ -218,25 +218,17 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
         else
             s = "ammo";
 
-        //If the gun has no ammo tags, give it some
-        if (!gun.stackTagCompound.hasKey(s)) {
-            NBTTagList ammoTagsList = new NBTTagList();
-            for (int i = 0; i < type.getNumAmmoItemsInGun(gun); i++) {
-                ammoTagsList.appendTag(new NBTTagCompound());
-            }
-            gun.stackTagCompound.setTag(s, ammoTagsList);
-        }
-        //Take the list of ammo tags
+        // Older stacks can have fewer ammo entries than the gun's current capacity.
         NBTTagList ammoTagsList = gun.stackTagCompound.getTagList(s, Constants.NBT.TAG_COMPOUND);
-        //Get the specific ammo tags required
-        NBTTagCompound ammoTags = ammoTagsList.getCompoundTagAt(id);
-        //Represent empty slots by null types
-        if (bullet == null) {
-            ammoTags = new NBTTagCompound();
-        } else {
-            //Set the tags to match the bullet stack
+        if (ammoTagsList.tagCount() == 0)
+            gun.stackTagCompound.setTag(s, ammoTagsList);
+        while (ammoTagsList.tagCount() <= id)
+            ammoTagsList.appendTag(new NBTTagCompound());
+
+        NBTTagCompound ammoTags = new NBTTagCompound();
+        if (bullet != null)
             bullet.writeToNBT(ammoTags);
-        }
+        ammoTagsList.func_150304_a(id, ammoTags);
     }
 
     /** A tactical magazine swap can leave one round in the chamber. */
@@ -1341,9 +1333,14 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     ? player.inventory.getStackInSlot(data.offHandGunSlot - 1) : stack;
             if (isShooting && firingStack != null && firingStack.getItem() instanceof ItemGun) {
                 ItemGun firingGun = (ItemGun) firingStack.getItem();
-                if (firingGun.type.getNumAmmoItemsInGun(firingStack) > 1
-                        && firingGun.hasLoadedRound(firingStack, firingGun.type))
-                    data.cancelSingleReload(player, firingStack, left);
+                if (firingGun.type.getNumAmmoItemsInGun(firingStack) > 1) {
+                    EnumFireMode mode = firingGun.type.getFireMode(firingStack);
+                    boolean continuous = mode == EnumFireMode.FULLAUTO || mode == EnumFireMode.MINIGUN;
+                    boolean wasHeld = left ? data.isShootingLeft : data.isShootingRight;
+                    // Held-trigger aim updates arrive as fire packets during full-auto reloads.
+                    if ((!continuous || !wasHeld) && firingGun.hasLoadedRound(firingStack, firingGun.type))
+                        data.cancelSingleReload(player, firingStack, left);
+                }
             }
             if (left && data.offHandGunSlot != 0) {
                 ItemStack offHandGunStack = player.inventory.getStackInSlot(data.offHandGunSlot - 1);
@@ -1418,25 +1415,23 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                 if (singlesReload) {
                     reloadCount = 0;
                     for (int i = 0; i < type.getNumAmmoItemsInGun(gunStack); i++) {
-                        ItemStack oldBulletStack = ((ItemGun) gunStack.getItem()).getBulletItemStack(gunStack, i);
-                        if (oldBulletStack != null && (oldBulletStack.getMaxDamage() - oldBulletStack.getItemDamage()) == 0) {
-                            reloadCount += 1;
+                        ItemStack oldBulletStack = getBulletItemStack(gunStack, i);
+                        if (oldBulletStack == null) {
+                            reloadCount++;
+                        } else if (oldBulletStack.getItemDamage() >= oldBulletStack.getMaxDamage()) {
+                            reloadCount++;
                             empty = false;
-                        } else if (oldBulletStack == null) {
-                            reloadCount += 1;
                         }
                     }
                 } else {
                     reloadCount = 1;
                 }
 
-                if(empty) {
-                    if(type.explodeOnEmpty) {
-                        if(!world.isRemote) {
-                            world.newExplosion(null, entityplayer.posX, entityplayer.posY, entityplayer.posZ, 1.0F, false , false);
-                        }
-                        return gunStack;
+                if (empty && type.explodeOnEmpty) {
+                    if (!world.isRemote) {
+                        world.newExplosion(null, entityplayer.posX, entityplayer.posY, entityplayer.posZ, 1.0F, false, false);
                     }
+                    return gunStack;
                 }
 
                 /* 奔跑不能射击 */
@@ -1448,15 +1443,13 @@ public class ItemGun extends Item implements IPaintableItem, IGunboxDescriptiona
                     //Set both gun delays to avoid reloading two guns at once
                     //data.shootTimeRight = data.shootTimeLeft = (int)gunType.getReloadTime(gunStack);
 
-                    float reloadTime;
-                    if(empty){
-                        reloadTime = singlesReload ? (type.getEmptyReloadTime(gunStack) / maxAmmo) * reloadCount : type.getEmptyReloadTime(gunStack);
-                    } else {
-                        reloadTime = type.getTacticalReloadTime(gunStack) / maxAmmo * reloadCount;
-                    }
+                    float reloadTime = empty ? type.getEmptyReloadTime(gunStack) : type.getTacticalReloadTime(gunStack);
+                    if (singlesReload)
+                        reloadTime = reloadTime / maxAmmo * reloadCount;
 
                     int reloadTicks = Math.max(1, (int) Math.ceil(reloadTime));
-                    data.startReload(gunStack, reloadTicks, reloadCount, left, false, false, false);
+                    if (!data.tryStartReload(gunStack, reloadTicks, reloadCount, left, false, false, false))
+                        return gunStack;
                     if (left) {
                         data.reloadingLeft = true;
                         data.burstRoundsRemainingLeft = 0;

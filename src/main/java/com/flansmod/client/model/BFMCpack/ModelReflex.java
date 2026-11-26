@@ -177,6 +177,10 @@ public class ModelReflex extends ModelAttachment //Same as Filename
         attachmentModel[39].setRotationPoint(4F, -8F, -6F);
         flipAll();
 
+        setReticleLens(14.25F,
+                6.5F, -2F, 8.7F, -4.75F, 11.9F, -4.75F, 14.7F, -2F,
+                14.7F, 2F, 11.9F, 4.75F, 8.7F, 4.75F, 6.5F, 2F);
+
         this.renderOffset = 0.2F;
     }
 }

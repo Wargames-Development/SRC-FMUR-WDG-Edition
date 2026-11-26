@@ -2085,5 +2085,6 @@ public class ModelSA58 extends ModelGun //Same as Filename
         zoomOffset = 0.175F;
         zoomOffsetY = -0.025F;
         flipAll();
+        setMuzzleFlashPoint(241F, 49F, 0F);
     }
 }

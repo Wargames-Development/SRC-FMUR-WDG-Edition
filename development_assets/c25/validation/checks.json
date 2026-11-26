@@ -1,7 +1,7 @@
 {
   "geometry": {
     "C25": {
-      "triangles": 14176,
+      "triangles": 7940,
       "maximum_java_error": 5.849999986651255e-07
     },
     "C25_magazine": {
@@ -13,32 +13,32 @@
       "maximum_java_error": 2.599999999741698e-07
     },
     "C25_scope": {
-      "triangles": 1044,
-      "maximum_java_error": 4.3999999999044803e-07
+      "triangles": 3144,
+      "maximum_java_error": 4.500000000406956e-07
     },
     "C25_muzzle": {
       "triangles": 240,
       "maximum_java_error": 8.050000026571524e-07
     },
     "C25Scope": {
-      "triangles": 1044,
+      "triangles": 3144,
       "maximum_java_error": 2.0000000056086265e-07
     }
   },
   "installed": {
-    "eclipse\\Flan\\BFMCpack\\C25.obj": "a4466255bec91f59f8b4b47f7396c69dd80a6a1431394c24d9ae53661451425a",
+    "eclipse\\Flan\\BFMCpack\\C25.obj": "75487d5b21a003e1e92daadecb3c4e3b86f2cc66a88b3cd0701af77e9e77a649",
     "eclipse\\Flan\\BFMCpack\\C25_magazine.obj": "a14eed827627c5d9fc1f80266360ca4555e518152c770355cbb857a2472b242b",
     "eclipse\\Flan\\BFMCpack\\C25_bolt.obj": "b921b17f379d03ceb5b82837795fedab33d93aa45f650ed491ececdc03a0b6ac",
-    "eclipse\\Flan\\BFMCpack\\C25_scope.obj": "acd7ac2a57a8a7d971cc747885e7815d87560bc9018a3e4cb84495699d1eb2a5",
+    "eclipse\\Flan\\BFMCpack\\C25_scope.obj": "8313a9f97609ec07974eed3a8cb3e0555cd2d6163bec33e5686adfef7b9e242d",
     "eclipse\\Flan\\BFMCpack\\C25_muzzle.obj": "a07dd0aae345e1fb3c74bbc068a2b6699721e859188ce7556e8f6c116ea8c94f",
-    "eclipse\\Flan\\BFMCpack\\C25Scope.obj": "229ae0c2c0714dd86c53b4cc4b5612e939969e5f336a6f0090ea7cfe551976c3",
+    "eclipse\\Flan\\BFMCpack\\C25Scope.obj": "616dabae40de9bf6b9bfa46338116df62b68ea130a7f3a524a22d7ed7808432b",
     "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\skins\\C25.png": "468d8a3e367c3a94f2b4cf7050eb200d5367ae3d769ed81c48840adc5db8310f",
-    "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\textures\\items\\C25.png": "35855070e6c1cc8d66178e8bd1da4d1496a617f2df7b7ba61367bd0ea2de0984",
-    "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\textures\\items\\C25Scope.png": "b9a6ec39448c9422221de669352474b3ed31757bc6c3a5afbef00ccb25514c38",
+    "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\textures\\items\\C25.png": "11e3f2f0a91ea81aa54f774a0e69759b9e427aa9b655f9ae3e2e03a1883d4e56",
+    "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\textures\\items\\C25Scope.png": "7c2fb6c8c5150fa27df8502b25b35d9b03d7cdb1c7546fe1d27099b5633135a2",
     "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\gui\\PIP\\C25Scope.png": "d4b30418b6aaf2902839ed5c00c3cff154f2dd3639df938825141b2cee351a31",
-    "eclipse\\Flan\\BFMC Gun Pack\\attachments\\SCOPE_C25.txt": "2b03cf019a15cd22dc6568fa204be8eea320fbd18af374ea3a8ccddefa986bc7",
-    "eclipse\\Flan\\BFMC Gun Pack\\guns\\CA_AR_C25.txt": "9129808639ad902379c591da04651d334da9ce6cd47e57aa43c54f15687dcc7a",
-    "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\lang\\en_US.lang": "ee99b264835fb71c28e48ef150681ca12a69b12a4e776f269226f8ac695c02e9"
+    "eclipse\\Flan\\BFMC Gun Pack\\attachments\\SCOPE_C25.txt": "8418dcbd27228e0811179e84ed77d46f17b2cc2842c73bc22d7bad5ce1e9041c",
+    "eclipse\\Flan\\BFMC Gun Pack\\guns\\CA_AR_C25.txt": "bd7b6c829631e10c63a9f9c7df9d037b16dd165123ba0ca415f5ea6d66629ad3",
+    "eclipse\\Flan\\BFMC Gun Pack\\assets\\flansmod\\lang\\en_US.lang": "c354954f92e1cadcb9de46135f156404708a56e8fbc464867be7c4eb2e931b57"
   },
   "identity": {
     "c25": [

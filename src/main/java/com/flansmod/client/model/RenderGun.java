@@ -2,6 +2,7 @@ package com.flansmod.client.model;
 
 import com.flansmod.client.FlansModClient;
 import com.flansmod.client.AttachmentLightRenderer;
+import com.flansmod.client.DotReticleLens;
 import com.flansmod.client.FlansModResourceHandler;
 import com.flansmod.client.ThermalScopeEffect;
 import com.flansmod.client.model.NewTapArmor.ModelGhillieBase;
@@ -771,30 +772,21 @@ public class RenderGun implements IItemRenderer {
 
             boolean isFlashEnabled = (barrelAttachment == null || !barrelAttachment.disableMuzzleFlash)
                     && gunType.getShouldShowMuzzleFlash();
+            boolean firing = animations.muzzleFlashTime > 0 && !gunType.getSecondaryFire(item);
+            Vector3f muzzle = firing || gunType.useHeatSystem
+                    ? model.getMuzzleFlashOffset(barrelAttachment != null, barrelAttachment == null ? null : barrelAttachment.model)
+                    : null;
 
-            // Keep the tracer and particle burst aligned with the configured muzzle point.
-            if (animations.muzzleFlashTime > 0 && !gunType.getSecondaryFire(item)) {
+            if (firing && muzzle != null) {
                 GL11.glPushMatrix();
                 GL11.glScalef(model.flashScale, model.flashScale, model.flashScale);
                 {
-                    Vector3f base = model.muzzleFlashPoint == null ? Vector3f.Zero : model.muzzleFlashPoint;
-                    if (barrelAttachment != null) {
-                        Vector3f barrelOffset = (barrelAttachment.model != null && barrelAttachment.model.attachmentFlashOffset != null) ? barrelAttachment.model.attachmentFlashOffset : Vector3f.Zero;
-                        GL11.glTranslatef(base.x + barrelOffset.x,
-                                base.y + barrelOffset.y,
-                                base.z + barrelOffset.z);
-                    } else {
-                        Vector3f defaultOffset = model.defaultBarrelFlashPoint == null ? Vector3f.Zero : model.defaultBarrelFlashPoint;
-
-                        GL11.glTranslatef(base.x + defaultOffset.x,
-                                base.y + defaultOffset.y,
-                                base.z + defaultOffset.z);
-                    }
+                    GL11.glTranslatef(muzzle.x, muzzle.y, muzzle.z);
 
                     BulletType loadedAmmo = getLoadedAmmo(item, gunType);
                     BulletType tracerAmmo = loadedAmmo != null && loadedAmmo.tracer
                             ? loadedAmmo : null;
-                    if (model.muzzleFlashPoint != null && tracerAmmo != null) {
+                    if (tracerAmmo != null) {
                         renderMuzzleTracer(model.flashScale, tracerAmmo);
                         renderEngine.bindTexture(FlansModResourceHandler.getPaintjobTexture(
                                 gunType.getPaintjob(item.getItemDamage())));
@@ -817,7 +809,7 @@ public class RenderGun implements IItemRenderer {
             }
 
             if (rtype != ItemRenderType.ENTITY && gunType.useHeatSystem
-                    && model.muzzleFlashPoint != null && Minecraft.getMinecraft().theWorld != null) {
+                    && muzzle != null && Minecraft.getMinecraft().theWorld != null) {
                 if (!gunType.shortName.equals(animations.heatEffectGun)) {
                     animations.heatEffectGun = gunType.shortName;
                     animations.lastOverheatTicks = 0;
@@ -833,8 +825,8 @@ public class RenderGun implements IItemRenderer {
                 animations.lastOverheatTicks = overheatTicks;
                 if (tick < animations.overheatBurstUntil || tick < animations.steamBurstUntil) {
                     GL11.glPushMatrix();
-                    GL11.glTranslatef(model.muzzleFlashPoint.x, model.muzzleFlashPoint.y,
-                            model.muzzleFlashPoint.z);
+                    GL11.glTranslatef(muzzle.x * model.flashScale, muzzle.y * model.flashScale,
+                            muzzle.z * model.flashScale);
                     if (tick < animations.overheatBurstUntil)
                         MuzzleFlashRenderer.renderHeatEffect(false,
                                 (int)(tick + 12L - animations.overheatBurstUntil));
@@ -1517,7 +1509,9 @@ public class RenderGun implements IItemRenderer {
         if (scopeAttachment != null) {
             GL11.glPushMatrix();
             {
-                preRenderAttachment(scopeAttachment, scopeItemStack, model.scopeAttachPoint, gunType, f);
+                Vector3f scopeMount = rtype == ItemRenderType.EQUIPPED && model.thirdPersonScopeAttachPoint != null
+                        ? model.thirdPersonScopeAttachPoint : model.scopeAttachPoint;
+                preRenderAttachment(scopeAttachment, scopeItemStack, scopeMount, gunType, f);
 
                 //TODO
                 if (model.scopeIsOnBreakAction && animations.reloading) {
@@ -1673,6 +1667,10 @@ public class RenderGun implements IItemRenderer {
             }
 
 			if (type == ItemRenderType.EQUIPPED_FIRST_PERSON) {
+				if (dotSwayDelta != null && attachment == FlansModClient.currentScope
+						&& !ThermalScopeEffect.usesModelScopeLens(attachment)) {
+					DotReticleLens.capture(attachment, model, f);
+				}
 				renderPictureInPictureLens(attachment, f);
 			}
         }

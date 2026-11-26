@@ -409,10 +409,6 @@ public final class AttachmentLightRenderer {
                     * bounded(light.laserDotScale, 1F, 0.25F, 1F);
             if (hit.entityHit != null) {
                 prepareProjection();
-                float range = bounded(light.laserRange, 128F, 1F, 128F);
-                MovingObjectPosition behind = traceBetween(renderedWorld, origin, origin.addVector(
-                        direction.xCoord * range, direction.yCoord * range, direction.zCoord * range));
-                if (behind != null) drawSpot(light, behind, origin, direction, r, g, b);
                 AxisAlignedBB bounds = entityBounds(hit.entityHit, renderPartial).expand(0.01D, 0.01D, 0.01D);
                 Vec3 relative = Vec3.createVectorHelper(origin.xCoord - cameraPosition.xCoord,
                         origin.yCoord - cameraPosition.yCoord, origin.zCoord - cameraPosition.zCoord);
