@@ -10,6 +10,7 @@ import com.flansmod.common.PlayerData;
 import com.flansmod.common.PlayerHandler;
 import com.flansmod.common.guns.IScope;
 import com.flansmod.common.guns.item.ItemGun;
+import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
 import com.flansmod.common.hook.MCHeliUtil;
 import com.flansmod.common.network.PacketMissileMCLOSOffset;
@@ -51,6 +52,7 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -416,35 +418,7 @@ public class FlansModClient extends FlansMod {
         playerRecoilYaw *= 0.8F;
 
 
-        //Update gun animations for the gun in hand
-        for (Map.Entry<EntityLivingBase, GunAnimations> entry : gunAnimationsRight.entrySet()) {
-            int equippedSlot = -1;
-            ItemStack equippedGun = null;
-            if (entry.getKey() instanceof EntityPlayer) {
-                EntityPlayer player = (EntityPlayer) entry.getKey();
-                equippedSlot = player.inventory.currentItem;
-                equippedGun = player.getCurrentEquippedItem();
-            }
-            entry.getValue().update(equippedSlot, equippedGun);
-        }
-        for (Map.Entry<EntityLivingBase, GunAnimations> entry : gunAnimationsLeft.entrySet()) {
-            int offHandSlot = -1;
-            ItemStack offHandGun = null;
-            if (entry.getKey() instanceof EntityPlayer) {
-                EntityPlayer player = (EntityPlayer) entry.getKey();
-                PlayerData data = PlayerHandler.getPlayerData(player);
-                ItemStack heldGun = player.getCurrentEquippedItem();
-                if (player != minecraft.thePlayer && data != null && data.offHandGunStack != null) {
-                    offHandGun = data.offHandGunStack;
-                } else if (data != null && data.offHandGunSlot > 0
-                        && heldGun != null && heldGun.getItem() instanceof ItemGun
-                        && ((ItemGun) heldGun.getItem()).type.getOneHanded()) {
-                    offHandSlot = data.offHandGunSlot - 1;
-                    offHandGun = player.inventory.getStackInSlot(offHandSlot);
-                }
-            }
-            entry.getValue().update(offHandSlot, offHandGun);
-        }
+        updateGunAnimations();
 
         for (
                 Object obj : minecraft.theWorld.playerEntities) {
@@ -472,9 +446,11 @@ public class FlansModClient extends FlansMod {
         ItemStack itemstackInHand = minecraft.thePlayer.inventory.getCurrentItem();
         if (itemstackInHand != null)
             itemInHand = itemstackInHand.getItem();
+        GunType heldGunType = itemInHand instanceof ItemGun ? ((ItemGun) itemInHand).type : null;
+        List<AttachmentType> heldAttachments = heldGunType == null ? null : heldGunType.getCurrentAttachments(itemstackInHand);
 
-        if (itemInHand instanceof ItemGun && !FlansMod.canChangeSettings) {
-            gamingMouseSensitivity = originalMouseSensitivity * (0.5F + 0.5F * ((ItemGun) itemInHand).type.getMovementSpeed(itemstackInHand));
+        if (heldGunType != null && !FlansMod.canChangeSettings) {
+            gamingMouseSensitivity = originalMouseSensitivity * (0.5F + 0.5F * heldGunType.getMovementSpeedFromAttachments(heldAttachments));
         } else {
             gamingMouseSensitivity = originalMouseSensitivity;
         }
@@ -490,14 +466,13 @@ public class FlansModClient extends FlansMod {
 
         /**  涉及开镜时间的改动  */
         if (currentScope == null) {
-            if (mc.thePlayer != null && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemGun) {
-                zoomProgress *= ((ItemGun) itemInHand).type.getAimTimeConstant(itemstackInHand);
+            if (heldGunType != null) {
+                zoomProgress *= heldGunType.getAimTimeConstantFromAttachments(heldAttachments);
             } else {
                 zoomProgress *= 0.66F;
             }
-        } else if (mc.thePlayer != null && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().
-                getItem() instanceof ItemGun) {
-            float constant = ((ItemGun) itemInHand).type.getAimTimeConstant(itemstackInHand);
+        } else if (heldGunType != null) {
+            float constant = heldGunType.getAimTimeConstantFromAttachments(heldAttachments);
             zoomProgress = Math.min(zoomProgress + (1 - constant) / 2 , 1);
         } else {
             zoomProgress = 1.0F - (1.0F - zoomProgress) * 0.66F;
@@ -510,22 +485,23 @@ public class FlansModClient extends FlansMod {
         PlayerData playerData = PlayerHandler.getPlayerData(minecraft.getSession().getUsername());
 
 
-        if (itemInHand instanceof ItemGun) {
-            ItemGun itemGun = (ItemGun) itemInHand;
-            GunType gunType = itemGun.type;
+        if (heldGunType != null) {
+            GunType gunType = heldGunType;
+            float runPosTime = gunType.getRunPosTimeFromAttachments(heldAttachments);
+            float runCrouchTime = gunType.getRunCrouchTimeFromAttachments(heldAttachments);
             GunAnimations gunAnimations = gunAnimationsRight.get(minecraft.thePlayer);
 
             /**  涉及奔跑时间的改动  */
             if(gunAnimations == null || gunAnimations.getReloadTimeLeft(mc.thePlayer.inventory.currentItem, itemstackInHand) == 0) {
                 playerData.lastSprintProgress = playerData.sprintProgress;
                 if (ItemGun.sprinting) {
-                    if (playerData.sprintProgress < 1.0F && gunType.getRunPosTime(itemstackInHand) != 0) {
-                        playerData.sprintProgress += 1.0F / gunType.getRunPosTime(itemstackInHand);
+                    if (playerData.sprintProgress < 1.0F && runPosTime != 0) {
+                        playerData.sprintProgress += 1.0F / runPosTime;
                         if (playerData.sprintProgress > 1.0F)
                             playerData.sprintProgress = 1.0F;
                     }
                 } else if (playerData.sprintProgress > 0.0F) {
-                    playerData.sprintProgress -= 1.0F / gunType.getRunPosTime(itemstackInHand);
+                    playerData.sprintProgress -= 1.0F / runPosTime;
                     if (playerData.sprintProgress < 0.0F)
                         playerData.sprintProgress = 0.0F;
                 }
@@ -539,13 +515,13 @@ public class FlansModClient extends FlansMod {
             /**  涉及下蹲时间的改动  */
             lastCrouchProgress = crouchProgress;
             if (ItemGun.crouching) {
-                if (crouchProgress < 1.0F && gunType.getRunCrouchTime(itemstackInHand) != 0) {
-                    crouchProgress += 1.0F / gunType.getRunCrouchTime(itemstackInHand);
+                if (crouchProgress < 1.0F && runCrouchTime != 0) {
+                    crouchProgress += 1.0F / runCrouchTime;
                     if (crouchProgress > 1.0F)
                         crouchProgress = 1.0F;
                 }
             } else if (crouchProgress > 0.0F) {
-                crouchProgress -= 1.0F / gunType.getRunCrouchTime(itemstackInHand);
+                crouchProgress -= 1.0F / runCrouchTime;
                 if (crouchProgress < 0.0F)
                     crouchProgress = 0.0F;
             }
@@ -589,26 +565,25 @@ public class FlansModClient extends FlansMod {
             lastStanceProgress = stanceProgress;
             //收枪
             if (ItemGun.sprinting && !ItemGun.crouching && gunAnimations != null && !gunAnimations.reloading && currentScope == null) {
-                if (stanceProgress < 1.0F && gunType.getRunPosTime(itemstackInHand) != 0) {
-                    stanceProgress += 1.0F / gunType.getRunPosTime(itemstackInHand);
+                if (stanceProgress < 1.0F && runPosTime != 0) {
+                    stanceProgress += 1.0F / runPosTime;
                     if (stanceProgress > 1.0F)
                         stanceProgress = 1.0F;
                 }
             } else if (stanceProgress > 0.0F) {
-                float posTime = gunType.getRunPosTime(itemstackInHand);
-                float mult = (posTime - 1) / (posTime + 1) * 0.8F;
+                float mult = (runPosTime - 1) / (runPosTime + 1) * 0.8F;
                 stanceProgress *= mult < 0.5 ? 0.5 : mult;
                 if (stanceProgress < 0.0001F)
                     stanceProgress = 0.0F;
             }
 
             /** 屏息 & 抖动参数 **/
-            if (gunType.getCameraShakeModifier(itemstackInHand) > 0
-                    && currentScope != null
-                    && currentScope.getZoomOverlay() != null
-                    && currentScope.getZoomFactor() * currentScope.getFOVFactor() >= 4F) {
+            float shake = currentScope != null && currentScope.getZoomOverlay() != null
+                    && currentScope.getZoomFactor() * currentScope.getFOVFactor() >= 4F
+                    ? gunType.getCameraShakeModifierFromAttachments(heldAttachments) : 0F;
+            if (shake > 0F) {
                 double speed = (1.0 + minecraft.thePlayer.motionZ + minecraft.thePlayer.motionX) * stableSightProgress;
-                double amplitude = speed * 0.01 * gunType.getCameraShakeModifier(itemstackInHand);
+                double amplitude = speed * 0.01 * shake;
                 minecraft.thePlayer.rotationYaw +=
                         amplitude * Math.sin(minecraft.thePlayer.ticksExisted * 0.05 * speed);
                 minecraft.thePlayer.rotationPitch +=
@@ -710,6 +685,39 @@ public class FlansModClient extends FlansMod {
         }
         if (controlModeSwitchTimer > 0)
             controlModeSwitchTimer--;
+    }
+
+    private static void updateGunAnimations() {
+        // Only the local reload acknowledgement needs equipped-item matching.
+        // All animations still advance on every tick.
+        for (Map.Entry<EntityLivingBase, GunAnimations> entry : gunAnimationsRight.entrySet()) {
+            GunAnimations animation = entry.getValue();
+            if (animation.localPlayerReload && entry.getKey() instanceof EntityPlayer) {
+                EntityPlayer player = (EntityPlayer) entry.getKey();
+                animation.update(player.inventory.currentItem, player.getCurrentEquippedItem());
+            } else {
+                animation.update();
+            }
+        }
+        for (Map.Entry<EntityLivingBase, GunAnimations> entry : gunAnimationsLeft.entrySet()) {
+            GunAnimations animation = entry.getValue();
+            int offHandSlot = -1;
+            ItemStack offHandGun = null;
+            if (animation.localPlayerReload && entry.getKey() instanceof EntityPlayer) {
+                EntityPlayer player = (EntityPlayer) entry.getKey();
+                PlayerData data = PlayerHandler.getPlayerData(player);
+                ItemStack heldGun = player.getCurrentEquippedItem();
+                if (player != minecraft.thePlayer && data != null && data.offHandGunStack != null) {
+                    offHandGun = data.offHandGunStack;
+                } else if (data != null && data.offHandGunSlot > 0
+                        && heldGun != null && heldGun.getItem() instanceof ItemGun
+                        && ((ItemGun) heldGun.getItem()).type.getOneHanded()) {
+                    offHandSlot = data.offHandGunSlot - 1;
+                    offHandGun = player.inventory.getStackInSlot(offHandSlot);
+                }
+            }
+            animation.update(offHandSlot, offHandGun);
+        }
     }
 
     private static void updateScopedMouseSensitivity() {

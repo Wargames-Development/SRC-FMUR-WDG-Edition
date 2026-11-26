@@ -606,6 +606,11 @@ public class FlansMod {
         FlansMod.log("Finished gunbox mapping.");
     }
 
+    @EventHandler
+    public void loadComplete(FMLLoadCompleteEvent event) {
+        proxy.onLoadComplete();
+    }
+
     @SubscribeEvent
     public void playerDrops(PlayerDropsEvent event) {
         for (int i = event.drops.size() - 1; i >= 0; i--) {

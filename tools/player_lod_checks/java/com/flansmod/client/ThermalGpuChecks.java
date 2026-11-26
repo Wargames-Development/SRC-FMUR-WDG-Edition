@@ -27,6 +27,7 @@ public final class ThermalGpuChecks {
             if (args.length > 0 && "--camera-particles".equals(args[0])) {
                 // macOS pbuffers can lack a usable default framebuffer.
                 displayTarget=fbo();
+                ammoHudRects();
                 entityReplayIsolation();
                 cameraParticles();
                 particleOcclusion();
@@ -97,6 +98,50 @@ public final class ThermalGpuChecks {
             check(GL11.glGetError() == GL11.GL_NO_ERROR,"No GL errors");
             System.out.println("PASS: " + checks + " thermal framebuffer, full sensor/model capture, sun/cover, player/MCHR precision replay and state-cleanup checks.");
         } finally { context.destroy(); }
+    }
+
+    private static void ammoHudRects() throws Exception {
+        Class<?> tessellator = net.minecraft.client.renderer.Tessellator.class;
+        Object quads = net.minecraft.client.renderer.Tessellator.instance;
+        Method begin = TickHandlerClient.class.getDeclaredMethod("beginAmmoHudRects", tessellator);
+        Method add = TickHandlerClient.class.getDeclaredMethod("addAmmoHudRect",
+                tessellator, int.class, int.class, int.class, int.class, int.class);
+        Method end = TickHandlerClient.class.getDeclaredMethod("endAmmoHudRects", tessellator, int.class);
+        begin.setAccessible(true); add.setAccessible(true); end.setAccessible(true);
+        GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, displayTarget);
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        int oldMatrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+        GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPushMatrix(); GL11.glLoadIdentity();
+        GL11.glOrtho(0, SIZE, SIZE, 0, -1, 1);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glPushMatrix(); GL11.glLoadIdentity();
+        try {
+            GL11.glViewport(0, 0, SIZE, SIZE);
+            GL11.glDisable(GL11.GL_DEPTH_TEST); GL11.glDisable(GL11.GL_ALPHA_TEST);
+            GL11.glClearColor(0F, 0F, 0F, 0F);
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+            int background = 0x900A2428, accent = 0x8876BA62;
+            net.minecraft.client.gui.Gui.drawRect(4, 4, 63, 40, background);
+            net.minecraft.client.gui.Gui.drawRect(4, 4, 63, 6, accent);
+            ByteBuffer original = BufferUtils.createByteBuffer(SIZE * SIZE * 4);
+            GL11.glReadPixels(0, 0, SIZE, SIZE, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, original);
+            check(original.get((SIZE * (SIZE - 11) + 10) * 4 + 3) != 0, "reference HUD draws nonzero pixels");
+            GL11.glClear(GL11.GL_COLOR_BUFFER_BIT);
+            begin.invoke(null, quads);
+            add.invoke(null, quads, 4, 4, 63, 40, background);
+            add.invoke(null, quads, 4, 4, 63, 6, accent);
+            end.invoke(null, quads, accent);
+            ByteBuffer batch = BufferUtils.createByteBuffer(SIZE * SIZE * 4);
+            GL11.glReadPixels(0, 0, SIZE, SIZE, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, batch);
+            check(original.equals(batch), "batched ammo HUD rectangles match vanilla RGBA pixels");
+            check(GL11.glIsEnabled(GL11.GL_TEXTURE_2D) && !GL11.glIsEnabled(GL11.GL_BLEND),
+                    "batched ammo HUD restores vanilla texture and blend state");
+        } finally {
+            GL11.glPopMatrix();
+            GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glPopMatrix();
+            GL11.glMatrixMode(oldMatrixMode);
+            GL11.glPopAttrib();
+            GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
+        }
     }
 
     private static void copyDepth(int backend,int format) throws Exception {

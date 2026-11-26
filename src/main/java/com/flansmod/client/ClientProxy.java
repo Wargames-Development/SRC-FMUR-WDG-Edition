@@ -125,6 +125,11 @@ public class ClientProxy extends CommonProxy {
         new TickHandlerClient();
     }
 
+    @Override
+    public void onLoadComplete() {
+        ScopeRenderCompatibility.prewarm();
+    }
+
     /**
      * This method reloads all textures from all mods and resource packs. It forces Minecraft to read images from the content packs added after mod init
      */

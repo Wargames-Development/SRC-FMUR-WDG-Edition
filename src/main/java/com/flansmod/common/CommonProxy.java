@@ -66,6 +66,9 @@ public class CommonProxy {
     public void load() {
     }
 
+    public void onLoadComplete() {
+    }
+
     public void forceReload() {
     }
 

@@ -13,12 +13,16 @@ import com.flansmod.common.driveables.mechas.EntityMecha;
 import com.flansmod.common.guns.EntityShootable;
 import com.flansmod.common.guns.EnumFireMode;
 import com.flansmod.common.guns.FlashlightState;
+import com.flansmod.common.guns.IScope;
 import com.flansmod.common.guns.item.ItemGrenade;
 import com.flansmod.common.guns.item.ItemGun;
 import com.flansmod.common.guns.item.ItemShootable;
+import com.flansmod.common.guns.type.AttachmentType;
 import com.flansmod.common.guns.type.GunType;
+import com.flansmod.common.guns.type.ShootableType;
 import com.flansmod.common.network.PacketParticle;
 import com.flansmod.common.network.PacketTeamInfo;
+import com.flansmod.common.teams.ArmourType;
 import com.flansmod.common.teams.ItemTeamArmour;
 import com.flansmod.common.teams.PlayerEquipmentInventory;
 import com.flansmod.common.types.InfoType;
@@ -41,6 +45,13 @@ import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.RenderItem;
+import net.minecraft.client.renderer.texture.ITextureObject;
+import net.minecraft.client.renderer.texture.SimpleTexture;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.client.renderer.texture.TextureUtil;
+import net.minecraft.client.resources.IReloadableResourceManager;
+import net.minecraft.client.resources.IResourceManager;
+import net.minecraft.client.resources.IResourceManagerReloadListener;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Slot;
@@ -48,7 +59,9 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.MathHelper;
 import net.minecraft.util.MouseHelper;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.ChunkPosition;
 import net.minecraft.world.EnumSkyBlock;
+import net.minecraft.world.World;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
@@ -62,13 +75,15 @@ import org.lwjgl.opengl.GL12;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 @SuppressWarnings({"unused", "WeakerAccess"})
-public class TickHandlerClient {
+public class TickHandlerClient implements IResourceManagerReloadListener {
     private static final float MAX_ALLOWED_GAMMA = 1F;
     public static final ResourceLocation offHand = new ResourceLocation("flansmod", "gui/offHand.png");
     public static final ResourceLocation aps = new ResourceLocation("flansmod", "gui/aps.png");
@@ -77,8 +92,11 @@ public class TickHandlerClient {
     private static final List<KillMessage> killMessages = new ArrayList<>();
     public static ArrayList<Vector3i> blockLightOverrides = new ArrayList<>();
     public static ArrayList<Vector3i> vehicleLightOverrides = new ArrayList<>();
-    private static final ArrayList<Vector3i> muzzleFlashLightOverrides = new ArrayList<>();
-    private static final Map<Integer, Integer> muzzleFlashLightTicks = new HashMap<>();
+    private static final Map<Integer, MuzzleFlash> muzzleFlashes = new HashMap<>();
+    private static final Map<ChunkPosition, MuzzleFlashLight> muzzleFlashLights = new HashMap<>();
+    private static final Set<ChunkPosition> muzzleFlashLightNeighbors = new HashSet<>();
+    private static World muzzleFlashWorld;
+    private static boolean retryMuzzleFlashPropagation;
     private static final int MUZZLE_FLASH_DURATION_TICKS = 3;
     private static final int MUZZLE_FLASH_LIGHT_LEVEL = 6;
     private static float localMuzzleFlashExposure;
@@ -124,6 +142,10 @@ public class TickHandlerClient {
     static ResourceLocation vehicleCross = new ResourceLocation("flansmod", "textures/items/cross5.png");
     static ResourceLocation flash = new ResourceLocation("flansmod", "gui/flash.png");
     static ResourceLocation flashBlack = new ResourceLocation("flansmod", "gui/flash2.png");
+    private static final ResourceLocation[] BUILTIN_OVERLAYS = {
+            offHand, aps, tvm, sprintCross, genericCross, circleCross, grenadeCross, vehicleCross, flash, flashBlack
+    };
+    private static final ClientTextureWarmup SCOPE_TEXTURES = new ClientTextureWarmup("FMUR scope texture decoder");
     private static GuiScreen guiDriveableController = null;
     int tickCount = 0;
     int tickCountFlash = 0;
@@ -133,11 +155,80 @@ public class TickHandlerClient {
     public static int apsMarkerTime;
     private int deathScreenDisplayWidth = -1;
     private int deathScreenDisplayHeight = -1;
+    private boolean overlayReloadListenerRegistered;
+    private IScope preloadedScope;
+    private ArmourType preloadedHelmet;
 
 
     public TickHandlerClient() {
         FMLCommonHandler.instance().bus().register(this);
         MinecraftForge.EVENT_BUS.register(this);
+    }
+
+    private void registerOverlayReloadListener(Minecraft mc) {
+        if (overlayReloadListenerRegistered || mc.getTextureManager() == null) return;
+        IResourceManager resources = mc.getResourceManager();
+        if (resources instanceof IReloadableResourceManager) {
+            // Registration invokes the listener immediately. The texture manager must be ready first.
+            overlayReloadListenerRegistered = true;
+            ((IReloadableResourceManager) resources).registerReloadListener(this);
+        }
+    }
+
+    @Override
+    public void onResourceManagerReload(IResourceManager resources) {
+        TextureManager manager = Minecraft.getMinecraft().getTextureManager();
+        if (manager == null) return;
+        SCOPE_TEXTURES.reset();
+        preloadedScope = null;
+        preloadedHelmet = null;
+        for (ResourceLocation overlay : BUILTIN_OVERLAYS) {
+            ITextureObject loaded = manager.getTexture(overlay);
+            if (loaded == null || loaded == TextureUtil.missingTexture) {
+                manager.loadTexture(overlay, new SimpleTexture(overlay));
+            }
+        }
+        for (GunType gun : GunType.guns.values()) preloadScope(manager, gun, false);
+        for (AttachmentType attachment : AttachmentType.attachments) preloadScope(manager, attachment, false);
+        for (ArmourType armour : ArmourType.armours) preloadOverlay(manager, armour.overlay, false);
+    }
+
+    private void preloadActiveOverlay(Minecraft mc) {
+        if (mc.thePlayer == null || mc.currentScreen != null) return;
+        TextureManager manager = mc.getTextureManager();
+        IScope scope = FlansModClient.currentScope;
+        if (scope != preloadedScope) {
+            preloadedScope = scope;
+            preloadScope(manager, scope, true);
+        }
+        ItemStack helmet = mc.thePlayer.inventory.armorInventory[3];
+        ArmourType type = helmet != null && helmet.getItem() instanceof ItemTeamArmour
+                ? ((ItemTeamArmour) helmet.getItem()).type : null;
+        if (type != preloadedHelmet) {
+            preloadedHelmet = type;
+            if (type != null) preloadOverlay(manager, type.overlay, true);
+        }
+    }
+
+    private static void preloadScope(TextureManager manager, IScope scope, boolean urgent) {
+        if (scope == null) return;
+        if (ThermalScopeEffect.usesModelScopeLens(scope)) {
+            preloadOverlay(manager, ThermalScopeEffect.getPictureInPictureReticle(scope), urgent);
+        } else {
+            if (scope.hasZoomOverlay()) preloadOverlay(manager, scope.getZoomOverlay(), urgent);
+            preloadOverlay(manager, scope.getDotOverlayTexture(), urgent);
+        }
+    }
+
+    private static boolean preloadOverlay(TextureManager manager, String name, boolean urgent) {
+        if (name == null || name.isEmpty()) return false;
+        return SCOPE_TEXTURES.request(manager, FlansModResourceHandler.getScope(name), urgent);
+    }
+
+    static boolean bindScopeOverlay(Minecraft mc, String name) {
+        if (!preloadOverlay(mc.getTextureManager(), name, true)) return false;
+        mc.getTextureManager().bindTexture(FlansModResourceHandler.getScope(name));
+        return true;
     }
 
     /**
@@ -335,43 +426,32 @@ public class TickHandlerClient {
 
     @SubscribeEvent
     public void eventHandler(RenderGameOverlayEvent event) {
-        Minecraft mc = Minecraft.getMinecraft();
-        if (event.type == ElementType.CROSSHAIRS && mc.thePlayer != null
-                && FlashlightState.hasEnabledLaser(mc.thePlayer.getHeldItem())) {
-            event.setCanceled(true);
-            return;
-        }
-        if (event.type == ElementType.CROSSHAIRS && mc.thePlayer != null
-                && mc.thePlayer.getHeldItem() != null
-                && mc.thePlayer.getHeldItem().getItem() instanceof ItemGun
-                && NightVisionGogglesEffect.getIntensity(mc, event.partialTicks) > 0.001F) {
-            event.setCanceled(true);
-            return;
-        }
-        //If main config is set to false, blanket disable crosshairs (client synced)
-        if (!FlansMod.crosshairEnable && event.type == ElementType.CROSSHAIRS && mc.thePlayer != null && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemGun) {
-            event.setCanceled(true);
-            return;
-        }
-        //Otherwise, fall back to weapon config settings (default false)
-        else {
-            //Remove crosshairs if looking down the sights of a gun
-            if (event.type == ElementType.CROSSHAIRS && mc.thePlayer != null && mc.thePlayer.getHeldItem() != null && mc.thePlayer.getHeldItem().getItem() instanceof ItemGun) {
-                if (!((ItemGun) mc.thePlayer.getHeldItem().getItem()).type.showCrosshair || FlansModClient.currentScope != null) {
+        if (event.type == ElementType.CROSSHAIRS && event.isCancelable()) {
+            Minecraft mc = Minecraft.getMinecraft();
+            EntityPlayer player = mc.thePlayer;
+            if (player != null) {
+                ItemStack held = player.getHeldItem();
+                if (FlashlightState.hasEnabledLaser(held)
+                        || (held != null && held.getItem() instanceof ItemGun
+                        && (!FlansMod.crosshairEnable || !((ItemGun) held.getItem()).type.showCrosshair
+                        || FlansModClient.currentScope != null
+                        || NightVisionGogglesEffect.getIntensity(mc, event.partialTicks) > 0.001F))) {
                     event.setCanceled(true);
-                    return;
                 }
             }
+        } else if (!event.isCancelable() && (event.type == ElementType.HELMET || event.type == ElementType.HOTBAR)) {
+            renderHud(event, Minecraft.getMinecraft());
         }
+    }
 
-        ScaledResolution scaledresolution = new ScaledResolution(FlansModClient.minecraft, FlansModClient.minecraft.displayWidth, FlansModClient.minecraft.displayHeight);
-        int i = scaledresolution.getScaledWidth();
-        int j = scaledresolution.getScaledHeight();
+    private void renderHud(RenderGameOverlayEvent event, Minecraft mc) {
+        int i = event.resolution.getScaledWidth();
+        int j = event.resolution.getScaledHeight();
 
         Tessellator tessellator = Tessellator.instance;
 
         //TODO
-        if (!event.isCancelable() && event.type == ElementType.HELMET) {
+        if (event.type == ElementType.HELMET) {
             ThermalScopeEffect.render(mc, event.partialTicks);
             //Scopes and helmet overlays
             String overlayTexture = null;
@@ -396,7 +476,7 @@ public class TickHandlerClient {
             }
 
             //绘制瞄具贴图
-            if (overlayTexture != null) {
+            if (bindScopeOverlay(mc, overlayTexture)) {
                 FlansModClient.minecraft.entityRenderer.setupOverlayRendering();
                 GL11.glEnable(3042 /* GL_BLEND */);
                 GL11.glDisable(2929 /* GL_DEPTH_TEST */);
@@ -404,8 +484,6 @@ public class TickHandlerClient {
                 GL11.glBlendFunc(770, 771);
                 GL11.glColor4f(1F, 1F, 1F, 1.0F);
                 GL11.glDisable(3008 /* GL_ALPHA_TEST */);
-
-                mc.renderEngine.bindTexture(FlansModResourceHandler.getScope(overlayTexture));
 
                 float shakeOffsetX = (float) (Math.abs(Math.sin(FlansModClient.playerRecoilPitch * 3)) * 20.0F);
                 float shakeOffsetY = shakeOffsetX / 2.0F;
@@ -581,7 +659,7 @@ public class TickHandlerClient {
 
         }
 
-        if (!event.isCancelable() && event.type == ElementType.HOTBAR && mc.thePlayer != null) {
+        if (event.type == ElementType.HOTBAR && mc.thePlayer != null) {
             ItemStack heldStack = mc.thePlayer.inventory.getCurrentItem();
             if (heldStack != null && heldStack.getItem() instanceof ItemGun) {
                 GunType heldGunType = ((ItemGun) heldStack.getItem()).type;
@@ -591,7 +669,7 @@ public class TickHandlerClient {
         }
 
         // Player ammo overlay
-        if (!event.isCancelable() && event.type == ElementType.HOTBAR && FlansMod.bulletGuiEnable) {
+        if (event.type == ElementType.HOTBAR && FlansMod.bulletGuiEnable) {
             if (mc.thePlayer != null) {
                 ItemStack stack = mc.thePlayer.inventory.getCurrentItem();
                 if (stack != null && stack.getItem() instanceof ItemGun) {
@@ -744,13 +822,11 @@ public class TickHandlerClient {
                 }
             }
 
-            //Off-hand weapon graphics
-            mc.renderEngine.bindTexture(offHand);
-
             ItemStack currentStack = mc.thePlayer.inventory.getCurrentItem();
             PlayerData data = PlayerHandler.getPlayerData(mc.thePlayer, Side.CLIENT);
 
             if (currentStack != null && currentStack.getItem() instanceof ItemGun && ((ItemGun) currentStack.getItem()).type.oneHanded) {
+                mc.renderEngine.bindTexture(offHand);
                 for (int n = 0; n < 9; n++) {
                     if (data.offHandGunSlot == n + 1) {
                         tessellator.startDrawingQuads();
@@ -983,7 +1059,7 @@ public class TickHandlerClient {
 
     private static void renderScopeReticle(Minecraft minecraft, int screenWidth,
                                             int screenHeight, String dotTexture) {
-        if (dotTexture == null || FlansModClient.currentScope == null) {
+        if (FlansModClient.currentScope == null || !bindScopeOverlay(minecraft, dotTexture)) {
             return;
         }
         minecraft.entityRenderer.setupOverlayRendering();
@@ -991,7 +1067,6 @@ public class TickHandlerClient {
         GL11.glDisable(GL11.GL_DEPTH_TEST);
         GL11.glDepthMask(false);
         GL11.glDisable(GL11.GL_ALPHA_TEST);
-        minecraft.renderEngine.bindTexture(FlansModResourceHandler.getScope(dotTexture));
 
         double size = 10D * FlansModClient.currentScope.getDotOverlayTextureScale();
         boolean greenReticle = isOkp7Scope();
@@ -1150,8 +1225,7 @@ public class TickHandlerClient {
         }
         NightVisionGogglesEffect.renderAfterHud(minecraft, intensity);
         if (intensity > 0.001F) {
-            ScaledResolution resolution = new ScaledResolution(minecraft,
-                    minecraft.displayWidth, minecraft.displayHeight);
+            ScaledResolution resolution = event.resolution;
             if (FlansModClient.currentScope != null
                     && !ThermalScopeEffect.usesModelScopeLens(FlansModClient.currentScope)
                     && minecraft.currentScreen == null && FlansModClient.zoomProgress > 0.95F) {
@@ -1208,6 +1282,7 @@ public class TickHandlerClient {
     public void renderTick(TickEvent.RenderTickEvent event) {
         switch (event.phase) {
             case START:
+                SCOPE_TEXTURES.uploadReady(Minecraft.getMinecraft());
                 RenderGun.beginReticleFrame();
                 ThermalScopeEffect.beginModelLensFrame();
                 NightVisionGogglesBrightness.beginFrame(Minecraft.getMinecraft());
@@ -1272,6 +1347,7 @@ public class TickHandlerClient {
      * Handle client ticks and remaining projectile/vehicle block light overrides.
      */
     public void clientTickStart(Minecraft mc) {
+        registerOverlayReloadListener(mc);
         enforceGammaLimit(mc);
         if (ClientProxy.grenadeRenderer != null) ClientProxy.grenadeRenderer.tick(mc);
         KeyInputHandler.checkLightKeyBinding(mc);
@@ -1300,6 +1376,10 @@ public class TickHandlerClient {
         }
         BulletHoleDecalRenderer.tick();
         TracerRicochetRenderer.tick();
+        updateProjectileAndVehicleLights(mc);
+    }
+
+    private static void updateProjectileAndVehicleLights(Minecraft mc) {
         if (FlansMod.ticker % lightOverrideRefreshRate == 0 && mc.theWorld != null) {
             //Check graphics setting and adjust refresh rate
             lightOverrideRefreshRate = mc.gameSettings.fancyGraphics ? 10 : 20;
@@ -1314,7 +1394,9 @@ public class TickHandlerClient {
             for (Object obj : mc.theWorld.loadedEntityList) {
                 if (obj instanceof EntityShootable) {
                     EntityShootable bullet = (EntityShootable) obj;
-                    if (!bullet.isDead && bullet.getType().hasDynamicLight) {
+                    if (bullet.isDead) continue;
+                    ShootableType bulletType = bullet.getType();
+                    if (bulletType != null && bulletType.hasDynamicLight) {
                         int x = (int) bullet.posX;
                         int y = (int) bullet.posY;
                         int z = (int) bullet.posZ;
@@ -1334,9 +1416,10 @@ public class TickHandlerClient {
                     int x = MathHelper.floor_double(mecha.posX);
                     int y = MathHelper.floor_double(mecha.posY);
                     int z = MathHelper.floor_double(mecha.posZ);
-                    if (mecha.lightLevel() > 0) {
+                    int lightLevel = mecha.lightLevel();
+                    if (lightLevel > 0) {
                         blockLightOverrides.add(new Vector3i(x, y, z));
-                        mc.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z, Math.max(mc.theWorld.getBlockLightValue(x, y, z), mecha.lightLevel()));
+                        mc.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z, Math.max(mc.theWorld.getBlockLightValue(x, y, z), lightLevel));
                         mc.theWorld.updateLightByType(EnumSkyBlock.Block, x + 1, y, z);
                         mc.theWorld.updateLightByType(EnumSkyBlock.Block, x - 1, y + 1, z);
                         mc.theWorld.updateLightByType(EnumSkyBlock.Block, x, y + 1, z);
@@ -1374,18 +1457,28 @@ public class TickHandlerClient {
         }
     }
 
-    public static void triggerMuzzleFlashLight(int playerEntityId) {
-        muzzleFlashLightTicks.put(playerEntityId, MUZZLE_FLASH_DURATION_TICKS);
+    public static void triggerMuzzleFlashLight(int playerEntityId, World packetWorld) {
         Minecraft minecraft = Minecraft.getMinecraft();
-        if (minecraft.thePlayer != null
-                && minecraft.thePlayer.getEntityId() == playerEntityId) {
-            if (localMuzzleFlashExposure <= 0F && minecraft.theWorld != null) {
-                int x = MathHelper.floor_double(minecraft.thePlayer.posX);
-                int y = MathHelper.floor_double(minecraft.thePlayer.posY
-                        + minecraft.thePlayer.getEyeHeight());
-                int z = MathHelper.floor_double(minecraft.thePlayer.posZ);
-                localMuzzleFlashBaseLightExposure = minecraft.theWorld.getSavedLightValue(
-                        EnumSkyBlock.Block, x, y, z) / 15F;
+        if (minecraft.func_152345_ab()) {
+            recordMuzzleFlashLight(minecraft, playerEntityId, packetWorld);
+        } else {
+            minecraft.func_152344_a(() -> recordMuzzleFlashLight(minecraft, playerEntityId, packetWorld));
+        }
+    }
+
+    private static void recordMuzzleFlashLight(Minecraft minecraft, int playerEntityId, World packetWorld) {
+        if (packetWorld == null || packetWorld != minecraft.theWorld || minecraft.thePlayer == null) {
+            return;
+        }
+        resetMuzzleFlashWorld(packetWorld);
+        MuzzleFlash flash = muzzleFlashes.computeIfAbsent(playerEntityId, id -> new MuzzleFlash());
+        flash.ticks = MUZZLE_FLASH_DURATION_TICKS;
+        if (minecraft.thePlayer.getEntityId() == playerEntityId) {
+            if (localMuzzleFlashExposure <= 0F) {
+                ChunkPosition position = flash.updatePosition(minecraft.thePlayer);
+                MuzzleFlashLight light = muzzleFlashLights.get(position);
+                int base = light == null ? getBlockLight(packetWorld, position) : light.base;
+                localMuzzleFlashBaseLightExposure = base / 15F;
             }
             localMuzzleFlashExposure = 1F;
         }
@@ -1467,64 +1560,137 @@ public class TickHandlerClient {
         shotShakeApplied = false;
     }
 
-    private static void updateMuzzleFlashLights(Minecraft minecraft) {
-        if (minecraft.theWorld == null) {
-            muzzleFlashLightTicks.clear();
-            muzzleFlashLightOverrides.clear();
+    private static void resetMuzzleFlashWorld(World world) {
+        if (muzzleFlashWorld != world) {
+            muzzleFlashWorld = world;
+            muzzleFlashes.clear();
+            muzzleFlashLights.clear();
+            retryMuzzleFlashPropagation = false;
             localMuzzleFlashExposure = 0F;
             localMuzzleFlashBaseLightExposure = -1F;
+        }
+    }
+
+    private static void updateMuzzleFlashLights(Minecraft minecraft) {
+        World world = minecraft.theWorld;
+        resetMuzzleFlashWorld(world);
+        if (world == null || (muzzleFlashes.isEmpty() && muzzleFlashLights.isEmpty())) {
             return;
         }
-
-        for (Vector3i position : muzzleFlashLightOverrides) {
-            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block,
-                    position.x, position.y, position.z);
-        }
-        muzzleFlashLightOverrides.clear();
         localMuzzleFlashExposure = 0F;
-        boolean localFlashActive = false;
+        localMuzzleFlashBaseLightExposure = -1F;
+        MuzzleFlashLight localLight = null;
 
-        Iterator<Map.Entry<Integer, Integer>> iterator = muzzleFlashLightTicks.entrySet().iterator();
+        Iterator<Map.Entry<Integer, MuzzleFlash>> iterator = muzzleFlashes.entrySet().iterator();
         while (iterator.hasNext()) {
-            Map.Entry<Integer, Integer> entry = iterator.next();
-            Entity entity = minecraft.theWorld.getEntityByID(entry.getKey());
-            int ticksRemaining = entry.getValue();
-            if (!(entity instanceof EntityPlayer) || entity.isDead || ticksRemaining <= 0) {
+            Map.Entry<Integer, MuzzleFlash> entry = iterator.next();
+            Entity entity = world.getEntityByID(entry.getKey());
+            if (!(entity instanceof EntityPlayer) || entity.isDead) {
                 iterator.remove();
                 continue;
             }
 
-            EntityPlayer shooter = (EntityPlayer)entity;
+            MuzzleFlash flash = entry.getValue();
+            ChunkPosition position = flash.updatePosition((EntityPlayer) entity);
+            MuzzleFlashLight light = muzzleFlashLights.computeIfAbsent(position, key -> new MuzzleFlashLight());
+            light.active = true;
+            if (entity == minecraft.thePlayer) {
+                localLight = light;
+                localMuzzleFlashExposure = flash.ticks / (float) MUZZLE_FLASH_DURATION_TICKS;
+            }
+            if (--flash.ticks == 0) {
+                iterator.remove();
+            }
+        }
+
+        removeExpiredMuzzleFlashLights(world);
+        for (Map.Entry<ChunkPosition, MuzzleFlashLight> entry : muzzleFlashLights.entrySet()) {
+            ChunkPosition position = entry.getKey();
+            MuzzleFlashLight light = entry.getValue();
+            light.active = false;
+            int existing = getBlockLight(world, position);
+            if (!light.overridden || existing != MUZZLE_FLASH_LIGHT_LEVEL) {
+                light.base = existing;
+            }
+            boolean needsLight = existing < MUZZLE_FLASH_LIGHT_LEVEL;
+            if (needsLight) {
+                world.setLightValue(EnumSkyBlock.Block, position.chunkPosX, position.chunkPosY, position.chunkPosZ,
+                        MUZZLE_FLASH_LIGHT_LEVEL);
+                light.overridden = true;
+            } else if (existing > MUZZLE_FLASH_LIGHT_LEVEL) {
+                light.overridden = false;
+            }
+            if (light.overridden && (needsLight || retryMuzzleFlashPropagation)) {
+                int x = position.chunkPosX, y = position.chunkPosY, z = position.chunkPosZ;
+                muzzleFlashLightNeighbors.add(new ChunkPosition(x + 1, y, z));
+                muzzleFlashLightNeighbors.add(new ChunkPosition(x - 1, y, z));
+                muzzleFlashLightNeighbors.add(new ChunkPosition(x, y + 1, z));
+                muzzleFlashLightNeighbors.add(new ChunkPosition(x, y - 1, z));
+                muzzleFlashLightNeighbors.add(new ChunkPosition(x, y, z + 1));
+                muzzleFlashLightNeighbors.add(new ChunkPosition(x, y, z - 1));
+            }
+        }
+        retryMuzzleFlashPropagation = false;
+        if (!muzzleFlashLightNeighbors.isEmpty()) {
+            propagateMuzzleFlashLights(world);
+        }
+        if (localLight != null) {
+            localMuzzleFlashBaseLightExposure = localLight.base / 15F;
+        }
+    }
+
+    private static void removeExpiredMuzzleFlashLights(World world) {
+        Iterator<Map.Entry<ChunkPosition, MuzzleFlashLight>> iterator = muzzleFlashLights.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<ChunkPosition, MuzzleFlashLight> entry = iterator.next();
+            MuzzleFlashLight light = entry.getValue();
+            if (!light.active) {
+                if (light.overridden) {
+                    relightBlock(world, entry.getKey());
+                }
+                iterator.remove();
+            }
+        }
+    }
+
+    private static void propagateMuzzleFlashLights(World world) {
+        // A vanilla neighbor update can derive light from all the installed origins.
+        // Recalculating an active origin itself would discard its synthetic light.
+        for (ChunkPosition position : muzzleFlashLightNeighbors) {
+            if (!muzzleFlashLights.containsKey(position)) {
+                retryMuzzleFlashPropagation |= !relightBlock(world, position);
+            }
+        }
+        muzzleFlashLightNeighbors.clear();
+    }
+
+    private static int getBlockLight(World world, ChunkPosition position) {
+        return world.getSavedLightValue(EnumSkyBlock.Block, position.chunkPosX, position.chunkPosY, position.chunkPosZ);
+    }
+
+    private static boolean relightBlock(World world, ChunkPosition position) {
+        return world.updateLightByType(EnumSkyBlock.Block, position.chunkPosX, position.chunkPosY, position.chunkPosZ);
+    }
+
+    private static final class MuzzleFlash {
+        private int ticks;
+        private ChunkPosition position;
+
+        private ChunkPosition updatePosition(EntityPlayer shooter) {
             int x = MathHelper.floor_double(shooter.posX);
             int y = MathHelper.floor_double(shooter.posY + shooter.getEyeHeight());
             int z = MathHelper.floor_double(shooter.posZ);
-            muzzleFlashLightOverrides.add(new Vector3i(x, y, z));
-            int existing = minecraft.theWorld.getSavedLightValue(EnumSkyBlock.Block, x, y, z);
-            minecraft.theWorld.setLightValue(EnumSkyBlock.Block, x, y, z,
-                    Math.max(existing, MUZZLE_FLASH_LIGHT_LEVEL));
-            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x + 1, y, z);
-            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x - 1, y, z);
-            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x, y + 1, z);
-            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x, y - 1, z);
-            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x, y, z + 1);
-            minecraft.theWorld.updateLightByType(EnumSkyBlock.Block, x, y, z - 1);
-
-            if (shooter == minecraft.thePlayer) {
-                localFlashActive = true;
-                localMuzzleFlashBaseLightExposure = existing / 15F;
-                localMuzzleFlashExposure = Math.max(localMuzzleFlashExposure,
-                        ticksRemaining / (float)MUZZLE_FLASH_DURATION_TICKS);
+            if (position == null || x != position.chunkPosX || y != position.chunkPosY || z != position.chunkPosZ) {
+                position = new ChunkPosition(x, y, z);
             }
+            return position;
+        }
+    }
 
-            if (ticksRemaining <= 1) {
-                iterator.remove();
-            } else {
-                entry.setValue(ticksRemaining - 1);
-            }
-        }
-        if (!localFlashActive) {
-            localMuzzleFlashBaseLightExposure = -1F;
-        }
+    private static final class MuzzleFlashLight {
+        private int base;
+        private boolean active;
+        private boolean overridden;
     }
 
     public void clientTickEnd(Minecraft minecraft) { /* Client side only */
@@ -1537,6 +1703,7 @@ public class TickHandlerClient {
         }
         RenderFlag.angle += 2F;
         FlansModClient.tick();
+        preloadActiveOverlay(minecraft);
     }
 
     public void renderTickStart(Minecraft mc, float smoothing) {
@@ -1616,11 +1783,15 @@ public class TickHandlerClient {
 		*/
     }
 
+    private String ammoHudLoadedText = "0", ammoHudReserveText = "0";
+    private int ammoHudLoaded, ammoHudReserve;
+
     private void renderAmmoHud(Minecraft mc, ItemStack gunStack, ItemGun gunItem, GunType gunType,
                                int screenWidth, int screenHeight) {
         int loaded = 0;
         int capacity = 0;
-        for (int slot = 0; slot < gunType.getNumAmmoItemsInGun(gunStack); slot++) {
+        int ammoSlots = gunType.getNumAmmoItemsInGun(gunStack);
+        for (int slot = 0; slot < ammoSlots; slot++) {
             ItemStack ammo = gunItem.getBulletItemStack(gunStack, slot);
             if (ammo != null) {
                 loaded += Math.max(0, ammo.getMaxDamage() - ammo.getItemDamage());
@@ -1641,7 +1812,7 @@ public class TickHandlerClient {
                     && gunType.isAmmo(((ItemShootable) ammo.getItem()).type, gunStack)) {
                 reserve += ammo.stackSize * (ammo.getMaxDamage() - ammo.getItemDamage());
                 capacity = Math.max(capacity,
-                        ammo.getMaxDamage() * gunType.getNumAmmoItemsInGun(gunStack));
+                        ammo.getMaxDamage() * ammoSlots);
             }
         }
         boolean empty = loaded == 0;
@@ -1652,25 +1823,36 @@ public class TickHandlerClient {
         int bulletColor = empty ? 0xA0CB6868 : 0xA052D5C8;
 
         FontRenderer font = mc.fontRenderer;
-        String loadedText = Integer.toString(loaded);
-        String reserveText = Integer.toString(reserve);
-        float countScale = Math.min(2F, 55F / Math.max(1, font.getStringWidth(loadedText)));
-        int loadedWidth = (int) (font.getStringWidth(loadedText) * countScale);
+        if (loaded != ammoHudLoaded) {
+            ammoHudLoaded = loaded;
+            ammoHudLoadedText = Integer.toString(loaded);
+        }
+        if (reserve != ammoHudReserve) {
+            ammoHudReserve = reserve;
+            ammoHudReserveText = Integer.toString(reserve);
+        }
+        int loadedTextWidth = font.getStringWidth(ammoHudLoadedText);
+        int reserveTextWidth = font.getStringWidth(ammoHudReserveText);
+        float countScale = Math.min(2F, 55F / Math.max(1, loadedTextWidth));
+        int loadedWidth = (int) (loadedTextWidth * countScale);
         int dividerOffset = 59 + loadedWidth;
-        int reserveWidth = Math.max(30, font.getStringWidth(reserveText)) + 12;
+        int reserveWidth = Math.max(30, reserveTextWidth) + 12;
         int panelWidth = dividerOffset + reserveWidth;
         int panelHeight = 49;
         int x = screenWidth - panelWidth - 8;
         int y = screenHeight - panelHeight - 8;
         int reserveX = x + dividerOffset
-                + (reserveWidth - font.getStringWidth(reserveText)) / 2;
+                + (reserveWidth - reserveTextWidth) / 2;
 
-        Gui.drawRect(x, y, x + panelWidth, y + panelHeight, empty ? 0x90402125 : 0x900A2428);
-        Gui.drawRect(x, y, x + panelWidth, y + 2, accentColor);
-        Gui.drawRect(x + 4, y + 4, x + dividerOffset - 4, y + 45,
+        int dividerColor = empty ? 0x887F3838 : 0x8844CFC5;
+        Tessellator quads = Tessellator.instance;
+        beginAmmoHudRects(quads);
+        addAmmoHudRect(quads, x, y, x + panelWidth, y + panelHeight, empty ? 0x90402125 : 0x900A2428);
+        addAmmoHudRect(quads, x, y, x + panelWidth, y + 2, accentColor);
+        addAmmoHudRect(quads, x + 4, y + 4, x + dividerOffset - 4, y + 45,
                 empty ? 0x304D2020 : 0x2832DCCB);
-        Gui.drawRect(x + dividerOffset, y + 7, x + dividerOffset + 1, y + 42,
-                empty ? 0x887F3838 : 0x8844CFC5);
+        addAmmoHudRect(quads, x + dividerOffset, y + 7, x + dividerOffset + 1, y + 42, dividerColor);
+        endAmmoHudRects(quads, dividerColor);
 
         RenderHelper.enableGUIStandardItemLighting();
         GL11.glEnable(GL12.GL_RESCALE_NORMAL);
@@ -1690,10 +1872,10 @@ public class TickHandlerClient {
         GL11.glTranslatef(x + 43 + (dividerOffset - 47 - loadedWidth) / 2F,
                 y + (panelHeight - font.FONT_HEIGHT * countScale) / 2F, 0F);
         GL11.glScalef(countScale, countScale, 1F);
-        font.drawStringWithShadow(loadedText, 0, 0, countColor);
+        font.drawStringWithShadow(ammoHudLoadedText, 0, 0, countColor);
         GL11.glPopMatrix();
 
-        font.drawStringWithShadow(reserveText, reserveX, y + 11, detailColor);
+        font.drawStringWithShadow(ammoHudReserveText, reserveX, y + 11, detailColor);
 
         EnumFireMode mode = gunType.getFireMode(gunStack);
         int bulletCount = mode == EnumFireMode.BURST ? 2
@@ -1704,12 +1886,37 @@ public class TickHandlerClient {
         font.drawStringWithShadow(modeLetter,
                 bulletsX + (bulletCount * 8 - 2 - font.getStringWidth(modeLetter)) / 2,
                 y + 26, empty ? 0xA0C07070 : 0xA0A2CF86);
+        beginAmmoHudRects(quads);
         for (int bullet = 0; bullet < bulletCount; bullet++) {
             int bulletX = bulletsX + bullet * 8;
-            Gui.drawRect(bulletX + 2, y + 35, bulletX + 4, y + 37, bulletColor);
-            Gui.drawRect(bulletX + 1, y + 37, bulletX + 5, y + 44, bulletColor);
-            Gui.drawRect(bulletX, y + 44, bulletX + 6, y + 46, bulletColor);
+            addAmmoHudRect(quads, bulletX + 2, y + 35, bulletX + 4, y + 37, bulletColor);
+            addAmmoHudRect(quads, bulletX + 1, y + 37, bulletX + 5, y + 44, bulletColor);
+            addAmmoHudRect(quads, bulletX, y + 44, bulletX + 6, y + 46, bulletColor);
         }
+        endAmmoHudRects(quads, bulletColor);
+    }
+
+    private static void beginAmmoHudRects(Tessellator quads) {
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ZERO);
+        quads.startDrawingQuads();
+    }
+
+    private static void addAmmoHudRect(Tessellator quads, int left, int top, int right, int bottom, int color) {
+        quads.setColorRGBA_I(color & 0xFFFFFF, color >>> 24);
+        quads.addVertex(right, top, 0);
+        quads.addVertex(left, top, 0);
+        quads.addVertex(left, bottom, 0);
+        quads.addVertex(right, bottom, 0);
+    }
+
+    private static void endAmmoHudRects(Tessellator quads, int color) {
+        quads.draw();
+        GL11.glColor4f((color >> 16 & 255) / 255F, (color >> 8 & 255) / 255F,
+                (color & 255) / 255F, (color >>> 24) / 255F);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glDisable(GL11.GL_BLEND);
     }
 
     private void drawSlotInventory(FontRenderer fontRenderer, ItemStack itemstack, int i, int j) {

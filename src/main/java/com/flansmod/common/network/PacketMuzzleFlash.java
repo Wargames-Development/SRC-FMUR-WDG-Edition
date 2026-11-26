@@ -70,12 +70,12 @@ public class PacketMuzzleFlash extends PacketBase
     @SideOnly(Side.CLIENT)
     public void handleClientSide(EntityPlayer clientPlayer)
     {
-        if (type == null || type.isEmpty()) {
+        if (clientPlayer == null || type == null || type.isEmpty()) {
             return;
         }
 
         boolean isThisPlayer = playerID == clientPlayer.getEntityId();
-        TickHandlerClient.triggerMuzzleFlashLight(playerID);
+        TickHandlerClient.triggerMuzzleFlashLight(playerID, clientPlayer.worldObj);
         GunType g = GunType.getGun(gunType);
         if (g == null || g.model == null) {
             return;

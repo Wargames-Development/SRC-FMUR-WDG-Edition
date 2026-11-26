@@ -109,7 +109,7 @@ public final class ThermalRenderApi {
     public static boolean isSupported() {
         return GLContext.getCapabilities().OpenGL20 && OpenGlHelper.isFramebufferEnabled()
                 && ThermalFramebuffers.isAvailable()
-                && ThermalCamera.ensureShader();
+                && ThermalCamera.hasShader();
     }
 
     /** Read-only geometry replay: isolate Iris program selection and restore its matrix cache. */
