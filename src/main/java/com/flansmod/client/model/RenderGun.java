@@ -29,6 +29,7 @@ import com.flansmod.common.vector.Vector3f;
 import cpw.mods.fml.relauncher.Side;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.PositionedSoundRecord;
+import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.model.ModelBiped;
 import net.minecraft.client.model.ModelRenderer;
 import net.minecraft.client.renderer.OpenGlHelper;
@@ -86,10 +87,68 @@ public class RenderGun implements IItemRenderer {
     private Matrix4f dotSwayDelta;
     private static IScope dotReticleScope;
     public static float dotReticleX, dotReticleY;
+    private static EntityPlayerSP adsHandPlayer;
+    private static float savedArmYaw, savedPreviousArmYaw, savedArmPitch, savedPreviousArmPitch;
+    private static float savedCameraYaw, savedPreviousCameraYaw, savedCameraPitch, savedPreviousCameraPitch;
 
     public static void beginReticleFrame() {
+        restoreAdsHand();
         dotReticleScope = null;
         dotReticleX = dotReticleY = 0F;
+    }
+
+    public static void stabilizeAdsHand(Minecraft mc) {
+        if (adsHandPlayer != null || mc.thePlayer == null || mc.gameSettings.thirdPersonView != 0
+                || mc.gameSettings.hideGUI || mc.renderViewEntity != mc.thePlayer) return;
+        ItemStack held = mc.thePlayer.getHeldItem();
+        if (held == null || !(held.getItem() instanceof ItemGun)) return;
+        IScope scope = ((ItemGun)held.getItem()).type.getCurrentScope(held);
+        float blend = adsStabilityBlend(scope);
+        if (blend <= 0F) return;
+
+        // The world has already been drawn. Fade vanilla's bob and hand lag for
+        // the hand pass, then restore the inputs before rendering the scope camera.
+        EntityPlayerSP player = adsHandPlayer = mc.thePlayer;
+        savedArmYaw = player.renderArmYaw;
+        savedPreviousArmYaw = player.prevRenderArmYaw;
+        savedArmPitch = player.renderArmPitch;
+        savedPreviousArmPitch = player.prevRenderArmPitch;
+        savedCameraYaw = player.cameraYaw;
+        savedPreviousCameraYaw = player.prevCameraYaw;
+        savedCameraPitch = player.cameraPitch;
+        savedPreviousCameraPitch = player.prevCameraPitch;
+        player.renderArmYaw += (player.rotationYaw - player.renderArmYaw) * blend;
+        player.prevRenderArmYaw += (player.rotationYaw - player.prevRenderArmYaw) * blend;
+        player.renderArmPitch += (player.rotationPitch - player.renderArmPitch) * blend;
+        player.prevRenderArmPitch += (player.rotationPitch - player.prevRenderArmPitch) * blend;
+        player.cameraYaw *= 1F - blend;
+        player.prevCameraYaw *= 1F - blend;
+        player.cameraPitch *= 1F - blend;
+        player.prevCameraPitch *= 1F - blend;
+    }
+
+    public static void restoreAdsHand() {
+        if (adsHandPlayer == null) return;
+        adsHandPlayer.renderArmYaw = savedArmYaw;
+        adsHandPlayer.prevRenderArmYaw = savedPreviousArmYaw;
+        adsHandPlayer.renderArmPitch = savedArmPitch;
+        adsHandPlayer.prevRenderArmPitch = savedPreviousArmPitch;
+        adsHandPlayer.cameraYaw = savedCameraYaw;
+        adsHandPlayer.prevCameraYaw = savedPreviousCameraYaw;
+        adsHandPlayer.cameraPitch = savedCameraPitch;
+        adsHandPlayer.prevCameraPitch = savedPreviousCameraPitch;
+        adsHandPlayer = null;
+    }
+
+    private static float adsStabilityBlend(IScope scope) {
+        if (!ThermalScopeEffect.hasPictureInPictureLensGeometry(scope)) return 0F;
+        float zoom = FlansModClient.lastZoomProgress + (zoomProgress - FlansModClient.lastZoomProgress) * smoothing;
+        return scopeAlignmentProgress(zoom);
+    }
+
+    private static float scopeAlignmentProgress(float zoom) {
+        float progress = MathHelper.clamp_float((zoom - 0.7F) / 0.3F, 0F, 1F);
+        return progress * progress * (3F - 2F * progress);
     }
 
     public static boolean hasModelReticle(IScope scope) {
@@ -286,13 +345,18 @@ public class RenderGun implements IItemRenderer {
                         mouseOffsetY = MathHelper.clamp_float(mouseOffsetY,
                                 -ADS_SIGHT_SWAY_LIMIT_DEGREES, ADS_SIGHT_SWAY_LIMIT_DEGREES);
                     }
+                    float passiveMovement = 1F - adsStabilityBlend(scope);
+                    mouseOffsetX *= passiveMovement;
+                    mouseOffsetY *= passiveMovement;
 
                     actualZoomProgress = FlansModClient.lastZoomProgress + (FlansModClient.zoomProgress - FlansModClient.lastZoomProgress) * (float) Math.sin(smoothing);
                     actualZoomProgress *= model.adsEffectMultiplier;
                     actualStanceProgress = FlansModClient.lastStanceProgress + (FlansModClient.stanceProgress - FlansModClient.lastStanceProgress) * (float) Math.sin(smoothing);
+                    actualStanceProgress *= passiveMovement;
                     actualCrouchProgress = FlansModClient.lastCrouchProgress + (FlansModClient.crouchProgress - FlansModClient.lastCrouchProgress) * (float) Math.sin(smoothing);
                     actualSpringProgress = FlansModClient.lastSpringProgress + (FlansModClient.springProgress - FlansModClient.lastSpringProgress) * smoothing;
-                    float rand = (float) Math.sin(System.currentTimeMillis() / 1000.0) * (1 - actualZoomProgress);
+                    actualSpringProgress *= passiveMovement;
+                    float rand = (float) Math.sin(System.currentTimeMillis() / 1000.0) * (1 - actualZoomProgress) * passiveMovement;
 
                     //收枪旋转
                     GL11.glRotatef(25F - 5F * actualZoomProgress + model.stanceRotate.z * actualStanceProgress, 0F, 0F, 1F);
@@ -1658,13 +1722,14 @@ public class RenderGun implements IItemRenderer {
             if (type == ItemRenderType.EQUIPPED || type == ItemRenderType.EQUIPPED_FIRST_PERSON)
                 AttachmentLightRenderer.renderEmitter(attachment, model, renderedGun, attachmentOwner, f,
                         type == ItemRenderType.EQUIPPED_FIRST_PERSON, renderedLaserPose, smoothing);
-            if(zoomProgress > 0.8F) {
-                renderZDepthModel(model, f, type);
-                model.renderAttachment(f);
-            } else {
-                model.renderAttachment(f);
-                renderZDepthModel(model, f, type);
-            }
+            // The active PiP image owns this aperture. Drawing the old glass as well
+            // leaves an extra surface that can overlap the housing at the lens edge.
+            boolean showGlass = type != ItemRenderType.EQUIPPED_FIRST_PERSON
+                    || attachment != FlansModClient.currentScope || !attachment.pictureInPicture
+                    || attachment.thermalOnModel || !ThermalScopeEffect.isModelLensActive();
+            if (showGlass && zoomProgress > 0.8F) renderZDepthModel(model, f, type);
+            model.renderAttachment(f);
+            if (showGlass && zoomProgress <= 0.8F) renderZDepthModel(model, f, type);
 
 			if (type == ItemRenderType.EQUIPPED_FIRST_PERSON) {
 				if (dotSwayDelta != null && attachment == FlansModClient.currentScope
@@ -1802,8 +1867,7 @@ public class RenderGun implements IItemRenderer {
 				+ (m4 * m2 - m0 * m6) * dy
 				+ (m0 * m5 - m4 * m1) * dz) * inverse;
 
-		float progress = MathHelper.clamp_float((zoom - 0.7F) / 0.3F, 0F, 1F);
-		progress = progress * progress * (3F - 2F * progress);
+		float progress = scopeAlignmentProgress(zoom);
 		GL11.glTranslatef(localX * progress, localY * progress, localZ * progress);
 	}
 

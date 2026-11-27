@@ -123,7 +123,8 @@ supplied ringtone by frasse converted to mono Ogg Vorbis. Both items are
 available in Gadgets.
 
 1. In a test world, give yourself `flansmod:wdg_ied` and `flansmod:wdg_nokia`.
-   Right-click with the IED to toss it onto a surface, then step back.
+   Toss an IED at the floor and at a wall. It should tumble like the M112
+   and settle lengthwise against either surface. Step back before testing the Nokia.
 2. Hold right-click with the Nokia. In first person, check that the digits
    appear as the keys depress. The ringtone starts at 4 seconds, after the
    call key goes down. A full call takes 7.2 seconds at 20 TPS.

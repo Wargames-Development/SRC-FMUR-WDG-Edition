@@ -1255,6 +1255,13 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
             event.setCanceled(true);
     }
 
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void stabilizeAdsHand(net.minecraftforge.client.event.RenderHandEvent event) {
+        if (!ThermalScopeEffect.isRenderingScopedWorld() && !ThermalRenderApi.isHeatPass()) {
+            RenderGun.stabilizeAdsHand(Minecraft.getMinecraft());
+        }
+    }
+
     @SubscribeEvent
     public void renderWorldLast(RenderWorldLastEvent event) {
         if (ThermalScopeEffect.isRenderingScopedWorld()) {
@@ -1294,6 +1301,7 @@ public class TickHandlerClient implements IResourceManagerReloadListener {
                 break;
             case END:
                 Minecraft minecraft = Minecraft.getMinecraft();
+                RenderGun.restoreAdsHand();
                 try {
                     renderTickEnd(minecraft, event.renderTickTime);
                     renderEquipmentEffectsWithHiddenHud(minecraft, event.renderTickTime);

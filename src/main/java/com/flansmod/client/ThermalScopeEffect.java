@@ -520,7 +520,7 @@ public final class ThermalScopeEffect {
         }
 
         // The centered thermal fallback is drawn without the model aperture inset.
-        float fallbackDiameter=hasThermalVision() && !hasPictureInPictureLensGeometry()
+        float fallbackDiameter=hasThermalVision() && !hasPictureInPictureLensGeometry(scope)
                 ? POST_COMPOSITE_THERMAL_RADIUS_FRACTION*2F
                 : MODEL_SCOPE_LENS_DIAMETER_FRACTION*POST_COMPOSITE_LENS_INSET;
         return modelLensMagnification(desiredMagnification,fallbackDiameter);
@@ -645,7 +645,8 @@ public final class ThermalScopeEffect {
 
     /** Every camera feed is composited after primary pack finalization. */
     public static boolean usesPostCompositeModelLens() {
-        return isModelLensActive() && modelLensValid && (hasThermalVision() || hasPictureInPictureLensGeometry());
+        return isModelLensActive() && modelLensValid
+                && (hasThermalVision() || hasPictureInPictureLensGeometry(FlansModClient.currentScope));
     }
 
     /**
@@ -741,12 +742,11 @@ public final class ThermalScopeEffect {
         return true;
     }
 
-    private static boolean hasPictureInPictureLensGeometry() {
-        if (FlansModClient.currentScope instanceof AttachmentType) {
-            return ((AttachmentType)FlansModClient.currentScope).pictureInPicture;
+    public static boolean hasPictureInPictureLensGeometry(IScope scope) {
+        if (scope instanceof AttachmentType) {
+            return ((AttachmentType)scope).pictureInPicture;
         }
-        return FlansModClient.currentScope instanceof GunType
-                && ((GunType)FlansModClient.currentScope).pictureInPicture;
+        return scope instanceof GunType && ((GunType)scope).pictureInPicture;
     }
 
     public static void renderPostCompositeModelLens(Minecraft mc, float partialTicks) {

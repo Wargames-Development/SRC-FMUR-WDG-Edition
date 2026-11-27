@@ -3,7 +3,7 @@ package com.flansmod.client;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 
-/** Color policy for the BFMC optical reticle textures. */
+/** BFMC PiP reticles with switchable illumination on the represented optic. */
 final class ScopeReticle {
     private static boolean red;
 
@@ -12,30 +12,11 @@ final class ScopeReticle {
     private static boolean supportsColor(String reticle) {
         if (reticle == null) return false;
         switch (FlansModResourceHandler.getScope(reticle).getResourcePath()) {
-            case "gui/PIP/ACOGTA01.png":
-            case "gui/PIP/ACOGTA31.png":
-            case "gui/PIP/C25Scope.png":
-            case "gui/PIP/C79.png":
-            case "gui/PIP/CL6X.png":
             case "gui/PIP/ELCAN.png":
-            case "gui/PIP/JGM-4.png":
-            case "gui/PIP/jgm4-ladder.png":
-            case "gui/PIP/MBTLAW.png":
-            case "gui/PIP/mgl140-ranging.png":
-            case "gui/PIP/PF-89.png":
-            case "gui/PIP/PKA.png":
-            case "gui/PIP/pka-chevron.png":
-            case "gui/PIP/pka-diamond.png":
             case "gui/PIP/pkas-ring.png":
             case "gui/PIP/PKS07.png":
-            case "gui/PIP/Prisma.png":
-            case "gui/PIP/prisma-ranging.png":
             case "gui/PIP/PSO1.png":
             case "gui/PIP/pso1-etched.png":
-            case "gui/PIP/PzF3.png":
-            case "gui/PIP/QBU-10.png":
-            case "gui/PIP/RifleScope.png":
-            case "gui/PIP/rifle-scope-etched.png":
                 return true;
             default:
                 return false;

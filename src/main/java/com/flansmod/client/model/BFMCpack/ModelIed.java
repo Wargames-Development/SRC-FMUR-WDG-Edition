@@ -1,6 +1,7 @@
 package com.flansmod.client.model.BFMCpack;
 
 import com.flansmod.common.FlansMod;
+import com.flansmod.common.guns.EntityGrenade;
 import net.minecraft.client.model.ModelBase;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
@@ -29,6 +30,11 @@ public class ModelIed extends ModelBase {
         try {
             float size = scale * 5.2F;
             GL11.glScalef(size, size, size);
+            if (entity instanceof EntityGrenade) {
+                // Center the OBJ's long axis for the tumble. Once stuck, local +Y points out of the surface.
+                GL11.glTranslatef(-0.78125F, ((EntityGrenade) entity).stuck ? 0.25F : 0F, 0F);
+                GL11.glRotatef(-90F, 0F, 0F, 1F);
+            }
             GL11.glEnable(GL11.GL_NORMALIZE);
             GL11.glDisable(GL11.GL_CULL_FACE);
             model.renderAll();

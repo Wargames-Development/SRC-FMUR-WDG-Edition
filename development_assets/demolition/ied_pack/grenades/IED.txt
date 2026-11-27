@@ -13,7 +13,7 @@ ThrowSpeed 0.9
 FallSpeed 1.5
 HitBoxSize 0.42
 Sticky true
-SpinWhenThrown false
+SpinWhenThrown true
 Remote true
 PrimeDelay 40
 DespawnTime 20000

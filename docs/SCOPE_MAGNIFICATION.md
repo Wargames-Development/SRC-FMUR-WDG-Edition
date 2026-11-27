@@ -58,18 +58,20 @@ Use `--pack "path/to/BFMC Gun Pack"` for another installation, then restart the
 client. The installer updates the affected definitions. The FMUR build
 provides the JGM-4, Prisma, PK-A, PK-AS, Rifle Scope and PSO-1 reticles and CNVD-T skin.
 
-Aim through an eligible BFMC picture-in-picture optic and press **Toggle Scope
-Reticle Color** (default **U**) to switch between black and red. The switch uses
-the flashlight/laser click. Both Rifle Scope variants, the PSO-1 and the PKS-07
-support the toggle. Holographic sights and green reticles keep their own colors.
-Check the redrawn reticles on the 8× and 8–14× Rifle Scopes and the PSO-1.
+Aim through the SpecterDR, PSO-1, PK-AS or either PKS-07 variant and press
+**Toggle Scope Reticle Color** (default **U**) to switch between black and red
+with the flashlight/laser click. The ACOGs, Rifle Scopes, holographic sights and
+green sights use their authored reticle colors. At full ADS with a PiP scope,
+turn, strafe and jump to check that the gun, hands, lens edge and reticle stay
+steady on screen. Aim with iron sights or a non-PiP red dot to check their
+usual sway. Recoil and reload animations still play.
 
 Aim through the JGM-4, Prisma, PK-A and PK-AS to check the reticle and the fit of
 the PiP image inside the housing. PK-AS uses a ring and dot at 1x. Inspect
 the CNVD-T from the side for the housing, control and lens-ring finishes, then
 aim to check the thermal image. Aim through the Coyote, Reflex, Kobra, HOLO,
-QXM-7 and OKP-7 while turning quickly. As a reticle crosses the edge, only the
-portion within the lens opening should be visible, including with night vision on.
+QXM-7 and OKP-7 and check that their dots stay within the lens, including with
+night vision on.
 
 For the grenade render-distance check, throw an M67 or M83 across open terrain
 and follow it past 10 blocks. The grenade model has a minimum culling distance

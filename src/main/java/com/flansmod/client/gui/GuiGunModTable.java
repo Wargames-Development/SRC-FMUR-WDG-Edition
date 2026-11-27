@@ -29,13 +29,14 @@ import java.util.List;
 import static com.flansmod.client.gui.GunPreviewStyle.*;
 
 public class GuiGunModTable extends GuiContainer {
-    private enum Tab { ATTACHMENTS, STATS }
-
-    private static final int INSET = 6, TABS_TOP = 29, BODY_TOP = 47;
+    private static final int INSET = 6, BODY_TOP = 28, SIDEBAR_WIDTH = 184;
+    private static final int STATS_HEIGHT = 64, INVENTORY_WIDTH = 162;
+    private static final int SURFACE = 0xF2181A19, FRAME = 0xFF626754, DIVIDER = 0xFF484C40;
+    private static final int PREVIEW_EDGE = 0xFF111312, PREVIEW_CENTER = 0xFF222624;
+    private static final int SLOT_FILL = 0xFF222624, SLOT_BORDER = 0xFF525951;
     private static final int PAINT_LEFT = INSET + 5, PAINT_HEIGHT = 36;
     private static final int NONE = -1, HIDDEN = -1000, MOUNT_SLOT_OFFSET = 26;
     private static final int GADGET_MOUNT = 4, OPPOSITE_GADGET_MOUNT = 6;
-    private static final String[] TAB_NAMES = {"Attachments", "Stats"};
     private static final String[] MOUNT_NAMES = {"Barrel", "Sight", "Stock", "Grip", "Side rail", "Slide", "Opposite rail"};
 
     private final InventoryPlayer playerInventory;
@@ -43,11 +44,11 @@ public class GuiGunModTable extends GuiContainer {
     private final GunStatsRadar radar = new GunStatsRadar();
     private final float[] projectedMount = new float[2];
     private final int[] mountX = new int[MOUNT_NAMES.length], mountY = new int[MOUNT_NAMES.length];
-    private Tab tab = Tab.ATTACHMENTS;
     private GunType lastGun;
     private int activeMount = NONE, pendingMount = NONE, pressX, pressY;
-    private int paintScroll, paintColumns, paintTop, footerTop, inventoryLeft, guiScale;
-    private boolean clickingDetails;
+    private int paintScroll, paintColumns, paintTop, paintRight;
+    private int previewRight, previewBottom, statsTop, footerTop, inventoryLeft, guiScale;
+    private boolean wideLayout, clickingDetails;
 
     public GuiGunModTable(InventoryPlayer inventory, World world) {
         super(new ContainerGunModTable(inventory, world));
@@ -57,19 +58,25 @@ public class GuiGunModTable extends GuiContainer {
 
     @Override
     public void initGui() {
-        xSize = width - 2 * Math.max(8, width / 12);
-        ySize = height - 12;
+        xSize = Math.min(580, width - 16);
+        ySize = Math.min(340, height - 12);
+        wideLayout = xSize >= 430 && ySize >= 258;
         footerTop = ySize - 89;
-        inventoryLeft = xSize - INSET - 166;
-        paintColumns = Math.max(1, (inventoryLeft - PAINT_LEFT - 16) / 18);
-        paintTop = footerTop + 34;
+        statsTop = wideLayout ? BODY_TOP + 3 : footerTop - STATS_HEIGHT - 2;
+        previewRight = wideLayout ? xSize - SIDEBAR_WIDTH - 1 : xSize - 1;
+        paintTop = wideLayout ? ySize - 48 : footerTop + 39;
+        previewBottom = wideLayout ? paintTop - 13 : statsTop;
+        inventoryLeft = xSize - INSET - INVENTORY_WIDTH - (wideLayout ? 5 : 0);
+        int weaponX = (wideLayout ? previewRight : inventoryLeft) - INSET - 30;
+        paintRight = weaponX - 12;
+        paintColumns = Math.max(1, (paintRight - PAINT_LEFT - 2) / 18);
         guiScale = new ScaledResolution(mc, mc.displayWidth, mc.displayHeight).getScaleFactor();
         super.initGui();
 
         Arrays.fill(mountY, HIDDEN);
-        moveSlot(0, inventoryLeft - 40, footerTop + 13);
+        moveSlot(0, weaponX, paintTop + 15);
         for (int i = 0; i < 36; i++) {
-            moveSlot(17 + i, inventoryLeft + 3 + i % 9 * 18, footerTop + (i < 27 ? 13 + i / 9 * 18 : 70));
+            moveSlot(17 + i, inventoryLeft + i % 9 * 18, footerTop + (i < 27 ? 13 + i / 9 * 18 : 70));
         }
         updateAttachmentSlots(currentGun());
     }
@@ -90,30 +97,36 @@ public class GuiGunModTable extends GuiContainer {
             GL11.glTranslated(guiLeft, guiTop, 0);
             GL11.glDisable(GL11.GL_DEPTH_TEST);
             GL11.glDisable(GL11.GL_LIGHTING);
-            panel(INSET, 0, xSize - INSET, 27, PANEL, BORDER);
-            panel(INSET, BODY_TOP, xSize - INSET, footerTop - 3, GRID, BORDER);
-            panel(inventoryLeft, footerTop, xSize - INSET, ySize, PANEL, BORDER);
-            panel(inventoryLeft - 60, footerTop, inventoryLeft - 5, footerTop + 32, PANEL, BORDER);
-            title(fontRendererObj, StatCollector.translateToLocal("tile.flansWorkbench.1.name"),
-                    xSize / 2, 4, xSize - 2 * INSET - 8);
-            if (gun != null) center(fontRendererObj.trimStringToWidth(weapon().getDisplayName(), xSize - 2 * INSET - 8),
-                    xSize / 2, 16, MUTED);
-            center("Weapon", inventoryLeft - 32, footerTop + 3, TEXT);
-            text(StatCollector.translateToLocal("container.inventory"), inventoryLeft + 3, footerTop + 3, TEXT);
-            drawTabs();
-
+            panel(0, 0, xSize, ySize, SURFACE, FRAME);
+            drawRect(1, BODY_TOP - 1, xSize - 1, BODY_TOP, DIVIDER);
+            int previewMid = (BODY_TOP + previewBottom) / 2;
+            drawGradientRect(1, BODY_TOP, previewRight, previewMid, PREVIEW_EDGE, PREVIEW_CENTER);
+            drawGradientRect(1, previewMid, previewRight, previewBottom, PREVIEW_CENTER, PREVIEW_EDGE);
+            if (wideLayout) {
+                drawRect(previewRight, BODY_TOP, previewRight + 1, ySize - 1, DIVIDER);
+                drawRect(previewRight + 1, footerTop - 2, xSize - 1, footerTop - 1, DIVIDER);
+            } else {
+                drawRect(1, statsTop, xSize - 1, statsTop + 1, DIVIDER);
+                drawRect(1, footerTop - 2, xSize - 1, footerTop - 1, DIVIDER);
+            }
+            int titleCenter = xSize / 2;
+            int titleWidth = xSize - 2 * INSET - 8;
+            title(fontRendererObj, StatCollector.translateToLocal("tile.flansWorkbench.1.name"), titleCenter, 4, titleWidth);
+            if (gun != null) center(fontRendererObj.trimStringToWidth(weapon().getDisplayName(), titleWidth), titleCenter, 16, MUTED);
+            center("Weapon", inventorySlots.getSlot(0).xDisplayPosition + 8, paintTop + 4, TEXT);
+            text(StatCollector.translateToLocal("container.inventory"), inventoryLeft, footerTop + 2, TEXT);
             if (gun == null) {
-                center("Place a weapon in the table", xSize / 2, (BODY_TOP + footerTop) / 2, MUTED);
-            } else if (tab == Tab.STATS) {
-                radar.draw(fontRendererObj, gun, weapon(), INSET, BODY_TOP, xSize - INSET, footerTop - 3);
+                center("Place a weapon in the table", previewRight / 2, (BODY_TOP + previewBottom) / 2, MUTED);
             } else {
                 drawAttachments(gun, mouseX - guiLeft, mouseY - guiTop);
+                int statsLeft = wideLayout ? previewRight + 5 : INSET;
+                radar.draw(fontRendererObj, gun, weapon(), statsLeft, statsTop, xSize - INSET, footerTop - 3, wideLayout);
+                drawPaint(weapon(), gun);
             }
-            if (gun != null) drawPaint(weapon(), gun);
             for (int i = 0; i < inventorySlots.inventorySlots.size(); i++) {
                 Slot slot = inventorySlots.getSlot(i);
                 if (slot.yDisplayPosition >= 0) drawSlot(slot.xDisplayPosition, slot.yDisplayPosition,
-                        tab == Tab.ATTACHMENTS && activeMount != NONE && i == mountSlot(activeMount));
+                        activeMount != NONE && i == mountSlot(activeMount));
             }
         } finally {
             GL11.glPopMatrix();
@@ -121,22 +134,9 @@ public class GuiGunModTable extends GuiContainer {
         }
     }
 
-    private void drawTabs() {
-        for (int i = 0; i < TAB_NAMES.length; i++) {
-            int left = tabEdge(i), right = tabEdge(i + 1);
-            boolean selected = i == tab.ordinal();
-            panel(left, TABS_TOP, right - 1, BODY_TOP - 2, CARD, selected ? SELECTED : BORDER);
-            center(TAB_NAMES[i], (left + right) / 2, TABS_TOP + 4, selected ? TEXT : MUTED);
-        }
-    }
-
-    private int tabEdge(int i) {
-        return INSET + (xSize - 2 * INSET + 1) * i / TAB_NAMES.length;
-    }
-
     private void drawAttachments(GunType gun, int mouseX, int mouseY) {
         if (gun.model == null) {
-            center("3D preview unavailable", xSize / 2, BODY_TOP + 6, MUTED);
+            center("3D preview unavailable", previewRight / 2, BODY_TOP + 2, MUTED);
         } else {
             drawPreview(gun);
             int hovered = hitMount(mouseX, mouseY);
@@ -151,21 +151,26 @@ public class GuiGunModTable extends GuiContainer {
                 center(MOUNT_NAMES[i], slot.xDisplayPosition + 8, slot.yDisplayPosition - 10, TEXT);
             }
         }
-        if (gun.model != null && inventoryLeft >= 157) {
-            text("Click a dot", INSET + 4, footerTop + 1, MUTED);
-            text("Drag to rotate", INSET + 4, footerTop + 12, MUTED);
-            text("Scroll to zoom", INSET + 4, footerTop + 23, MUTED);
+        if (gun.model != null) {
+            if (wideLayout) {
+                center("Click a node  |  Drag to rotate  |  Scroll to zoom", previewRight / 2, previewBottom + 2, MUTED);
+            } else {
+                text("Click a node", PAINT_LEFT, footerTop + 3, MUTED);
+                text("Drag to rotate", PAINT_LEFT, footerTop + 14, MUTED);
+                text("Scroll to zoom", PAINT_LEFT, footerTop + 25, MUTED);
+            }
         }
     }
 
     private void drawPreview(GunType gun) {
-        int left = INSET + 1, right = xSize - INSET - 1, top = BODY_TOP + 1, bottom = footerTop - 4;
+        int left = INSET + 1, right = previewRight - 1, top = BODY_TOP + 1, bottom = previewBottom - 1;
+        if (bottom <= top) return;
         GL11.glPushAttrib(GL11.GL_SCISSOR_BIT | GL11.GL_ENABLE_BIT | GL11.GL_DEPTH_BUFFER_BIT);
         try {
             GL11.glScissor((guiLeft + left) * guiScale, mc.displayHeight - (guiTop + bottom) * guiScale,
                     (right - left) * guiScale, (bottom - top) * guiScale);
             GL11.glEnable(GL11.GL_SCISSOR_TEST);
-            preview.render(weapon(), gun, xSize / 2F, (top + bottom) / 2F, right - left, bottom - top);
+            preview.render(weapon(), gun, (left + right) / 2F, (top + bottom) / 2F, right - left, bottom - top);
             // Native slot items draw later and may sit over the model's depth pixels.
             GL11.glDepthMask(true);
             GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
@@ -237,13 +242,13 @@ public class GuiGunModTable extends GuiContainer {
 
     private void updateAttachmentSlots(GunType gun) {
         for (int i = 1; i < 17; i++) moveSlot(i, 0, HIDDEN);
-        if (tab != Tab.ATTACHMENTS || gun == null) return;
+        if (gun == null) return;
         for (int i = 0; i < MOUNT_NAMES.length; i++) {
             if (availableMount(gun, i)) {
                 boolean modelMount = gun.model != null && mountPoint(gun, i) != null;
                 if (modelMount && activeMount == i && mountY[i] != HIDDEN) positionActiveMount();
-                if (!modelMount) moveSlot(mountSlot(i), (xSize * (i % 4 * 2 + 1)) / 8 - 8,
-                        BODY_TOP + 26 + i / 4 * 30);
+                if (!modelMount) moveSlot(mountSlot(i), INSET + (previewRight - 2 * INSET) * (2 * i + 1) / 12 - 8,
+                        Math.max(BODY_TOP + 22, (BODY_TOP + previewBottom) / 2 - 3));
             }
         }
     }
@@ -275,10 +280,10 @@ public class GuiGunModTable extends GuiContainer {
 
     private void positionActiveMount() {
         int x = mountX[activeMount], y = mountY[activeMount];
-        int left = INSET + 11, right = xSize - INSET - 11;
-        int top = BODY_TOP + 11, bottom = footerTop - 14;
-        if (activeMount == 0 || activeMount == 2) {
-            x = offsetWithin(x, x < xSize / 2 ? -MOUNT_SLOT_OFFSET : MOUNT_SLOT_OFFSET, left, right);
+        int left = INSET + 11, right = previewRight - 11;
+        int top = BODY_TOP + 11, bottom = previewBottom - 11;
+        if (activeMount == 0 || activeMount == 2 || Math.max(y - top, bottom - y) < 15) {
+            x = offsetWithin(x, x < previewRight / 2 ? -MOUNT_SLOT_OFFSET : MOUNT_SLOT_OFFSET, left, right);
         } else {
             int offset = activeMount == 3 || isGadgetMount(activeMount) ? MOUNT_SLOT_OFFSET : -MOUNT_SLOT_OFFSET;
             y = offsetWithin(y, offset, top, bottom);
@@ -299,9 +304,7 @@ public class GuiGunModTable extends GuiContainer {
     }
 
     private void drawPaint(ItemStack stack, GunType gun) {
-        int right = inventoryLeft - 5;
-        panel(INSET, paintTop, right, paintTop + PAINT_HEIGHT, PANEL, BORDER);
-        text("Paint", PAINT_LEFT, paintTop + 4, TEXT);
+        text("Skins", PAINT_LEFT, paintTop + 4, TEXT);
         int maxScroll = maxPaintScroll(gun);
         paintScroll = Math.min(paintScroll, maxScroll);
         for (int i = 0; i < paintColumns && paintScroll + i < gun.paintjobs.size(); i++) {
@@ -315,7 +318,7 @@ public class GuiGunModTable extends GuiContainer {
             RenderHelper.disableStandardItemLighting();
         }
         if (maxScroll > 0) {
-            int track = right - PAINT_LEFT - 5;
+            int track = paintRight - PAINT_LEFT - 5;
             int length = Math.max(5, track * paintColumns / gun.paintjobs.size());
             int offset = (track - length) * paintScroll / maxScroll;
             drawRect(PAINT_LEFT, paintTop + 33, PAINT_LEFT + track, paintTop + 34, GRID);
@@ -327,16 +330,22 @@ public class GuiGunModTable extends GuiContainer {
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
         int x = mouseX - guiLeft, y = mouseY - guiTop;
         GunType gun = currentGun();
-        if (tab == Tab.ATTACHMENTS) {
-            int hover = hitMount(x, y);
-            if (hover != NONE && gun != null && !preview.isDragging()) {
-                drawHoveringText(Collections.singletonList(mountName(gun, hover)), x, y, fontRendererObj);
+        int hover = hitMount(x, y);
+        if (hover != NONE && gun != null && !preview.isDragging()) {
+            drawHoveringText(Collections.singletonList(mountName(gun, hover)), x, y, fontRendererObj);
+            return;
+        }
+        if (gun != null) {
+            List<String> details = radar.detailsAt(gun, weapon(), x, y);
+            if (!details.isEmpty()) {
+                int tooltipWidth = 0;
+                for (String line : details) tooltipWidth = Math.max(tooltipWidth, fontRendererObj.getStringWidth(line));
+                // Hover coordinates are container-local, but vanilla's tooltip bounds are screen-wide.
+                int rightmost = width - guiLeft - tooltipWidth - 16;
+                int anchor = x <= rightmost ? x : x - tooltipWidth - 28;
+                drawHoveringText(details, MathHelper.clamp_int(anchor, -guiLeft - 8, rightmost), y, fontRendererObj);
                 return;
             }
-        }
-        if (tab == Tab.STATS && gun != null && radar.hoversControl(x, y)) {
-            drawHoveringText(radar.controlDetails(gun, weapon()), x, y, fontRendererObj);
-            return;
         }
         Paintjob paint = paintAt(gun, x, y);
         if (paint == null || playerInventory.getItemStack() != null) return;
@@ -375,15 +384,7 @@ public class GuiGunModTable extends GuiContainer {
         int localX = x - guiLeft, localY = y - guiTop;
         GunType gun = currentGun();
         if (button == 0) {
-            for (int i = 0; i < TAB_NAMES.length; i++) {
-                if (contains(localX, localY, tabEdge(i), TABS_TOP, tabEdge(i + 1), BODY_TOP - 2)) {
-                    tab = Tab.values()[i];
-                    clickingDetails = true;
-                    updateAttachmentSlots(gun);
-                    return;
-                }
-            }
-            if (gun != null && tab == Tab.ATTACHMENTS && !overAttachmentSlot(localX, localY)) {
+            if (gun != null && !overAttachmentSlot(localX, localY)) {
                 int hit = hitMount(localX, localY);
                 if (gun.model != null && (hit != NONE
                         || (isPreview(localX, localY) && playerInventory.getItemStack() == null))) {
@@ -456,15 +457,15 @@ public class GuiGunModTable extends GuiContainer {
         int y = height - Mouse.getEventY() * height / mc.displayHeight - 1 - guiTop;
         GunType gun = currentGun();
         if (gun == null) return;
-        if (contains(x, y, INSET, paintTop, inventoryLeft - 5, paintTop + PAINT_HEIGHT)) {
+        if (contains(x, y, INSET, paintTop, paintRight, paintTop + PAINT_HEIGHT)) {
             paintScroll = MathHelper.clamp_int(paintScroll + (wheel > 0 ? -1 : 1), 0, maxPaintScroll(gun));
-        } else if (tab == Tab.ATTACHMENTS && gun.model != null && isPreview(x, y)) {
+        } else if (gun.model != null && isPreview(x, y)) {
             preview.zoom(wheel);
         }
     }
 
     private boolean isPreview(int x, int y) {
-        return contains(x, y, INSET, BODY_TOP, xSize - INSET, footerTop - 3);
+        return contains(x, y, INSET, BODY_TOP, previewRight, previewBottom);
     }
 
     private static boolean contains(int x, int y, int left, int top, int right, int bottom) {
@@ -481,7 +482,7 @@ public class GuiGunModTable extends GuiContainer {
     }
 
     private void drawSlot(int x, int y, boolean selected) {
-        panel(x - 1, y - 1, x + 17, y + 17, CARD, selected ? SELECTED : BORDER);
+        panel(x - 1, y - 1, x + 17, y + 17, SLOT_FILL, selected ? SELECTED : SLOT_BORDER);
     }
 
     private void center(String caption, int x, int y, int color) {
